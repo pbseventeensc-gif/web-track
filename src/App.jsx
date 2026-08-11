@@ -73,8 +73,10 @@ export default function App() {
   const [gSheetUrl, setGSheetUrl] = useState('');
   const [importingGSheet, setImportingGSheet] = useState(false);
 
-  // State Modal Scanner QC Checker
+  // State Modal Scanner & Input Manual
   const [showScanModal, setShowScanModal] = useState(false);
+  const [inputMode, setInputMode] = useState('scan'); // 'scan' atau 'manual'
+  const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
   const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
   const [scannedInput, setScannedInput] = useState('');
   const [lastScanMessage, setLastScanMessage] = useState('');
@@ -160,7 +162,14 @@ export default function App() {
     }
   };
 
-  // Fungsi Scan Barcode/QR Code: Update Supabase & Sync Otomatis ke Kolom "tes scan" di Google Sheets
+  // Handler Submit Form Modal Scan / Manual
+  const handleSubmitInput = (e) => {
+    if (e) e.preventDefault();
+    if (!scannedInput.trim()) return;
+    handleProcessScan(scannedInput);
+  };
+
+  // Fungsi Dinamis Scan / Input Manual (Multi Kolom Target)
   const handleProcessScan = async (codeValue) => {
     if (!codeValue) return;
 
@@ -174,20 +183,24 @@ export default function App() {
     );
 
     if (!targetItem) {
-      setLastScanMessage(`❌ Toko/QR "${codeValue}" tidak ditemukan di database!`);
+      setLastScanMessage(`❌ Toko/Kode/SPK "${codeValue}" tidak ditemukan!`);
       setScannedInput('');
       return;
     }
 
     const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
 
-    // 1. Update ke Supabase pada kolom tes_scan dan qc_checker
+    // Dinamis menentukan kolom yang di-update di Supabase
+    let updatePayload = { tes_scan: updaterValue };
+    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
+    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
+    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
+    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
+
+    // 1. Update ke Supabase
     const { error } = await supabase
       .from('spk_data')
-      .update({ 
-        tes_scan: updaterValue,
-        qc_checker: updaterValue 
-      })
+      .update(updatePayload)
       .eq('id', targetItem.id);
 
     if (error) {
@@ -197,15 +210,15 @@ export default function App() {
     }
 
     setSpkList((prev) =>
-      prev.map((item) => (item.id === targetItem.id ? { ...item, tes_scan: updaterValue, qc_checker: updaterValue } : item))
+      prev.map((item) => (item.id === targetItem.id ? { ...item, ...updatePayload } : item))
     );
 
-    // 2. Kirim Hasil Scan ke Google Sheets (Menggunakan Format URLSearchParams untuk Menembus Isu CORS Browser)
+    // 2. Kirim Hasil Scan ke Google Sheets
     try {
       const formData = new URLSearchParams();
       formData.append('scanned_code', codeValue);
       formData.append('qc_checker', updaterValue);
-      formData.append('column_target', 'tes scan');
+      formData.append('column_target', scanTargetColumn);
 
       await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
         method: 'POST',
@@ -214,7 +227,7 @@ export default function App() {
         body: formData
       });
 
-      setLastScanMessage(`✅ SUKSES! Toko "${targetItem.project}" (${targetItem.no_spk}) berhasil di-scan & otomatis terisi ke Google Sheets kolom "tes scan"!`);
+      setLastScanMessage(`✅ SUKSES! [${scanTargetColumn.toUpperCase()}] "${targetItem.project}" (${targetItem.no_spk}) berhasil diperbarui!`);
     } catch (err) {
       setLastScanMessage(`⚠️ Supabase ter-update, namun gagal sync Google Sheets: ${err.message}`);
     }
@@ -662,12 +675,12 @@ export default function App() {
               {isDarkMode ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
             </button>
 
-            {/* Tombol Scan QR Code QC Checker */}
+            {/* Tombol Scan / Input Manual Multi-Kolom */}
             <button
               onClick={() => setShowScanModal(true)}
               className="px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all bg-purple-600 hover:bg-purple-500 text-white active:scale-95"
             >
-              <span>📷 Scan QR (QC Checker)</span>
+              <span>📷 Scan & Input Station</span>
             </button>
 
             {/* Tombol Upload Excel File */}
@@ -1285,7 +1298,7 @@ export default function App() {
                       )}
                     </td>
 
-                    {/* Total Average */}
+                    {/* Total Average Progress */}
                     <td className="p-4">
                       <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs ${getStatusBadge(totalAvg).text}`}>
                         <span>{getStatusBadge(totalAvg).icon}</span>
@@ -1300,13 +1313,13 @@ export default function App() {
         </div>
       </div>
 
-      {/* Pop-Up Modal Scanner QR Code QC Checker */}
+      {/* Pop-Up Modal Scan & Input Manual */}
       {showScanModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className={`w-full max-w-md p-6 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
             <div className="flex justify-between items-center border-b pb-3 mb-4 border-black/10 dark:border-white/10">
               <h3 className="font-bold text-sm flex items-center gap-2">
-                <span>📷</span> Scan Barcode/QR (Auto QC Checker)
+                <span>{inputMode === 'scan' ? '📷' : '⌨️'}</span> Input Data QC & Progress
               </h3>
               <button onClick={() => setShowScanModal(false)} className="text-xs opacity-60 hover:opacity-100 font-bold">
                 ✕
@@ -1314,8 +1327,53 @@ export default function App() {
             </div>
 
             <div className="space-y-4 text-xs">
+              {/* Toggle Tab Mode Input: Scan vs Manual */}
+              <div className="flex p-1 bg-stone-100 dark:bg-neutral-900 rounded-xl border dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => { setInputMode('scan'); setScannedInput(''); }}
+                  className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                    inputMode === 'scan'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-stone-600 dark:text-neutral-400 hover:text-stone-900'
+                  }`}
+                >
+                  📷 Mode Scan QR / Barcode
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setInputMode('manual'); setScannedInput(''); }}
+                  className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                    inputMode === 'manual'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-stone-600 dark:text-neutral-400 hover:text-stone-900'
+                  }`}
+                >
+                  ⌨️ Mode Input Manual
+                </button>
+              </div>
+
+              {/* Target Kolom Update */}
               <div>
-                <label className="block font-bold mb-1">Pilih Staff QC Checker:</label>
+                <label className="block font-bold mb-1 opacity-80">1. Target Kolom Update:</label>
+                <select
+                  value={scanTargetColumn}
+                  onChange={(e) => setScanTargetColumn(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border focus:outline-none font-semibold ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                >
+                  <option value="qc_checker">🔍 QC Checker</option>
+                  <option value="qc_paking">📦 QC Paking</option>
+                  <option value="qc_deliver">🚚 QC Deliver / Driver</option>
+                  <option value="qty_finish">⚙️ Finishing (Auto Complete Qty)</option>
+                  <option value="tes_scan">🧪 Tes Scan Sahaja</option>
+                </select>
+              </div>
+
+              {/* Pilih Petugas / Operator */}
+              <div>
+                <label className="block font-bold mb-1 opacity-80">2. Petugas / Operator:</label>
                 <select
                   value={qcStaffName}
                   onChange={(e) => setQcStaffName(e.target.value)}
@@ -1329,28 +1387,53 @@ export default function App() {
                 </select>
               </div>
 
-              <div>
-                <label className="block font-bold mb-1">Hasil Scan QR Address / Store Code / SPK:</label>
-                <input
-                  type="text"
-                  autoFocus
-                  value={scannedInput}
-                  onChange={(e) => setScannedInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleProcessScan(scannedInput);
+              {/* Form Input Dinamis */}
+              <form onSubmit={handleSubmitInput} className="space-y-3">
+                <div>
+                  <label className="block font-bold mb-1 opacity-80">
+                    {inputMode === 'scan' ? '3. Arahkan Scanner Ke Sini:' : '3. Ketik No SPK / Kode Toko / QR:'}
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={scannedInput}
+                    onChange={(e) => setScannedInput(e.target.value)}
+                    placeholder={
+                      inputMode === 'scan'
+                        ? 'Scan barcode disini (Otomatis Enter)...'
+                        : 'Contoh: SPK-001 atau Store 204A...'
                     }
-                  }}
-                  placeholder="Tempel barcode scanner di sini lalu tekan Enter..."
-                  className={`w-full p-2.5 rounded-xl border focus:outline-none font-mono text-[11px] ${
-                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
-                  }`}
-                />
-                <p className="text-[10px] opacity-60 mt-1">
-                  💡 Bebas menggunakan Barcode Scanner USB / Bluetooth (Otomatis tekan Enter setelah scan).
-                </p>
-              </div>
+                    className={`w-full p-2.5 rounded-xl border focus:outline-none font-mono text-xs ${
+                      isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                    }`}
+                  />
+                  <p className="text-[10px] opacity-60 mt-1">
+                    {inputMode === 'scan'
+                      ? '⚡ Hardware/HP Scanner akan otomatis memproses saat mendapat karakter Enter.'
+                      : '💡 Ketik manual lalu tekan Enter pada keyboard atau klik tombol Simpan.'}
+                  </p>
+                </div>
 
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowScanModal(false)}
+                    className="px-4 py-2 rounded-xl font-bold opacity-70 hover:opacity-100 text-xs"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 rounded-xl font-bold text-white text-xs active:scale-95 transition-all ${
+                      inputMode === 'scan' ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'
+                    }`}
+                  >
+                    {inputMode === 'scan' ? '⚡ Proses Scan' : '💾 Simpan Input'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Status Log Notifikasi */}
               {lastScanMessage && (
                 <div className={`p-3 rounded-xl border text-xs font-semibold ${
                   lastScanMessage.includes('✅')
@@ -1360,15 +1443,6 @@ export default function App() {
                   {lastScanMessage}
                 </div>
               )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  onClick={() => handleProcessScan(scannedInput)}
-                  className="px-5 py-2 rounded-xl font-bold text-white bg-purple-600 hover:bg-purple-500 active:scale-95"
-                >
-                  ⚡ Proses Scan
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -1396,7 +1470,7 @@ export default function App() {
                 <label className="block font-bold mb-1">URL Google Sheets:</label>
                 <input
                   type="text"
-                  placeholder="https://docs.google.com/spreadsheets/d/1G7Sdxi80SSKA9Cfgd4OzHT-ng4_nCZ6EcpHJd7tdOqk/edit?gid=1285100890#gid=1285100890"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
                   value={gSheetUrl}
                   onChange={(e) => setGSheetUrl(e.target.value)}
                   className={`w-full p-2.5 rounded-xl border focus:outline-none font-mono text-[11px] ${
