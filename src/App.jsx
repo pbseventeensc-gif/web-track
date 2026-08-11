@@ -169,54 +169,61 @@ export default function App() {
     handleProcessScan(scannedInput);
   };
 
-  // Fungsi Dinamis Scan / Input Manual (Multi Kolom Target)
+  // FUNGSI UTAMA SCAN & INPUT MANUAL (Fix Sync Webtrack + Supabase + Google Sheets)
   const handleProcessScan = async (codeValue) => {
     if (!codeValue) return;
 
-    const val = codeValue.trim().toLowerCase();
+    // 1. Bersihkan string dari enter/spasi bawaan scanner HP Android (\r, \n)
+    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim();
+    const val = cleanCode.toLowerCase();
     
-    const targetItem = spkList.find((item) => 
-      item.qr_address?.toLowerCase().includes(val) ||
-      item.store_code?.toLowerCase() === val ||
-      item.no_spk?.toLowerCase().includes(val) ||
-      item.project?.toLowerCase().includes(val)
-    );
+    // 2. Pencarian data fleksibel di Webtrack
+    const targetItem = spkList.find((item) => {
+      const qr = (item.qr_address || '').toLowerCase();
+      const store = (item.store_code || '').toLowerCase();
+      const spk = (item.no_spk || '').toLowerCase();
+      const proj = (item.project || '').toLowerCase();
+
+      return qr.includes(val) || store === val || spk.includes(val) || proj.includes(val) || val.includes(spk);
+    });
 
     if (!targetItem) {
-      setLastScanMessage(`❌ Toko/Kode/SPK "${codeValue}" tidak ditemukan!`);
+      setLastScanMessage(`❌ Toko/Kode/SPK "${cleanCode}" tidak ditemukan di Webtrack!`);
       setScannedInput('');
       return;
     }
 
     const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
 
-    // Dinamis menentukan kolom yang di-update di Supabase
+    // 3. Tentukan kolom target yang akan di-update di Supabase & Webtrack
     let updatePayload = { tes_scan: updaterValue };
     if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
     if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
     if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
     if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
 
-    // 1. Update ke Supabase
+    // 4. Update tampilan UI Webtrack LANGSUNG agar ter-refresh di layar
+    setSpkList((prev) =>
+      prev.map((item) => (item.id === targetItem.id ? { ...item, ...updatePayload } : item))
+    );
+
+    // 5. Update Database Supabase
     const { error } = await supabase
       .from('spk_data')
       .update(updatePayload)
       .eq('id', targetItem.id);
 
     if (error) {
-      setLastScanMessage(`❌ Gagal update Supabase: ${error.message}`);
+      console.error("Error Supabase:", error);
+      setLastScanMessage(`⚠️ Webtrack terupdate, tapi Supabase error: ${error.message}`);
       setScannedInput('');
       return;
     }
 
-    setSpkList((prev) =>
-      prev.map((item) => (item.id === targetItem.id ? { ...item, ...updatePayload } : item))
-    );
-
-    // 2. Kirim Hasil Scan ke Google Sheets
+    // 6. Sinkronisasi ke Google Sheets
     try {
       const formData = new URLSearchParams();
-      formData.append('scanned_code', codeValue);
+      formData.append('scanned_code', cleanCode);
       formData.append('qc_checker', updaterValue);
       formData.append('column_target', scanTargetColumn);
 
@@ -227,9 +234,9 @@ export default function App() {
         body: formData
       });
 
-      setLastScanMessage(`✅ SUKSES! [${scanTargetColumn.toUpperCase()}] "${targetItem.project}" (${targetItem.no_spk}) berhasil diperbarui!`);
+      setLastScanMessage(`✅ SUKSES! [${scanTargetColumn.toUpperCase()}] "${targetItem.project}" (${targetItem.no_spk}) terbaca di Webtrack & Google Sheets!`);
     } catch (err) {
-      setLastScanMessage(`⚠️ Supabase ter-update, namun gagal sync Google Sheets: ${err.message}`);
+      setLastScanMessage(`✅ Webtrack & Supabase terisi, tapi Sheets error: ${err.message}`);
     }
 
     setScannedInput('');
