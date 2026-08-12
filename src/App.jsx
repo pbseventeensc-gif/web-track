@@ -16,7 +16,49 @@ const STAFF_QC_LIST = [
   "Rian (QC Deliver)"
 ];
 
-// Komponen Widget Ring Circular Progress
+// FUNGSI GENERATE LOGO WELLEN PRINT BASE64
+const createWellenLogoDataUrl = () => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 300;
+  canvas.height = 100;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return '';
+
+  ctx.fillStyle = '#FFFF00';
+  ctx.beginPath();
+  ctx.moveTo(10, 90);
+  ctx.quadraticCurveTo(10, 50, 25, 45);
+  ctx.lineTo(25, 90);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#FF6600';
+  ctx.beginPath();
+  ctx.moveTo(30, 90);
+  ctx.quadraticCurveTo(30, 30, 50, 22);
+  ctx.lineTo(50, 90);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#FF0000';
+  ctx.beginPath();
+  ctx.moveTo(55, 90);
+  ctx.quadraticCurveTo(55, 10, 80, 2);
+  ctx.lineTo(80, 90);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 36px Arial, sans-serif';
+  ctx.fillText('WELLEN', 95, 52);
+
+  ctx.font = 'bold 18px Arial, sans-serif';
+  ctx.fillText('P R I N T', 100, 80);
+
+  return canvas.toDataURL('image/png');
+};
+
 function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
   const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
@@ -59,7 +101,6 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   );
 }
 
-// Komponen Tab Khusus Cetak Label & Surat Jalan Wellen Print
 function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -370,7 +411,6 @@ function LabelGeneratorTab({ isDarkMode }) {
     const pagesHtml = itemsToPrint.map((item) => {
       return `
         <div class="sj-page">
-          <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
               ${renderHeaderLogoHtml()}
@@ -378,7 +418,6 @@ function LabelGeneratorTab({ isDarkMode }) {
             <div class="sj-title">Tanda Terima</div>
           </div>
 
-          <!-- Info Boxes Header -->
           <div class="info-row">
             <div class="info-box left-box">
               <div class="info-line">Kepada Yth :</div>
@@ -410,7 +449,6 @@ function LabelGeneratorTab({ isDarkMode }) {
             </div>
           </div>
 
-          <!-- Main Table Detail Barang -->
           <table class="item-grid-table">
             <thead>
               <tr>
@@ -439,7 +477,6 @@ function LabelGeneratorTab({ isDarkMode }) {
             </tfoot>
           </table>
 
-          <!-- Signature Box Bottom -->
           <div class="signature-row">
             <div class="sig-box">PENGIRIM</div>
             <div class="sig-box">PENERIMA</div>
@@ -461,11 +498,9 @@ function LabelGeneratorTab({ isDarkMode }) {
           .font-normal { font-weight: normal; }
           .text-center { text-align: center; }
           
-          /* Top Header */
           .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
           .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
 
-          /* Info Rows */
           .info-row { display: flex; gap: 15px; margin-bottom: 10px; }
           .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; }
           .left-box { flex: 1; height: 75px; }
@@ -478,13 +513,11 @@ function LabelGeneratorTab({ isDarkMode }) {
           .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; }
           .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; }
 
-          /* Grid Table */
           .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; }
           .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; }
           .item-grid-table th { text-align: center; background: #f8f8f8; }
           .item-grid-table tfoot td { background: #f8f8f8; }
 
-          /* Signatures */
           .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
@@ -793,10 +826,17 @@ export default function App() {
     }
   };
 
+  // OTOMATIS SINKRONKAN CHECKBOX SPK DENGAN PANEL FINISHING
   const handleToggleCheck = (id) => {
-    setSelectedSpkIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedSpkIds((prev) => {
+      const isExist = prev.includes(id);
+      const updated = isExist ? prev.filter((item) => item !== id) : [...prev, id];
+      
+      if (!isExist) {
+        handleSelectSpk(id);
+      }
+      return updated;
+    });
   };
 
   const handleToggleSelectAll = (filteredItems) => {
@@ -804,6 +844,9 @@ export default function App() {
       setSelectedSpkIds([]);
     } else {
       setSelectedSpkIds(filteredItems.map((item) => item.id));
+      if (filteredItems.length > 0) {
+        handleSelectSpk(filteredItems[0].id);
+      }
     }
   };
 
@@ -1141,7 +1184,7 @@ export default function App() {
     }
   };
 
-  // FUNGSI UPDATE QTY DENGAN VALIDASI BERANTAI
+  // FUNGSI UPDATE QTY DENGAN VALIDASI BERANTAI DAN ALERT PRESISI
   const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
     const val = Number(value) || 0;
 
@@ -1163,12 +1206,12 @@ export default function App() {
     const outQty = Number(qty_finish_sub_out) || 0;
     const backQty = Number(qty_finish) || 0;
 
-    // VALIDASI FINISHING BERANTAI TERHADAP PRINT
-    const maxFinishingAllowed = Number(activeItem.qty_print || 0);
+    // BATAS FINISHING BERANTAI: TIDAK BOLEH MELEBIHI QTY PRINT (ATAU QTY ORDER JIKA PRINT KOSONG)
+    const maxFinishingAllowed = Number(activeItem.qty_print || activeItem.qty_order || 0);
 
     if (finishing_type === 'sub') {
       if (outQty > maxFinishingAllowed) {
-        alert(`❌ Gagal: Jumlah barang keluar ke vendor (${outQty} pcs) melebihi Qty yang sudah di-Print (${maxFinishingAllowed} pcs)!`);
+        alert(`❌ Gagal: Jumlah barang keluar ke vendor (${outQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
         return;
       }
       if (outQty === 0 && backQty > 0) {
@@ -1181,7 +1224,7 @@ export default function App() {
       }
     } else {
       if (backQty > maxFinishingAllowed) {
-        alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty yang sudah di-Print (${maxFinishingAllowed} pcs)!`);
+        alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
         return;
       }
     }
@@ -1197,7 +1240,7 @@ export default function App() {
     if (error) {
       alert('Gagal menyimpan data finishing: ' + error.message);
     } else {
-      alert('✅ Data Finishing SPK ' + activeItem.no_spk + ' berhasil diperbarui!');
+      alert('✅ Data Finishing SPK ' + activeItem.no_spk + ' (' + activeItem.client + ') berhasil diperbarui!');
       fetchSpkData();
     }
   };
@@ -1587,7 +1630,7 @@ export default function App() {
                     value={finishingForm.qty_finish}
                     onChange={(e) => {
                       let val = Number(e.target.value) || 0;
-                      const maxAllowed = Number(activeSpkItem.qty_print || 0);
+                      const maxAllowed = Number(activeSpkItem.qty_print || activeSpkItem.qty_order || 0);
                       if (val > maxAllowed) {
                         alert(`❌ Gagal: Jumlah Finishing (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
                         val = maxAllowed;
@@ -1623,7 +1666,7 @@ export default function App() {
                       value={finishingForm.qty_finish_sub_out}
                       onChange={(e) => {
                         let val = Number(e.target.value) || 0;
-                        const maxAllowed = Number(activeSpkItem.qty_print || 0);
+                        const maxAllowed = Number(activeSpkItem.qty_print || activeSpkItem.qty_order || 0);
                         if (val > maxAllowed) {
                           alert(`❌ Gagal: Jumlah Out ke Vendor (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
                           val = maxAllowed;
@@ -1729,7 +1772,6 @@ export default function App() {
                   const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
 
                   const isSubFinishing = item.finishing_type === 'sub';
-                  const maxFinishAllowed = Number(item.qty_print || 0);
                   const maxPackAllowed = Number(item.qty_finish || 0);
                   const maxShipAllowed = Number(item.qty_pack || 0);
 
