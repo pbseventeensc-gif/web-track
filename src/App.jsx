@@ -239,14 +239,14 @@ function LabelGeneratorTab({ isDarkMode }) {
     }
   };
 
-  // Render HTML Logo Header KOP
+  // Render HTML Logo Header KOP (Ukuran Diperbesar Seimbang Dengan QR Code)
   const renderHeaderLogoHtml = () => {
     if (headerLogoUrl) {
-      return `<img src="${headerLogoUrl}" style="max-height:50px; max-width:140px; object-fit:contain; display:block;">`;
+      return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
     }
     return `
-      <div style="font-weight:900; font-size:18px; line-height:1; color:#000;">
-        WELLEN<br><span style="font-size:11px; letter-spacing:5px;">PRINT</span>
+      <div style="font-weight:900; font-size:22px; line-height:1; color:#000;">
+        WELLEN<br><span style="font-size:13px; letter-spacing:6px;">PRINT</span>
       </div>
     `;
   };
@@ -273,7 +273,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           
           let qrDataUrl = '';
           try {
-            qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 100, margin: 1 });
+            qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 });
           } catch (e) {
             console.error(e);
           }
@@ -283,14 +283,14 @@ function LabelGeneratorTab({ isDarkMode }) {
               <div class="label-box">
                 <table class="header-table">
                   <tr>
-                    <td style="width: 25%; align-items:center;">${renderHeaderLogoHtml()}</td>
-                    <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2;">
-                      <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
+                    <td style="width: 25%; vertical-align: middle;">${renderHeaderLogoHtml()}</td>
+                    <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2; vertical-align: middle;">
+                      <strong style="font-size:13px;">PT. WELLEN PRINT</strong><br>
                       Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
                       RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
                     </td>
-                    <td style="width: 20%; text-align:right;">
-                      ${qrDataUrl ? `<img src="${qrDataUrl}" style="width:55px; height:55px;">` : ''}
+                    <td style="width: 20%; text-align:right; vertical-align: middle;">
+                      ${qrDataUrl ? `<img src="${qrDataUrl}" style="width:65px; height:65px; display:inline-block;">` : ''}
                     </td>
                   </tr>
                 </table>
@@ -342,7 +342,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           .label-page { width: 210mm; height: 148mm; padding: 5mm; box-sizing: border-box; page-break-after: always; break-after: page; }
           .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
           .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; }
-          .header-table td { border: none; padding: 4px; vertical-align: middle; }
+          .header-table td { border: none; padding: 6px; vertical-align: middle; }
           .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; }
           .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 6px; font-size: 11px; line-height: 1.4; box-sizing: border-box; }
           .grid-box:nth-child(2n) { border-right: none; }
@@ -517,7 +517,7 @@ function LabelGeneratorTab({ isDarkMode }) {
         isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'
       }`}>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
+          <div className="w-16 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
             {headerLogoUrl ? (
               <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" />
             ) : (
