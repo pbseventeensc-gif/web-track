@@ -124,6 +124,18 @@ function LabelGeneratorTab({ isDarkMode }) {
             const client = String(row.CLIENT || row.Client || row.client || row.COMPANY || row['Nama Klient'] || '').trim();
             const itemDesc = String(row.ITEM_DESCRIPTION || row['Item Description'] || row.item_description || '').trim();
             
+            // PEMBACAAN QTY DENGAN BERBAGAI VARIASI HEADER EXCEL
+            const rawQty = 
+              row.QTY_TOTAL || row['Qty Total'] || row.qty_total || 
+              row.QTY || row.Qty || row.qty || 
+              row.QUANTITY || row.Quantity || row.quantity || 
+              row['TOTAL QTY ORDER'] || row['qty Order'] || row['QTY ORDER'] || row['Total Qty'] ||
+              row['QTY PACKING'] || row['QTY ORDER (PCS)'] || 0;
+
+            const rawKoli = 
+              row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || 
+              row['ISI PER KOLI'] || row['ISI/KOLI'] || row['QTY/KOLI'] || 20;
+
             return {
               NO_SPK: noSpk,
               PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || row.po_number || row['NO PO'] || '').trim(),
@@ -136,8 +148,8 @@ function LabelGeneratorTab({ isDarkMode }) {
               ITEM_DESCRIPTION: itemDesc,
               MEDIA: String(row.MEDIA || row.Media || row.media || '').trim(),
               UKURAN: String(row.UKURAN || row.Ukuran || row.ukuran || '').trim(),
-              QTY_TOTAL: Number(row.QTY_TOTAL || row['Qty Total'] || row.qty_total || 0),
-              QTY_PER_KOLI: Number(row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || 20),
+              QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
+              QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 20,
               DATE_PRODUCTION: String(row.DATE_PRODUCTION || row['Date Production'] || row.date_production || row['TANGGAL'] || '12-Aug-26').trim(),
               SENDER: String(row.SENDER || row.Sender || 'WELLEN PRINT').trim(),
               WELLEN_PIC: String(row.WELLEN_PIC || row['Wellen PIC'] || 'BPK. JHONNY').trim(),
@@ -443,7 +455,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           .item-grid-table tfoot td { background: #f8f8f8; }
 
           /* Signatures */
-          .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
+          .signature-row { display: flex; justify-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
           @media print {
