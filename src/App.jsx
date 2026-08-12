@@ -16,7 +16,7 @@ const STAFF_QC_LIST = [
   "Rian (QC Deliver)"
 ];
 
-// FUNGSI GENERATE LOGO WELLEN PRINT BASE64 (Murni via HTML5 Canvas)
+// FUNGSI GENERATE LOGO WELLEN PRINT BASE64
 const createWellenLogoDataUrl = () => {
   const canvas = document.createElement('canvas');
   canvas.width = 300;
@@ -84,6 +84,9 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsertToSupabase }) {
   const [selectedRows, setSelectedRows] = useState([]);
   const [wellenLogoDataUrl, setWellenLogoDataUrl] = useState('');
+  const [headerLogoUrl, setHeaderLogoUrl] = useState(() => {
+    return localStorage.getItem('wellen_header_logo') || '';
+  });
 
   useEffect(() => {
     try {
@@ -92,6 +95,27 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
       console.error('Failed to create canvas logo:', err);
     }
   }, []);
+
+  const handleUploadHeaderLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Logo = evt.target.result;
+      setHeaderLogoUrl(base64Logo);
+      localStorage.setItem('wellen_header_logo', base64Logo);
+      alert('✅ Logo Header KOP berhasil diunggah!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetHeaderLogo = () => {
+    if (confirm('Hapus logo header custom?')) {
+      setHeaderLogoUrl('');
+      localStorage.removeItem('wellen_header_logo');
+    }
+  };
 
   const handleDownloadTemplate = () => {
     const templateSampleData = [
@@ -166,6 +190,9 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
   };
 
   const getLogoHtml = () => {
+    if (headerLogoUrl) {
+      return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
+    }
     const logoSrc = wellenLogoDataUrl || createWellenLogoDataUrl();
     if (logoSrc) {
       return `<img src="${logoSrc}" style="height:60px; max-width:190px; object-fit:contain; display:block;">`;
@@ -272,10 +299,7 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
           .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
           .koli-title { font-size: 20px; font-weight: bold; margin: 2px 0; }
           .preview-img { max-width: 95%; max-height: 90px; object-fit: contain; }
-          @media print {
-            body { padding: 0; }
-            .label-page { page-break-after: always; break-after: page; }
-          }
+          @media print { body { padding: 0; } .label-page { page-break-after: always; break-after: page; } }
         </style>
       </head>
       <body>${pagesHtml.join('')}</body>
@@ -396,6 +420,41 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
 
   return (
     <div className="space-y-4">
+      {/* Panel Upload Logo Header KOP */}
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
+        isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className="w-16 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
+            {headerLogoUrl ? (
+              <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" />
+            ) : (
+              <span className="text-[10px] font-bold opacity-50 text-center">Default Logo</span>
+            )}
+          </div>
+          <div>
+            <h4 className="font-bold text-xs">🖼️ Logo Header KOP (Label & Surat Jalan)</h4>
+            <p className="text-[11px] opacity-70">
+              {headerLogoUrl ? '✅ Logo Custom Aktif' : 'ℹ️ Menggunakan Logo Wellen Print Default'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-purple-600 hover:bg-purple-500 transition-all active:scale-95">
+            🖼️ Upload Logo Custom KOP
+            <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          </label>
+
+          {headerLogoUrl && (
+            <button onClick={handleResetHeaderLogo} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Control Buttons */}
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
         isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'
       }`}>
@@ -403,7 +462,7 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
           <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${
             isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'
           }`}>
-            📁 Import Excel Format Label & SJ
+            📁 Import Excel Label & SJ (Auto Sync Cloud)
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
 
@@ -450,6 +509,10 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
                 const koli = Number(row.QTY_PER_KOLI || 20);
                 const isChecked = selectedRows.includes(idx);
 
+                const recipientName = row.recipient_name || row.RECIPIENT_NAME || '-';
+                const recipientPhone = row.recipient_phone || row.RECIPIENT_PHONE || '';
+                const deliveryAddress = row.delivery_address || row.DELIVERY_ADDRESS || row.project || '-';
+
                 return (
                   <tr key={idx} className={`transition-colors ${isChecked ? (isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70') : (isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]')}`}>
                     <td className="p-3 text-center">
@@ -461,8 +524,8 @@ function LabelGeneratorTab({ isDarkMode, spkList, fetchSpkData, processAndInsert
                       <span className="font-normal text-[10px] text-emerald-500">SJ: {row.no_sj || '-'}</span>
                     </td>
                     <td className="p-3"><strong className="text-xs">{row.client || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.brand || row.project || '-'}</span></td>
-                    <td className="p-3"><strong>{row.recipient_name || '-'}</strong> ({row.recipient_phone || '-'})<br /><span className="text-[10px] opacity-70">{row.delivery_address || row.project || '-'}</span></td>
-                    <td className="p-3">{row.project || '-'}<br /><span className="text-[10px] opacity-70">{row.bahan || '-'} ({row.ukuran || '-'})</span></td>
+                    <td className="p-3"><strong>{recipientName}</strong> ({recipientPhone})<br /><span className="text-[10px] opacity-70">{deliveryAddress}</span></td>
+                    <td className="p-3">{row.project || row.item_description || '-'}<br /><span className="text-[10px] opacity-70">{row.bahan || '-'} ({row.ukuran || '-'})</span></td>
                     <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
                     <td className="p-3">{koli} Pcs</td>
                   </tr>
@@ -519,12 +582,6 @@ export default function App() {
     if (!item) return;
     setSelectedSpkId(item.id);
     setFinishingForm({ finishing_type: item.finishing_type || 'inhouse', sub_vendor_name: item.sub_vendor_name || '', qty_finish_sub_out: item.qty_finish_sub_out || 0, qty_finish: item.qty_finish || 0 });
-  };
-
-  const handleSelectSpk = (spkId) => {
-    setSelectedSpkId(spkId);
-    const item = spkList.find((s) => String(s.id) === String(spkId));
-    if (item) initFinishingForm(item);
   };
 
   const processAndInsertToSupabase = async (rawData) => {
