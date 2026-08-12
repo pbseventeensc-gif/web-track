@@ -16,6 +16,9 @@ const STAFF_QC_LIST = [
   "Rian (QC Deliver)"
 ];
 
+// SVG LOGO WELLEN PRINT (Base64 SVG - Dijamin Permanen Tampil 100%)
+const WELLEN_LOGO_BASE64 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 120" width="350" height="120"><g transform="translate(10,10)"><path d="M 15 100 C 15 75, 35 55, 35 55 L 35 100 Z" fill="%23FFFF00"/><path d="M 40 100 C 40 50, 65 25, 65 25 L 65 100 Z" fill="%23FF6600"/><path d="M 70 100 C 70 25, 95 0, 95 0 L 95 100 Z" fill="%23FF0000"/></g><g transform="translate(120, 35)"><text x="0" y="40" font-family="Arial, sans-serif" font-weight="900" font-size="42" fill="%23000000" letter-spacing="2">WELLEN</text><text x="35" y="70" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="%23000000" letter-spacing="14">PRINT</text></g></svg>`;
+
 // Komponen Widget Ring Circular Progress
 function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
@@ -64,38 +67,35 @@ function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
-  // URL Logo Resmi Wellen Print
-  const WELLEN_LOGO_URL = "https://raw.githubusercontent.com/pbseventeensc-gif/web-track/main/public/favicon.svg";
-
-  // Download Template Excel Resmi Label & Surat Jalan (Termasuk Kolom Alamat Penerima)
+  // Download Template Excel Resmi Label & Surat Jalan
   const handleDownloadTemplate = () => {
-    const templateHeader = [
+    const templateSampleData = [
       {
-        NO_SPK: "SPK-0726-05780",
-        PO_NUMBER: "4500122076",
-        NO_SJ: "WL-19-76-26",
-        CLIENT: "AMO BEKASI",
-        BRAND: "Production Sunscreen Juara Intens for Fire 4",
-        RECIPIENT_NAME: "Pak Yogi",
-        RECIPIENT_PHONE: "0812-2183-7715",
-        DELIVERY_ADDRESS: "004, Jl. Raya Siliwangi No.98, RT./RW/RW.003, Sepanjang Jaya, Kec. Rawalumbu, Kota Bks, Jawa Barat 17114",
-        ITEM_DESCRIPTION: "SUNSCREEN",
+        NO_SPK: "SPK-0826-00101",
+        PO_NUMBER: "4500122101",
+        NO_SJ: "WL-26-88-01",
+        CLIENT: "PT TRI SAKTI PURWOSARI MAKMUR",
+        BRAND: "Production Sunscreen Juara Intens",
+        RECIPIENT_NAME: "Pak Pajri Hidayah",
+        RECIPIENT_PHONE: "0838-3041-0548",
+        DELIVERY_ADDRESS: "Management Support (DC Marunda) JL. Kebantenan IV No. 15, Semper Timur, Cilincing, JAKARTA UTARA 14130",
+        ITEM_DESCRIPTION: "SUNSCREEN BANNER",
         MEDIA: "FLEXY CINA 280 GR",
         UKURAN: "2 X 0.75 M",
-        QTY_TOTAL: 1000,
+        QTY_TOTAL: 300,
         QTY_PER_KOLI: 20,
         DATE_PRODUCTION: "12-Aug-26",
         SENDER: "WELLEN PRINT",
         WELLEN_PIC: "BPK. JHONNY",
         SENDER_TELP: "021-5506999",
         SENDER_EMAIL: "info@wellenprint.com",
-        VISUAL_IMAGE: ""
+        VISUAL_IMAGE: "https://via.placeholder.com/300x120/f37335/ffffff?text=SUNSCREEN+MARUNDA"
       }
     ];
 
-    const ws = XLSX.utils.json_to_sheet(templateHeader);
+    const ws = XLSX.utils.json_to_sheet(templateSampleData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template_Label_SJ");
+    XLSX.utils.book_append_sheet(wb, ws, "Template_WellenPrint");
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
@@ -249,8 +249,8 @@ function LabelGeneratorTab({ isDarkMode }) {
               <div class="label-box">
                 <table class="header-table">
                   <tr>
-                    <td style="width: 20%;"><img src="${WELLEN_LOGO_URL}" style="max-height:45px;" onerror="this.src='https://via.placeholder.com/120x40?text=WELLEN'"></td>
-                    <td style="width: 60%; text-align:center; font-size:9px; line-height: 1.2;">
+                    <td style="width: 25%;"><img src="${WELLEN_LOGO_BASE64}" style="max-height:48px; width:auto; display:block;"></td>
+                    <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2;">
                       <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
                       Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
                       RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
@@ -346,7 +346,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
-              <img src="${WELLEN_LOGO_URL}" class="sj-logo" onerror="this.src='https://via.placeholder.com/150x50?text=WELLEN+PRINT'">
+              <img src="${WELLEN_LOGO_BASE64}" class="sj-logo">
             </div>
             <div class="sj-title">Tanda Terima</div>
           </div>
@@ -436,7 +436,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           
           /* Top Header */
           .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-          .sj-logo { max-height: 45px; }
+          .sj-logo { max-height: 48px; width: auto; display: block; }
           .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
 
           /* Info Rows */
