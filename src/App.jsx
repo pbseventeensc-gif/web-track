@@ -59,6 +59,270 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   );
 }
 
+// Komponen Tab Khusus Cetak Label & Surat Jalan Wellen Print
+function LabelGeneratorTab({ isDarkMode }) {
+  const [labelData, setLabelData] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+
+  const handleExcelImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        setLabelData(data);
+        setSelectedRows([]);
+      } catch (err) {
+        alert('Gagal membaca file Excel: ' + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleToggleCheck = (index) => {
+    setSelectedRows((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRows.length === labelData.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(labelData.map((_, idx) => idx));
+    }
+  };
+
+  const handlePrintLabels = async () => {
+    if (selectedRows.length === 0) {
+      alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
+      return;
+    }
+
+    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
+
+    const pagesHtml = await Promise.all(
+      itemsToPrint.map(async (item) => {
+        const totalQty = Number(item.QTY_TOTAL || item.qty_total || item.QTY_ORDER || 0);
+        const qtyPerKoli = Number(item.QTY_PER_KOLI || item.qty_per_koli || 20);
+        const totalKoli = Math.ceil(totalQty / qtyPerKoli) || 1;
+
+        let koliHtmls = [];
+        for (let k = 1; k <= totalKoli; k++) {
+          const currentQty = (k === totalKoli && totalQty % qtyPerKoli !== 0) ? (totalQty % qtyPerKoli) : qtyPerKoli;
+          const qrAddress = item.NO_SPK || item.no_spk ? `SPK:${item.NO_SPK || item.no_spk}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
+          
+          let qrDataUrl = '';
+          try {
+            qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 100, margin: 1 });
+          } catch (e) {
+            console.error(e);
+          }
+
+          koliHtmls.push(`
+            <div class="label-page">
+              <div class="label-box">
+                <table class="header-table">
+                  <tr>
+                    <td style="width: 20%;"><img src="${item.LOGO_URL || 'https://via.placeholder.com/120x40?text=WELLEN'}" style="max-height:45px;"></td>
+                    <td style="width: 60%; text-align:center; font-size:9px; line-height: 1.2;">
+                      <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
+                      Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
+                      RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11840
+                    </td>
+                    <td style="width: 20%; text-align:right;">
+                      ${qrDataUrl ? `<img src="${qrDataUrl}" style="width:55px; height:55px;">` : ''}
+                    </td>
+                  </tr>
+                </table>
+
+                <div class="content-grid">
+                  <div class="grid-box">
+                    <strong>SENDER:</strong> ${item.SENDER || 'WELLEN PRINT'}<br>
+                    <strong>WELLEN PIC:</strong> ${item.WELLEN_PIC || 'BPK. JHONNY'}<br>
+                    <strong>NO. TELP:</strong> ${item.SENDER_TELP || '123456'}<br>
+                    <strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'Tes@gmail.com'}
+                  </div>
+                  <div class="grid-box">
+                    <strong>CLIENT:</strong> ${item.CLIENT || item.client || '-'}<br>
+                    <strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || item.delivery_address || '-'}<br>
+                    <strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || item.recipient_name || '-'}<br>
+                    <strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || item.recipient_phone || '-'}
+                  </div>
+                  <div class="grid-box">
+                    <strong>PO NUMBER:</strong> ${item.PO_NUMBER || item.po_number || '-'}<br>
+                    <strong>NO. SPK:</strong> ${item.NO_SPK || item.no_spk || '-'}<br>
+                    <strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || item.item_description || '-'}<br>
+                    <strong>MEDIA:</strong> ${item.MEDIA || item.media || '-'}<br>
+                    <strong>UKURAN:</strong> ${item.UKURAN || item.ukuran || '-'}<br>
+                    <strong>QUANTITY:</strong> ${currentQty} PCS<br>
+                    <strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || item.date_production || '-'}
+                  </div>
+                  <div class="grid-box visual-box">
+                    <div><strong>VISUAL IMAGE :</strong></div>
+                    <div class="koli-title">${k} OF ${totalKoli}</div>
+                    <img src="${item.VISUAL_IMAGE || item.visual_image || 'https://via.placeholder.com/200x80?text=No+Image'}" class="preview-img">
+                  </div>
+                </div>
+              </div>
+            </div>
+          `);
+        }
+        return koliHtmls.join('');
+      })
+    );
+
+    const printWin = window.open('', '_blank', 'width=900,height=800');
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Print Label Wellen Print</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+          .label-page { width: 210mm; height: 148mm; padding: 5mm; box-sizing: border-box; page-break-after: always; break-after: page; }
+          .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; }
+          .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; }
+          .header-table td { border: none; padding: 4px; vertical-align: middle; }
+          .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; }
+          .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 6px; font-size: 11px; line-height: 1.4; box-sizing: border-box; }
+          .grid-box:nth-child(2n) { border-right: none; }
+          .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; }
+          .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
+          .koli-title { font-size: 20px; font-weight: bold; margin: 2px 0; }
+          .preview-img { max-width: 95%; max-height: 90px; object-fit: contain; }
+          @media print {
+            body { padding: 0; }
+            .label-page { page-break-after: always; break-after: page; }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml.join('')}
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+    setTimeout(() => { printWin.print(); }, 500);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
+        isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'
+      }`}>
+        <div className="flex items-center gap-3">
+          <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${
+            isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'
+          }`}>
+            📁 Import Excel Format Label
+            <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
+          </label>
+          <span className="text-xs opacity-70">
+            Terisi: <strong>{labelData.length}</strong> Baris Data
+          </span>
+        </div>
+
+        <button
+          onClick={handlePrintLabels}
+          disabled={selectedRows.length === 0}
+          className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
+            selectedRows.length > 0
+              ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
+              : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
+          }`}
+        >
+          🏷️ Cetak {selectedRows.length} Label Terpilih (Auto Split Koli)
+        </button>
+      </div>
+
+      <div className={`overflow-x-auto rounded-2xl border shadow-sm ${
+        isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2]'
+      }`}>
+        <table className="w-full text-left text-xs">
+          <thead className={`font-bold border-b ${
+            isDarkMode ? 'bg-neutral-800 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+          }`}>
+            <tr>
+              <th className="p-3 text-center w-10">
+                <input
+                  type="checkbox"
+                  checked={labelData.length > 0 && selectedRows.length === labelData.length}
+                  onChange={handleSelectAll}
+                  className="cursor-pointer accent-indigo-600"
+                />
+              </th>
+              <th className="p-3">No SPK / PO</th>
+              <th className="p-3">Client</th>
+              <th className="p-3">Penerima & Alamat</th>
+              <th className="p-3">Deskripsi / Media / Ukuran</th>
+              <th className="p-3">Total Qty</th>
+              <th className="p-3">Isi/Koli</th>
+              <th className="p-3">Estimasi Koli</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+            {labelData.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="p-6 text-center opacity-60">
+                  Belum ada data label. Silakan klik tombol <strong>"Import Excel Format Label"</strong> di atas.
+                </td>
+              </tr>
+            ) : (
+              labelData.map((row, idx) => {
+                const total = Number(row.QTY_TOTAL || row.qty_total || row.QTY_ORDER || 0);
+                const koli = Number(row.QTY_PER_KOLI || row.qty_per_koli || 20);
+                const estKoli = Math.ceil(total / koli) || 1;
+                const isChecked = selectedRows.includes(idx);
+
+                return (
+                  <tr key={idx} className={`transition-colors ${
+                    isChecked
+                      ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70'
+                      : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'
+                  }`}>
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleCheck(idx)}
+                        className="cursor-pointer accent-indigo-600"
+                      />
+                    </td>
+                    <td className="p-3 font-bold text-blue-500">
+                      {row.NO_SPK || row.no_spk || '-'}<br />
+                      <span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || row.po_number || '-'}</span>
+                    </td>
+                    <td className="p-3 font-semibold">{row.CLIENT || row.client || '-'}</td>
+                    <td className="p-3">
+                      <strong>{row.RECIPIENT_NAME || row.recipient_name || '-'}</strong> ({row.RECIPIENT_PHONE || row.recipient_phone || '-'})<br />
+                      <span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || row.delivery_address || '-'}</span>
+                    </td>
+                    <td className="p-3">
+                      {row.ITEM_DESCRIPTION || row.item_description || '-'}<br />
+                      <span className="text-[10px] opacity-70">{row.MEDIA || row.media || '-'} ({row.UKURAN || row.ukuran || '-'})</span>
+                    </td>
+                    <td className="p-3 font-bold">{total} Pcs</td>
+                    <td className="p-3">{koli} Pcs</td>
+                    <td className="p-3 font-bold text-indigo-500">{estKoli} Label</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [spkList, setSpkList] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -169,15 +433,13 @@ export default function App() {
     handleProcessScan(scannedInput);
   };
 
-  // FUNGSI UTAMA SCAN & INPUT MANUAL (Fix Sync Webtrack + Supabase + Google Sheets)
+  // FUNGSI UTAMA SCAN & INPUT MANUAL
   const handleProcessScan = async (codeValue) => {
     if (!codeValue) return;
 
-    // 1. Bersihkan string dari enter/spasi bawaan scanner HP Android (\r, \n)
     const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim();
     const val = cleanCode.toLowerCase();
     
-    // 2. Pencarian data fleksibel di Webtrack
     const targetItem = spkList.find((item) => {
       const qr = (item.qr_address || '').toLowerCase();
       const store = (item.store_code || '').toLowerCase();
@@ -195,19 +457,16 @@ export default function App() {
 
     const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
 
-    // 3. Tentukan kolom target yang akan di-update di Supabase & Webtrack
     let updatePayload = { tes_scan: updaterValue };
     if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
     if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
     if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
     if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
 
-    // 4. Update tampilan UI Webtrack LANGSUNG agar ter-refresh di layar
     setSpkList((prev) =>
       prev.map((item) => (item.id === targetItem.id ? { ...item, ...updatePayload } : item))
     );
 
-    // 5. Update Database Supabase
     const { error } = await supabase
       .from('spk_data')
       .update(updatePayload)
@@ -220,7 +479,6 @@ export default function App() {
       return;
     }
 
-    // 6. Sinkronisasi ke Google Sheets
     try {
       const formData = new URLSearchParams();
       formData.append('scanned_code', cleanCode);
@@ -242,7 +500,7 @@ export default function App() {
     setScannedInput('');
   };
 
-  // Batch Print dengan QR Code Base64
+  // Batch Print bawaan Webtrack
   const handleBatchPrint = async () => {
     const itemsToPrint = spkList.filter((item) => selectedSpkIds.includes(item.id));
     
@@ -716,9 +974,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs (Termasuk Tab Cetak Label Baru) */}
         <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
-          {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman'].map((tab) => (
+          {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -732,10 +990,15 @@ export default function App() {
                   : 'bg-white/70 text-[#4A5D58] hover:bg-white border border-[#D8D2C2]/70'
               }`}
             >
-              {tab}
+              {tab === 'label' ? '🏷️ Cetak Label & SJ' : tab}
             </button>
           ))}
         </div>
+
+        {/* TAB 6: FITUR CETAK LABEL & SURAT JALAN BARU */}
+        {activeTab === 'label' && (
+          <LabelGeneratorTab isDarkMode={isDarkMode} />
+        )}
 
         {/* Dashboard Circular */}
         {activeTab === 'dashboard' && (
@@ -786,31 +1049,33 @@ export default function App() {
         )}
 
         {/* Baris Tombol Aksi Batch Print (Merge & Print) */}
-        <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${
-          isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'
-        }`}>
-          <div className="flex items-center gap-3">
-            <span className="text-lg">🖨️</span>
-            <div>
-              <h3 className="font-bold text-xs">Aksi Cetak Masal (Merge & Print)</h3>
-              <p className="text-[11px] opacity-70">
-                Dicentang: <strong>{selectedSpkIds.length}</strong> dari <strong>{displayedList.length}</strong> SPK Toko
-              </p>
+        {activeTab !== 'label' && (
+          <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${
+            isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🖨️</span>
+              <div>
+                <h3 className="font-bold text-xs">Aksi Cetak Masal (Merge & Print)</h3>
+                <p className="text-[11px] opacity-70">
+                  Dicentang: <strong>{selectedSpkIds.length}</strong> dari <strong>{displayedList.length}</strong> SPK Toko
+                </p>
+              </div>
             </div>
-          </div>
 
-          <button
-            onClick={handleBatchPrint}
-            disabled={selectedSpkIds.length === 0}
-            className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
-              selectedSpkIds.length > 0
-                ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
-                : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
-            }`}
-          >
-            <span>🏷️ Cetak {selectedSpkIds.length} Label Sekaligus (Merge & Print PDF)</span>
-          </button>
-        </div>
+            <button
+              onClick={handleBatchPrint}
+              disabled={selectedSpkIds.length === 0}
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
+                selectedSpkIds.length > 0
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
+                  : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
+              }`}
+            >
+              <span>🏷️ Cetak {selectedSpkIds.length} Label Sekaligus (Merge & Print PDF)</span>
+            </button>
+          </div>
+        )}
 
         {/* Panel Kontrol Finishing */}
         {activeTab === 'finishing' && activeSpkItem && (
@@ -1025,299 +1290,301 @@ export default function App() {
         )}
 
         {/* Tabel Data Utama */}
-        <div
-          className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${
-            isDarkMode
-              ? 'bg-[#121829] border-neutral-800'
-              : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'
-          }`}
-        >
-          <table className="w-full text-left text-xs">
-            <thead
-              className={`font-bold border-b transition-colors ${
-                isDarkMode
-                  ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800'
-                  : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
-              }`}
-            >
-              <tr>
-                <th className="p-4 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={displayedList.length > 0 && selectedSpkIds.length === displayedList.length}
-                    onChange={() => handleToggleSelectAll(displayedList)}
-                    className="w-4 h-4 cursor-pointer accent-indigo-600"
-                  />
-                </th>
-                <th className="p-4">No SPK</th>
-                <th className="p-4">Klient / Store Name</th>
-                <th className="p-4">Bahan / Ukuran</th>
-                <th className="p-4">Order</th>
-                <th className="p-4">Print</th>
-                <th className="p-4">Finish</th>
-                <th className="p-4">Pack</th>
-                <th className="p-4">QC Paking</th>
-                <th className="p-4">QC Checker</th>
-                <th className="p-4">QC Deliver</th>
-                <th className="p-4">Tes Scan</th>
-                <th className="p-4">Ship</th>
-                <th className="p-4">Total Rata-Rata</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
-              {displayedList.map((item) => {
-                const pPrint = getPercent(item.qty_print, item.qty_order);
-                const pFinish = getPercent(item.qty_finish, item.qty_order);
-                const pPack = getPercent(item.qty_pack, item.qty_order);
-                const pShip = getPercent(item.qty_ship, item.qty_order);
-                const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
+        {activeTab !== 'label' && (
+          <div
+            className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${
+              isDarkMode
+                ? 'bg-[#121829] border-neutral-800'
+                : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'
+            }`}
+          >
+            <table className="w-full text-left text-xs">
+              <thead
+                className={`font-bold border-b transition-colors ${
+                  isDarkMode
+                    ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800'
+                    : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+                }`}
+              >
+                <tr>
+                  <th className="p-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={displayedList.length > 0 && selectedSpkIds.length === displayedList.length}
+                      onChange={() => handleToggleSelectAll(displayedList)}
+                      className="w-4 h-4 cursor-pointer accent-indigo-600"
+                    />
+                  </th>
+                  <th className="p-4">No SPK</th>
+                  <th className="p-4">Klient / Store Name</th>
+                  <th className="p-4">Bahan / Ukuran</th>
+                  <th className="p-4">Order</th>
+                  <th className="p-4">Print</th>
+                  <th className="p-4">Finish</th>
+                  <th className="p-4">Pack</th>
+                  <th className="p-4">QC Paking</th>
+                  <th className="p-4">QC Checker</th>
+                  <th className="p-4">QC Deliver</th>
+                  <th className="p-4">Tes Scan</th>
+                  <th className="p-4">Ship</th>
+                  <th className="p-4">Total Rata-Rata</th>
+                </tr>
+              </thead>
+              <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+                {displayedList.map((item) => {
+                  const pPrint = getPercent(item.qty_print, item.qty_order);
+                  const pFinish = getPercent(item.qty_finish, item.qty_order);
+                  const pPack = getPercent(item.qty_pack, item.qty_order);
+                  const pShip = getPercent(item.qty_ship, item.qty_order);
+                  const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
 
-                const isSubFinishing = item.finishing_type === 'sub';
-                const maxPackAllowed = isSubFinishing ? (item.qty_finish || 0) : item.qty_order;
-                const isChecked = selectedSpkIds.includes(item.id);
+                  const isSubFinishing = item.finishing_type === 'sub';
+                  const maxPackAllowed = isSubFinishing ? (item.qty_finish || 0) : item.qty_order;
+                  const isChecked = selectedSpkIds.includes(item.id);
 
-                return (
-                  <tr
-                    key={item.id}
-                    className={`transition-colors ${
-                      isChecked
-                        ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70'
-                        : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'
-                    }`}
-                  >
-                    <td className="p-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleCheck(item.id)}
-                        className="w-4 h-4 cursor-pointer accent-indigo-600"
-                      />
-                    </td>
-                    <td className={`p-4 font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
-                      {item.no_spk}
-                    </td>
-                    <td className="p-4">
-                      <div className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
-                        {item.client}
-                      </div>
-                      <div className={`text-[11px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
-                        {item.project}
-                      </div>
-                    </td>
-                    <td className={`p-4 text-[11px] ${isDarkMode ? 'text-neutral-300' : 'text-[#4A5D58]'}`}>
-                      <div className="font-medium">{item.bahan}</div>
-                      <div className={isDarkMode ? 'text-neutral-500' : 'text-[#8B9B96]'}>{item.ukuran}</div>
-                    </td>
-                    <td className={`p-4 font-bold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
-                      {item.qty_order?.toLocaleString()} pcs
-                    </td>
-
-                    {/* Print */}
-                    <td className="p-4">
-                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPrint).text}`}>
-                        <span>{getStatusBadge(pPrint).icon}</span>
-                        <span>{pPrint}%</span>
-                        <span className="font-normal opacity-70">({item.qty_print?.toLocaleString()})</span>
-                      </div>
-                      {activeTab === 'produksi' && (
-                        <div className="mt-1.5">
-                          <input
-                            type="number"
-                            value={item.qty_print}
-                            disabled={item.qty_print >= item.qty_order}
-                            onChange={(e) => handleUpdateQty(item.id, 'qty_print', e.target.value, item.qty_order)}
-                            className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
-                              item.qty_print >= item.qty_order
-                                ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
-                                : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                            }`}
-                          />
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isChecked
+                          ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70'
+                          : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'
+                      }`}
+                    >
+                      <td className="p-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleCheck(item.id)}
+                          className="w-4 h-4 cursor-pointer accent-indigo-600"
+                        />
+                      </td>
+                      <td className={`p-4 font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
+                        {item.no_spk}
+                      </td>
+                      <td className="p-4">
+                        <div className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
+                          {item.client}
                         </div>
-                      )}
-                    </td>
-
-                    {/* Finish */}
-                    <td className="p-4 space-y-1">
-                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pFinish).text}`}>
-                        <span>{getStatusBadge(pFinish).icon}</span>
-                        <span>{pFinish}%</span>
-                        <span className="font-normal opacity-70">({item.qty_finish?.toLocaleString()})</span>
-                      </div>
-
-                      {isSubFinishing && (
-                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                          🛠️ Sub ({item.sub_vendor_name || 'Vendor'}) <br /> Out: {item.qty_finish_sub_out || 0} | Back: {item.qty_finish || 0} pcs
+                        <div className={`text-[11px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
+                          {item.project}
                         </div>
-                      )}
-                    </td>
+                      </td>
+                      <td className={`p-4 text-[11px] ${isDarkMode ? 'text-neutral-300' : 'text-[#4A5D58]'}`}>
+                        <div className="font-medium">{item.bahan}</div>
+                        <div className={isDarkMode ? 'text-neutral-500' : 'text-[#8B9B96]'}>{item.ukuran}</div>
+                      </td>
+                      <td className={`p-4 font-bold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
+                        {item.qty_order?.toLocaleString()} pcs
+                      </td>
 
-                    {/* Pack */}
-                    <td className="p-4 space-y-1">
-                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPack).text}`}>
-                        <span>{getStatusBadge(pPack).icon}</span>
-                        <span>{pPack}%</span>
-                        <span className="font-normal opacity-70">({item.qty_pack?.toLocaleString()})</span>
-                      </div>
-
-                      {activeTab === 'paking' && (
-                        <div className="mt-1.5">
-                          <input
-                            type="number"
-                            value={item.qty_pack}
-                            disabled={item.qty_pack >= maxPackAllowed}
-                            onChange={(e) =>
-                              handleUpdateQty(
-                                item.id,
-                                'qty_pack',
-                                e.target.value,
-                                maxPackAllowed,
-                                isSubFinishing
-                                  ? `❌ Gagal: Jumlah Paking tidak boleh melebihi barang yang sudah balik dari Sub-Finishing (${item.qty_finish || 0} pcs)!`
-                                  : `❌ Gagal: Jumlah Paking tidak boleh melebihi Qty Order (${item.qty_order} pcs)!`
-                              )
-                            }
-                            className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
-                              item.qty_pack >= maxPackAllowed
-                                ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
-                                : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                            }`}
-                          />
+                      {/* Print */}
+                      <td className="p-4">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPrint).text}`}>
+                          <span>{getStatusBadge(pPrint).icon}</span>
+                          <span>{pPrint}%</span>
+                          <span className="font-normal opacity-70">({item.qty_print?.toLocaleString()})</span>
                         </div>
-                      )}
-                    </td>
-
-                    {/* QC Paking */}
-                    <td className="p-4">
-                      <select
-                        value={item.qc_paking || ''}
-                        onChange={(e) => handleUpdateField(item.id, { qc_paking: e.target.value })}
-                        className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
-                          isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                        }`}
-                      >
-                        <option value="">-- Pilih QC --</option>
-                        {STAFF_QC_LIST.map((staff) => (
-                          <option key={staff} value={staff}>{staff}</option>
-                        ))}
-                      </select>
-                    </td>
-
-                    {/* QC Checker */}
-                    <td className="p-4">
-                      <select
-                        value={item.qc_checker || ''}
-                        onChange={(e) => handleUpdateField(item.id, { qc_checker: e.target.value })}
-                        className={`p-1 rounded-lg border text-[11px] font-semibold focus:outline-none ${
-                          item.qc_checker 
-                            ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/40 dark:text-purple-300' 
-                            : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                        }`}
-                      >
-                        <option value="">-- Pilih QC --</option>
-                        {STAFF_QC_LIST.map((staff) => (
-                          <option key={staff} value={staff}>{staff}</option>
-                        ))}
-                      </select>
-                    </td>
-
-                    {/* QC Deliver */}
-                    <td className="p-4">
-                      <select
-                        value={item.qc_deliver || ''}
-                        onChange={(e) => handleUpdateField(item.id, { qc_deliver: e.target.value })}
-                        className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
-                          isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                        }`}
-                      >
-                        <option value="">-- Pilih QC --</option>
-                        {STAFF_QC_LIST.map((staff) => (
-                          <option key={staff} value={staff}>{staff}</option>
-                        ))}
-                      </select>
-                    </td>
-
-                    {/* Tes Scan */}
-                    <td className="p-4">
-                      <input
-                        type="text"
-                        placeholder="Hasil Scan"
-                        value={item.tes_scan || ''}
-                        onChange={(e) => handleUpdateField(item.id, { tes_scan: e.target.value })}
-                        className={`w-28 p-1 rounded-lg border text-[11px] font-mono focus:outline-none ${
-                          item.tes_scan
-                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300'
-                            : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                        }`}
-                      />
-                    </td>
-
-                    {/* Ship & Surat Jalan */}
-                    <td className="p-4 space-y-1">
-                      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pShip).text}`}>
-                        <span>{getStatusBadge(pShip).icon}</span>
-                        <span>{pShip}%</span>
-                        <span className="font-normal opacity-70">({item.qty_ship?.toLocaleString()})</span>
-                      </div>
-                      
-                      {activeTab === 'pengiriman' && (
-                        <div className="space-y-1.5 mt-1.5">
-                          <input
-                            type="number"
-                            value={item.qty_ship}
-                            disabled={item.qty_ship >= item.qty_order}
-                            onChange={(e) => handleUpdateQty(item.id, 'qty_ship', e.target.value, item.qty_order)}
-                            className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
-                              item.qty_ship >= item.qty_order
-                                ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
-                                : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                            }`}
-                          />
-                          
-                          <label
-                            className={`block rounded-lg px-2 py-1 text-[10px] cursor-pointer text-center font-semibold transition-colors w-max border ${
-                              isDarkMode
-                                ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-600'
-                                : 'bg-[#EFECE6] hover:bg-[#E5E0D5] text-[#3D4F4B] border-[#D8D2C2]'
-                            }`}
-                          >
-                            📤 Upload Surat Jalan
+                        {activeTab === 'produksi' && (
+                          <div className="mt-1.5">
                             <input
-                              type="file"
-                              accept="image/*,application/pdf"
-                              onChange={(e) => handleUploadSuratJalan(e, item)}
-                              className="hidden"
+                              type="number"
+                              value={item.qty_print}
+                              disabled={item.qty_print >= item.qty_order}
+                              onChange={(e) => handleUpdateQty(item.id, 'qty_print', e.target.value, item.qty_order)}
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_print >= item.qty_order
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
                             />
-                          </label>
-                        </div>
-                      )}
+                          </div>
+                        )}
+                      </td>
 
-                      {item.surat_jalan_url && (
-                        <a
-                          href={item.surat_jalan_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`inline-flex items-center gap-1 text-[11px] font-bold mt-1 hover:underline ${
-                            isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'
+                      {/* Finish */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pFinish).text}`}>
+                          <span>{getStatusBadge(pFinish).icon}</span>
+                          <span>{pFinish}%</span>
+                          <span className="font-normal opacity-70">({item.qty_finish?.toLocaleString()})</span>
+                        </div>
+
+                        {isSubFinishing && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            🛠️ Sub ({item.sub_vendor_name || 'Vendor'}) <br /> Out: {item.qty_finish_sub_out || 0} | Back: {item.qty_finish || 0} pcs
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Pack */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPack).text}`}>
+                          <span>{getStatusBadge(pPack).icon}</span>
+                          <span>{pPack}%</span>
+                          <span className="font-normal opacity-70">({item.qty_pack?.toLocaleString()})</span>
+                        </div>
+
+                        {activeTab === 'paking' && (
+                          <div className="mt-1.5">
+                            <input
+                              type="number"
+                              value={item.qty_pack}
+                              disabled={item.qty_pack >= maxPackAllowed}
+                              onChange={(e) =>
+                                handleUpdateQty(
+                                  item.id,
+                                  'qty_pack',
+                                  e.target.value,
+                                  maxPackAllowed,
+                                  isSubFinishing
+                                    ? `❌ Gagal: Jumlah Paking tidak boleh melebihi barang yang sudah balik dari Sub-Finishing (${item.qty_finish || 0} pcs)!`
+                                    : `❌ Gagal: Jumlah Paking tidak boleh melebihi Qty Order (${item.qty_order} pcs)!`
+                                )
+                              }
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_pack >= maxPackAllowed
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
+                            />
+                          </div>
+                        )}
+                      </td>
+
+                      {/* QC Paking */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_paking || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_paking: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
+                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
                           }`}
                         >
-                          📄 Lihat Surat Jalan
-                        </a>
-                      )}
-                    </td>
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
 
-                    {/* Total Average Progress */}
-                    <td className="p-4">
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs ${getStatusBadge(totalAvg).text}`}>
-                        <span>{getStatusBadge(totalAvg).icon}</span>
-                        <span>{totalAvg}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      {/* QC Checker */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_checker || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_checker: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] font-semibold focus:outline-none ${
+                            item.qc_checker 
+                              ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/40 dark:text-purple-300' 
+                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        >
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* QC Deliver */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_deliver || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_deliver: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
+                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        >
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Tes Scan */}
+                      <td className="p-4">
+                        <input
+                          type="text"
+                          placeholder="Hasil Scan"
+                          value={item.tes_scan || ''}
+                          onChange={(e) => handleUpdateField(item.id, { tes_scan: e.target.value })}
+                          className={`w-28 p-1 rounded-lg border text-[11px] font-mono focus:outline-none ${
+                            item.tes_scan
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        />
+                      </td>
+
+                      {/* Ship & Surat Jalan */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pShip).text}`}>
+                          <span>{getStatusBadge(pShip).icon}</span>
+                          <span>{pShip}%</span>
+                          <span className="font-normal opacity-70">({item.qty_ship?.toLocaleString()})</span>
+                        </div>
+                        
+                        {activeTab === 'pengiriman' && (
+                          <div className="space-y-1.5 mt-1.5">
+                            <input
+                              type="number"
+                              value={item.qty_ship}
+                              disabled={item.qty_ship >= item.qty_order}
+                              onChange={(e) => handleUpdateQty(item.id, 'qty_ship', e.target.value, item.qty_order)}
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_ship >= item.qty_order
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
+                            />
+                            
+                            <label
+                              className={`block rounded-lg px-2 py-1 text-[10px] cursor-pointer text-center font-semibold transition-colors w-max border ${
+                                isDarkMode
+                                  ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-600'
+                                  : 'bg-[#EFECE6] hover:bg-[#E5E0D5] text-[#3D4F4B] border-[#D8D2C2]'
+                              }`}
+                            >
+                              📤 Upload Surat Jalan
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => handleUploadSuratJalan(e, item)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        {item.surat_jalan_url && (
+                          <a
+                            href={item.surat_jalan_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`inline-flex items-center gap-1 text-[11px] font-bold mt-1 hover:underline ${
+                              isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'
+                            }`}
+                          >
+                            📄 Lihat Surat Jalan
+                          </a>
+                        )}
+                      </td>
+
+                      {/* Total Average Progress */}
+                      <td className="p-4">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs ${getStatusBadge(totalAvg).text}`}>
+                          <span>{getStatusBadge(totalAvg).icon}</span>
+                          <span>{totalAvg}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Pop-Up Modal Scan & Input Manual */}
@@ -1334,7 +1601,6 @@ export default function App() {
             </div>
 
             <div className="space-y-4 text-xs">
-              {/* Toggle Tab Mode Input: Scan vs Manual */}
               <div className="flex p-1 bg-stone-100 dark:bg-neutral-900 rounded-xl border dark:border-neutral-700">
                 <button
                   type="button"
@@ -1360,7 +1626,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Target Kolom Update */}
               <div>
                 <label className="block font-bold mb-1 opacity-80">1. Target Kolom Update:</label>
                 <select
@@ -1378,7 +1643,6 @@ export default function App() {
                 </select>
               </div>
 
-              {/* Pilih Petugas / Operator */}
               <div>
                 <label className="block font-bold mb-1 opacity-80">2. Petugas / Operator:</label>
                 <select
@@ -1394,7 +1658,6 @@ export default function App() {
                 </select>
               </div>
 
-              {/* Form Input Dinamis */}
               <form onSubmit={handleSubmitInput} className="space-y-3">
                 <div>
                   <label className="block font-bold mb-1 opacity-80">
@@ -1440,7 +1703,6 @@ export default function App() {
                 </div>
               </form>
 
-              {/* Status Log Notifikasi */}
               {lastScanMessage && (
                 <div className={`p-3 rounded-xl border text-xs font-semibold ${
                   lastScanMessage.includes('✅')
