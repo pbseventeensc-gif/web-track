@@ -485,7 +485,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           .item-grid-table tfoot td { background: #f8f8f8; }
 
           /* Signatures */
-          .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
+          .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
           @media print {
@@ -1141,6 +1141,7 @@ export default function App() {
     }
   };
 
+  // FUNGSI UPDATE QTY DENGAN VALIDASI BERANTAI
   const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
     const val = Number(value) || 0;
 
@@ -1162,9 +1163,12 @@ export default function App() {
     const outQty = Number(qty_finish_sub_out) || 0;
     const backQty = Number(qty_finish) || 0;
 
+    // VALIDASI FINISHING BERANTAI TERHADAP PRINT
+    const maxFinishingAllowed = Number(activeItem.qty_print || 0);
+
     if (finishing_type === 'sub') {
-      if (outQty > activeItem.qty_order) {
-        alert(`❌ Gagal: Jumlah barang keluar (${outQty} pcs) melebihi Qty Order (${activeItem.qty_order} pcs)!`);
+      if (outQty > maxFinishingAllowed) {
+        alert(`❌ Gagal: Jumlah barang keluar ke vendor (${outQty} pcs) melebihi Qty yang sudah di-Print (${maxFinishingAllowed} pcs)!`);
         return;
       }
       if (outQty === 0 && backQty > 0) {
@@ -1176,8 +1180,8 @@ export default function App() {
         return;
       }
     } else {
-      if (backQty > activeItem.qty_order) {
-        alert(`❌ Gagal: Jumlah selesai (${backQty} pcs) melebihi Qty Order (${activeItem.qty_order} pcs)!`);
+      if (backQty > maxFinishingAllowed) {
+        alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty yang sudah di-Print (${maxFinishingAllowed} pcs)!`);
         return;
       }
     }
@@ -1579,13 +1583,14 @@ export default function App() {
                   <input
                     type="number"
                     min="0"
-                    max={activeSpkItem.qty_order}
+                    max={activeSpkItem.qty_print || activeSpkItem.qty_order}
                     value={finishingForm.qty_finish}
                     onChange={(e) => {
                       let val = Number(e.target.value) || 0;
-                      if (val > activeSpkItem.qty_order) {
-                        alert(`❌ Jumlah selesai tidak boleh melebihi Qty Order (${activeSpkItem.qty_order} pcs)!`);
-                        val = activeSpkItem.qty_order;
+                      const maxAllowed = Number(activeSpkItem.qty_print || 0);
+                      if (val > maxAllowed) {
+                        alert(`❌ Gagal: Jumlah Finishing (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                        val = maxAllowed;
                       }
                       setFinishingForm({ ...finishingForm, qty_finish: val });
                     }}
@@ -1614,13 +1619,14 @@ export default function App() {
                     <input
                       type="number"
                       min="0"
-                      max={activeSpkItem.qty_order}
+                      max={activeSpkItem.qty_print || activeSpkItem.qty_order}
                       value={finishingForm.qty_finish_sub_out}
                       onChange={(e) => {
                         let val = Number(e.target.value) || 0;
-                        if (val > activeSpkItem.qty_order) {
-                          alert(`❌ Jumlah kirim out ke vendor tidak boleh melebihi Qty Order (${activeSpkItem.qty_order} pcs)!`);
-                          val = activeSpkItem.qty_order;
+                        const maxAllowed = Number(activeSpkItem.qty_print || 0);
+                        if (val > maxAllowed) {
+                          alert(`❌ Gagal: Jumlah Out ke Vendor (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                          val = maxAllowed;
                         }
                         const currentBack = Number(finishingForm.qty_finish) || 0;
                         const adjustedBack = currentBack > val ? val : currentBack;
@@ -1723,7 +1729,10 @@ export default function App() {
                   const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
 
                   const isSubFinishing = item.finishing_type === 'sub';
-                  const maxPackAllowed = isSubFinishing ? (item.qty_finish || 0) : item.qty_order;
+                  const maxFinishAllowed = Number(item.qty_print || 0);
+                  const maxPackAllowed = Number(item.qty_finish || 0);
+                  const maxShipAllowed = Number(item.qty_pack || 0);
+
                   const isChecked = selectedSpkIds.includes(item.id);
 
                   return (
@@ -1775,7 +1784,13 @@ export default function App() {
                               type="number"
                               value={item.qty_print}
                               disabled={item.qty_print >= item.qty_order}
-                              onChange={(e) => handleUpdateQty(item.id, 'qty_print', e.target.value, item.qty_order)}
+                              onChange={(e) => handleUpdateQty(
+                                item.id, 
+                                'qty_print', 
+                                e.target.value, 
+                                item.qty_order,
+                                `❌ Gagal: Qty Print tidak boleh melebihi Qty Order (${item.qty_order} pcs)!`
+                              )}
                               className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
                                 item.qty_print >= item.qty_order
                                   ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
@@ -1821,9 +1836,7 @@ export default function App() {
                                   'qty_pack',
                                   e.target.value,
                                   maxPackAllowed,
-                                  isSubFinishing
-                                    ? `❌ Gagal: Jumlah Paking tidak boleh melebihi barang yang sudah balik dari Sub-Finishing (${item.qty_finish || 0} pcs)!`
-                                    : `❌ Gagal: Jumlah Paking tidak boleh melebihi Qty Order (${item.qty_order} pcs)!`
+                                  `❌ Gagal: Qty Paking (${e.target.value} pcs) tidak boleh melebihi Qty Finishing yang sudah selesai (${maxPackAllowed} pcs)!`
                                 )
                               }
                               className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
@@ -1914,10 +1927,16 @@ export default function App() {
                             <input
                               type="number"
                               value={item.qty_ship}
-                              disabled={item.qty_ship >= item.qty_order}
-                              onChange={(e) => handleUpdateQty(item.id, 'qty_ship', e.target.value, item.qty_order)}
+                              disabled={item.qty_ship >= maxShipAllowed}
+                              onChange={(e) => handleUpdateQty(
+                                item.id, 
+                                'qty_ship', 
+                                e.target.value, 
+                                maxShipAllowed,
+                                `❌ Gagal: Qty Kirim (${e.target.value} pcs) tidak boleh melebihi Qty yang sudah di-Paking (${maxShipAllowed} pcs)!`
+                              )}
                               className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
-                                item.qty_ship >= item.qty_order
+                                item.qty_ship >= maxShipAllowed
                                   ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
                                   : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
                               }`}
