@@ -64,10 +64,10 @@ function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
-  // URL Logo Default Wellen Print
-  const DEFAULT_WELLEN_LOGO = "https://raw.githubusercontent.com/pbseventeensc-gif/web-track/main/public/favicon.svg";
+  // URL Logo Resmi Wellen Print
+  const WELLEN_LOGO_URL = "https://raw.githubusercontent.com/pbseventeensc-gif/web-track/main/public/favicon.svg";
 
-  // Download Template Excel Resmi Label & Surat Jalan
+  // Download Template Excel Resmi Label & Surat Jalan (Termasuk Kolom Alamat Penerima)
   const handleDownloadTemplate = () => {
     const templateHeader = [
       {
@@ -124,7 +124,6 @@ function LabelGeneratorTab({ isDarkMode }) {
             const client = String(row.CLIENT || row.Client || row.client || row.COMPANY || row['Nama Klient'] || '').trim();
             const itemDesc = String(row.ITEM_DESCRIPTION || row['Item Description'] || row.item_description || '').trim();
             
-            // PEMBACAAN QTY DENGAN BERBAGAI VARIASI HEADER EXCEL
             const rawQty = 
               row.QTY_TOTAL || row['Qty Total'] || row.qty_total || 
               row.QTY || row.Qty || row.qty || 
@@ -136,15 +135,21 @@ function LabelGeneratorTab({ isDarkMode }) {
               row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || 
               row['ISI PER KOLI'] || row['ISI/KOLI'] || row['QTY/KOLI'] || 20;
 
+            const deliveryAddress = String(
+              row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || 
+              row['ALAMAT_PENERIMA'] || row['Alamat Penerima'] || row['alamat_penerima'] || 
+              row['ALAMAT'] || row['Alamat'] || row['alamat'] || row['Alamat Kirim'] || ''
+            ).trim();
+
             return {
               NO_SPK: noSpk,
               PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || row.po_number || row['NO PO'] || '').trim(),
               NO_SJ: String(row.NO_SJ || row['NO SJ'] || row.no_sj || `WL-${Math.floor(10 + Math.random() * 90)}-${Math.floor(10 + Math.random() * 90)}`).trim(),
               CLIENT: client,
               BRAND: String(row.BRAND || row.Brand || row.brand || itemDesc).trim(),
-              RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row.recipient_name || row['UP'] || '').trim(),
-              RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || row.recipient_phone || '').trim(),
-              DELIVERY_ADDRESS: String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || '').trim(),
+              RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row.recipient_name || row['UP'] || row['Nama Penerima'] || '').trim(),
+              RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || row.recipient_phone || row['No Telp Penerima'] || '').trim(),
+              DELIVERY_ADDRESS: deliveryAddress,
               ITEM_DESCRIPTION: itemDesc,
               MEDIA: String(row.MEDIA || row.Media || row.media || '').trim(),
               UKURAN: String(row.UKURAN || row.Ukuran || row.ukuran || '').trim(),
@@ -177,7 +182,6 @@ function LabelGeneratorTab({ isDarkMode }) {
     e.target.value = '';
   };
 
-  // Upload Gambar Manual Per Baris
   const handleImageUploadRow = (e, index) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -245,7 +249,7 @@ function LabelGeneratorTab({ isDarkMode }) {
               <div class="label-box">
                 <table class="header-table">
                   <tr>
-                    <td style="width: 20%;"><img src="${DEFAULT_WELLEN_LOGO}" style="max-height:45px;" onerror="this.src='https://via.placeholder.com/120x40?text=WELLEN'"></td>
+                    <td style="width: 20%;"><img src="${WELLEN_LOGO_URL}" style="max-height:45px;" onerror="this.src='https://via.placeholder.com/120x40?text=WELLEN'"></td>
                     <td style="width: 60%; text-align:center; font-size:9px; line-height: 1.2;">
                       <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
                       Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
@@ -342,7 +346,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
-              <img src="${DEFAULT_WELLEN_LOGO}" class="sj-logo" onerror="this.src='https://via.placeholder.com/150x50?text=WELLEN+PRINT'">
+              <img src="${WELLEN_LOGO_URL}" class="sj-logo" onerror="this.src='https://via.placeholder.com/150x50?text=WELLEN+PRINT'">
             </div>
             <div class="sj-title">Tanda Terima</div>
           </div>
@@ -455,7 +459,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           .item-grid-table tfoot td { background: #f8f8f8; }
 
           /* Signatures */
-          .signature-row { display: flex; justify-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
+          .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
           @media print {
