@@ -16,9 +16,6 @@ const STAFF_QC_LIST = [
   "Rian (QC Deliver)"
 ];
 
-// SVG LOGO WELLEN PRINT (Base64 SVG - Dijamin Permanen Tampil 100%)
-const WELLEN_LOGO_BASE64 = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 120" width="350" height="120"><g transform="translate(10,10)"><path d="M 15 100 C 15 75, 35 55, 35 55 L 35 100 Z" fill="%23FFFF00"/><path d="M 40 100 C 40 50, 65 25, 65 25 L 65 100 Z" fill="%23FF6600"/><path d="M 70 100 C 70 25, 95 0, 95 0 L 95 100 Z" fill="%23FF0000"/></g><g transform="translate(120, 35)"><text x="0" y="40" font-family="Arial, sans-serif" font-weight="900" font-size="42" fill="%23000000" letter-spacing="2">WELLEN</text><text x="35" y="70" font-family="Arial, sans-serif" font-weight="700" font-size="20" fill="%23000000" letter-spacing="14">PRINT</text></g></svg>`;
-
 // Komponen Widget Ring Circular Progress
 function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
@@ -66,6 +63,31 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [headerLogoUrl, setHeaderLogoUrl] = useState(() => {
+    return localStorage.getItem('wellen_header_logo') || '';
+  });
+
+  // Handle Upload Logo Header
+  const handleUploadHeaderLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Logo = evt.target.result;
+      setHeaderLogoUrl(base64Logo);
+      localStorage.setItem('wellen_header_logo', base64Logo);
+      alert('✅ Logo Header KOP berhasil diunggah!');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleResetHeaderLogo = () => {
+    if (confirm('Hapus logo header custom?')) {
+      setHeaderLogoUrl('');
+      localStorage.removeItem('wellen_header_logo');
+    }
+  };
 
   // Download Template Excel Resmi Label & Surat Jalan
   const handleDownloadTemplate = () => {
@@ -217,6 +239,18 @@ function LabelGeneratorTab({ isDarkMode }) {
     }
   };
 
+  // Render HTML Logo Header KOP
+  const renderHeaderLogoHtml = () => {
+    if (headerLogoUrl) {
+      return `<img src="${headerLogoUrl}" style="max-height:50px; max-width:140px; object-fit:contain; display:block;">`;
+    }
+    return `
+      <div style="font-weight:900; font-size:18px; line-height:1; color:#000;">
+        WELLEN<br><span style="font-size:11px; letter-spacing:5px;">PRINT</span>
+      </div>
+    `;
+  };
+
   // 1. FUNGSI CETAK LABEL PENGIRIMAN MULTI-KOLI
   const handlePrintLabels = async () => {
     if (selectedRows.length === 0) {
@@ -249,7 +283,7 @@ function LabelGeneratorTab({ isDarkMode }) {
               <div class="label-box">
                 <table class="header-table">
                   <tr>
-                    <td style="width: 25%;"><img src="${WELLEN_LOGO_BASE64}" style="max-height:48px; width:auto; display:block;"></td>
+                    <td style="width: 25%; align-items:center;">${renderHeaderLogoHtml()}</td>
                     <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2;">
                       <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
                       Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
@@ -346,7 +380,7 @@ function LabelGeneratorTab({ isDarkMode }) {
           <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
-              <img src="${WELLEN_LOGO_BASE64}" class="sj-logo">
+              ${renderHeaderLogoHtml()}
             </div>
             <div class="sj-title">Tanda Terima</div>
           </div>
@@ -436,7 +470,6 @@ function LabelGeneratorTab({ isDarkMode }) {
           
           /* Top Header */
           .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-          .sj-logo { max-height: 48px; width: auto; display: block; }
           .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
 
           /* Info Rows */
@@ -479,6 +512,43 @@ function LabelGeneratorTab({ isDarkMode }) {
 
   return (
     <div className="space-y-4">
+      {/* Panel Upload Logo KOP Header */}
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
+        isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden">
+            {headerLogoUrl ? (
+              <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" />
+            ) : (
+              <span className="text-[10px] font-bold opacity-50 text-center">No Logo</span>
+            )}
+          </div>
+          <div>
+            <h4 className="font-bold text-xs">🖼️ Logo Header KOP (Label & Surat Jalan)</h4>
+            <p className="text-[11px] opacity-70">
+              {headerLogoUrl ? '✅ Logo KOP aktif (Tersimpan)' : '⚠️ Menggunakan teks default "WELLEN PRINT"'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-purple-600 hover:bg-purple-500 transition-all active:scale-95">
+            🖼️ Upload Logo KOP Wellen
+            <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          </label>
+
+          {headerLogoUrl && (
+            <button
+              onClick={handleResetHeaderLogo}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Top Action Controls */}
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
         isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'
