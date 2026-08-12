@@ -239,7 +239,7 @@ function LabelGeneratorTab({ isDarkMode }) {
     }
   };
 
-  // Render HTML Logo Header KOP (Ukuran Diperbesar Seimbang Dengan QR Code)
+  // Render HTML Logo Header KOP (Proporsional dengan QR Code)
   const renderHeaderLogoHtml = () => {
     if (headerLogoUrl) {
       return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
@@ -1031,20 +1031,21 @@ export default function App() {
     }
   };
 
+  // SINKRONISASI DATA EXCEL IMPORT LANGSUNG KE DATABASE SUPABASE
   const processImportData = async (rawData) => {
     const formattedData = rawData
-      .filter((row) => (row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['SPK/WPP'] || row['No SPK']))
+      .filter((row) => (row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['SPK/WPP'] || row['No SPK'] || row['NO_SPK']))
       .map((row) => {
-        const rawSpk = String(row['SPK/WPP'] || row['No SPK'] || '-');
+        const rawSpk = String(row['SPK/WPP'] || row['No SPK'] || row['NO_SPK'] || '-');
         const cleanSpk = rawSpk.split('/')[0].trim();
 
         return {
           no_spk: cleanSpk,
-          client: String(row['COMPANY'] || row['Nama Klient'] || '-'),
-          project: String(row['Store Name'] || row['Nama Project'] || '-'),
-          bahan: String(row['Nama Bahan'] || 'Art Paper & Art Carton'),
-          ukuran: String(row['Ukuran'] || 'A5 & Wobbler 10x10cm'),
-          qty_order: Number(row['TOTAL QTY ORDER'] || row['qty Order'] || 40),
+          client: String(row['COMPANY'] || row['Nama Klient'] || row['CLIENT'] || row['Client'] || '-'),
+          project: String(row['Store Name'] || row['Nama Project'] || row['ITEM_DESCRIPTION'] || row['Item Description'] || '-'),
+          bahan: String(row['Nama Bahan'] || row['MEDIA'] || row['Media'] || 'Art Paper & Art Carton'),
+          ukuran: String(row['Ukuran'] || row['UKURAN'] || 'A5 & Wobbler 10x10cm'),
+          qty_order: Number(row['TOTAL QTY ORDER'] || row['qty Order'] || row['QTY_TOTAL'] || row['Qty Total'] || 40),
           qty_print: 0,
           qty_finish: 0,
           qty_finish_sub_out: 0,
@@ -1054,7 +1055,7 @@ export default function App() {
           qty_ship: 0,
           store_code: String(row['NO. STORE'] || row['Store ID'] || '-'),
           delivery_route: String(row['DELIVERY'] || 'DALAM KOTA'),
-          po_number: String(row['NO. PO'] || '-'),
+          po_number: String(row['NO. PO'] || row['PO_NUMBER'] || row['PO Number'] || '-'),
           qr_address: String(row['QR ADDRESS'] || '-'),
           qc_paking: String(row['QC Paking'] || row['qc_paking'] || ''),
           qc_checker: String(row['QC Checker'] || row['qc_checker'] || ''),
@@ -1073,7 +1074,7 @@ export default function App() {
     if (error) {
       alert('Gagal simpan data ke Supabase: ' + error.message);
     } else {
-      alert(`✅ Sukses! ${formattedData.length} Data SPK Valid Berhasil Diimport.`);
+      alert(`✅ Sukses! ${formattedData.length} Data SPK Berhasil Diimport & Tersimpan di Supabase.`);
       fetchSpkData();
     }
   };
@@ -1090,7 +1091,7 @@ export default function App() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         
-        const rawData = XLSX.utils.sheet_to_json(ws, { range: 2 });
+        const rawData = XLSX.utils.sheet_to_json(ws);
         await processImportData(rawData);
       } catch (err) {
         alert('Format file Excel tidak sesuai: ' + err.message);
@@ -1126,7 +1127,7 @@ export default function App() {
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
 
-      const rawData = XLSX.utils.sheet_to_json(ws, { range: 2 });
+      const rawData = XLSX.utils.sheet_to_json(ws);
       await processImportData(rawData);
 
       setShowGSheetModal(false);
