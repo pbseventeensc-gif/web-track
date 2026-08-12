@@ -64,6 +64,42 @@ function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
+  // URL Logo Default Wellen Print
+  const DEFAULT_WELLEN_LOGO = "https://raw.githubusercontent.com/pbseventeensc-gif/web-track/main/public/favicon.svg";
+
+  // Download Template Excel Resmi Label & Surat Jalan
+  const handleDownloadTemplate = () => {
+    const templateHeader = [
+      {
+        NO_SPK: "SPK-0726-05780",
+        PO_NUMBER: "4500122076",
+        NO_SJ: "WL-19-76-26",
+        CLIENT: "AMO BEKASI",
+        BRAND: "Production Sunscreen Juara Intens for Fire 4",
+        RECIPIENT_NAME: "Pak Yogi",
+        RECIPIENT_PHONE: "0812-2183-7715",
+        DELIVERY_ADDRESS: "004, Jl. Raya Siliwangi No.98, RT./RW/RW.003, Sepanjang Jaya, Kec. Rawalumbu, Kota Bks, Jawa Barat 17114",
+        ITEM_DESCRIPTION: "SUNSCREEN",
+        MEDIA: "FLEXY CINA 280 GR",
+        UKURAN: "2 X 0.75 M",
+        QTY_TOTAL: 1000,
+        QTY_PER_KOLI: 20,
+        DATE_PRODUCTION: "12-Aug-26",
+        SENDER: "WELLEN PRINT",
+        WELLEN_PIC: "BPK. JHONNY",
+        SENDER_TELP: "021-5506999",
+        SENDER_EMAIL: "info@wellenprint.com",
+        VISUAL_IMAGE: ""
+      }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateHeader);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template_Label_SJ");
+    XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
+  };
+
+  // Import Handler Excel
   const handleExcelImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -75,15 +111,80 @@ function LabelGeneratorTab({ isDarkMode }) {
         const wb = XLSX.read(bstr, { type: 'binary' });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
-        setLabelData(data);
+        const rawData = XLSX.utils.sheet_to_json(ws);
+
+        if (!rawData || rawData.length === 0) {
+          alert('❌ File Excel kosong atau tidak terbaca!');
+          return;
+        }
+
+        const cleanedData = rawData
+          .map((row) => {
+            const noSpk = String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim();
+            const client = String(row.CLIENT || row.Client || row.client || row.COMPANY || row['Nama Klient'] || '').trim();
+            const itemDesc = String(row.ITEM_DESCRIPTION || row['Item Description'] || row.item_description || '').trim();
+            
+            return {
+              NO_SPK: noSpk,
+              PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || row.po_number || row['NO PO'] || '').trim(),
+              NO_SJ: String(row.NO_SJ || row['NO SJ'] || row.no_sj || `WL-${Math.floor(10 + Math.random() * 90)}-${Math.floor(10 + Math.random() * 90)}`).trim(),
+              CLIENT: client,
+              BRAND: String(row.BRAND || row.Brand || row.brand || itemDesc).trim(),
+              RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row.recipient_name || row['UP'] || '').trim(),
+              RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || row.recipient_phone || '').trim(),
+              DELIVERY_ADDRESS: String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || '').trim(),
+              ITEM_DESCRIPTION: itemDesc,
+              MEDIA: String(row.MEDIA || row.Media || row.media || '').trim(),
+              UKURAN: String(row.UKURAN || row.Ukuran || row.ukuran || '').trim(),
+              QTY_TOTAL: Number(row.QTY_TOTAL || row['Qty Total'] || row.qty_total || 0),
+              QTY_PER_KOLI: Number(row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || 20),
+              DATE_PRODUCTION: String(row.DATE_PRODUCTION || row['Date Production'] || row.date_production || row['TANGGAL'] || '12-Aug-26').trim(),
+              SENDER: String(row.SENDER || row.Sender || 'WELLEN PRINT').trim(),
+              WELLEN_PIC: String(row.WELLEN_PIC || row['Wellen PIC'] || 'BPK. JHONNY').trim(),
+              SENDER_TELP: String(row.SENDER_TELP || row['Sender Telp'] || '021-5506999').trim(),
+              SENDER_EMAIL: String(row.SENDER_EMAIL || row['Sender Email'] || 'info@wellenprint.com').trim(),
+              VISUAL_IMAGE: String(row.VISUAL_IMAGE || row['Visual Image'] || '').trim()
+            };
+          })
+          .filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.ITEM_DESCRIPTION !== '' || item.QTY_TOTAL > 0);
+
+        if (cleanedData.length === 0) {
+          alert('❌ Validasi Gagal: Format kolom Excel tidak cocok!');
+          setLabelData([]);
+          return;
+        }
+
+        setLabelData(cleanedData);
         setSelectedRows([]);
+        alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
       } catch (err) {
         alert('Gagal membaca file Excel: ' + err.message);
       }
     };
     reader.readAsBinaryString(file);
     e.target.value = '';
+  };
+
+  // Upload Gambar Manual Per Baris
+  const handleImageUploadRow = (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Url = evt.target.result;
+      setLabelData((prev) =>
+        prev.map((item, i) => (i === index ? { ...item, VISUAL_IMAGE: base64Url } : item))
+      );
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearData = () => {
+    if (confirm('Apakah Anda yakin ingin membersihkan seluruh data import pada tabel?')) {
+      setLabelData([]);
+      setSelectedRows([]);
+    }
   };
 
   const handleToggleCheck = (index) => {
@@ -100,6 +201,7 @@ function LabelGeneratorTab({ isDarkMode }) {
     }
   };
 
+  // 1. FUNGSI CETAK LABEL PENGIRIMAN MULTI-KOLI
   const handlePrintLabels = async () => {
     if (selectedRows.length === 0) {
       alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
@@ -110,14 +212,14 @@ function LabelGeneratorTab({ isDarkMode }) {
 
     const pagesHtml = await Promise.all(
       itemsToPrint.map(async (item) => {
-        const totalQty = Number(item.QTY_TOTAL || item.qty_total || item.QTY_ORDER || 0);
-        const qtyPerKoli = Number(item.QTY_PER_KOLI || item.qty_per_koli || 20);
+        const totalQty = Number(item.QTY_TOTAL || 0);
+        const qtyPerKoli = Number(item.QTY_PER_KOLI || 20);
         const totalKoli = Math.ceil(totalQty / qtyPerKoli) || 1;
 
         let koliHtmls = [];
         for (let k = 1; k <= totalKoli; k++) {
           const currentQty = (k === totalKoli && totalQty % qtyPerKoli !== 0) ? (totalQty % qtyPerKoli) : qtyPerKoli;
-          const qrAddress = item.NO_SPK || item.no_spk ? `SPK:${item.NO_SPK || item.no_spk}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
+          const qrAddress = item.NO_SPK ? `SPK:${item.NO_SPK}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
           
           let qrDataUrl = '';
           try {
@@ -131,11 +233,11 @@ function LabelGeneratorTab({ isDarkMode }) {
               <div class="label-box">
                 <table class="header-table">
                   <tr>
-                    <td style="width: 20%;"><img src="${item.LOGO_URL || 'https://via.placeholder.com/120x40?text=WELLEN'}" style="max-height:45px;"></td>
+                    <td style="width: 20%;"><img src="${DEFAULT_WELLEN_LOGO}" style="max-height:45px;" onerror="this.src='https://via.placeholder.com/120x40?text=WELLEN'"></td>
                     <td style="width: 60%; text-align:center; font-size:9px; line-height: 1.2;">
                       <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
                       Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
-                      RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11840
+                      RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
                     </td>
                     <td style="width: 20%; text-align:right;">
                       ${qrDataUrl ? `<img src="${qrDataUrl}" style="width:55px; height:55px;">` : ''}
@@ -147,28 +249,28 @@ function LabelGeneratorTab({ isDarkMode }) {
                   <div class="grid-box">
                     <strong>SENDER:</strong> ${item.SENDER || 'WELLEN PRINT'}<br>
                     <strong>WELLEN PIC:</strong> ${item.WELLEN_PIC || 'BPK. JHONNY'}<br>
-                    <strong>NO. TELP:</strong> ${item.SENDER_TELP || '123456'}<br>
-                    <strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'Tes@gmail.com'}
+                    <strong>NO. TELP:</strong> ${item.SENDER_TELP || '021-5506999'}<br>
+                    <strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'info@wellenprint.com'}
                   </div>
                   <div class="grid-box">
-                    <strong>CLIENT:</strong> ${item.CLIENT || item.client || '-'}<br>
-                    <strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || item.delivery_address || '-'}<br>
-                    <strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || item.recipient_name || '-'}<br>
-                    <strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || item.recipient_phone || '-'}
+                    <strong>CLIENT:</strong> ${item.CLIENT || '-'}<br>
+                    <strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || '-'}<br>
+                    <strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || '-'}<br>
+                    <strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || '-'}
                   </div>
                   <div class="grid-box">
-                    <strong>PO NUMBER:</strong> ${item.PO_NUMBER || item.po_number || '-'}<br>
-                    <strong>NO. SPK:</strong> ${item.NO_SPK || item.no_spk || '-'}<br>
-                    <strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || item.item_description || '-'}<br>
-                    <strong>MEDIA:</strong> ${item.MEDIA || item.media || '-'}<br>
-                    <strong>UKURAN:</strong> ${item.UKURAN || item.ukuran || '-'}<br>
+                    <strong>PO NUMBER:</strong> ${item.PO_NUMBER || '-'}<br>
+                    <strong>NO. SPK:</strong> ${item.NO_SPK || '-'}<br>
+                    <strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || '-'}<br>
+                    <strong>MEDIA:</strong> ${item.MEDIA || '-'}<br>
+                    <strong>UKURAN:</strong> ${item.UKURAN || '-'}<br>
                     <strong>QUANTITY:</strong> ${currentQty} PCS<br>
-                    <strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || item.date_production || '-'}
+                    <strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || '-'}
                   </div>
                   <div class="grid-box visual-box">
                     <div><strong>VISUAL IMAGE :</strong></div>
                     <div class="koli-title">${k} OF ${totalKoli}</div>
-                    <img src="${item.VISUAL_IMAGE || item.visual_image || 'https://via.placeholder.com/200x80?text=No+Image'}" class="preview-img">
+                    ${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>`}
                   </div>
                 </div>
               </div>
@@ -213,36 +315,216 @@ function LabelGeneratorTab({ isDarkMode }) {
     setTimeout(() => { printWin.print(); }, 500);
   };
 
+  // 2. FUNGSI CETAK SURAT JALAN / TANDA TERIMA
+  const handlePrintSuratJalan = () => {
+    if (selectedRows.length === 0) {
+      alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak Surat Jalan!');
+      return;
+    }
+
+    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
+
+    const pagesHtml = itemsToPrint.map((item) => {
+      return `
+        <div class="sj-page">
+          <!-- Top Header -->
+          <div class="sj-top-header">
+            <div class="logo-sec">
+              <img src="${DEFAULT_WELLEN_LOGO}" class="sj-logo" onerror="this.src='https://via.placeholder.com/150x50?text=WELLEN+PRINT'">
+            </div>
+            <div class="sj-title">Tanda Terima</div>
+          </div>
+
+          <!-- Info Boxes Header -->
+          <div class="info-row">
+            <div class="info-box left-box">
+              <div class="info-line">Kepada Yth :</div>
+              <div class="info-line font-bold">${item.CLIENT || '-'}</div>
+              <div class="info-line">${item.DELIVERY_ADDRESS || '-'}</div>
+              <div class="info-line">UP : ${item.RECIPIENT_NAME || '-'} ${item.RECIPIENT_PHONE || ''}</div>
+            </div>
+
+            <div class="right-box-container">
+              <table class="meta-table">
+                <tr>
+                  <td class="font-bold">NO PO</td>
+                  <td>: ${item.PO_NUMBER || '-'}</td>
+                </tr>
+                <tr>
+                  <td class="font-bold">BRAND</td>
+                  <td>: ${item.BRAND || item.ITEM_DESCRIPTION || '-'}</td>
+                </tr>
+                <tr>
+                  <td class="font-bold">NO SJ</td>
+                  <td>: ${item.NO_SJ || '-'}</td>
+                </tr>
+              </table>
+
+              <div class="date-box">
+                <div class="date-header">TANGGAL</div>
+                <div class="date-value">${item.DATE_PRODUCTION || '12-Aug-26'}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Table Detail Barang -->
+          <table class="item-grid-table">
+            <thead>
+              <tr>
+                <th style="width: 8%;">NO</th>
+                <th style="width: 25%;">AMO/DEPO</th>
+                <th style="width: 27%;">AMO</th>
+                <th>
+                  <div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div>
+                  <div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="text-align: center;">1</td>
+                <td>AMO/DEPO</td>
+                <td></td>
+                <td style="text-align: right; padding-right: 15px;">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" class="text-center font-bold">TOTAL</td>
+                <td style="text-align: right; padding-right: 15px;" class="font-bold">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <!-- Signature Box Bottom -->
+          <div class="signature-row">
+            <div class="sig-box">PENGIRIM</div>
+            <div class="sig-box">PENERIMA</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const printWin = window.open('', '_blank', 'width=900,height=800');
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Print Surat Jalan - Wellen Print</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; }
+          .sj-page { width: 210mm; height: 148mm; padding: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; }
+          .font-bold { font-weight: bold; }
+          .font-normal { font-weight: normal; }
+          .text-center { text-align: center; }
+          
+          /* Top Header */
+          .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+          .sj-logo { max-height: 45px; }
+          .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
+
+          /* Info Rows */
+          .info-row { display: flex; gap: 15px; margin-bottom: 10px; }
+          .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; }
+          .left-box { flex: 1; height: 75px; }
+          .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 6px; }
+
+          .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; }
+          .meta-table td { padding: 2px 6px; border: none; }
+          
+          .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 10px; }
+          .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; }
+          .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; }
+
+          /* Grid Table */
+          .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; }
+          .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; }
+          .item-grid-table th { text-align: center; background: #f8f8f8; }
+          .item-grid-table tfoot td { background: #f8f8f8; }
+
+          /* Signatures */
+          .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
+          .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
+
+          @media print {
+            body { padding: 0; }
+            .sj-page { page-break-after: always; break-after: page; }
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+    setTimeout(() => { printWin.print(); }, 500);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Top Action Controls */}
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
         isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'
       }`}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${
             isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'
           }`}>
-            📁 Import Excel Format Label
+            📁 Import Excel Format Label & SJ
             <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
-          <span className="text-xs opacity-70">
-            Terisi: <strong>{labelData.length}</strong> Baris Data
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all"
+          >
+            📥 Download Template Excel
+          </button>
+
+          {labelData.length > 0 && (
+            <button
+              onClick={handleClearData}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all"
+            >
+              🧹 Bersihkan Import
+            </button>
+          )}
+
+          <span className="text-xs opacity-70 ml-2">
+            Terisi: <strong>{labelData.length}</strong> Baris Data Valid
           </span>
         </div>
 
-        <button
-          onClick={handlePrintLabels}
-          disabled={selectedRows.length === 0}
-          className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
-            selectedRows.length > 0
-              ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
-              : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
-          }`}
-        >
-          🏷️ Cetak {selectedRows.length} Label Terpilih (Auto Split Koli)
-        </button>
+        {/* Buttons Action Print */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrintSuratJalan}
+            disabled={selectedRows.length === 0}
+            className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
+              selectedRows.length > 0
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95'
+                : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
+            }`}
+          >
+            📄 Cetak Surat Jalan ({selectedRows.length})
+          </button>
+
+          <button
+            onClick={handlePrintLabels}
+            disabled={selectedRows.length === 0}
+            className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
+              selectedRows.length > 0
+                ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
+                : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
+            }`}
+          >
+            🏷️ Cetak Label ({selectedRows.length})
+          </button>
+        </div>
       </div>
 
+      {/* Grid Table Data Preview */}
       <div className={`overflow-x-auto rounded-2xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2]'
       }`}>
@@ -259,27 +541,26 @@ function LabelGeneratorTab({ isDarkMode }) {
                   className="cursor-pointer accent-indigo-600"
                 />
               </th>
-              <th className="p-3">No SPK / PO</th>
-              <th className="p-3">Client</th>
+              <th className="p-3">No SPK / PO / SJ</th>
+              <th className="p-3">Client & Brand</th>
               <th className="p-3">Penerima & Alamat</th>
               <th className="p-3">Deskripsi / Media / Ukuran</th>
               <th className="p-3">Total Qty</th>
               <th className="p-3">Isi/Koli</th>
-              <th className="p-3">Estimasi Koli</th>
+              <th className="p-3">Visual Image</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
             {labelData.length === 0 ? (
               <tr>
                 <td colSpan="8" className="p-6 text-center opacity-60">
-                  Belum ada data label. Silakan klik tombol <strong>"Import Excel Format Label"</strong> di atas.
+                  Tabel kosong. Silakan klik tombol <strong>"Download Template Excel"</strong> di atas.
                 </td>
               </tr>
             ) : (
               labelData.map((row, idx) => {
-                const total = Number(row.QTY_TOTAL || row.qty_total || row.QTY_ORDER || 0);
-                const koli = Number(row.QTY_PER_KOLI || row.qty_per_koli || 20);
-                const estKoli = Math.ceil(total / koli) || 1;
+                const total = Number(row.QTY_TOTAL || 0);
+                const koli = Number(row.QTY_PER_KOLI || 20);
                 const isChecked = selectedRows.includes(idx);
 
                 return (
@@ -297,21 +578,42 @@ function LabelGeneratorTab({ isDarkMode }) {
                       />
                     </td>
                     <td className="p-3 font-bold text-blue-500">
-                      {row.NO_SPK || row.no_spk || '-'}<br />
-                      <span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || row.po_number || '-'}</span>
-                    </td>
-                    <td className="p-3 font-semibold">{row.CLIENT || row.client || '-'}</td>
-                    <td className="p-3">
-                      <strong>{row.RECIPIENT_NAME || row.recipient_name || '-'}</strong> ({row.RECIPIENT_PHONE || row.recipient_phone || '-'})<br />
-                      <span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || row.delivery_address || '-'}</span>
+                      {row.NO_SPK || '-'}<br />
+                      <span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br />
+                      <span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span>
                     </td>
                     <td className="p-3">
-                      {row.ITEM_DESCRIPTION || row.item_description || '-'}<br />
-                      <span className="text-[10px] opacity-70">{row.MEDIA || row.media || '-'} ({row.UKURAN || row.ukuran || '-'})</span>
+                      <strong className="text-xs">{row.CLIENT || '-'}</strong><br />
+                      <span className="text-[10px] opacity-70">{row.BRAND || '-'}</span>
                     </td>
-                    <td className="p-3 font-bold">{total} Pcs</td>
+                    <td className="p-3">
+                      <strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br />
+                      <span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span>
+                    </td>
+                    <td className="p-3">
+                      {row.ITEM_DESCRIPTION || '-'}<br />
+                      <span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'})</span>
+                    </td>
+                    <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
                     <td className="p-3">{koli} Pcs</td>
-                    <td className="p-3 font-bold text-indigo-500">{estKoli} Label</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {row.VISUAL_IMAGE ? (
+                          <img src={row.VISUAL_IMAGE} alt="Preview" className="w-12 h-8 object-contain border rounded bg-white" />
+                        ) : (
+                          <span className="text-[10px] opacity-50">Belum ada</span>
+                        )}
+                        <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold">
+                          Upload
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUploadRow(e, idx)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </td>
                   </tr>
                 );
               })
@@ -339,7 +641,7 @@ export default function App() {
 
   // State Modal Scanner & Input Manual
   const [showScanModal, setShowScanModal] = useState(false);
-  const [inputMode, setInputMode] = useState('scan'); // 'scan' atau 'manual'
+  const [inputMode, setInputMode] = useState('scan');
   const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
   const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
   const [scannedInput, setScannedInput] = useState('');
@@ -426,14 +728,12 @@ export default function App() {
     }
   };
 
-  // Handler Submit Form Modal Scan / Manual
   const handleSubmitInput = (e) => {
     if (e) e.preventDefault();
     if (!scannedInput.trim()) return;
     handleProcessScan(scannedInput);
   };
 
-  // FUNGSI UTAMA SCAN & INPUT MANUAL
   const handleProcessScan = async (codeValue) => {
     if (!codeValue) return;
 
@@ -500,7 +800,6 @@ export default function App() {
     setScannedInput('');
   };
 
-  // Batch Print bawaan Webtrack
   const handleBatchPrint = async () => {
     const itemsToPrint = spkList.filter((item) => selectedSpkIds.includes(item.id));
     
@@ -648,7 +947,7 @@ export default function App() {
 
   const processImportData = async (rawData) => {
     const formattedData = rawData
-      .filter((row) => row['Store Name'] || row['Nama Project'] || row['COMPANY'])
+      .filter((row) => (row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['SPK/WPP'] || row['No SPK']))
       .map((row) => {
         const rawSpk = String(row['SPK/WPP'] || row['No SPK'] || '-');
         const cleanSpk = rawSpk.split('/')[0].trim();
@@ -676,13 +975,19 @@ export default function App() {
           qc_deliver: String(row['QC Deliver'] || row['qc_deliver'] || ''),
           tes_scan: String(row['tes scan'] || row['Tes Scan'] || row['tes_scan'] || '')
         };
-      });
+      })
+      .filter((item) => item.no_spk !== '-' || item.client !== '-');
+
+    if (formattedData.length === 0) {
+      alert('❌ Validasi Gagal: Data Excel kosong atau header tidak sesuai!');
+      return;
+    }
 
     const { error } = await supabase.from('spk_data').insert(formattedData);
     if (error) {
       alert('Gagal simpan data ke Supabase: ' + error.message);
     } else {
-      alert(`✅ Sukses! ${formattedData.length} Data SPK Berhasil Diimport.`);
+      alert(`✅ Sukses! ${formattedData.length} Data SPK Valid Berhasil Diimport.`);
       fetchSpkData();
     }
   };
@@ -974,7 +1279,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tabs (Termasuk Tab Cetak Label Baru) */}
+        {/* Navigation Tabs */}
         <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
           {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label'].map((tab) => (
             <button
