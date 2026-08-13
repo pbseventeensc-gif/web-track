@@ -103,7 +103,7 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 
 /* =========================================================
    KOMPONEN TAB: PROJECT KAWAN LAMA
-   (STICKY HEADER + PROMO NAME + PROJECT A/B/C + BUDGET CALCULATOR)
+   (DENGAN VALIDASI STRICT OVER-BUDGET & ACTION BUTTONS)
    ========================================================= */
 function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
@@ -114,7 +114,7 @@ function KawanLamaTab({ isDarkMode }) {
   const [branchSearch, setBranchSearch] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // State Fitur Baru: Nama Promo & Tipe Project / Budget
+  // State Nama Promo & Tipe Project / Budget
   const [promoName, setPromoName] = useState('PROMO TEMATIK AGUSTUS');
   const [projectType, setProjectType] = useState('Project C');
   const [customBudget, setCustomBudget] = useState(2500000);
@@ -185,14 +185,7 @@ function KawanLamaTab({ isDarkMode }) {
     setLoading(false);
   };
 
-  const handleQtyChange = (itemId, val) => {
-    setQuantities(prev => ({
-      ...prev,
-      [itemId]: Number(val) || 0
-    }));
-  };
-
-  // Hitung Total Terpakai
+  // Hitung Total Terpakai Saat Ini
   const totalUsedBudget = masterItems.reduce((acc, item) => {
     const qty = quantities[item.id] || 0;
     return acc + (qty * (item.price || 0));
@@ -200,9 +193,35 @@ function KawanLamaTab({ isDarkMode }) {
 
   const remainingBudget = (Number(customBudget) || 0) - totalUsedBudget;
 
+  // HANDLER EDIT QTY DENGAN VALIDASI STRICT BUDGET
+  const handleQtyChange = (itemId, val, itemPrice) => {
+    const newQty = Number(val) || 0;
+    const oldQty = quantities[itemId] || 0;
+    const price = Number(itemPrice) || 0;
+
+    // Hitung estimasi total budget baru jika qty ini diterapkan
+    const estimatedUsedBudget = totalUsedBudget - (oldQty * price) + (newQty * price);
+    const maxBudget = Number(customBudget) || 0;
+
+    // VALIDASI: MENCEGAH INPUT JIKA MELEBIHI BUDGET
+    if (estimatedUsedBudget > maxBudget) {
+      alert(`❌ Gagal: Qty tidak bisa ditambahkan!\nTotal belanja (Rp${estimatedUsedBudget.toLocaleString()}) melebihi Total Budget (Rp${maxBudget.toLocaleString()}).`);
+      return; // Batalkan input
+    }
+
+    setQuantities(prev => ({
+      ...prev,
+      [itemId]: newQty
+    }));
+  };
+
   const handleSubmitOrder = async () => {
     if (!selectedBranch) return alert('⚠️ Silakan pilih kantor cabang terlebih dahulu!');
     if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
+
+    if (remainingBudget < 0) {
+      return alert('❌ Gagal: Total belanja melebihi budget! Kurangi jumlah Qty item sebelum submit.');
+    }
 
     const itemsToInsert = masterItems
       .filter(item => (quantities[item.id] || 0) > 0)
@@ -214,12 +233,6 @@ function KawanLamaTab({ isDarkMode }) {
 
     if (itemsToInsert.length === 0) {
       return alert('⚠️ Silakan isi Qty minimal pada 1 item!');
-    }
-
-    if (remainingBudget < 0) {
-      if (!confirm('⚠️ Perhatian: Total belanja melebihi Budget! Tetap lanjutkan submit?')) {
-        return;
-      }
     }
 
     setLoading(true);
@@ -435,7 +448,7 @@ function KawanLamaTab({ isDarkMode }) {
         </div>
         <div>
           <span className="opacity-60 block text-[10px]">SISA BUDGET:</span>
-          <span className={`text-sm ${remainingBudget < 0 ? 'text-rose-600 font-black' : 'text-emerald-600 dark:text-emerald-400'}`}>
+          <span className={`text-sm ${remainingBudget < 0 ? 'text-rose-600 font-black animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}`}>
             Rp{remainingBudget.toLocaleString()}
           </span>
         </div>
@@ -486,7 +499,7 @@ function KawanLamaTab({ isDarkMode }) {
                     min="0"
                     disabled={isFormLocked || !selectedBranch}
                     value={quantities[item.id] || ''}
-                    onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                    onChange={(e) => handleQtyChange(item.id, e.target.value, item.price)}
                     placeholder="0"
                     className={`w-full p-1.5 border rounded-lg text-xs text-center font-bold focus:outline-none ${
                       isFormLocked || !selectedBranch
@@ -501,13 +514,13 @@ function KawanLamaTab({ isDarkMode }) {
         </table>
       </div>
 
-      {/* Tombol Aksi */}
+      {/* TOMBOL AKSI (SUBMIT & REVISI) */}
       <div className="flex justify-end items-center gap-3 pt-2">
         {orderStatus === 'SUBMITTED' && (
           <button
             onClick={handleRequestRevision}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all active:scale-95"
+            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
           >
             🔒 Form Dikunci - Klik Minta ACC Revisi Admin
           </button>
@@ -522,10 +535,10 @@ function KawanLamaTab({ isDarkMode }) {
         {(orderStatus === 'DRAFT' || orderStatus === 'REVISION_ALLOWED') && (
           <button
             onClick={handleSubmitOrder}
-            disabled={loading || !selectedBranch}
-            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-all active:scale-95 ${
-              !selectedBranch || loading
-                ? 'bg-stone-400 cursor-not-allowed'
+            disabled={loading || !selectedBranch || remainingBudget < 0}
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-all active:scale-95 flex items-center gap-1.5 ${
+              !selectedBranch || loading || remainingBudget < 0
+                ? 'bg-stone-400 cursor-not-allowed opacity-60'
                 : 'bg-emerald-600 hover:bg-emerald-500'
             }`}
           >
