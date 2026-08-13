@@ -101,7 +101,7 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   );
 }
 
-function LabelGeneratorTab({ isDarkMode }) {
+function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => {
@@ -715,7 +715,12 @@ function LabelGeneratorTab({ isDarkMode }) {
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         {row.VISUAL_IMAGE ? (
-                          <img src={row.VISUAL_IMAGE} alt="Preview" className="w-12 h-8 object-contain border rounded bg-white" />
+                          <img 
+                            src={row.VISUAL_IMAGE} 
+                            alt="Preview" 
+                            onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual Item SPK: ${row.NO_SPK}`)}
+                            className="w-12 h-8 object-contain border rounded bg-white cursor-pointer hover:scale-105 transition-transform" 
+                          />
                         ) : (
                           <span className="text-[10px] opacity-50">Belum ada</span>
                         )}
@@ -746,9 +751,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // State untuk Checkbox Pilihan SPK (Batch Print)
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
+
+  // State Modal Preview Gambar
+  const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
 
   // State Modal Link Google Sheet
   const [showGSheetModal, setShowGSheetModal] = useState(false);
@@ -779,6 +785,15 @@ export default function App() {
   useEffect(() => {
     fetchSpkData();
   }, []);
+
+  const openImageModal = (url, title) => {
+    if (!url) return;
+    setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview Foto' });
+  };
+
+  const closeImageModal = () => {
+    setModalImageModalInfo({ isOpen: false, url: '', title: '' });
+  };
 
   const toggleTheme = () => {
     setIsDarkMode((prev) => {
@@ -1187,7 +1202,7 @@ export default function App() {
     }
   };
 
-  // UPLOAD PACKING PHYSICAL VISUAL IMAGE DENGAN SAFE LOCAL STATE FIRST (MENCEGAH ERROR SCHEMA CACHE)
+  // UPLOAD PACKING PHYSICAL VISUAL IMAGE DENGAN SAFE LOCAL STATE FIRST
   const handleUploadPackingVisualImage = async (e, item) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1196,12 +1211,10 @@ export default function App() {
     reader.onload = async (evt) => {
       const base64Url = evt.target.result;
       
-      // Update tampilan langsung di UI (State React)
       setSpkList((prev) =>
         prev.map((spk) => (spk.id === item.id ? { ...spk, packing_visual_url: base64Url } : spk))
       );
 
-      // Coba simpan ke Supabase jika kolom sudah tersedia di DB
       const { error } = await supabase
         .from('spk_data')
         .update({ packing_visual_url: base64Url })
@@ -1462,7 +1475,7 @@ export default function App() {
 
         {/* TAB 6: FITUR CETAK LABEL & SURAT JALAN BARU */}
         {activeTab === 'label' && (
-          <LabelGeneratorTab isDarkMode={isDarkMode} />
+          <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
         {/* Dashboard Circular */}
@@ -1931,13 +1944,12 @@ export default function App() {
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             {item.packing_visual_url ? (
-                              <a href={item.packing_visual_url} target="_blank" rel="noreferrer">
-                                <img
-                                  src={item.packing_visual_url}
-                                  alt="Hasil Paking"
-                                  className="w-12 h-10 object-cover rounded border border-stone-300 dark:border-neutral-700 shadow-sm"
-                                />
-                              </a>
+                              <img
+                                src={item.packing_visual_url}
+                                alt="Hasil Paking"
+                                onClick={() => openImageModal(item.packing_visual_url, `Foto Paking Physical SPK: ${item.no_spk}`)}
+                                className="w-12 h-10 object-cover rounded border border-stone-300 dark:border-neutral-700 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                              />
                             ) : (
                               <span className="text-[10px] opacity-50">[ Belum ada ]</span>
                             )}
@@ -2094,6 +2106,57 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* POP-UP MODAL PREVIEW GAMBAR INTERAKTIF */}
+      {modalImageInfo.isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 animate-fade-in"
+          onClick={closeImageModal}
+        >
+          <div 
+            className={`relative max-w-4xl max-h-[90vh] p-4 rounded-3xl border shadow-2xl flex flex-col items-center gap-3 overflow-hidden ${
+              isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-[#D8D2C2]'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex justify-between items-center border-b pb-2 dark:border-neutral-700 border-stone-200">
+              <h3 className="font-bold text-sm tracking-wide">{modalImageInfo.title}</h3>
+              <button
+                onClick={closeImageModal}
+                className="w-8 h-8 rounded-full bg-stone-200 dark:bg-neutral-800 hover:bg-rose-500 hover:text-white font-bold text-sm flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto flex items-center justify-center p-2">
+              <img
+                src={modalImageInfo.url}
+                alt="Preview Detail"
+                className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-md border dark:border-neutral-800"
+              />
+            </div>
+
+            <div className="w-full flex justify-end gap-2 pt-2 border-t dark:border-neutral-700 border-stone-200">
+              <a
+                href={modalImageInfo.url}
+                download="photo_preview.png"
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <span>💾 Buka / Download Gambar Ukuran Penuh</span>
+              </a>
+              <button
+                onClick={closeImageModal}
+                className="px-4 py-2 bg-stone-200 dark:bg-neutral-800 hover:bg-stone-300 dark:hover:bg-neutral-700 rounded-xl text-xs font-bold transition-all"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pop-Up Modal Scan & Input Manual */}
       {showScanModal && (
