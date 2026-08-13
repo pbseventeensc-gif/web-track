@@ -502,11 +502,9 @@ function LabelGeneratorTab({ isDarkMode }) {
           .font-normal { font-weight: normal; }
           .text-center { text-align: center; }
           
-          /* Top Header */
           .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
           .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
 
-          /* Info Rows */
           .info-row { display: flex; gap: 15px; margin-bottom: 10px; }
           .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; }
           .left-box { flex: 1; height: 75px; }
@@ -519,13 +517,11 @@ function LabelGeneratorTab({ isDarkMode }) {
           .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; }
           .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; }
 
-          /* Grid Table */
           .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; }
           .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; }
           .item-grid-table th { text-align: center; background: #f8f8f8; }
           .item-grid-table tfoot td { background: #f8f8f8; }
 
-          /* Signatures */
           .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
@@ -1191,7 +1187,7 @@ export default function App() {
     }
   };
 
-  // UPLOAD PACKING PHYSICAL VISUAL IMAGE
+  // UPLOAD PACKING PHYSICAL VISUAL IMAGE DENGAN SAFE LOCAL STATE FIRST (MENCEGAH ERROR SCHEMA CACHE)
   const handleUploadPackingVisualImage = async (e, item) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1199,8 +1195,23 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const base64Url = evt.target.result;
-      handleUpdateField(item.id, { packing_visual_url: base64Url });
-      alert(`✅ Foto paking untuk SPK ${item.no_spk} berhasil diunggah!`);
+      
+      // Update tampilan langsung di UI (State React)
+      setSpkList((prev) =>
+        prev.map((spk) => (spk.id === item.id ? { ...spk, packing_visual_url: base64Url } : spk))
+      );
+
+      // Coba simpan ke Supabase jika kolom sudah tersedia di DB
+      const { error } = await supabase
+        .from('spk_data')
+        .update({ packing_visual_url: base64Url })
+        .eq('id', item.id);
+
+      if (error) {
+        console.warn('Gagal sync ke Supabase (Pastikan kolom packing_visual_url sudah dibuat di DB):', error.message);
+      } else {
+        alert(`✅ Foto paking SPK ${item.no_spk} berhasil disimpan ke database!`);
+      }
     };
     reader.readAsDataURL(file);
   };
