@@ -102,7 +102,8 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 }
 
 /* =========================================================
-   KOMPONEN TAB: PROJECT KAWAN LAMA (AUTO-SEARCH + URUT A-Z)
+   KOMPONEN TAB: PROJECT KAWAN LAMA
+   (STICKY HEADER + PROMO NAME + PROJECT A/B/C + BUDGET CALCULATOR)
    ========================================================= */
 function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
@@ -112,6 +113,11 @@ function KawanLamaTab({ isDarkMode }) {
   // State Auto Search Cabang
   const [branchSearch, setBranchSearch] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // State Fitur Baru: Nama Promo & Tipe Project / Budget
+  const [promoName, setPromoName] = useState('PROMO TEMATIK AGUSTUS');
+  const [projectType, setProjectType] = useState('Project C');
+  const [customBudget, setCustomBudget] = useState(2500000);
 
   // State Urutan A-Z atau Z-A
   const [sortAscending, setSortAscending] = useState(true);
@@ -127,15 +133,21 @@ function KawanLamaTab({ isDarkMode }) {
 
   const fetchMasterData = async () => {
     setLoading(true);
-    // Fetch 103 Cabang (Urut Nama Cabang)
     const { data: bData } = await supabase.from('kl_branches').select('*').order('branch_name', { ascending: true });
     if (bData) setBranches(bData);
 
-    // Fetch 70 Master Items (Urut Nama Item A-Z)
     const { data: iData } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
     if (iData) setMasterItems(iData);
 
     setLoading(false);
+  };
+
+  // Handler Ganti Tipe Project (A, B, C, Custom)
+  const handleProjectTypeChange = (type) => {
+    setProjectType(type);
+    if (type === 'Project A') setCustomBudget(5000000);
+    else if (type === 'Project B') setCustomBudget(3500000);
+    else if (type === 'Project C') setCustomBudget(2500000);
   };
 
   const handleSelectBranchItem = async (branch) => {
@@ -144,7 +156,6 @@ function KawanLamaTab({ isDarkMode }) {
     setIsDropdownOpen(false);
 
     setLoading(true);
-    // Cek apakah cabang ini sudah memiliki order di Supabase
     const { data: orderData } = await supabase
       .from('kl_orders')
       .select('*, kl_order_items(*)')
@@ -156,6 +167,8 @@ function KawanLamaTab({ isDarkMode }) {
     if (orderData) {
       setActiveOrder(orderData);
       setOrderStatus(orderData.status);
+      if (orderData.project_name) setPromoName(orderData.project_name);
+      if (orderData.total_budget) setCustomBudget(Number(orderData.total_budget));
 
       let initialQty = {};
       if (orderData.kl_order_items) {
@@ -179,8 +192,17 @@ function KawanLamaTab({ isDarkMode }) {
     }));
   };
 
+  // Hitung Total Terpakai
+  const totalUsedBudget = masterItems.reduce((acc, item) => {
+    const qty = quantities[item.id] || 0;
+    return acc + (qty * (item.price || 0));
+  }, 0);
+
+  const remainingBudget = (Number(customBudget) || 0) - totalUsedBudget;
+
   const handleSubmitOrder = async () => {
     if (!selectedBranch) return alert('⚠️ Silakan pilih kantor cabang terlebih dahulu!');
+    if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
 
     const itemsToInsert = masterItems
       .filter(item => (quantities[item.id] || 0) > 0)
@@ -194,14 +216,20 @@ function KawanLamaTab({ isDarkMode }) {
       return alert('⚠️ Silakan isi Qty minimal pada 1 item!');
     }
 
+    if (remainingBudget < 0) {
+      if (!confirm('⚠️ Perhatian: Total belanja melebihi Budget! Tetap lanjutkan submit?')) {
+        return;
+      }
+    }
+
     setLoading(true);
 
     const { data: order, error: orderErr } = await supabase
       .from('kl_orders')
       .insert([{
-        project_name: 'PROMO TEMATIK AGUSTUS',
+        project_name: promoName,
         branch_id: selectedBranch,
-        total_budget: 2500000,
+        total_budget: Number(customBudget) || 0,
         status: 'SUBMITTED'
       }])
       .select()
@@ -252,12 +280,10 @@ function KawanLamaTab({ isDarkMode }) {
 
   const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
 
-  // Filter Cabang berdasarkan ketikan user
   const filteredBranches = branches.filter(b => 
     b.branch_name.toLowerCase().includes(branchSearch.toLowerCase())
   );
 
-  // Sorting Master Items berdasarkan Nama Item A-Z atau Z-A
   const sortedMasterItems = [...masterItems].sort((a, b) => {
     if (sortAscending) {
       return a.item_name.localeCompare(b.item_name);
@@ -292,71 +318,145 @@ function KawanLamaTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* AUTO SEARCH CABANG COMBOBOX */}
-      <div className="max-w-md space-y-1 relative">
-        <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang (103 Cabang):</label>
-        <div className="relative">
+      {/* PANEL PENGATURAN PROMO, PROJECT, BUDGET & CABANG */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* 1. Nama Promo */}
+        <div className="space-y-1">
+          <label className="block text-xs font-bold opacity-80">🏷️ Nama Promo / Project:</label>
           <input
             type="text"
-            placeholder="Ketik nama cabang (contoh: Cibinong, Depok, MOI)..."
-            value={branchSearch}
+            placeholder="Contoh: PROMO TEMATIK AGUSTUS..."
+            value={promoName}
             disabled={isFormLocked}
-            onChange={(e) => {
-              setBranchSearch(e.target.value);
-              setSelectedBranch('');
-              setIsDropdownOpen(true);
-            }}
-            onFocus={() => setIsDropdownOpen(true)}
+            onChange={(e) => setPromoName(e.target.value)}
             className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
               isFormLocked 
                 ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
                 : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
             }`}
           />
+        </div>
 
-          {/* Dropdown Hasil Pencarian */}
-          {isDropdownOpen && !isFormLocked && (
-            <div className={`absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border shadow-xl z-50 ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-            }`}>
-              {filteredBranches.length === 0 ? (
-                <div className="p-3 text-xs opacity-60 text-center">Cabang tidak ditemukan</div>
-              ) : (
-                filteredBranches.map((b) => (
-                  <div
-                    key={b.id}
-                    onClick={() => handleSelectBranchItem(b)}
-                    className={`p-2.5 text-xs font-semibold cursor-pointer border-b last:border-none transition-colors ${
-                      selectedBranch === b.id
-                        ? isDarkMode ? 'bg-indigo-900/60 font-bold' : 'bg-indigo-50 font-bold text-indigo-700'
-                        : isDarkMode ? 'hover:bg-neutral-800 border-neutral-800' : 'hover:bg-[#F8F6F0] border-stone-100'
-                    }`}
-                  >
-                    🏢 {b.branch_name}
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+        {/* 2. Tipe Project (A, B, C, Custom) & Budget */}
+        <div className="space-y-1">
+          <label className="block text-xs font-bold opacity-80">💰 Tipe Budget / Project:</label>
+          <div className="flex gap-2">
+            <select
+              value={projectType}
+              disabled={isFormLocked}
+              onChange={(e) => handleProjectTypeChange(e.target.value)}
+              className={`p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
+                isFormLocked 
+                  ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
+                  : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+              }`}
+            >
+              <option value="Project A">Project A (Rp5.000.000)</option>
+              <option value="Project B">Project B (Rp3.500.000)</option>
+              <option value="Project C">Project C (Rp2.500.000)</option>
+              <option value="Custom">Custom Budget</option>
+            </select>
+
+            <input
+              type="number"
+              value={customBudget}
+              disabled={isFormLocked || projectType !== 'Custom'}
+              onChange={(e) => setCustomBudget(Number(e.target.value) || 0)}
+              className={`flex-1 p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
+                isFormLocked || projectType !== 'Custom'
+                  ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
+                  : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD]'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* 3. Auto Search Cabang Combobox */}
+        <div className="space-y-1 relative">
+          <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang:</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Ketik cabang (Cibinong, Depok)..."
+              value={branchSearch}
+              disabled={isFormLocked}
+              onChange={(e) => {
+                setBranchSearch(e.target.value);
+                setSelectedBranch('');
+                setIsDropdownOpen(true);
+              }}
+              onFocus={() => setIsDropdownOpen(true)}
+              className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
+                isFormLocked 
+                  ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
+                  : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+              }`}
+            />
+
+            {isDropdownOpen && !isFormLocked && (
+              <div className={`absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border shadow-xl z-50 ${
+                isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+              }`}>
+                {filteredBranches.length === 0 ? (
+                  <div className="p-3 text-xs opacity-60 text-center">Cabang tidak ditemukan</div>
+                ) : (
+                  filteredBranches.map((b) => (
+                    <div
+                      key={b.id}
+                      onClick={() => handleSelectBranchItem(b)}
+                      className={`p-2.5 text-xs font-semibold cursor-pointer border-b last:border-none transition-colors ${
+                        selectedBranch === b.id
+                          ? isDarkMode ? 'bg-indigo-900/60 font-bold' : 'bg-indigo-50 font-bold text-indigo-700'
+                          : isDarkMode ? 'hover:bg-neutral-800 border-neutral-800' : 'hover:bg-[#F8F6F0] border-stone-100'
+                      }`}
+                    >
+                      🏢 {b.branch_name}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Tabel Master Items (Dengan Pengurutan A-Z pada Nama Item) */}
-      <div className={`overflow-x-auto rounded-xl border shadow-sm ${
+      {/* CARD KONTROL KALKULASI BUDGET REAL-TIME */}
+      <div className={`grid grid-cols-3 gap-3 p-3 rounded-xl border text-xs font-bold ${
+        isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-stone-200'
+      }`}>
+        <div>
+          <span className="opacity-60 block text-[10px]">TOTAL BUDGET:</span>
+          <span className="text-blue-600 dark:text-blue-400 text-sm">Rp{Number(customBudget).toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="opacity-60 block text-[10px]">TOTAL TERPAKAI:</span>
+          <span className="text-amber-600 dark:text-amber-400 text-sm">Rp{totalUsedBudget.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="opacity-60 block text-[10px]">SISA BUDGET:</span>
+          <span className={`text-sm ${remainingBudget < 0 ? 'text-rose-600 font-black' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            Rp{remainingBudget.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {/* TABEL DATA MASTER (STICKY HEADER + SCROLLABLE BODY) */}
+      <div className={`max-h-[60vh] overflow-y-auto rounded-xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
-        <table className="w-full text-left text-xs">
-          <thead className={`font-bold border-b ${
-            isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+        <table className="w-full text-left text-xs border-collapse">
+          {/* HEADER STICKY LENGKET DI ATAS */}
+          <thead className={`sticky top-0 z-20 font-bold shadow-sm ${
+            isDarkMode ? 'bg-neutral-900 text-neutral-300 border-b border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-b border-[#D8D2C2]'
           }`}>
             <tr>
               <th className="p-3 w-12 text-center">No</th>
               
-              {/* KOLOM NAMA ITEM DENGAN TOMBOL SORTING A-Z */}
               <th 
                 className="p-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 onClick={() => setSortAscending(!sortAscending)}
-                title="Klik untuk mengubah urutan abjad"
+                title="Klik untuk mengurutkan A-Z"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Nama Item</span>
