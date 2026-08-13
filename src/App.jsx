@@ -16,49 +16,6 @@ const STAFF_QC_LIST = [
   "Rian (QC Deliver)"
 ];
 
-// FUNGSI GENERATE LOGO WELLEN PRINT BASE64
-const createWellenLogoDataUrl = () => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 300;
-  canvas.height = 100;
-  const ctx = canvas.getContext('2d');
-
-  if (!ctx) return '';
-
-  ctx.fillStyle = '#FFFF00';
-  ctx.beginPath();
-  ctx.moveTo(10, 90);
-  ctx.quadraticCurveTo(10, 50, 25, 45);
-  ctx.lineTo(25, 90);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#FF6600';
-  ctx.beginPath();
-  ctx.moveTo(30, 90);
-  ctx.quadraticCurveTo(30, 30, 50, 22);
-  ctx.lineTo(50, 90);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#FF0000';
-  ctx.beginPath();
-  ctx.moveTo(55, 90);
-  ctx.quadraticCurveTo(55, 10, 80, 2);
-  ctx.lineTo(80, 90);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#000000';
-  ctx.font = 'bold 36px Arial, sans-serif';
-  ctx.fillText('WELLEN', 95, 52);
-
-  ctx.font = 'bold 18px Arial, sans-serif';
-  ctx.fillText('P R I N T', 100, 80);
-
-  return canvas.toDataURL('image/png');
-};
-
 function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
   const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
@@ -104,7 +61,7 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 /* =========================================================
    KOMPONEN TAB: PROJECT KAWAN LAMA
    ========================================================= */
-function KawanLamaTab({ isDarkMode, currentUser }) {
+function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
   const [branches, setBranches] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -328,7 +285,7 @@ function KawanLamaTab({ isDarkMode, currentUser }) {
   };
 
   const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
-  const isBranchUser = currentUser && currentUser.role === 'branch';
+  const isBranchUser = isBranchMode || (currentUser && currentUser.role === 'branch');
 
   const filteredBranches = branches.filter(b => 
     b.branch_name.toLowerCase().includes(branchSearch.toLowerCase())
@@ -348,7 +305,7 @@ function KawanLamaTab({ isDarkMode, currentUser }) {
             <span>🏢</span> Input Form Cabang - Project Kawan Lama
           </h3>
           <p className="text-xs opacity-70">
-            {isBranchUser ? `Akun Terhubung: ${currentUser.branch_name}` : 'Akses Admin Operasional'}
+            {isBranchUser ? `Halaman Pengisian Cabang` : 'Akses Admin Operasional'}
           </p>
         </div>
 
@@ -426,29 +383,27 @@ function KawanLamaTab({ isDarkMode, currentUser }) {
         </div>
 
         <div className="space-y-1 relative" ref={dropdownRef}>
-          <label className="block text-xs font-bold opacity-80">
-            {isBranchUser ? '🔒 Cabang Anda (Terkunci):' : '🔍 Cari & Pilih Kantor Cabang:'}
-          </label>
+          <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang:</label>
           <div className="relative">
             <input
               type="text"
               placeholder="Ketik cabang (Cibinong, Depok)..."
               value={branchSearch}
-              disabled={isFormLocked || isBranchUser}
+              disabled={isFormLocked}
               onChange={(e) => {
                 setBranchSearch(e.target.value);
                 setSelectedBranch('');
                 setIsDropdownOpen(true);
               }}
-              onFocus={() => !isBranchUser && setIsDropdownOpen(true)}
+              onFocus={() => setIsDropdownOpen(true)}
               className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
-                isFormLocked || isBranchUser 
+                isFormLocked 
                   ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-80 text-indigo-600 dark:text-indigo-400' 
                   : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
               }`}
             />
 
-            {isDropdownOpen && !isFormLocked && !isBranchUser && (
+            {isDropdownOpen && !isFormLocked && (
               <div className={`absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border shadow-xl z-50 ${
                 isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
               }`}>
@@ -587,31 +542,10 @@ function KawanLamaTab({ isDarkMode, currentUser }) {
 /* =========================================================
    KOMPONEN TAB: CETAK LABEL & SURAT JALAN
    ========================================================= */
-function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
+function LabelGeneratorTab({ isDarkMode }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
-
-  const handleUploadHeaderLogo = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const base64Logo = evt.target.result;
-      setHeaderLogoUrl(base64Logo);
-      localStorage.setItem('wellen_header_logo', base64Logo);
-      alert('✅ Logo Header KOP berhasil diunggah!');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleResetHeaderLogo = () => {
-    if (confirm('Hapus logo header custom?')) {
-      setHeaderLogoUrl('');
-      localStorage.removeItem('wellen_header_logo');
-    }
-  };
 
   const handleDownloadTemplate = () => {
     const templateSampleData = [{
@@ -697,11 +631,6 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx));
   };
 
-  const renderHeaderLogoHtml = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
-    return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000;">WELLEN<br><span style="font-size:13px; letter-spacing:6px;">PRINT</span></div>`;
-  };
-
   const handlePrintLabels = async () => {
     if (selectedRows.length === 0) return alert('⚠️ Pilih minimal 1 baris data!');
     const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
@@ -721,17 +650,15 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         koliHtmls.push(`
           <div class="label-page"><div class="label-box">
             <table class="header-table"><tr>
-              <td style="width: 25%;">${renderHeaderLogoHtml()}</td>
-              <td style="width: 55%; text-align:center; font-size:9px;">
-                <strong style="font-size:13px;">PT. WELLEN PRINT</strong><br>Green Sedayu Bizpark. Jl. Daan Mogot KM.18 Kalideres, Jakarta Barat
-              </td>
+              <td style="width: 25%;">WELLEN PRINT</td>
+              <td style="text-align:center; font-size:9px;"><strong style="font-size:13px;">PT. WELLEN PRINT</strong></td>
               <td style="width: 20%; text-align:right;">${qrDataUrl ? `<img src="${qrDataUrl}" style="width:65px; height:65px;">` : ''}</td>
             </tr></table>
             <div class="content-grid">
-              <div class="grid-box"><strong>SENDER:</strong> ${item.SENDER}<br><strong>PIC:</strong> ${item.WELLEN_PIC}</div>
-              <div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT}<br><strong>ADDRESS:</strong> ${item.DELIVERY_ADDRESS}</div>
+              <div class="grid-box"><strong>SENDER:</strong> ${item.SENDER}</div>
+              <div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT}</div>
               <div class="grid-box"><strong>NO. SPK:</strong> ${item.NO_SPK}<br><strong>QTY:</strong> ${currentQty} PCS</div>
-              <div class="grid-box visual-box"><div class="koli-title">${k} OF ${totalKoli}</div>${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : ''}</div>
+              <div class="grid-box visual-box"><div class="koli-title">${k} OF ${totalKoli}</div></div>
             </div>
           </div></div>
         `);
@@ -746,7 +673,6 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .header-table { width: 100%; border-bottom: 2px solid #000; } .header-table td { padding: 6px; }
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; }
       .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 6px; font-size: 11px; }
-      .visual-box { text-align: center; } .koli-title { font-size: 20px; font-weight: bold; } .preview-img { max-height: 90px; object-fit: contain; }
     </style></head><body>${pagesHtml.join('')}</body></html>`);
     printWin.document.close();
     setTimeout(() => printWin.print(), 500);
@@ -802,52 +728,25 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 }
 
 /* =========================================================
-   KOMPONEN MODAL LOGIN USER & CABANG
+   KOMPONEN MODAL LOGIN KHUSUS ADMIN
    ========================================================= */
-function LoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
-  const [accessCode, setAccessCode] = useState('');
-  const [pinCode, setPinCode] = useState('');
-  const [loading, setLoading] = useState(false);
+function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
-  const handleLoginSubmit = async (e) => {
+  const handleAdminLogin = (e) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!accessCode.trim() || !pinCode.trim()) return setErrorMsg('Ketik Kode Login & PIN!');
-
-    setLoading(true);
-
-    if (accessCode.toUpperCase() === 'ADMIN' && pinCode === '123456') {
+    if (username.toUpperCase() === 'ADMIN' && password === '123456') {
       const adminUser = { role: 'admin', name: 'Administrator System' };
-      localStorage.setItem('kl_user_session', JSON.stringify(adminUser));
+      localStorage.setItem('kl_admin_session', JSON.stringify(adminUser));
       onLoginSuccess(adminUser);
-      setLoading(false);
-      return;
-    }
-
-    const { data: branchAuth, error } = await supabase
-      .from('kl_branch_access')
-      .select('*, kl_branches(branch_name)')
-      .eq('access_code', accessCode.trim().toUpperCase())
-      .eq('pin_code', pinCode.trim())
-      .maybeSingle();
-
-    setLoading(false);
-
-    if (error || !branchAuth) {
-      setErrorMsg('❌ Kode Login atau PIN Cabang Salah!');
     } else {
-      const branchUser = {
-        role: 'branch',
-        branch_id: branchAuth.branch_id,
-        branch_name: branchAuth.kl_branches?.branch_name || 'Cabang',
-        access_code: branchAuth.access_code
-      };
-      localStorage.setItem('kl_user_session', JSON.stringify(branchUser));
-      onLoginSuccess(branchUser);
+      setErrorMsg('❌ Username atau Password Admin salah!');
     }
   };
 
@@ -855,32 +754,31 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div className={`w-full max-w-md p-6 rounded-3xl border shadow-2xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2]'}`}>
         <div className="text-center mb-6">
-          <span className="text-4xl">🔑</span>
-          <h3 className="font-bold text-lg mt-2">Login Akses Cabang & Admin</h3>
-          <p className="text-xs opacity-70">Kode Cabang (misal: AZKO-001) / ADMIN & PIN</p>
+          <span className="text-4xl">🔐</span>
+          <h3 className="font-bold text-lg mt-2">Login Khusus Admin Operasional</h3>
+          <p className="text-xs opacity-70">Masukkan Akun Administrator System</p>
         </div>
 
-        <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
           <div>
-            <label className="block font-bold mb-1">Kode Login / Cabang:</label>
+            <label className="block font-bold mb-1">Username Admin:</label>
             <input
               type="text"
-              placeholder="Contoh: AZKO-001 atau ADMIN"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value)}
-              className={`w-full p-3 rounded-xl border font-mono font-bold uppercase ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
+              placeholder="ADMIN"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={`w-full p-3 rounded-xl border font-mono font-bold focus:outline-none uppercase ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
             />
           </div>
 
           <div>
-            <label className="block font-bold mb-1">PIN Kode (6 Digit):</label>
+            <label className="block font-bold mb-1">Password Admin:</label>
             <input
               type="password"
-              maxLength="6"
-              placeholder="******"
-              value={pinCode}
-              onChange={(e) => setPinCode(e.target.value)}
-              className={`w-full p-3 rounded-xl border font-mono font-bold text-center tracking-widest ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
+              placeholder="123456"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={`w-full p-3 rounded-xl border font-mono font-bold text-center tracking-widest focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
             />
           </div>
 
@@ -888,8 +786,8 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
 
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl font-bold border">Batal</button>
-            <button type="submit" disabled={loading} className="flex-1 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
-              {loading ? 'Validasi...' : 'Masuk / Login 🚀'}
+            <button type="submit" className="flex-1 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
+              Masuk Dashboard Admin 🚀
             </button>
           </div>
         </form>
@@ -898,17 +796,24 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
   );
 }
 
+/* =========================================================
+   KOMPONEN UTAMA (APP)
+   ========================================================= */
 export default function App() {
   const [activeTab, setActiveTab] = useState('kawan_lama');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [spkList, setSpkList] = useState([]);
   
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('kl_user_session');
+  // DILENGKAPI DETEKSI LINK PARAMETER MODE CABANG VS ADMIN
+  const searchParams = new URLSearchParams(window.location.search);
+  const isBranchMode = searchParams.get('mode') === 'cabang';
+
+  const [currentAdmin, setCurrentAdmin] = useState(() => {
+    const saved = localStorage.getItem('kl_admin_session');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
 
   useEffect(() => {
     fetchSpkData();
@@ -927,13 +832,14 @@ export default function App() {
     });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('kl_user_session');
-    setCurrentUser(null);
+  const handleAdminLogout = () => {
+    localStorage.removeItem('kl_admin_session');
+    setCurrentAdmin(null);
     setActiveTab('kawan_lama');
   };
 
-  const availableTabs = currentUser?.role === 'branch' 
+  // PEMBATASAN HALAMAN / LINK AKSEBILITAS
+  const availableTabs = isBranchMode 
     ? ['kawan_lama'] 
     : ['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'];
 
@@ -941,44 +847,59 @@ export default function App() {
     <div className={`min-h-screen p-6 font-sans antialiased transition-colors ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-gradient-to-br from-[#FBF9F5] to-[#E5E0D5] text-[#2F3E3B]'}`}>
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header Utama */}
+        {/* Header */}
         <div className={`flex flex-col sm:flex-row justify-between items-center p-5 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
           <div>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>WEB-TRACK MONITORING</h1>
-            <p className="text-xs opacity-70">{currentUser ? `Akses: ${currentUser.role === 'admin' ? 'ADMINISTRATOR' : currentUser.branch_name}` : 'Sistem Pelacak Progress Produksi'}</p>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
+              {isBranchMode ? 'FORM INPUT CABANG - KAWAN LAMA' : 'WEB-TRACK MONITORING ADMIN'}
+            </h1>
+            <p className="text-xs opacity-70">
+              {isBranchMode 
+                ? 'Portal Resmi Pengisian Barang Cabang' 
+                : currentAdmin ? `Akses: ${currentAdmin.name}` : 'Akses Admin Operasional Internal'}
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button onClick={toggleTheme} className="px-3 py-2 rounded-xl text-xs font-semibold border">
               {isDarkMode ? '☀️ Terang' : '🌙 Gelap'}
             </button>
-            {currentUser ? (
-              <button onClick={handleLogout} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white">🔒 Keluar ({currentUser.role === 'admin' ? 'Admin' : 'Cabang'})</button>
-            ) : (
-              <button onClick={() => setShowLoginModal(true)} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white">🔑 Login Cabang / Admin</button>
+
+            {!isBranchMode && (
+              currentAdmin ? (
+                <button onClick={handleAdminLogout} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white">
+                  🔒 Logout Admin
+                </button>
+              ) : (
+                <button onClick={() => setShowAdminLoginModal(true)} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white">
+                  🔑 Login Admin
+                </button>
+              )
             )}
           </div>
         </div>
 
-        {/* Tab Navigasi */}
-        <div className="flex gap-2 overflow-x-auto border-b pb-2">
-          {availableTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize whitespace-nowrap ${
-                activeTab === tab 
-                  ? 'bg-blue-600 text-white shadow-sm' 
-                  : isDarkMode ? 'bg-neutral-800 text-neutral-400' : 'bg-white/70 text-[#4A5D58]'
-              }`}
-            >
-              {tab === 'label' ? '🏷️ Cetak Label & SJ' : tab === 'kawan_lama' ? '🏢 Project Kawan Lama' : tab}
-            </button>
-          ))}
-        </div>
+        {/* Tab Navigasi (Hanya Tampil Jika Bukan Link Cabang) */}
+        {!isBranchMode && (
+          <div className="flex gap-2 overflow-x-auto border-b pb-2">
+            {availableTabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize whitespace-nowrap ${
+                  activeTab === tab 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-400' : 'bg-white/70 text-[#4A5D58]'
+                }`}
+              >
+                {tab === 'label' ? '🏷️ Cetak Label & SJ' : tab === 'kawan_lama' ? '🏢 Project Kawan Lama' : tab}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Dashboard Circular Gauge */}
-        {activeTab === 'dashboard' && (
+        {/* Dashboard Circular Gauge (Admin) */}
+        {!isBranchMode && activeTab === 'dashboard' && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <CircularGaugeCard title="Completion Rate" percent={75} color="#2D5A27" detailText="Overall Progress" />
             <CircularGaugeCard title="Total Target Order" percent={100} color="#4F46E5" detailText="Data SPK" />
@@ -987,18 +908,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab Kawan Lama */}
-        {activeTab === 'kawan_lama' && (
-          <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentUser} />
+        {/* Tab Kawan Lama (Tampil untuk Link Cabang & Link Admin) */}
+        {(isBranchMode || activeTab === 'kawan_lama') && (
+          <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={isBranchMode} />
         )}
 
-        {/* Tab Label Generator */}
-        {activeTab === 'label' && (
+        {/* Tab Label Generator (Admin) */}
+        {!isBranchMode && activeTab === 'label' && (
           <LabelGeneratorTab isDarkMode={isDarkMode} />
         )}
 
-        {/* Tabel Data SPK untuk Admin/Operator */}
-        {activeTab !== 'label' && activeTab !== 'kawan_lama' && (
+        {/* Tabel Data SPK Operasional (Admin) */}
+        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
           <div className={`overflow-x-auto rounded-2xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'}`}>
             <table className="w-full text-left text-xs">
               <thead className={isDarkMode ? 'bg-neutral-800 text-neutral-300' : 'bg-[#EFECE6] text-[#3D4F4B]'}>
@@ -1029,14 +950,14 @@ export default function App() {
 
       </div>
 
-      {/* Modal Login */}
-      <LoginModal
-        isOpen={showLoginModal}
+      {/* Modal Login Admin */}
+      <AdminLoginModal
+        isOpen={showAdminLoginModal}
         isDarkMode={isDarkMode}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          setShowLoginModal(false);
+        onClose={() => setShowAdminLoginModal(false)}
+        onLoginSuccess={(admin) => {
+          setCurrentAdmin(admin);
+          setShowAdminLoginModal(false);
         }}
       />
     </div>
