@@ -411,6 +411,7 @@ function LabelGeneratorTab({ isDarkMode }) {
     const pagesHtml = itemsToPrint.map((item) => {
       return `
         <div class="sj-page">
+          <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
               ${renderHeaderLogoHtml()}
@@ -418,6 +419,7 @@ function LabelGeneratorTab({ isDarkMode }) {
             <div class="sj-title">Tanda Terima</div>
           </div>
 
+          <!-- Info Boxes Header -->
           <div class="info-row">
             <div class="info-box left-box">
               <div class="info-line">Kepada Yth :</div>
@@ -449,6 +451,7 @@ function LabelGeneratorTab({ isDarkMode }) {
             </div>
           </div>
 
+          <!-- Main Table Detail Barang -->
           <table class="item-grid-table">
             <thead>
               <tr>
@@ -477,6 +480,7 @@ function LabelGeneratorTab({ isDarkMode }) {
             </tfoot>
           </table>
 
+          <!-- Signature Box Bottom -->
           <div class="signature-row">
             <div class="sig-box">PENGIRIM</div>
             <div class="sig-box">PENERIMA</div>
@@ -498,9 +502,11 @@ function LabelGeneratorTab({ isDarkMode }) {
           .font-normal { font-weight: normal; }
           .text-center { text-align: center; }
           
+          /* Top Header */
           .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
           .sj-title { font-size: 26px; font-weight: bold; text-align: right; }
 
+          /* Info Rows */
           .info-row { display: flex; gap: 15px; margin-bottom: 10px; }
           .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; }
           .left-box { flex: 1; height: 75px; }
@@ -513,11 +519,13 @@ function LabelGeneratorTab({ isDarkMode }) {
           .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; }
           .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; }
 
+          /* Grid Table */
           .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; }
           .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; }
           .item-grid-table th { text-align: center; background: #f8f8f8; }
           .item-grid-table tfoot td { background: #f8f8f8; }
 
+          /* Signatures */
           .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; }
           .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; }
 
@@ -826,7 +834,6 @@ export default function App() {
     }
   };
 
-  // OTOMATIS SINKRONKAN CHECKBOX SPK DENGAN PANEL FINISHING
   const handleToggleCheck = (id) => {
     setSelectedSpkIds((prev) => {
       const isExist = prev.includes(id);
@@ -1184,7 +1191,20 @@ export default function App() {
     }
   };
 
-  // FUNGSI UPDATE QTY DENGAN VALIDASI BERANTAI DAN ALERT PRESISI
+  // UPLOAD PACKING PHYSICAL VISUAL IMAGE
+  const handleUploadPackingVisualImage = async (e, item) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64Url = evt.target.result;
+      handleUpdateField(item.id, { packing_visual_url: base64Url });
+      alert(`✅ Foto paking untuk SPK ${item.no_spk} berhasil diunggah!`);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
     const val = Number(value) || 0;
 
@@ -1196,7 +1216,6 @@ export default function App() {
     handleUpdateField(id, { [field]: val });
   };
 
-  // HANDLER FINISHING LENGKAP DENGAN SINKRONISASI REALTIME KE STATE SPKLIST
   const handleSubmitFinishing = async (e) => {
     e.preventDefault();
     const activeItem = spkList.find((s) => String(s.id) === String(selectedSpkId));
@@ -1205,9 +1224,8 @@ export default function App() {
     const { finishing_type, sub_vendor_name, qty_finish_sub_out, qty_finish } = finishingForm;
 
     const outQty = Number(qty_finish_sub_out) || 0;
-    const backQty = Number(qty_finish) || 0;
+    let backQty = Number(qty_finish) || 0;
 
-    // KALKULASI BATASAN TERHADAP QTY PRINT (JIKA PRINT KOSONG, GUNAKAN QTY ORDER)
     const maxFinishingAllowed = Number(activeItem.qty_print > 0 ? activeItem.qty_print : activeItem.qty_order || 0);
 
     if (finishing_type === 'sub') {
@@ -1226,7 +1244,7 @@ export default function App() {
     } else {
       if (backQty > maxFinishingAllowed) {
         alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
-        return;
+        backQty = maxFinishingAllowed;
       }
     }
 
@@ -1237,7 +1255,6 @@ export default function App() {
       qty_finish: backQty,
     };
 
-    // UPDATE DULU SECARA INSTAN DI MEMORI BROWSER (STATE) DULUAN AGAR TABEL LANGSUNG UPDATE
     setSpkList((prev) =>
       prev.map((item) => (item.id === activeItem.id ? { ...item, ...payload } : item))
     );
@@ -1245,7 +1262,7 @@ export default function App() {
     const { error } = await supabase.from('spk_data').update(payload).eq('id', activeItem.id);
     if (error) {
       alert('Gagal menyimpan data finishing: ' + error.message);
-      fetchSpkData(); // Rollback jika DB error
+      fetchSpkData();
     } else {
       alert(`✅ Data Finishing SPK ${activeItem.no_spk} (${activeItem.client}) berhasil disimpan! Total Selesai: ${backQty} pcs.`);
     }
@@ -1761,6 +1778,7 @@ export default function App() {
                   <th className="p-4">Print</th>
                   <th className="p-4">Finish</th>
                   <th className="p-4">Pack</th>
+                  {activeTab === 'paking' && <th className="p-4">Visual Image Paking</th>}
                   <th className="p-4">QC Paking</th>
                   <th className="p-4">QC Checker</th>
                   <th className="p-4">QC Deliver</th>
@@ -1896,6 +1914,34 @@ export default function App() {
                           </div>
                         )}
                       </td>
+
+                      {/* KOLOM VISUAL IMAGE KHUSUS TAB PAKING */}
+                      {activeTab === 'paking' && (
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            {item.packing_visual_url ? (
+                              <a href={item.packing_visual_url} target="_blank" rel="noreferrer">
+                                <img
+                                  src={item.packing_visual_url}
+                                  alt="Hasil Paking"
+                                  className="w-12 h-10 object-cover rounded border border-stone-300 dark:border-neutral-700 shadow-sm"
+                                />
+                              </a>
+                            ) : (
+                              <span className="text-[10px] opacity-50">[ Belum ada ]</span>
+                            )}
+                            <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold transition-all">
+                              Upload
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleUploadPackingVisualImage(e, item)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </td>
+                      )}
 
                       {/* QC Paking */}
                       <td className="p-4">
