@@ -1202,6 +1202,54 @@ export default function App() {
     }
   };
 
+  // FUNGSI GENERATE / EXPORT SELURUH DATA KE FILE EXCEL (.XLSX)
+  const handleExportAllToExcel = () => {
+    if (spkList.length === 0) {
+      alert('⚠️ Tidak ada data untuk diexport!');
+      return;
+    }
+
+    const exportRows = spkList.map((item) => {
+      const pPrint = getPercent(item.qty_print, item.qty_order);
+      const pFinish = getPercent(item.qty_finish, item.qty_order);
+      const pPack = getPercent(item.qty_pack, item.qty_order);
+      const pShip = getPercent(item.qty_ship, item.qty_order);
+      const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
+
+      return {
+        'NO SPK': item.no_spk || '-',
+        'NO PO': item.po_number || '-',
+        'NO SJ': item.no_sj || '-',
+        'CLIENT': item.client || '-',
+        'BRAND / PROJECT': item.project || '-',
+        'BAHAN / MEDIA': item.bahan || '-',
+        'UKURAN': item.ukuran || '-',
+        'QTY ORDER (PCS)': Number(item.qty_order || 0),
+        'QTY PRINT (PCS)': Number(item.qty_print || 0),
+        'PROGRESS PRINT (%)': `${pPrint}%`,
+        'TIPE FINISHING': item.finishing_type || 'inhouse',
+        'VENDOR SUB': item.sub_vendor_name || '-',
+        'QTY FINISHING (PCS)': Number(item.qty_finish || 0),
+        'PROGRESS FINISHING (%)': `${pFinish}%`,
+        'QTY PACK (PCS)': Number(item.qty_pack || 0),
+        'PROGRESS PACK (%)': `${pPack}%`,
+        'QC PAKING': item.qc_paking || '-',
+        'QC CHECKER': item.qc_checker || '-',
+        'QC DELIVER': item.qc_deliver || '-',
+        'QTY SHIP (PCS)': Number(item.qty_ship || 0),
+        'PROGRESS SHIP (%)': `${pShip}%`,
+        'TOTAL AVG PROGRESS (%)': `${totalAvg}%`
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "SPK_WebTrack_All");
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Report_WebTrack_Monitoring_${dateStr}.xlsx`);
+  };
+
   // UPLOAD PACKING PHYSICAL VISUAL IMAGE DENGAN SAFE LOCAL STATE FIRST
   const handleUploadPackingVisualImage = async (e, item) => {
     const file = e.target.files[0];
@@ -1508,20 +1556,30 @@ export default function App() {
               />
             </div>
 
-            <div className={`p-3 rounded-2xl border flex items-center gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'}`}>
-              <span className="text-sm">🔍</span>
-              <input
-                type="text"
-                placeholder="Cari berdasarkan No SPK, nama Klient, atau Store Name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full text-xs bg-transparent focus:outline-none ${isDarkMode ? 'text-white' : 'text-[#2F3E3B]'}`}
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="text-xs opacity-60 hover:opacity-100">
-                  ✕ Clear
-                </button>
-              )}
+            {/* BARIS KONTROL SEARCH & EXCEL EXPORT DASHBOARD */}
+            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'}`}>
+              <div className="flex items-center gap-2 flex-1 w-full">
+                <span className="text-sm">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan No SPK, nama Klient, atau Store Name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`w-full text-xs bg-transparent focus:outline-none ${isDarkMode ? 'text-white' : 'text-[#2F3E3B]'}`}
+                />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} className="text-xs opacity-60 hover:opacity-100">
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={handleExportAllToExcel}
+                className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap"
+              >
+                <span>📊 Export Semua Data ke Excel (.xlsx)</span>
+              </button>
             </div>
           </div>
         )}
