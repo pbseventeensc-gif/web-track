@@ -101,6 +101,282 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   );
 }
 
+/* =========================================================
+   KOMPONEN TAB BARU: PROJECT KAWAN LAMA
+   ========================================================= */
+function KawanLamaTab({ isDarkMode }) {
+  const [branches, setBranches] = useState([]);
+  const [masterItems, setMasterItems] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [quantities, setQuantities] = useState({});
+  const [orderStatus, setOrderStatus] = useState('DRAFT');
+  const [loading, setLoading] = useState(false);
+  const [activeOrder, setActiveOrder] = useState(null);
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
+
+  const fetchMasterData = async () => {
+    setLoading(true);
+    // Fetch 103 Cabang
+    const { data: bData, error: bErr } = await supabase.from('kl_branches').select('*').order('branch_name');
+    if (bData) setBranches(bData);
+
+    // Fetch 70 Master Items
+    const { data: iData, error: iErr } = await supabase.from('kl_master_items').select('*').order('id');
+    if (iData) setMasterItems(iData);
+
+    setLoading(false);
+  };
+
+  const handleBranchChange = async (branchId) => {
+    setSelectedBranch(branchId);
+    if (!branchId) {
+      setQuantities({});
+      setOrderStatus('DRAFT');
+      setActiveOrder(null);
+      return;
+    }
+
+    setLoading(true);
+    // Cek apakah cabang ini sudah punya order di Supabase
+    const { data: orderData } = await supabase
+      .from('kl_orders')
+      .select('*, kl_order_items(*)')
+      .eq('branch_id', branchId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (orderData) {
+      setActiveOrder(orderData);
+      setOrderStatus(orderData.status);
+
+      // Map item yang pernah dipilih
+      let initialQty = {};
+      if (orderData.kl_order_items) {
+        orderData.kl_order_items.forEach(item => {
+          initialQty[item.item_id] = item.qty;
+        });
+      }
+      setQuantities(initialQty);
+    } else {
+      setActiveOrder(null);
+      setOrderStatus('DRAFT');
+      setQuantities({});
+    }
+    setLoading(false);
+  };
+
+  const handleQtyChange = (itemId, val) => {
+    setQuantities(prev => ({
+      ...prev,
+      [itemId]: Number(val) || 0
+    }));
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!selectedBranch) return alert('⚠️ Silakan pilih kantor cabang terlebih dahulu!');
+
+    // Filter hanya item yang dipilih (Qty > 0)
+    const itemsToInsert = masterItems
+      .filter(item => (quantities[item.id] || 0) > 0)
+      .map(item => ({
+        item_id: item.id,
+        qty: quantities[item.id],
+        subtotal: quantities[item.id] * (item.price || 0)
+      }));
+
+    if (itemsToInsert.length === 0) {
+      return alert('⚠️ Silakan isi Qty minimal pada 1 item!');
+    }
+
+    setLoading(true);
+
+    // 1. Buat Header Transaksi (kl_orders)
+    const { data: order, error: orderErr } = await supabase
+      .from('kl_orders')
+      .insert([{
+        project_name: 'PROMO TEMATIK AGUSTUS',
+        branch_id: selectedBranch,
+        total_budget: 2500000,
+        status: 'SUBMITTED'
+      }])
+      .select()
+      .single();
+
+    if (orderErr) {
+      setLoading(false);
+      return alert('❌ Gagal Submit Order: ' + orderErr.message);
+    }
+
+    // 2. Buat Detail Item (kl_order_items) -> HANYA simpan Qty > 0
+    const detailPayload = itemsToInsert.map(item => ({
+      order_id: order.id,
+      item_id: item.item_id,
+      qty: item.qty,
+      subtotal: item.subtotal
+    }));
+
+    const { error: itemErr } = await supabase.from('kl_order_items').insert(detailPayload);
+    setLoading(false);
+
+    if (itemErr) {
+      alert('❌ Gagal menyimpan detail item: ' + itemErr.message);
+    } else {
+      alert('✅ Order berhasil di-submit dan dikunci! Hanya item terpilih yang disimpan.');
+      setOrderStatus('SUBMITTED');
+      setActiveOrder(order);
+    }
+  };
+
+  const handleRequestRevision = async () => {
+    if (!activeOrder) return;
+    setLoading(true);
+
+    const { error } = await supabase
+      .from('kl_orders')
+      .update({ status: 'REVISION_REQUESTED' })
+      .eq('id', activeOrder.id);
+
+    setLoading(false);
+
+    if (error) {
+      alert('Gagal mengirimkan permohonan revisi: ' + error.message);
+    } else {
+      alert('✅ Permohonan revisi telah dikirim ke Admin!');
+      setOrderStatus('REVISION_REQUESTED');
+    }
+  };
+
+  const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
+
+  return (
+    <div className={`p-5 rounded-2xl border space-y-4 shadow-sm ${
+      isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-[#D8D2C2]'
+    }`}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 gap-3 border-stone-200 dark:border-neutral-700">
+        <div>
+          <h3 className="font-bold text-base flex items-center gap-2">
+            <span>🏢</span> Input Form Cabang - Project Kawan Lama
+          </h3>
+          <p className="text-xs opacity-70">Pengisian master item dinamis (Hanya item terisi yang disimpan ke database)</p>
+        </div>
+
+        {/* Status Badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold">Status:</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+            orderStatus === 'SUBMITTED' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+            orderStatus === 'REVISION_REQUESTED' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' :
+            orderStatus === 'REVISION_ALLOWED' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' :
+            'bg-stone-200 text-stone-800 dark:bg-neutral-700 dark:text-neutral-300'
+          }`}>
+            {orderStatus}
+          </span>
+        </div>
+      </div>
+
+      {/* Select Box Cabang */}
+      <div className="max-w-sm space-y-1">
+        <label className="block text-xs font-bold opacity-80">Pilih Kantor Cabang (103 Cabang):</label>
+        <select
+          value={selectedBranch}
+          onChange={(e) => handleBranchChange(e.target.value)}
+          className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
+            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+          }`}
+        >
+          <option value="">-- Pilih Cabang --</option>
+          {branches.map(b => (
+            <option key={b.id} value={b.id}>{b.branch_name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Tabel Master Items */}
+      <div className={`overflow-x-auto rounded-xl border shadow-sm ${
+        isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
+      }`}>
+        <table className="w-full text-left text-xs">
+          <thead className={`font-bold border-b ${
+            isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+          }`}>
+            <tr>
+              <th className="p-3 w-12 text-center">No</th>
+              <th className="p-3">Nama Item</th>
+              <th className="p-3">Material / Bahan</th>
+              <th className="p-3">Ukuran</th>
+              <th className="p-3">Harga Per PC</th>
+              <th className="p-3 w-28 text-center">Qty Input</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+            {masterItems.map((item, index) => (
+              <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}>
+                <td className="p-3 text-center opacity-60">{index + 1}</td>
+                <td className="p-3 font-bold">{item.item_name}</td>
+                <td className="p-3">{item.material}</td>
+                <td className="p-3">{item.size}</td>
+                <td className="p-3 font-semibold">Rp{Number(item.price || 0).toLocaleString()}</td>
+                <td className="p-3">
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={isFormLocked || !selectedBranch}
+                    value={quantities[item.id] || ''}
+                    onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                    placeholder="0"
+                    className={`w-full p-1.5 border rounded-lg text-xs text-center font-bold focus:outline-none ${
+                      isFormLocked || !selectedBranch
+                        ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60'
+                        : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD]'
+                    }`}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tombol Aksi */}
+      <div className="flex justify-end items-center gap-3 pt-2">
+        {orderStatus === 'SUBMITTED' && (
+          <button
+            onClick={handleRequestRevision}
+            disabled={loading}
+            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all active:scale-95"
+          >
+            🔒 Form Dikunci - Klik Minta ACC Revisi Admin
+          </button>
+        )}
+
+        {orderStatus === 'REVISION_REQUESTED' && (
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+            ⏳ Permohonan revisi telah dikirim. Menunggu persetujuan Admin...
+          </span>
+        )}
+
+        {(orderStatus === 'DRAFT' || orderStatus === 'REVISION_ALLOWED') && (
+          <button
+            onClick={handleSubmitOrder}
+            disabled={loading || !selectedBranch}
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-all active:scale-95 ${
+              !selectedBranch || loading
+                ? 'bg-stone-400 cursor-not-allowed'
+                : 'bg-emerald-600 hover:bg-emerald-500'
+            }`}
+          >
+            {loading ? 'Submitting...' : '🚀 Submit Order & Kunci Data'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -1500,9 +1776,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs (Termasuk Tab Baru: Project Kawan Lama) */}
         <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
-          {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label'].map((tab) => (
+          {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1516,12 +1792,21 @@ export default function App() {
                   : 'bg-white/70 text-[#4A5D58] hover:bg-white border border-[#D8D2C2]/70'
               }`}
             >
-              {tab === 'label' ? '🏷️ Cetak Label & SJ' : tab}
+              {tab === 'label' 
+                ? '🏷️ Cetak Label & SJ' 
+                : tab === 'kawan_lama' 
+                ? '🏢 Project Kawan Lama' 
+                : tab}
             </button>
           ))}
         </div>
 
-        {/* TAB 6: FITUR CETAK LABEL & SURAT JALAN BARU */}
+        {/* TAB BARU: PROJECT KAWAN LAMA */}
+        {activeTab === 'kawan_lama' && (
+          <KawanLamaTab isDarkMode={isDarkMode} />
+        )}
+
+        {/* TAB 6: FITUR CETAK LABEL & SURAT JALAN */}
         {activeTab === 'label' && (
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
@@ -1585,7 +1870,7 @@ export default function App() {
         )}
 
         {/* Baris Tombol Aksi Batch Print (Merge & Print) */}
-        {activeTab !== 'label' && (
+        {activeTab !== 'label' && activeTab !== 'kawan_lama' && (
           <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${
             isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'
           }`}>
@@ -1828,7 +2113,7 @@ export default function App() {
         )}
 
         {/* Tabel Data Utama */}
-        {activeTab !== 'label' && (
+        {activeTab !== 'label' && activeTab !== 'kawan_lama' && (
           <div
             className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${
               isDarkMode
