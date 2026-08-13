@@ -103,7 +103,6 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 
 /* =========================================================
    KOMPONEN TAB: PROJECT KAWAN LAMA
-   (DENGAN VALIDASI STRICT OVER-BUDGET & ACTION BUTTONS)
    ========================================================= */
 function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
@@ -193,7 +192,7 @@ function KawanLamaTab({ isDarkMode }) {
 
   const remainingBudget = (Number(customBudget) || 0) - totalUsedBudget;
 
-  // HANDLER EDIT QTY DENGAN VALIDASI STRICT BUDGET
+  // HANDLER EDIT QTY DENGAN NOTIFIKASI BARU
   const handleQtyChange = (itemId, val, itemPrice) => {
     const newQty = Number(val) || 0;
     const oldQty = quantities[itemId] || 0;
@@ -203,9 +202,9 @@ function KawanLamaTab({ isDarkMode }) {
     const estimatedUsedBudget = totalUsedBudget - (oldQty * price) + (newQty * price);
     const maxBudget = Number(customBudget) || 0;
 
-    // VALIDASI: MENCEGAH INPUT JIKA MELEBIHI BUDGET
+    // VALIDASI: NOTIFIKASI DIUBAH SESUAI PERMINTAAN
     if (estimatedUsedBudget > maxBudget) {
-      alert(`❌ Gagal: Qty tidak bisa ditambahkan!\nTotal belanja (Rp${estimatedUsedBudget.toLocaleString()}) melebihi Total Budget (Rp${maxBudget.toLocaleString()}).`);
+      alert(`❌ Qty tidak bisa ditambahkan, melebihi total Budget`);
       return; // Batalkan input
     }
 
@@ -220,7 +219,7 @@ function KawanLamaTab({ isDarkMode }) {
     if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
 
     if (remainingBudget < 0) {
-      return alert('❌ Gagal: Total belanja melebihi budget! Kurangi jumlah Qty item sebelum submit.');
+      return alert('❌ Qty tidak bisa ditambahkan, melebihi total Budget');
     }
 
     const itemsToInsert = masterItems
