@@ -102,12 +102,20 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 }
 
 /* =========================================================
-   KOMPONEN TAB BARU: PROJECT KAWAN LAMA
+   KOMPONEN TAB: PROJECT KAWAN LAMA (AUTO-SEARCH + URUT A-Z)
    ========================================================= */
 function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
+  
+  // State Auto Search Cabang
+  const [branchSearch, setBranchSearch] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // State Urutan A-Z atau Z-A
+  const [sortAscending, setSortAscending] = useState(true);
+
   const [quantities, setQuantities] = useState({});
   const [orderStatus, setOrderStatus] = useState('DRAFT');
   const [loading, setLoading] = useState(false);
@@ -119,41 +127,36 @@ function KawanLamaTab({ isDarkMode }) {
 
   const fetchMasterData = async () => {
     setLoading(true);
-    // Fetch 103 Cabang
-    const { data: bData, error: bErr } = await supabase.from('kl_branches').select('*').order('branch_name');
+    // Fetch 103 Cabang (Urut Nama Cabang)
+    const { data: bData } = await supabase.from('kl_branches').select('*').order('branch_name', { ascending: true });
     if (bData) setBranches(bData);
 
-    // Fetch 70 Master Items
-    const { data: iData, error: iErr } = await supabase.from('kl_master_items').select('*').order('id');
+    // Fetch 70 Master Items (Urut Nama Item A-Z)
+    const { data: iData } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
     if (iData) setMasterItems(iData);
 
     setLoading(false);
   };
 
-  const handleBranchChange = async (branchId) => {
-    setSelectedBranch(branchId);
-    if (!branchId) {
-      setQuantities({});
-      setOrderStatus('DRAFT');
-      setActiveOrder(null);
-      return;
-    }
+  const handleSelectBranchItem = async (branch) => {
+    setSelectedBranch(branch.id);
+    setBranchSearch(branch.branch_name);
+    setIsDropdownOpen(false);
 
     setLoading(true);
-    // Cek apakah cabang ini sudah punya order di Supabase
+    // Cek apakah cabang ini sudah memiliki order di Supabase
     const { data: orderData } = await supabase
       .from('kl_orders')
       .select('*, kl_order_items(*)')
-      .eq('branch_id', branchId)
+      .eq('branch_id', branch.id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (orderData) {
       setActiveOrder(orderData);
       setOrderStatus(orderData.status);
 
-      // Map item yang pernah dipilih
       let initialQty = {};
       if (orderData.kl_order_items) {
         orderData.kl_order_items.forEach(item => {
@@ -179,7 +182,6 @@ function KawanLamaTab({ isDarkMode }) {
   const handleSubmitOrder = async () => {
     if (!selectedBranch) return alert('⚠️ Silakan pilih kantor cabang terlebih dahulu!');
 
-    // Filter hanya item yang dipilih (Qty > 0)
     const itemsToInsert = masterItems
       .filter(item => (quantities[item.id] || 0) > 0)
       .map(item => ({
@@ -194,7 +196,6 @@ function KawanLamaTab({ isDarkMode }) {
 
     setLoading(true);
 
-    // 1. Buat Header Transaksi (kl_orders)
     const { data: order, error: orderErr } = await supabase
       .from('kl_orders')
       .insert([{
@@ -211,7 +212,6 @@ function KawanLamaTab({ isDarkMode }) {
       return alert('❌ Gagal Submit Order: ' + orderErr.message);
     }
 
-    // 2. Buat Detail Item (kl_order_items) -> HANYA simpan Qty > 0
     const detailPayload = itemsToInsert.map(item => ({
       order_id: order.id,
       item_id: item.item_id,
@@ -225,7 +225,7 @@ function KawanLamaTab({ isDarkMode }) {
     if (itemErr) {
       alert('❌ Gagal menyimpan detail item: ' + itemErr.message);
     } else {
-      alert('✅ Order berhasil di-submit dan dikunci! Hanya item terpilih yang disimpan.');
+      alert('✅ Order berhasil di-submit dan dikunci!');
       setOrderStatus('SUBMITTED');
       setActiveOrder(order);
     }
@@ -251,6 +251,20 @@ function KawanLamaTab({ isDarkMode }) {
   };
 
   const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
+
+  // Filter Cabang berdasarkan ketikan user
+  const filteredBranches = branches.filter(b => 
+    b.branch_name.toLowerCase().includes(branchSearch.toLowerCase())
+  );
+
+  // Sorting Master Items berdasarkan Nama Item A-Z atau Z-A
+  const sortedMasterItems = [...masterItems].sort((a, b) => {
+    if (sortAscending) {
+      return a.item_name.localeCompare(b.item_name);
+    } else {
+      return b.item_name.localeCompare(a.item_name);
+    }
+  });
 
   return (
     <div className={`p-5 rounded-2xl border space-y-4 shadow-sm ${
@@ -278,24 +292,56 @@ function KawanLamaTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Select Box Cabang */}
-      <div className="max-w-sm space-y-1">
-        <label className="block text-xs font-bold opacity-80">Pilih Kantor Cabang (103 Cabang):</label>
-        <select
-          value={selectedBranch}
-          onChange={(e) => handleBranchChange(e.target.value)}
-          className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
-          }`}
-        >
-          <option value="">-- Pilih Cabang --</option>
-          {branches.map(b => (
-            <option key={b.id} value={b.id}>{b.branch_name}</option>
-          ))}
-        </select>
+      {/* AUTO SEARCH CABANG COMBOBOX */}
+      <div className="max-w-md space-y-1 relative">
+        <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang (103 Cabang):</label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Ketik nama cabang (contoh: Cibinong, Depok, MOI)..."
+            value={branchSearch}
+            disabled={isFormLocked}
+            onChange={(e) => {
+              setBranchSearch(e.target.value);
+              setSelectedBranch('');
+              setIsDropdownOpen(true);
+            }}
+            onFocus={() => setIsDropdownOpen(true)}
+            className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
+              isFormLocked 
+                ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
+                : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+            }`}
+          />
+
+          {/* Dropdown Hasil Pencarian */}
+          {isDropdownOpen && !isFormLocked && (
+            <div className={`absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border shadow-xl z-50 ${
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+            }`}>
+              {filteredBranches.length === 0 ? (
+                <div className="p-3 text-xs opacity-60 text-center">Cabang tidak ditemukan</div>
+              ) : (
+                filteredBranches.map((b) => (
+                  <div
+                    key={b.id}
+                    onClick={() => handleSelectBranchItem(b)}
+                    className={`p-2.5 text-xs font-semibold cursor-pointer border-b last:border-none transition-colors ${
+                      selectedBranch === b.id
+                        ? isDarkMode ? 'bg-indigo-900/60 font-bold' : 'bg-indigo-50 font-bold text-indigo-700'
+                        : isDarkMode ? 'hover:bg-neutral-800 border-neutral-800' : 'hover:bg-[#F8F6F0] border-stone-100'
+                    }`}
+                  >
+                    🏢 {b.branch_name}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Tabel Master Items */}
+      {/* Tabel Master Items (Dengan Pengurutan A-Z pada Nama Item) */}
       <div className={`overflow-x-auto rounded-xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
@@ -305,7 +351,21 @@ function KawanLamaTab({ isDarkMode }) {
           }`}>
             <tr>
               <th className="p-3 w-12 text-center">No</th>
-              <th className="p-3">Nama Item</th>
+              
+              {/* KOLOM NAMA ITEM DENGAN TOMBOL SORTING A-Z */}
+              <th 
+                className="p-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                onClick={() => setSortAscending(!sortAscending)}
+                title="Klik untuk mengubah urutan abjad"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Nama Item</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                    {sortAscending ? '🔤 A-Z 🠅' : '🔤 Z-A 🠇'}
+                  </span>
+                </div>
+              </th>
+
               <th className="p-3">Material / Bahan</th>
               <th className="p-3">Ukuran</th>
               <th className="p-3">Harga Per PC</th>
@@ -313,10 +373,10 @@ function KawanLamaTab({ isDarkMode }) {
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
-            {masterItems.map((item, index) => (
+            {sortedMasterItems.map((item, index) => (
               <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}>
                 <td className="p-3 text-center opacity-60">{index + 1}</td>
-                <td className="p-3 font-bold">{item.item_name}</td>
+                <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">{item.item_name}</td>
                 <td className="p-3">{item.material}</td>
                 <td className="p-3">{item.size}</td>
                 <td className="p-3 font-semibold">Rp{Number(item.price || 0).toLocaleString()}</td>
