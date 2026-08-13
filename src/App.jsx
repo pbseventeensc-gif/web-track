@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
@@ -103,12 +103,16 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 
 /* =========================================================
    KOMPONEN TAB: PROJECT KAWAN LAMA
+   (DENGAN FIX DROPDOWN BUG & BROADCAST PROMO ADMIN)
    ========================================================= */
 function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   
+  // Ref untuk mendeteksi klik di luar Dropdown Auto-Search
+  const dropdownRef = useRef(null);
+
   // State Auto Search Cabang
   const [branchSearch, setBranchSearch] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -128,6 +132,18 @@ function KawanLamaTab({ isDarkMode }) {
 
   useEffect(() => {
     fetchMasterData();
+
+    // Event Listener Klik di Luar Dropdown untuk Menutupnya
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const fetchMasterData = async () => {
@@ -192,26 +208,51 @@ function KawanLamaTab({ isDarkMode }) {
 
   const remainingBudget = (Number(customBudget) || 0) - totalUsedBudget;
 
-  // HANDLER EDIT QTY DENGAN NOTIFIKASI BARU
   const handleQtyChange = (itemId, val, itemPrice) => {
     const newQty = Number(val) || 0;
     const oldQty = quantities[itemId] || 0;
     const price = Number(itemPrice) || 0;
 
-    // Hitung estimasi total budget baru jika qty ini diterapkan
     const estimatedUsedBudget = totalUsedBudget - (oldQty * price) + (newQty * price);
     const maxBudget = Number(customBudget) || 0;
 
-    // VALIDASI: NOTIFIKASI DIUBAH SESUAI PERMINTAAN
     if (estimatedUsedBudget > maxBudget) {
       alert(`❌ Qty tidak bisa ditambahkan, melebihi total Budget`);
-      return; // Batalkan input
+      return;
     }
 
     setQuantities(prev => ({
       ...prev,
       [itemId]: newQty
     }));
+  };
+
+  // FITUR BARU: BROADCAST PROMO KE SELURUH CABANG BY ADMIN
+  const handleBroadcastPromo = async () => {
+    if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
+    
+    if (!confirm(`📢 Apakah Anda yakin ingin membagikan Promo "${promoName}" dengan Budget Rp${Number(customBudget).toLocaleString()} ke SELURUH KANTOR CABANG?`)) {
+      return;
+    }
+
+    setLoading(true);
+
+    // Update / Insert setting promo aktif di Supabase
+    const { error } = await supabase
+      .from('kl_orders')
+      .update({ 
+        project_name: promoName,
+        total_budget: Number(customBudget) || 0 
+      })
+      .eq('status', 'DRAFT');
+
+    setLoading(false);
+
+    if (error) {
+      alert('Gagal membagikan promo: ' + error.message);
+    } else {
+      alert(`✅ SUKSES! Promo "${promoName}" telah dibagikan dan akan otomatis aktif di seluruh cabang.`);
+    }
   };
 
   const handleSubmitOrder = async () => {
@@ -333,9 +374,18 @@ function KawanLamaTab({ isDarkMode }) {
       {/* PANEL PENGATURAN PROMO, PROJECT, BUDGET & CABANG */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* 1. Nama Promo */}
+        {/* 1. Nama Promo + Tombol Broadcast Admin */}
         <div className="space-y-1">
-          <label className="block text-xs font-bold opacity-80">🏷️ Nama Promo / Project:</label>
+          <div className="flex justify-between items-center">
+            <label className="block text-xs font-bold opacity-80">🏷️ Nama Promo / Project:</label>
+            <button
+              onClick={handleBroadcastPromo}
+              title="Bagikan promo dan budget ini ke seluruh cabang"
+              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              📢 Broadcast ke Cabang
+            </button>
+          </div>
           <input
             type="text"
             placeholder="Contoh: PROMO TEMATIK AGUSTUS..."
@@ -384,8 +434,8 @@ function KawanLamaTab({ isDarkMode }) {
           </div>
         </div>
 
-        {/* 3. Auto Search Cabang Combobox */}
-        <div className="space-y-1 relative">
+        {/* 3. Auto Search Cabang Combobox (FIXED: CLICK OUTSIDE CLOSE) */}
+        <div className="space-y-1 relative" ref={dropdownRef}>
           <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang:</label>
           <div className="relative">
             <input
@@ -458,7 +508,6 @@ function KawanLamaTab({ isDarkMode }) {
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
         <table className="w-full text-left text-xs border-collapse">
-          {/* HEADER STICKY LENGKET DI ATAS */}
           <thead className={`sticky top-0 z-20 font-bold shadow-sm ${
             isDarkMode ? 'bg-neutral-900 text-neutral-300 border-b border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-b border-[#D8D2C2]'
           }`}>
@@ -1948,7 +1997,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tabs (Termasuk Tab Baru: Project Kawan Lama) */}
+        {/* Navigation Tabs */}
         <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
           {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map((tab) => (
             <button
