@@ -16,19 +16,19 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
   const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
   return (
-    <div className="bg-white/80 dark:bg-neutral-800/80 p-5 rounded-3xl border border-[#D8D2C2] dark:border-neutral-700 flex flex-col items-center shadow-sm transition-all hover:scale-105">
-      <h4 className="text-[11px] font-bold uppercase tracking-wider opacity-70 mb-3">{title}</h4>
+    <div className="bg-white p-5 rounded-3xl border border-stone-200/80 flex flex-col items-center shadow-sm hover:shadow-md transition-all hover:scale-[1.02] dark:bg-neutral-800/80 dark:border-neutral-700">
+      <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:opacity-70 mb-3">{title}</h4>
       <div className="relative w-36 h-36 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="7" className="text-stone-200 dark:text-neutral-700 fill-none" />
+          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="7" className="text-stone-100 dark:text-neutral-700 fill-none" />
           <circle cx="40" cy="40" r="36" stroke={color} strokeWidth="7" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="fill-none transition-all duration-700 ease-out" />
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
-          <span className="text-2xl font-black">{percent}%</span>
-          <span className="text-[9px] font-bold opacity-60 uppercase">Progress</span>
+          <span className="text-2xl font-black text-stone-800 dark:text-neutral-100">{percent}%</span>
+          <span className="text-[9px] font-bold text-stone-400 uppercase">Progress</span>
         </div>
       </div>
-      <p className="text-xs font-bold mt-3 opacity-80">{detailText}</p>
+      <p className="text-xs font-bold mt-3 text-stone-600 dark:opacity-80">{detailText}</p>
     </div>
   );
 }
@@ -172,35 +172,35 @@ export default function App() {
   const displayedList = spkList.filter(item => (item.no_spk||'').toLowerCase().includes(searchTerm.toLowerCase()) || (item.project||'').toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-gradient-to-br from-[#FBF9F5] via-[#F3EFE6] to-[#E5E0D5] text-[#2F3E3B]'}`}>
+    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* HEADER UTAMA */}
-        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white/80 border-[#D8D2C2] backdrop-blur-md'} gap-4`}>
+        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
           <div>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
+            <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
               {isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING'}
             </h1>
-            <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
+            <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
               {isBranchMode ? 'Sistem Terpadu Portal Cabang' : 'Sistem Pelacak Progress Produksi & Pengiriman SPK'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={toggleTheme} className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-white hover:bg-stone-100 text-slate-700 border-[#D8D2C2]'}`}>
+            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
-            {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔑 Login Admin</button>)}
-            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null);}} className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
-            {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">📷 Scan QC Station</button>}
-            {!isBranchMode && <label className={`px-3.5 py-2 rounded-xl cursor-pointer text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${isDarkMode ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-[#6B8E85] hover:bg-[#57756D] text-white'}`}>📁 Upload SPK Excel<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
+            {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔑 Login Admin</button>)}
+            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null);}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
+            {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">📷 Scan QC Station</button>}
+            {!isBranchMode && <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">📁 Upload SPK Excel<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
           </div>
         </div>
 
         {/* TABS MENU */}
         {!isBranchMode && (
-          <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${activeTab === t ? (isDarkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#6B8E85] text-white shadow-sm') : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white/70 text-[#4A5D58] hover:bg-white border border-[#D8D2C2]/70')}`}>
+              <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm ${activeTab === t ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')}`}>
                 {t === 'label' ? '🏷️ Cetak Label & SJ' : t === 'kawan_lama' ? '🏢 Project Kawan Lama' : t}
               </button>
             ))}
@@ -217,7 +217,7 @@ export default function App() {
           </div>
         )}
 
-        {/* PANEL KONTROL FINISHING (Tampil saat tab finishing aktif) */}
+        {/* PANEL KONTROL FINISHING */}
         {!isBranchMode && activeTab === 'finishing' && (
           <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
         )}
