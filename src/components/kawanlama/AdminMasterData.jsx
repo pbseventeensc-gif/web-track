@@ -8,7 +8,10 @@ export default function AdminMasterData({ isDarkMode }) {
   useEffect(() => { fetchItems(); }, []);
 
   const fetchItems = async () => {
-    const { data } = await supabase.from('kl_master_items').select('*').order('id', { ascending: false });
+    const { data } = await supabase
+      .from('kl_master_items')
+      .select('*')
+      .order('item_name', { ascending: true }); // Diurutkan A-Z
     if (data) setItems(data);
   };
 
@@ -33,7 +36,7 @@ export default function AdminMasterData({ isDarkMode }) {
       </div>
 
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-        <h3 className="font-bold text-sm mb-3">Daftar Master Data Barang</h3>
+        <h3 className="font-bold text-sm mb-3">Daftar Master Data Barang (Urut A-Z)</h3>
         <table className="w-full text-xs">
           <thead className="border-b">
             <tr><th className="p-2 text-left">Nama Barang</th><th className="p-2 text-left">Material</th><th className="p-2 text-left">Ukuran</th></tr>
