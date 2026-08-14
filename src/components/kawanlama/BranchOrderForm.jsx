@@ -74,7 +74,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif */}
+      {/* Keterangan Promo Aktif (Tanpa Nominal Budget) */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
           Kampanye / Promo Aktif
@@ -83,7 +83,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         <p className="text-xs opacity-70 mt-1">{activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.'}</p>
       </div>
 
-      {/* Grid Input Order Cabang dengan Sticky Header */}
+      {/* Grid Input Order Cabang (Master Data Tampil Lengkap, Harga Di-hide, Hanya Input Qty) */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Form Permintaan / Order Logistik Cabang</h2>
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
