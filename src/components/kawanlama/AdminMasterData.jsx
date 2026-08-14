@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 
 export default function AdminMasterData({ isDarkMode }) {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({ item_name: '', material: '', size: '' });
+  const [form, setForm] = useState({ item_name: '', material: '', size: '', price: '' });
 
   useEffect(() => { fetchItems(); }, []);
 
@@ -11,46 +11,94 @@ export default function AdminMasterData({ isDarkMode }) {
     const { data } = await supabase
       .from('kl_master_items')
       .select('*')
-      .order('item_name', { ascending: true }); // Diurutkan A-Z
+      .order('item_name', { ascending: true });
     if (data) setItems(data);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.item_name) return alert('Nama barang wajib diisi!');
-    await supabase.from('kl_master_items').insert([form]);
-    setForm({ item_name: '', material: '', size: '' });
+    await supabase.from('kl_master_items').insert([{
+      item_name: form.item_name,
+      material: form.material,
+      size: form.size,
+      price: Number(form.price) || 0
+    }]);
+    setForm({ item_name: '', material: '', size: '', price: '' });
     fetchItems();
   };
 
+  const formatRupiah = (angka) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
+  };
+
   return (
-    <div className="space-y-4">
-      <div className={`p-5 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-        <h3 className="font-bold text-sm mb-3">➕ Tambah Master Barang Baru</h3>
-        <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-          <input type="text" placeholder="Nama Barang" value={form.item_name} onChange={e=>setForm({...form, item_name: e.target.value})} className="p-2.5 border rounded-xl dark:bg-neutral-900" />
-          <input type="text" placeholder="Material / Bahan" value={form.material} onChange={e=>setForm({...form, material: e.target.value})} className="p-2.5 border rounded-xl dark:bg-neutral-900" />
-          <input type="text" placeholder="Ukuran (Size)" value={form.size} onChange={e=>setForm({...form, size: e.target.value})} className="p-2.5 border rounded-xl dark:bg-neutral-900" />
-          <button type="submit" className="bg-blue-600 text-white font-bold rounded-xl py-2.5">Simpan Item</button>
+    <div className="space-y-6">
+      {/* Form Tambah Master */}
+      <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <h3 className="font-bold text-sm mb-4">➕ Tambah Master Barang Baru</h3>
+        <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+          <input 
+            type="text" 
+            placeholder="Nama Barang" 
+            value={form.item_name} 
+            onChange={e => setForm({...form, item_name: e.target.value})} 
+            className={`p-3 border rounded-xl font-semibold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+          />
+          <input 
+            type="text" 
+            placeholder="Material (Cth: Albatros Lam Doff)" 
+            value={form.material} 
+            onChange={e => setForm({...form, material: e.target.value})} 
+            className={`p-3 border rounded-xl focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+          />
+          <input 
+            type="text" 
+            placeholder="Ukuran (Cth: 59x84 cm)" 
+            value={form.size} 
+            onChange={e => setForm({...form, size: e.target.value})} 
+            className={`p-3 border rounded-xl focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+          />
+          <input 
+            type="number" 
+            placeholder="Harga Satuan (Rp)" 
+            value={form.price} 
+            onChange={e => setForm({...form, price: e.target.value})} 
+            className={`p-3 border rounded-xl focus:outline-none font-mono ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+          />
+          <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl py-3 transition-all active:scale-95 shadow-sm">
+            Simpan Barang
+          </button>
         </form>
       </div>
 
-      <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-        <h3 className="font-bold text-sm mb-3">Daftar Master Data Barang (Urut A-Z)</h3>
-        <table className="w-full text-xs">
-          <thead className="border-b">
-            <tr><th className="p-2 text-left">Nama Barang</th><th className="p-2 text-left">Material</th><th className="p-2 text-left">Ukuran</th></tr>
-          </thead>
-          <tbody>
-            {items.map(i => (
-              <tr key={i.id} className="border-b">
-                <td className="p-2 font-semibold">{i.item_name}</td>
-                <td className="p-2 opacity-80">{i.material || '-'}</td>
-                <td className="p-2 opacity-80">{i.size || '-'}</td>
+      {/* Tabel Master Data */}
+      <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <h3 className="font-bold text-sm mb-4">Daftar Master Data Barang (Urut A-Z)</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className={`border-b ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-200 text-stone-500'}`}>
+              <tr>
+                <th className="p-3 text-left w-1/3">Nama Barang</th>
+                <th className="p-3 text-left w-1/2">Material / Ukuran</th>
+                <th className="p-3 text-right">Harga Satuan</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
+              {items.map(i => (
+                <tr key={i.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
+                  <td className="p-3.5 font-bold">{i.item_name}</td>
+                  <td className="p-3.5 opacity-80 uppercase">
+                    {i.material || '-'}{i.size ? ` / ${i.size}` : ''}
+                  </td>
+                  <td className="p-3.5 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                    {formatRupiah(i.price)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
