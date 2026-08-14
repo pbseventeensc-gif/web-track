@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
 import MainTrackingTable from './components/MainTrackingTable';
+import FinishingPanel from './components/FinishingPanel';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 
 const STAFF_QC_LIST = [
@@ -216,6 +217,11 @@ export default function App() {
           </div>
         )}
 
+        {/* PANEL KONTROL FINISHING (Tampil saat tab finishing aktif) */}
+        {!isBranchMode && activeTab === 'finishing' && (
+          <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
+        )}
+
         {/* TAB KAWAN LAMA */}
         {(isBranchMode || activeTab === 'kawan_lama') && (
           <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
@@ -226,7 +232,7 @@ export default function App() {
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
-        {/* TRACKING TABLE FULL (Menggunakan Komponen Baru) */}
+        {/* TRACKING TABLE FULL */}
         {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
           <MainTrackingTable 
             isDarkMode={isDarkMode}
