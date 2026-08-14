@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [items, setItems] = useState([]);
   const [activePromo, setActivePromo] = useState(null);
+  const [existingOrder, setExistingOrder] = useState(null);
   const [hasOrdered, setHasOrdered] = useState(false);
   const [orderQty, setOrderQty] = useState({});
   const [loading, setLoading] = useState(false);
@@ -33,17 +34,26 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     if (promoData) {
       setActivePromo(promoData);
       
-      // Cek apakah cabang ini sudah pernah submit order untuk promo aktif tersebut
       if (currentUser) {
-        const { data: existingOrder } = await supabase
+        const { data: orderData } = await supabase
           .from('kl_orders')
-          .select('id')
+          .select('*, kl_order_items(item_id, qty)')
           .eq('branch_id', currentUser.branch_id)
           .eq('promo_id', promoData.id)
           .maybeSingle();
 
-        if (existingOrder) {
-          setHasOrdered(true);
+        if (orderData) {
+          setExistingOrder(orderData);
+          // Jika status lock_status adalah 'UNLOCKED', maka cabang boleh edit meskipun sudah pernah submit
+          if (orderData.lock_status === 'UNLOCKED') {
+            setHasOrdered(false);
+            // Muat qty yang sebelumnya sudah di-input ke form agar bisa diedit
+            const qtyMap = {};
+            orderData.kl_order_items?.forEach(i => { qtyMap[i.item_id] = i.qty; });
+            setOrderQty(qtyMap);
+          } else {
+            setHasOrdered(true);
+          }
         } else {
           setHasOrdered(false);
         }
@@ -74,9 +84,25 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     setOrderQty(simulatedQtyMap);
   };
 
+  const requestUnlock = async () => {
+    if (!existingOrder) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from('kl_orders')
+      .update({ lock_status: 'REQUEST_UNLOCK' })
+      .eq('id', existingOrder.id);
+
+    if (!error) {
+      alert('🔓 Permintaan buka kunci telah dikirim ke Admin. Mohon tunggu persetujuan admin.');
+      fetchActivePromo();
+    } else {
+      alert('Gagal mengirim permintaan: ' + error.message);
+    }
+    setLoading(false);
+  };
+
   const submitOrder = async () => {
     if (!currentUser) return alert('Silakan login cabang terlebih dahulu');
-    if (hasOrdered) return alert('❌ Anda sudah melakukan submit order untuk promo ini. Setiap cabang hanya dapat melakukan order sekali.');
     
     const totalOrder = calculateTotalOrderValue(orderQty);
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
@@ -88,27 +114,43 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
     setLoading(true);
     
-    const { data: orderData, error: orderError } = await supabase
-      .from('kl_orders')
-      .insert({ 
-        branch_id: currentUser.branch_id, 
-        promo_id: activePromo ? activePromo.id : null,
-        project_name: activePromo ? activePromo.title : 'Order Cabang',
-        status: 'SUBMITTED' 
-      })
-      .select()
-      .single();
+    let targetOrderId = existingOrder?.id;
 
-    if (orderError) {
-      alert('Gagal submit order: ' + orderError.message);
-      setLoading(false);
-      return;
+    if (targetOrderId) {
+      // Jika order sudah ada (sedang dalam status unlocked), update header order & hapus item lama untuk diganti yang baru
+      await supabase.from('kl_orders').update({
+        status: 'SUBMITTED',
+        lock_status: 'LOCKED',
+        project_name: activePromo ? activePromo.title : 'Order Cabang'
+      }).eq('id', targetOrderId);
+
+      await supabase.from('kl_order_items').delete().eq('order_id', targetOrderId);
+    } else {
+      // Buat order baru jika belum pernah ada
+      const { data: orderData, error: orderError } = await supabase
+        .from('kl_orders')
+        .insert({ 
+          branch_id: currentUser.branch_id, 
+          promo_id: activePromo ? activePromo.id : null,
+          project_name: activePromo ? activePromo.title : 'Order Cabang',
+          status: 'SUBMITTED',
+          lock_status: 'LOCKED'
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        alert('Gagal submit order: ' + orderError.message);
+        setLoading(false);
+        return;
+      }
+      targetOrderId = orderData.id;
     }
 
     const orderItems = Object.entries(orderQty)
       .filter(([_, qty]) => qty > 0)
       .map(([itemId, qty]) => ({
-        order_id: orderData.id,
+        order_id: targetOrderId,
         item_id: itemId,
         qty: qty
       }));
@@ -117,18 +159,17 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       await supabase.from('kl_order_items').insert(orderItems);
     }
     
-    alert('✅ Order Berhasil Disubmit!');
-    setHasOrdered(true);
-    setOrderQty({});
+    alert('✅ Order Berhasil Disubmit / Diperbarui!');
     setLoading(false);
+    fetchActivePromo();
   };
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif & Status Kunci Order */}
+      {/* Keterangan Promo Aktif & Status Tombol Cabang */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
               Kampanye / Promo Aktif
             </span>
@@ -137,29 +178,51 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
                 Alokasi: {activePromo.budget_type}
               </span>
             )}
-            {hasOrdered && (
+            {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
               <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
-                🔒 Telah Disubmit (Terkunci)
+                🔒 Terkunci (Telah Disubmit)
+              </span>
+            )}
+            {existingOrder?.lock_status === 'REQUEST_UNLOCK' && (
+              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                ⏳ Menunggu Persetujuan Admin Buka Kunci
+              </span>
+            )}
+            {existingOrder?.lock_status === 'UNLOCKED' && (
+              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                🔓 Dibuka Admin (Silakan Edit & Resubmit)
               </span>
             )}
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           <p className="text-xs opacity-70 mt-1">
-            {hasOrdered 
-              ? 'Anda sudah melakukan submit order untuk promo ini. Silakan cek menu "Tracking Order" untuk melihat status pesanan.' 
+            {hasOrdered && existingOrder?.lock_status === 'LOCKED'
+              ? 'Anda sudah melakukan submit order. Jika ingin mengubah pesanan, silakan klik tombol "Minta Buka Kunci ke Admin".'
               : (activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.')}
           </p>
         </div>
-        
-        {!hasOrdered && (
-          <button 
-            onClick={submitOrder}
-            disabled={loading || !activePromo}
-            className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
-          >
-            {loading ? 'Memproses...' : '🚀 Submit Order Cabang'}
-          </button>
-        )}
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
+            <button 
+              onClick={requestUnlock}
+              disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK'}
+              className="px-5 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-w-auto"
+            >
+              🔑 Minta Buka Kunci ke Admin
+            </button>
+          )}
+
+          {!hasOrdered && (
+            <button 
+              onClick={submitOrder}
+              disabled={loading || !activePromo}
+              className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
+            >
+              {loading ? 'Memproses...' : (existingOrder?.lock_status === 'UNLOCKED' ? '🔄 Resubmit / Perbarui Order' : '🚀 Submit Order Cabang')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grid Input Order Cabang */}
