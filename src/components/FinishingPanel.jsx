@@ -116,7 +116,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
   return (
     <form
       onSubmit={handleSubmitFinishing}
-      className={`p-5 rounded-2xl border shadow-sm transition-colors space-y-4 ${
+      className={`p-5 rounded-2xl border shadow-sm transition-colors space-y-4 max-h-[80vh] overflow-y-auto relative ${
         isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white/90 border-[#D8D2C2] text-[#2F3E3B]'
       }`}
     >
