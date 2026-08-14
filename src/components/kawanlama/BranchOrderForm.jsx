@@ -31,7 +31,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     if (data) setActivePromo(data);
   };
 
-  // Hitung total estimasi harga pesanan saat ini berdasarkan item master dan qty yang diinput
   const calculateTotalOrderValue = (currentQtyMap) => {
     return items.reduce((acc, item) => {
       const qty = Number(currentQtyMap[item.id] || 0);
@@ -42,20 +41,13 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   const handleQtyChange = (itemId, val) => {
     const newQty = Number(val) || 0;
-    const targetItem = items.find(i => i.id === itemId);
-    const itemPrice = Number(targetItem?.price || 0);
-
-    // Simulasi map qty baru
     const simulatedQtyMap = { ...orderQty, [itemId]: newQty };
     const projectedTotal = calculateTotalOrderValue(simulatedQtyMap);
-
-    // Ambil batas maksimal budget dari promo aktif (jika ada)
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
 
-    // Validasi Over Budget secara Real-time sebelum submit
     if (maxBudgetLimit > 0 && projectedTotal > maxBudgetLimit) {
       alert(`⚠️ Peringatan: Penambahan kuantiti ini membuat total estimasi pesanan melebihi batas alokasi ${activePromo.budget_type}! Kuantiti dibatasi.`);
-      return; // Tolak perubahan jika melewati budget
+      return;
     }
 
     setOrderQty(simulatedQtyMap);
@@ -79,6 +71,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       .insert({ 
         branch_id: currentUser.branch_id, 
         promo_id: activePromo ? activePromo.id : null,
+        project_name: activePromo ? activePromo.title : 'Order Cabang',
         status: 'SUBMITTED' 
       })
       .select()
@@ -109,7 +102,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif & Tampilkan Jenis Budget (Tanpa Nominal Angka Budget) */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
           <div className="flex items-center gap-2">
@@ -134,7 +126,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </button>
       </div>
 
-      {/* Grid Input Order Cabang (Master Data Lengkap, Harga Di-hide, Validasi Budget Aktif) */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Form Permintaan / Order Logistik Cabang</h2>
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
