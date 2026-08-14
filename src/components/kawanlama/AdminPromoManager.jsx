@@ -3,11 +3,19 @@ import { supabase } from '../../supabaseClient';
 
 export default function AdminPromoManager({ isDarkMode }) {
   const [promos, setPromos] = useState([]);
+  
+  // State default nominal angka untuk Budget A, B, dan C (bisa diedit langsung oleh admin)
+  const [defaultBudgets, setDefaultBudgets] = useState({
+    'Budget A': 5000000,
+    'Budget B': 3000000,
+    'Budget C': 1500000
+  });
+
   const [form, setForm] = useState({ 
     title: '', 
     description: '', 
     budget_type: 'Budget A', 
-    custom_budget: '', 
+    budget_nominal: 5000000, 
     is_active: true 
   });
 
@@ -18,6 +26,14 @@ export default function AdminPromoManager({ isDarkMode }) {
     if (data) setPromos(data);
   };
 
+  const handleTypeSelect = (type) => {
+    let nominal = form.budget_nominal;
+    if (type !== 'Custom') {
+      nominal = defaultBudgets[type] || 0;
+    }
+    setForm({ ...form, budget_type: type, budget_nominal: nominal });
+  };
+
   const handleCreatePromo = async (e) => {
     e.preventDefault();
     if (!form.title) return alert('Judul promo wajib diisi!');
@@ -26,11 +42,11 @@ export default function AdminPromoManager({ isDarkMode }) {
       title: form.title,
       description: form.description,
       budget_type: form.budget_type,
-      custom_budget: form.budget_type === 'Custom' ? Number(form.custom_budget) || 0 : null,
+      custom_budget: Number(form.budget_nominal) || 0,
       is_active: true
     }]);
 
-    setForm({ title: '', description: '', budget_type: 'Budget A', custom_budget: '', is_active: true });
+    setForm({ title: '', description: '', budget_type: 'Budget A', budget_nominal: defaultBudgets['Budget A'], is_active: true });
     fetchPromos();
   };
 
@@ -40,7 +56,7 @@ export default function AdminPromoManager({ isDarkMode }) {
 
   return (
     <div className="space-y-6">
-      {/* Form Buat Promo & Pilihan Budget A, B, C, Custom */}
+      {/* Form Buat Promo & Pengaturan Nominal Budget A, B, C, Custom */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">📢 Buat & Share Promo / Kampanye Baru</h3>
         <form onSubmit={handleCreatePromo} className="space-y-4 text-xs">
@@ -63,7 +79,7 @@ export default function AdminPromoManager({ isDarkMode }) {
                 <button
                   type="button"
                   key={type}
-                  onClick={() => setForm({...form, budget_type: type})}
+                  onClick={() => handleTypeSelect(type)}
                   className={`py-2.5 px-4 rounded-xl font-bold border transition-all ${form.budget_type === type ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-neutral-300' : 'bg-stone-50 border-stone-300 text-stone-700'}`}
                 >
                   {type}
@@ -72,18 +88,23 @@ export default function AdminPromoManager({ isDarkMode }) {
             </div>
           </div>
 
-          {form.budget_type === 'Custom' && (
-            <div>
-              <label className="block font-bold mb-1 opacity-80">Nominal Budget Custom (Rp)</label>
-              <input 
-                type="number" 
-                placeholder="Masukkan nominal budget khusus" 
-                value={form.custom_budget} 
-                onChange={e => setForm({...form, custom_budget: e.target.value})} 
-                className={`w-full p-3 border rounded-xl font-mono focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
-              />
-            </div>
-          )}
+          <div>
+            <label className="block font-bold mb-1 opacity-80">
+              Nominal {form.budget_type} (Bisa Diedit / Ubah Angka)
+            </label>
+            <input 
+              type="number" 
+              value={form.budget_nominal} 
+              onChange={e => {
+                const val = Number(e.target.value) || 0;
+                setForm({...form, budget_nominal: val});
+                if (form.budget_type !== 'Custom') {
+                  setDefaultBudgets({...defaultBudgets, [form.budget_type]: val});
+                }
+              }} 
+              className={`w-full p-3 border rounded-xl font-mono font-bold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-emerald-400' : 'bg-stone-50 border-stone-300 text-emerald-600'}`} 
+            />
+          </div>
 
           <div>
             <label className="block font-bold mb-1 opacity-80">Deskripsi / Instruksi Promo untuk Cabang</label>
@@ -112,7 +133,7 @@ export default function AdminPromoManager({ isDarkMode }) {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-sm">{p.title}</span>
                   <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-                    {p.budget_type}{p.budget_type === 'Custom' && p.custom_budget ? ` (${formatRupiah(p.custom_budget)})` : ''}
+                    {p.budget_type} ({formatRupiah(p.custom_budget)})
                   </span>
                 </div>
                 <p className="opacity-70 text-[11px] mt-1">{p.description || 'Tidak ada deskripsi.'}</p>
