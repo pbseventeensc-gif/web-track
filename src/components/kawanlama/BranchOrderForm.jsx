@@ -6,6 +6,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [activePromo, setActivePromo] = useState(null);
   const [existingOrder, setExistingOrder] = useState(null);
   const [hasOrdered, setHasOrdered] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const [orderQty, setOrderQty] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -15,39 +16,20 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   }, [currentUser]);
 
   const fetchMasterItems = async () => {
-    const { data } = await supabase
-      .from('kl_master_items')
-      .select('*')
-      .order('item_name', { ascending: true });
+    const { data } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
     if (data) setItems(data);
   };
 
   const fetchActivePromo = async () => {
-    const { data: promoData } = await supabase
-      .from('kl_promos')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
+    const { data: promoData } = await supabase.from('kl_promos').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (promoData) {
       setActivePromo(promoData);
-      
       if (currentUser) {
-        const { data: orderData } = await supabase
-          .from('kl_orders')
-          .select('*, kl_order_items(item_id, qty)')
-          .eq('branch_id', currentUser.branch_id)
-          .eq('promo_id', promoData.id)
-          .maybeSingle();
-
+        const { data: orderData } = await supabase.from('kl_orders').select('*, kl_order_items(item_id, qty)').eq('branch_id', currentUser.branch_id).eq('promo_id', promoData.id).maybeSingle();
         if (orderData) {
           setExistingOrder(orderData);
-          // Jika status lock_status adalah 'UNLOCKED', maka cabang boleh edit meskipun sudah pernah submit
           if (orderData.lock_status === 'UNLOCKED') {
             setHasOrdered(false);
-            // Muat qty yang sebelumnya sudah di-input ke form agar bisa diedit
             const qtyMap = {};
             orderData.kl_order_items?.forEach(i => { qtyMap[i.item_id] = i.qty; });
             setOrderQty(qtyMap);
@@ -56,6 +38,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           }
         } else {
           setHasOrdered(false);
+          setShowNotification(true); // Munculkan pop-up otomatis jika belum submit
         }
       }
     }
@@ -117,7 +100,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     let targetOrderId = existingOrder?.id;
 
     if (targetOrderId) {
-      // Jika order sudah ada (sedang dalam status unlocked), update header order & hapus item lama untuk diganti yang baru
       await supabase.from('kl_orders').update({
         status: 'SUBMITTED',
         lock_status: 'LOCKED',
@@ -126,7 +108,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
       await supabase.from('kl_order_items').delete().eq('order_id', targetOrderId);
     } else {
-      // Buat order baru jika belum pernah ada
       const { data: orderData, error: orderError } = await supabase
         .from('kl_orders')
         .insert({ 
@@ -165,8 +146,27 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Keterangan Promo Aktif & Status Tombol Cabang */}
+    <div className="space-y-6 relative">
+      {/* MODAL NOTIFIKASI OTOMATIS JIKA BELUM SUBMIT */}
+      {showNotification && !hasOrdered && activePromo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+            <div className="text-4xl mb-3">📢</div>
+            <h2 className="font-black text-base uppercase mb-2 text-indigo-600 dark:text-indigo-400">Pengingat: Order Belum Disubmit!</h2>
+            <p className="text-xs opacity-80 mb-6 leading-relaxed">
+              Halo Cabang, kampanye atau promo aktif <strong>"{activePromo.title}"</strong> sedang berjalan. Anda belum melakukan submit order. Mohon segera isi formulir pesanan logistik Anda.
+            </p>
+            <button 
+              onClick={() => setShowNotification(false)}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs"
+            >
+              Saya Mengerti, Lanjutkan ke Form
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header Info Promo & Tombol Aksi */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -207,7 +207,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             <button 
               onClick={requestUnlock}
               disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK'}
-              className="px-5 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-w-auto"
+              className="px-5 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
             >
               🔑 Minta Buka Kunci ke Admin
             </button>
