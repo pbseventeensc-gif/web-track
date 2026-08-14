@@ -3,8 +3,8 @@ import { supabase } from '../../supabaseClient';
 
 export default function AdminPromoManager({ isDarkMode }) {
   const [promos, setPromos] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
   
-  // State default nominal angka untuk Budget A, B, dan C (bisa diedit langsung oleh admin)
   const [defaultBudgets, setDefaultBudgets] = useState({
     'Budget A': 5000000,
     'Budget B': 3000000,
@@ -38,7 +38,7 @@ export default function AdminPromoManager({ isDarkMode }) {
     e.preventDefault();
     if (!form.title) return alert('Judul promo wajib diisi!');
     
-    await supabase.from('kl_promos').insert([{
+    const { error } = await supabase.from('kl_promos').insert([{
       title: form.title,
       description: form.description,
       budget_type: form.budget_type,
@@ -46,8 +46,15 @@ export default function AdminPromoManager({ isDarkMode }) {
       is_active: true
     }]);
 
-    setForm({ title: '', description: '', budget_type: 'Budget A', budget_nominal: defaultBudgets['Budget A'], is_active: true });
-    fetchPromos();
+    if (!error) {
+      setSuccessMessage(`🚀 Berhasil! Promo "${form.title}" (${form.budget_type}) telah sukses dib广播/share ke seluruh kantor cabang.`);
+      setTimeout(() => setSuccessMessage(''), 5000); // Hilang otomatis setelah 5 detik
+
+      setForm({ title: '', description: '', budget_type: 'Budget A', budget_nominal: defaultBudgets['Budget A'], is_active: true });
+      fetchPromos();
+    } else {
+      alert('Gagal broadcast promo: ' + error.message);
+    }
   };
 
   const formatRupiah = (angka) => {
@@ -56,7 +63,20 @@ export default function AdminPromoManager({ isDarkMode }) {
 
   return (
     <div className="space-y-6">
-      {/* Form Buat Promo & Pengaturan Nominal Budget A, B, C, Custom */}
+      {/* Pop-up Notifikasi Sukses Broadcast */}
+      {successMessage && (
+        <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-lg animate-bounce ${
+          isDarkMode ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <span>✅</span>
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-xs font-bold opacity-70 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* Form Buat Promo */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">📢 Buat & Share Promo / Kampanye Baru</h3>
         <form onSubmit={handleCreatePromo} className="space-y-4 text-xs">
