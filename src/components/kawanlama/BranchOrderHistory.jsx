@@ -11,7 +11,7 @@ export default function BranchOrderHistory({ isDarkMode, currentUser }) {
   const fetchOrders = async () => {
     const { data } = await supabase
       .from('kl_orders')
-      .select('*, kl_order_items(*, kl_master_items(*))')
+      .select('*, kl_promos(title), kl_order_items(*, kl_master_items(*))')
       .eq('branch_id', currentUser.branch_id)
       .order('created_at', { ascending: false });
       
@@ -19,28 +19,71 @@ export default function BranchOrderHistory({ isDarkMode, currentUser }) {
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="font-bold text-sm">Riwayat & Tracking Order Cabang</h2>
+    <div className="space-y-6">
+      <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <h2 className="font-extrabold text-base mb-1 tracking-wide">📦 Riwayat & Tracking Order Cabang</h2>
+        <p className="text-xs opacity-70">Daftar pesanan logistik yang telah Anda submit ke kantor pusat.</p>
+      </div>
+
       {orders.length === 0 ? (
-        <div className="p-6 text-center opacity-60 text-xs">Belum ada riwayat pesanan yang dibuat.</div>
+        <div className={`p-10 text-center rounded-3xl border text-xs opacity-60 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+          📭 Belum ada riwayat pesanan yang dibuat.
+        </div>
       ) : (
         orders.map(order => (
-          <div key={order.id} className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-bold text-xs uppercase opacity-70">Order ID: {order.id.slice(0, 8)}</span>
-              <span className={`px-2 py-1 rounded text-[10px] font-bold ${order.status === 'SUBMITTED' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                {order.status}
+          <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+            
+            {/* Header Card Order */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                    {order.kl_promos?.title || order.project_name || 'Order Logistik Cabang'}
+                  </span>
+                  <span className="text-[10px] font-mono opacity-60 px-2 py-0.5 rounded bg-stone-100 dark:bg-neutral-900">
+                    ID: {order.id.slice(0, 8)}
+                  </span>
+                </div>
+                <p className="text-[11px] opacity-70 mt-1">Waktu Submit: {new Date(order.created_at).toLocaleString()}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-xl text-xs font-black ${
+                order.status === 'SUBMITTED' 
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' 
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+              }`}>
+                Status: {order.status}
               </span>
             </div>
-            <p className="text-[10px] opacity-60">Dibuat: {new Date(order.created_at).toLocaleString()}</p>
-            <div className="mt-2 text-xs space-y-1">
-              {order.kl_order_items?.map((item, idx) => (
-                <div key={idx} className="flex justify-between border-b py-1">
-                  <span>{item.kl_master_items?.item_name || 'Item'}</span>
-                  <span className="font-bold">{item.qty} pcs</span>
-                </div>
-              ))}
+
+            {/* Tabel Detail Item dengan Kolom Terpisah, Sticky Header, & Scroll */}
+            <div className="max-h-[400px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+              <table className="w-full text-xs border-collapse">
+                <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+                  <tr>
+                    <th className="p-3.5 text-left">Nama Barang</th>
+                    <th className="p-3.5 text-left">Material / Bahan</th>
+                    <th className="p-3.5 text-left">Ukuran (Size)</th>
+                    <th className="p-3.5 text-center w-28">Qty Order</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
+                  {order.kl_order_items?.map((item, idx) => {
+                    const master = item.kl_master_items || {};
+                    return (
+                      <tr key={idx} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
+                        <td className="p-3.5 font-bold">{master.item_name || 'Barang Logistik'}</td>
+                        <td className="p-3.5 opacity-80 uppercase font-medium">{master.material || '-'}</td>
+                        <td className="p-3.5 opacity-80 uppercase font-mono">{master.size || '-'}</td>
+                        <td className="p-3.5 text-center font-bold font-mono text-indigo-600 dark:text-indigo-400">
+                          {item.qty} pcs
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
+
           </div>
         ))
       )}
