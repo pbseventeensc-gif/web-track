@@ -36,7 +36,7 @@ export default function AdminMasterData({ isDarkMode }) {
     <div className="space-y-6">
       {/* Form Tambah Master */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h3 className="font-bold text-sm mb-4">➕ Tambah Master Barang Baru</h3>
+        <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">➕ Tambah Master Barang Baru</h3>
         <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
           <input 
             type="text" 
@@ -47,7 +47,7 @@ export default function AdminMasterData({ isDarkMode }) {
           />
           <input 
             type="text" 
-            placeholder="Material (Cth: Albatros Lam Doff)" 
+            placeholder="Material / Bahan" 
             value={form.material} 
             onChange={e => setForm({...form, material: e.target.value})} 
             className={`p-3 border rounded-xl focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
@@ -74,24 +74,24 @@ export default function AdminMasterData({ isDarkMode }) {
 
       {/* Tabel Master Data */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h3 className="font-bold text-sm mb-4">Daftar Master Data Barang (Urut A-Z)</h3>
+        <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Daftar Master Data Barang (Urut A-Z)</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
-            <thead className={`border-b ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-200 text-stone-500'}`}>
-              <tr>
-                <th className="p-3 text-left w-1/3">Nama Barang</th>
-                <th className="p-3 text-left w-1/2">Material / Ukuran</th>
-                <th className="p-3 text-right">Harga Satuan</th>
+            <thead>
+              <tr className={`border-b font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 text-neutral-300' : 'bg-stone-100 border-stone-300 text-stone-700'}`}>
+                <th className="p-3.5 text-left">Nama Barang</th>
+                <th className="p-3.5 text-left">Material / Bahan</th>
+                <th className="p-3.5 text-left">Ukuran (Size)</th>
+                <th className="p-3.5 text-right">Harga Satuan</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
               {items.map(i => (
                 <tr key={i.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
                   <td className="p-3.5 font-bold">{i.item_name}</td>
-                  <td className="p-3.5 opacity-80 uppercase">
-                    {i.material || '-'}{i.size ? ` / ${i.size}` : ''}
-                  </td>
-                  <td className="p-3.5 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                  <td className="p-3.5 opacity-80 uppercase font-medium">{i.material || '-'}</td>
+                  <td className="p-3.5 opacity-80 uppercase font-mono">{i.size || '-'}</td>
+                  <td className="p-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     {formatRupiah(i.price)}
                   </td>
                 </tr>
