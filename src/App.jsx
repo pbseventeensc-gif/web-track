@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import * as XLSX from 'xlsx';
-import QRCode from 'qrcode';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
-
-// URL Google Apps Script milik Anda
-const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzh4DKAVUWYfGzzD90yc7Oy6oE0h1RfWYro0abbgFpSBEjNNoen1O1bu6vYtbe-CXLpuQ/exec";
+import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 
 const STAFF_QC_LIST = [
   "Budi (QC Paking)", "Siti (QC Paking)", "Agus (QC Checker)",
@@ -34,64 +31,6 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   );
 }
 
-/* ==========================================
-   MODAL LOGIN
-========================================== */
-function BranchLoginModal({ isOpen, onLoginSuccess }) {
-  const [accessCode, setAccessCode] = useState('');
-  const [pinCode, setPinCode] = useState('');
-  if (!isOpen) return null;
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    const { data } = await supabase.from('kl_branch_access').select('*, kl_branches(branch_name)').eq('access_code', accessCode.toUpperCase()).eq('pin_code', pinCode).maybeSingle();
-    if (data) onLoginSuccess({ role: 'branch', branch_id: data.branch_id, branch_name: data.kl_branches.branch_name });
-    else alert('❌ Kode Cabang atau PIN Salah!');
-  };
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100]">
-      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center shadow-2xl">
-        <div className="text-4xl mb-3">🔑</div>
-        <h3 className="font-bold text-lg text-black mb-4">Login Cabang</h3>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input type="text" placeholder="Kode Cabang (Misal: AZKO-001)" value={accessCode} onChange={e=>setAccessCode(e.target.value)} className="w-full p-3 border rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <input type="password" placeholder="PIN 6 Digit" value={pinCode} onChange={e=>setPinCode(e.target.value)} className="w-full p-3 border rounded-xl text-center tracking-widest text-black focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">Masuk / Login 🚀</button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  if (!isOpen) return null;
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (username.toUpperCase() === 'ADMIN' && password === '123456') onLoginSuccess({ role: 'admin', name: 'Administrator' });
-    else alert('❌ Admin Username/Password salah!');
-  };
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100]">
-      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center shadow-2xl">
-        <div className="text-4xl mb-3">🔐</div>
-        <h3 className="font-bold text-lg text-black mb-4">Login Admin Operasional</h3>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input type="text" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} className="w-full p-3 border rounded-xl text-black font-bold uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full p-3 border rounded-xl text-center tracking-widest text-black focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 border py-3 rounded-xl font-bold text-black hover:bg-stone-100 transition-all">Batal</button>
-            <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">Masuk</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   KOMPONEN UTAMA APP
-   ========================================================= */
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
@@ -101,11 +40,8 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
-  const [showGSheetModal, setShowGSheetModal] = useState(false);
-  const [gSheetUrl, setGSheetUrl] = useState('');
-  const [importingGSheet, setImportingGSheet] = useState(false);
+  
   const [showScanModal, setShowScanModal] = useState(false);
-  const [inputMode, setInputMode] = useState('scan');
   const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
   const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
   const [scannedInput, setScannedInput] = useState('');
@@ -231,7 +167,6 @@ export default function App() {
   const getStatusBadge = (p) => p >= 100 ? { text: 'text-green-800 bg-green-100', icon: '🟢' } : p > 0 ? { text: 'text-yellow-800 bg-yellow-100', icon: '🟡' } : { text: 'text-red-800 bg-red-100', icon: '🔴' };
 
   const totalSpk = spkList.length;
-  const totalOrderPcs = spkList.reduce((acc, curr) => acc + (Number(curr.qty_order) || 0), 0);
   const displayedList = spkList.filter(item => (item.no_spk||'').toLowerCase().includes(searchTerm.toLowerCase()) || (item.project||'').toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -280,20 +215,19 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB KAWAN LAMA (Dipanggil dari Komponen) */}
+        {/* TAB KAWAN LAMA */}
         {(isBranchMode || activeTab === 'kawan_lama') && (
           <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
         )}
         
-        {/* TAB CETAK LABEL & SURAT JALAN (Dipanggil dari Komponen) */}
+        {/* TAB CETAK LABEL & SURAT JALAN */}
         {!isBranchMode && activeTab === 'label' && (
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
-        {/* TRACKING TABLE FULL (Admin Tabs) */}
+        {/* TRACKING TABLE FULL */}
         {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
           <div className="space-y-4">
-            {/* Table Header Controls */}
             <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'}`}>
               <div className="flex items-center gap-2 flex-1 w-full">
                 <span className="text-sm">🔍</span>
@@ -304,7 +238,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Main Table */}
             <div className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'}`}>
               <table className="w-full text-xs text-left">
                 <thead className={`font-bold border-b transition-colors ${isDarkMode ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
@@ -330,20 +263,14 @@ export default function App() {
                           <span className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>{i.client} - {i.project}</span><br/>
                           <span className={`text-[10px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>Order: {i.qty_order} Pcs</span>
                         </td>
-                        
-                        {/* Kolom Print */}
                         <td className="p-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPrint).text}`}>{pPrint}%</span><br/>
                           {activeTab==='produksi' && <input type="number" value={i.qty_print||0} onChange={e=>handleUpdateQty(i.id, 'qty_print', e.target.value, i.qty_order)} className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />}
                         </td>
-                        
-                        {/* Kolom Finish */}
                         <td className="p-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pFinish).text}`}>{pFinish}%</span><br/>
                           {activeTab==='finishing' && <input type="number" value={i.qty_finish||0} onChange={e=>handleUpdateQty(i.id, 'qty_finish', e.target.value, i.qty_order)} className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />}
                         </td>
-                        
-                        {/* Kolom Paking */}
                         <td className="p-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPack).text}`}>{pPack}%</span><br/>
                           {activeTab==='paking' && (
@@ -357,14 +284,10 @@ export default function App() {
                             </div>
                           )}
                         </td>
-
-                        {/* Kolom QC */}
                         <td className="p-4 space-y-1.5">
                           <select value={i.qc_checker||''} onChange={e=>handleUpdateField(i.id, {qc_checker: e.target.value})} className={`block w-full rounded-lg border p-1 text-[10px] focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`}><option value="">-- QC Checker --</option>{STAFF_QC_LIST.map(s=><option key={s}>{s}</option>)}</select>
                           <select value={i.qc_paking||''} onChange={e=>handleUpdateField(i.id, {qc_paking: e.target.value})} className={`block w-full rounded-lg border p-1 text-[10px] focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`}><option value="">-- QC Paking --</option>{STAFF_QC_LIST.map(s=><option key={s}>{s}</option>)}</select>
                         </td>
-
-                        {/* Kolom Pengiriman */}
                         <td className="p-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pShip).text}`}>{pShip}%</span><br/>
                           {activeTab==='pengiriman' && (
@@ -388,39 +311,35 @@ export default function App() {
         )}
       </div>
 
-      {/* MODAL SCAN QC */}
-      {showScanModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className={`w-full max-w-sm p-6 rounded-3xl border shadow-2xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-            <div className="flex justify-between items-center mb-4 border-b pb-2 dark:border-neutral-700 border-stone-200">
-              <h3 className="font-bold">📷 Scan QC Station</h3>
-              <button onClick={()=>setShowScanModal(false)} className="hover:text-red-500">✕</button>
-            </div>
-            <form onSubmit={handleSubmitInput} className="space-y-4 text-sm">
-              <select value={scanTargetColumn} onChange={e=>setScanTargetColumn(e.target.value)} className={`w-full p-2.5 rounded-xl border focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-[#C5BEAD] text-black'}`}>
-                <option value="qc_checker">QC Checker</option><option value="qc_paking">QC Paking</option><option value="qty_finish">Auto Set Finish (Max Qty)</option>
-              </select>
-              <input type="text" autoFocus placeholder="Arahkan Scanner Barcode Ke Sini..." value={scannedInput} onChange={e=>setScannedInput(e.target.value)} className={`w-full p-3 rounded-xl border font-mono text-center focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-[#C5BEAD] text-black'}`} />
-              <button type="submit" className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl active:scale-95 transition-all">⚡ Proses Scan Input</button>
-            </form>
-            {lastScanMessage && <div className={`mt-3 p-3 text-center text-xs font-bold rounded-xl border ${lastScanMessage.includes('✅') ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}`}>{lastScanMessage}</div>}
-          </div>
-        </div>
-      )}
+      {/* PANGGIL MODAL DARI KOMPONEN TERPISAH */}
+      <ScanQCModal 
+        isOpen={showScanModal} 
+        onClose={() => setShowScanModal(false)} 
+        isDarkMode={isDarkMode} 
+        scanTargetColumn={scanTargetColumn} 
+        setScanTargetColumn={setScanTargetColumn} 
+        scannedInput={scannedInput} 
+        setScannedInput={setScannedInput} 
+        handleSubmitInput={handleSubmitInput} 
+        lastScanMessage={lastScanMessage} 
+      />
 
-      {/* PREVIEW GAMBAR MODAL */}
-      {modalImageInfo.isOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={closeImageModal}>
-          <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <button onClick={closeImageModal} className="absolute -top-10 right-0 text-white hover:text-red-500 text-3xl">✕</button>
-            <img src={modalImageInfo.url} alt="Preview" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-stone-700" />
-            <div className="text-center mt-3 text-white font-bold text-sm tracking-widest">{modalImageInfo.title}</div>
-          </div>
-        </div>
-      )}
+      <ImagePreviewModal 
+        isOpen={modalImageInfo.isOpen} 
+        onClose={closeImageModal} 
+        modalImageInfo={modalImageInfo} 
+      />
 
-      <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
-      <BranchLoginModal isOpen={showBranchLoginModal} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
+      <AdminLoginModal 
+        isOpen={showAdminLoginModal} 
+        onClose={() => setShowAdminLoginModal(false)} 
+        onLoginSuccess={(admin) => { setCurrentAdmin(admin); setShowAdminLoginModal(false); }} 
+      />
+
+      <BranchLoginModal 
+        isOpen={showBranchLoginModal} 
+        onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} 
+      />
     </div>
   );
 }
