@@ -21,7 +21,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   };
 
   const fetchActivePromo = async () => {
-    // Mengambil promo aktif terbaru untuk diikat ke order secara otomatis di background
     const { data } = await supabase
       .from('kl_promos')
       .select('*')
@@ -40,7 +39,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     if (!currentUser) return alert('Silakan login cabang terlebih dahulu');
     setLoading(true);
     
-    // Create Header Order (Promo tetap terikat di database untuk kontrol admin, tanpa ditampilkan ke cabang)
     const { data: orderData, error: orderError } = await supabase
       .from('kl_orders')
       .insert({ 
@@ -76,7 +74,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif (Tanpa Menampilkan Nominal atau Info Budget) */}
+      {/* Keterangan Promo Aktif */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
           Kampanye / Promo Aktif
@@ -85,27 +83,29 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         <p className="text-xs opacity-70 mt-1">{activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.'}</p>
       </div>
 
-      {/* Grid Input Order Cabang (Bersih: Nama Barang, Material/Ukuran, Qty Saja) */}
+      {/* Grid Input Order Cabang dengan Sticky Header */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h2 className="font-bold text-sm mb-4">Form Permintaan / Order Logistik Cabang</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className={`border-b ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-200 text-stone-500'}`}>
+        <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Form Permintaan / Order Logistik Cabang</h2>
+        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+          <table className="w-full text-xs border-collapse">
+            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
               <tr>
-                <th className="p-3 text-left">Nama Barang</th>
-                <th className="p-3 text-left">Material / Ukuran</th>
-                <th className="p-3 text-center w-32">Qty Order</th>
+                <th className="p-3.5 text-left">Nama Barang</th>
+                <th className="p-3.5 text-left">Material / Bahan</th>
+                <th className="p-3.5 text-left">Ukuran (Size)</th>
+                <th className="p-3.5 text-center w-32">Qty Order</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
               {items.map(item => {
                 const materialStr = item.material || '-';
-                const sizeStr = item.size ? ` / ${item.size}` : '';
+                const sizeStr = item.size || '-';
 
                 return (
                   <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
                     <td className="p-3.5 font-bold">{item.item_name}</td>
-                    <td className="p-3.5 opacity-80 uppercase">{materialStr}{sizeStr}</td>
+                    <td className="p-3.5 opacity-80 uppercase font-medium">{materialStr}</td>
+                    <td className="p-3.5 opacity-80 uppercase font-mono">{sizeStr}</td>
                     <td className="p-3.5 text-center">
                       <input 
                         type="number" 

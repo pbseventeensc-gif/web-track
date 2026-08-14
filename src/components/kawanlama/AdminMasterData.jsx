@@ -72,13 +72,13 @@ export default function AdminMasterData({ isDarkMode }) {
         </form>
       </div>
 
-      {/* Tabel Master Data */}
+      {/* Tabel Master Data dengan Sticky Header & Scrollable Body */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Daftar Master Data Barang (Urut A-Z)</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className={`border-b font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 text-neutral-300' : 'bg-stone-100 border-stone-300 text-stone-700'}`}>
+        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+          <table className="w-full text-xs border-collapse">
+            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+              <tr>
                 <th className="p-3.5 text-left">Nama Barang</th>
                 <th className="p-3.5 text-left">Material / Bahan</th>
                 <th className="p-3.5 text-left">Ukuran (Size)</th>
