@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
+import KawanLamaTab from './components/KawanLamaTab'; // Memanggil tab cabang yang sudah dipisah
 
-// URL Google Apps Script milik Anda
 const GOOGLE_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzh4DKAVUWYfGzzD90yc7Oy6oE0h1RfWYro0abbgFpSBEjNNoen1O1bu6vYtbe-CXLpuQ/exec";
 
 const STAFF_QC_LIST = [
@@ -15,7 +15,7 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
   const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
   return (
-    <div className="bg-white/80 dark:bg-neutral-800/80 p-5 rounded-3xl border border-[#D8D2C2] dark:border-neutral-700 flex flex-col items-center shadow-sm">
+    <div className="bg-white/80 dark:bg-neutral-800/80 p-5 rounded-3xl border border-[#D8D2C2] dark:border-neutral-700 flex flex-col items-center shadow-sm transition-all hover:scale-105">
       <h4 className="text-[11px] font-bold uppercase tracking-wider opacity-70 mb-3">{title}</h4>
       <div className="relative w-36 h-36 flex items-center justify-center">
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
@@ -33,7 +33,7 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 }
 
 /* ==========================================
-   MODAL LOGIN CABANG & ADMIN
+   MODAL LOGIN
 ========================================== */
 function BranchLoginModal({ isOpen, onLoginSuccess }) {
   const [accessCode, setAccessCode] = useState('');
@@ -46,13 +46,14 @@ function BranchLoginModal({ isOpen, onLoginSuccess }) {
     else alert('❌ Kode Cabang atau PIN Salah!');
   };
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center text-black">
-        <h3 className="font-bold text-lg mb-4">🔑 Login Cabang</h3>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100]">
+      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center shadow-2xl">
+        <div className="text-4xl mb-3">🔑</div>
+        <h3 className="font-bold text-lg text-black mb-4">Login Cabang</h3>
         <form onSubmit={handleLogin} className="space-y-4">
-          <input type="text" placeholder="Kode Cabang (AZKO-001)" value={accessCode} onChange={e=>setAccessCode(e.target.value)} className="w-full p-3 border rounded" />
-          <input type="password" placeholder="PIN" value={pinCode} onChange={e=>setPinCode(e.target.value)} className="w-full p-3 border rounded" />
-          <button type="submit" className="w-full py-3 bg-blue-600 text-white font-bold rounded">Masuk</button>
+          <input type="text" placeholder="Kode Cabang (Misal: AZKO-001)" value={accessCode} onChange={e=>setAccessCode(e.target.value)} className="w-full p-3 border rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <input type="password" placeholder="PIN 6 Digit" value={pinCode} onChange={e=>setPinCode(e.target.value)} className="w-full p-3 border rounded-xl text-center tracking-widest text-black focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">Masuk / Login 🚀</button>
         </form>
       </div>
     </div>
@@ -69,15 +70,16 @@ function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
     else alert('❌ Admin Username/Password salah!');
   };
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center text-black">
-        <h3 className="font-bold text-lg mb-4">🔐 Login Admin</h3>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100]">
+      <div className="w-full max-w-sm p-6 bg-white rounded-3xl text-center shadow-2xl">
+        <div className="text-4xl mb-3">🔐</div>
+        <h3 className="font-bold text-lg text-black mb-4">Login Admin Operasional</h3>
         <form onSubmit={handleLogin} className="space-y-4">
-          <input type="text" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} className="w-full p-3 border rounded" />
-          <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full p-3 border rounded" />
+          <input type="text" placeholder="Username" value={username} onChange={e=>setUsername(e.target.value)} className="w-full p-3 border rounded-xl text-black font-bold uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full p-3 border rounded-xl text-center tracking-widest text-black focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 border py-3 rounded font-bold">Batal</button>
-            <button type="submit" className="flex-1 bg-indigo-600 text-white font-bold rounded">Masuk</button>
+            <button type="button" onClick={onClose} className="flex-1 border py-3 rounded-xl font-bold text-black hover:bg-stone-100 transition-all">Batal</button>
+            <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md transition-all active:scale-95">Masuk</button>
           </div>
         </form>
       </div>
@@ -86,251 +88,253 @@ function AdminLoginModal({ isOpen, onClose, onLoginSuccess }) {
 }
 
 /* =========================================================
-   KOMPONEN TAB: PROJECT KAWAN LAMA
+   KOMPONEN TAB: CETAK LABEL & SURAT JALAN (VERSI FULL)
    ========================================================= */
-function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
-  const [branches, setBranches] = useState([]);
-  const [masterItems, setMasterItems] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState('');
-  const dropdownRef = useRef(null);
-  const [branchSearch, setBranchSearch] = useState('');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [promoName, setPromoName] = useState('PROMO TEMATIK AGUSTUS');
-  const [projectType, setProjectType] = useState('Project C');
-  const [customBudget, setCustomBudget] = useState(2500000);
-  const [sortAscending, setSortAscending] = useState(true);
-  const [quantities, setQuantities] = useState({});
-  const [orderStatus, setOrderStatus] = useState('DRAFT');
-  const [loading, setLoading] = useState(false);
-  const [activeOrder, setActiveOrder] = useState(null);
-
-  useEffect(() => {
-    fetchMasterData();
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (isBranchMode && currentUser && currentUser.role === 'branch') {
-      setSelectedBranch(currentUser.branch_id);
-      setBranchSearch(currentUser.branch_name || '');
-      loadBranchOrder(currentUser.branch_id);
-    }
-  }, [currentUser, isBranchMode]);
-
-  const fetchMasterData = async () => {
-    setLoading(true);
-    const { data: bData } = await supabase.from('kl_branches').select('*').order('branch_name', { ascending: true });
-    if (bData) setBranches(bData);
-    const { data: iData } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
-    if (iData) setMasterItems(iData);
-    setLoading(false);
-  };
-
-  const loadBranchOrder = async (branchId) => {
-    setLoading(true);
-    const { data: orderData } = await supabase.from('kl_orders').select('*, kl_order_items(*)').eq('branch_id', branchId).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (orderData) {
-      setActiveOrder(orderData); setOrderStatus(orderData.status);
-      if (orderData.project_name) setPromoName(orderData.project_name);
-      if (orderData.total_budget) setCustomBudget(Number(orderData.total_budget));
-      let initialQty = {};
-      if (orderData.kl_order_items) orderData.kl_order_items.forEach(item => initialQty[item.item_id] = item.qty);
-      setQuantities(initialQty);
-    } else {
-      setActiveOrder(null); setOrderStatus('DRAFT'); setQuantities({});
-    }
-    setLoading(false);
-  };
-
-  const handleProjectTypeChange = (type) => {
-    setProjectType(type);
-    if (type === 'Project A') setCustomBudget(5000000);
-    else if (type === 'Project B') setCustomBudget(3500000);
-    else if (type === 'Project C') setCustomBudget(2500000);
-  };
-
-  const handleSelectBranchItem = async (branch) => {
-    setSelectedBranch(branch.id); setBranchSearch(branch.branch_name || ''); setIsDropdownOpen(false);
-    loadBranchOrder(branch.id);
-  };
-
-  const totalUsedBudget = masterItems.reduce((acc, item) => acc + ((quantities[item.id] || 0) * (item.price || 0)), 0);
-  const remainingBudget = (Number(customBudget) || 0) - totalUsedBudget;
-
-  const handleQtyChange = (itemId, val, itemPrice) => {
-    const newQty = Number(val) || 0;
-    const estimatedUsedBudget = totalUsedBudget - ((quantities[itemId] || 0) * (itemPrice || 0)) + (newQty * (itemPrice || 0));
-    if (estimatedUsedBudget > (Number(customBudget) || 0)) return alert(`❌ Qty tidak bisa ditambahkan, melebihi total Budget`);
-    setQuantities(prev => ({ ...prev, [itemId]: newQty }));
-  };
-
-  const handleBroadcastPromo = async () => {
-    if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
-    if (!confirm(`📢 Bagikan Promo "${promoName}" (Budget Rp${Number(customBudget).toLocaleString()}) ke SELURUH CABANG?`)) return;
-    setLoading(true);
-    const { error } = await supabase.from('kl_orders').update({ project_name: promoName, total_budget: Number(customBudget) || 0 }).eq('status', 'DRAFT');
-    setLoading(false);
-    if (error) alert('Gagal membagikan promo: ' + error.message);
-    else alert(`✅ Promo "${promoName}" berhasil dibagikan!`);
-  };
-
-  const handleSubmitOrder = async () => {
-    if (!selectedBranch) return alert('⚠️ Silakan pilih kantor cabang terlebih dahulu!');
-    if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
-    if (remainingBudget < 0) return alert('❌ Qty tidak bisa ditambahkan, melebihi total Budget');
-    const itemsToInsert = masterItems.filter(item => (quantities[item.id] || 0) > 0).map(item => ({ item_id: item.id, qty: quantities[item.id], subtotal: quantities[item.id] * (item.price || 0) }));
-    if (itemsToInsert.length === 0) return alert('⚠️ Silakan isi Qty minimal pada 1 item!');
-    setLoading(true);
-    const { data: order, error: orderErr } = await supabase.from('kl_orders').insert([{ project_name: promoName, branch_id: selectedBranch, total_budget: Number(customBudget) || 0, status: 'SUBMITTED' }]).select().single();
-    if (orderErr) { setLoading(false); return alert('❌ Gagal Submit Order: ' + orderErr.message); }
-    const detailPayload = itemsToInsert.map(item => ({ order_id: order.id, item_id: item.item_id, qty: item.qty, subtotal: item.subtotal }));
-    const { error: itemErr } = await supabase.from('kl_order_items').insert(detailPayload);
-    setLoading(false);
-    if (itemErr) alert('❌ Gagal menyimpan detail item: ' + itemErr.message);
-    else { alert('✅ Order berhasil di-submit dan dikunci!'); setOrderStatus('SUBMITTED'); setActiveOrder(order); }
-  };
-
-  const handleRequestRevision = async () => {
-    if (!activeOrder) return;
-    setLoading(true);
-    const { error } = await supabase.from('kl_orders').update({ status: 'REVISION_REQUESTED' }).eq('id', activeOrder.id);
-    setLoading(false);
-    if (error) alert('Gagal mengirimkan permohonan revisi: ' + error.message);
-    else { alert('✅ Permohonan revisi telah dikirim ke Admin!'); setOrderStatus('REVISION_REQUESTED'); }
-  };
-
-  const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
-  const filteredBranches = branches.filter(b => (b.branch_name || '').toLowerCase().includes((branchSearch || '').toLowerCase()));
-  const sortedMasterItems = [...masterItems].sort((a, b) => sortAscending ? (a.item_name||'').localeCompare(b.item_name||'') : (b.item_name||'').localeCompare(a.item_name||''));
-
-  return (
-    <div className={`p-5 rounded-2xl border space-y-4 shadow-sm ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-      <div className="flex flex-col sm:flex-row items-center justify-between border-b pb-3 gap-3">
-        <div>
-          <h3 className="font-bold text-base flex items-center gap-2">🏢 Input Form Cabang - Project Kawan Lama</h3>
-          <p className="text-xs opacity-70">{isBranchMode ? 'Halaman Pengisian Cabang' : 'Akses Admin Operasional'}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold">Status:</span>
-          <span className={`px-3 py-1 rounded-full text-xs font-bold ${orderStatus === 'SUBMITTED' ? 'bg-rose-100 text-rose-800' : 'bg-stone-200 text-stone-800'}`}>{orderStatus}</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <div className="flex justify-between"><label className="text-xs font-bold">🏷️ Nama Promo:</label>{!isBranchMode && <button onClick={handleBroadcastPromo} className="text-[10px] font-bold text-indigo-500">📢 Broadcast</button>}</div>
-          <input type="text" value={promoName} disabled={isFormLocked || isBranchMode} onChange={(e) => setPromoName(e.target.value)} className={`w-full p-2.5 rounded-xl border text-xs font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-bold">💰 Tipe Budget:</label>
-          <div className="flex gap-2">
-            <select value={projectType} disabled={isFormLocked || isBranchMode} onChange={(e) => handleProjectTypeChange(e.target.value)} className={`p-2.5 rounded-xl border text-xs font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`}><option value="Project A">Project A</option><option value="Project B">Project B</option><option value="Project C">Project C</option><option value="Custom">Custom</option></select>
-            <input type="number" value={customBudget} disabled={isFormLocked || isBranchMode || projectType !== 'Custom'} onChange={(e) => setCustomBudget(Number(e.target.value) || 0)} className={`flex-1 p-2.5 rounded-xl border text-xs font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`} />
-          </div>
-        </div>
-        <div className="space-y-1 relative" ref={dropdownRef}>
-          <label className="text-xs font-bold">{isBranchMode ? '🔒 Cabang Anda:' : '🔍 Cari Cabang:'}</label>
-          <input type="text" value={branchSearch} disabled={isFormLocked || isBranchMode} onChange={(e) => { setBranchSearch(e.target.value); setSelectedBranch(''); setIsDropdownOpen(true); }} onFocus={() => !isBranchMode && setIsDropdownOpen(true)} className={`w-full p-2.5 rounded-xl border text-xs font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`} />
-          {isDropdownOpen && !isFormLocked && !isBranchMode && (
-            <div className={`absolute left-0 right-0 top-full mt-1 max-h-56 overflow-y-auto rounded-xl border shadow-xl z-50 ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`}>
-              {filteredBranches.map((b) => (<div key={b.id} onClick={() => handleSelectBranchItem(b)} className="p-2.5 text-xs font-semibold cursor-pointer border-b hover:bg-stone-100 dark:hover:bg-neutral-800">🏢 {b.branch_name}</div>))}
-            </div>
-          )}
-        </div>
-      </div>
-      <div className={`grid grid-cols-3 gap-3 p-3 rounded-xl border text-xs font-bold ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-black'}`}>
-        <div><span className="opacity-60 block text-[10px]">TOTAL BUDGET:</span><span className="text-blue-500 text-sm">Rp{Number(customBudget).toLocaleString()}</span></div>
-        <div><span className="opacity-60 block text-[10px]">TOTAL TERPAKAI:</span><span className="text-amber-500 text-sm">Rp{totalUsedBudget.toLocaleString()}</span></div>
-        <div><span className="opacity-60 block text-[10px]">SISA BUDGET:</span><span className={`text-sm ${remainingBudget < 0 ? 'text-rose-500 font-black' : 'text-emerald-500'}`}>Rp{remainingBudget.toLocaleString()}</span></div>
-      </div>
-      <div className={`max-h-[60vh] overflow-y-auto rounded-xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'}`}>
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className={`sticky top-0 z-20 font-bold shadow-sm ${isDarkMode ? 'bg-neutral-900 text-neutral-300 border-b border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-b border-[#D8D2C2]'}`}>
-            <tr>
-              <th className="p-3 w-12 text-center">No</th>
-              <th className="p-3 cursor-pointer" onClick={() => setSortAscending(!sortAscending)}>Nama Item {sortAscending ? '🠅' : '🠇'}</th>
-              <th className="p-3">Material</th>
-              <th className="p-3">Ukuran</th>
-              <th className="p-3">Harga</th>
-              <th className="p-3 w-28 text-center">Qty</th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800 text-white' : 'divide-stone-200 text-black'}`}>
-            {sortedMasterItems.map((item, index) => (
-              <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-800' : 'hover:bg-[#F8F6F0]'}>
-                <td className="p-3 text-center">{index + 1}</td>
-                <td className="p-3 font-bold text-indigo-500">{item.item_name}</td>
-                <td className="p-3">{item.material}</td>
-                <td className="p-3">{item.size}</td>
-                <td className="p-3 font-semibold">Rp{Number(item.price || 0).toLocaleString()}</td>
-                <td className="p-3"><input type="number" min="0" disabled={isFormLocked || !selectedBranch} value={quantities[item.id] || ''} onChange={(e) => handleQtyChange(item.id, e.target.value, item.price)} className={`w-full p-1.5 border rounded-lg text-xs text-center font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white text-black'}`} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex justify-end items-center gap-3 pt-2">
-        {orderStatus === 'SUBMITTED' && <button onClick={handleRequestRevision} disabled={loading} className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 text-white">🔒 Minta Revisi</button>}
-        {orderStatus === 'REVISION_REQUESTED' && <span className="text-xs font-bold text-amber-500">⏳ Menunggu ACC Admin...</span>}
-        {(orderStatus === 'DRAFT' || orderStatus === 'REVISION_ALLOWED') && <button onClick={handleSubmitOrder} disabled={loading || !selectedBranch || remainingBudget < 0} className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white ${!selectedBranch || remainingBudget < 0 ? 'bg-stone-400' : 'bg-emerald-600'}`}>🚀 Submit Order</button>}
-      </div>
-    </div>
-  );
-}
-
-/* ==========================================
-   TAB LABEL & SURAT JALAN
-========================================== */
 function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
 
   const handleUploadHeaderLogo = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader(); reader.onload = (evt) => { setHeaderLogoUrl(evt.target.result); localStorage.setItem('wellen_header_logo', evt.target.result); alert('✅ Logo KOP diunggah!'); }; reader.readAsDataURL(file);
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Logo = evt.target.result;
+      setHeaderLogoUrl(base64Logo);
+      localStorage.setItem('wellen_header_logo', base64Logo);
+      alert('✅ Logo Header KOP berhasil diunggah!');
+    };
+    reader.readAsDataURL(file);
   };
+
+  const handleResetHeaderLogo = () => {
+    if (confirm('Hapus logo header custom?')) {
+      setHeaderLogoUrl('');
+      localStorage.removeItem('wellen_header_logo');
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateSampleData = [{
+      NO_SPK: "SPK-0826-00101", PO_NUMBER: "4500122101", NO_SJ: "WL-26-88-01", CLIENT: "PT TRI SAKTI PURWOSARI MAKMUR",
+      BRAND: "Production Sunscreen Juara Intens", RECIPIENT_NAME: "Pak Pajri Hidayah", RECIPIENT_PHONE: "0838-3041-0548",
+      DELIVERY_ADDRESS: "Management Support (DC Marunda) JL. Kebantenan IV No. 15, Semper Timur, Cilincing, JAKARTA UTARA 14130",
+      ITEM_DESCRIPTION: "SUNSCREEN BANNER", MEDIA: "FLEXY CINA 280 GR", UKURAN: "2 X 0.75 M", QTY_TOTAL: 300, QTY_PER_KOLI: 20,
+      DATE_PRODUCTION: "12-Aug-26", SENDER: "WELLEN PRINT", WELLEN_PIC: "BPK. JHONNY", SENDER_TELP: "021-5506999", SENDER_EMAIL: "info@wellenprint.com"
+    }];
+    const ws = XLSX.utils.json_to_sheet(templateSampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template_WellenPrint");
+    XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
+  };
+
   const handleExcelImport = (e) => {
     const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader(); reader.onload = (evt) => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
       try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' }); const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        if (!rawData.length) return alert('❌ Excel kosong!');
-        const cleanedData = rawData.map(row => ({
-          NO_SPK: String(row.NO_SPK || row['No SPK'] || '').trim(), PO_NUMBER: String(row.PO_NUMBER || '').trim(), NO_SJ: String(row.NO_SJ || `WL-${Math.floor(10+Math.random()*90)}`).trim(),
-          CLIENT: String(row.CLIENT || row.COMPANY || '').trim(), BRAND: String(row.BRAND || '').trim(), RECIPIENT_NAME: String(row.RECIPIENT_NAME || '').trim(), DELIVERY_ADDRESS: String(row.DELIVERY_ADDRESS || '').trim(),
-          ITEM_DESCRIPTION: String(row.ITEM_DESCRIPTION || '').trim(), QTY_TOTAL: Number(String(row.QTY_TOTAL || row['Qty Total'] || 0).replace(/[^0-9]/g, '')) || 0, QTY_PER_KOLI: Number(String(row.QTY_PER_KOLI || 20).replace(/[^0-9]/g, '')) || 20, SENDER: "WELLEN PRINT", VISUAL_IMAGE: row.VISUAL_IMAGE || ''
-        }));
-        setLabelData(cleanedData); setSelectedRows([]); alert(`✅ Sukses Import ${cleanedData.length} baris!`);
-      } catch (err) { alert('Error: ' + err.message); }
-    }; reader.readAsBinaryString(file); e.target.value = '';
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        if (!rawData || rawData.length === 0) return alert('❌ File Excel kosong atau tidak terbaca!');
+        const cleanedData = rawData.map((row) => {
+          const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
+          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 20;
+          const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
+          return {
+            NO_SPK: String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim(),
+            PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || '').trim(),
+            NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}-${Math.floor(10 + Math.random() * 90)}`).trim(),
+            CLIENT: String(row.CLIENT || row.Client || row.COMPANY || '').trim(),
+            BRAND: String(row.BRAND || row.Brand || row.ITEM_DESCRIPTION || '').trim(),
+            RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row['Nama Penerima'] || '').trim(),
+            RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || '').trim(),
+            DELIVERY_ADDRESS: deliveryAddress,
+            ITEM_DESCRIPTION: String(row.ITEM_DESCRIPTION || row['Item Description'] || '').trim(),
+            MEDIA: String(row.MEDIA || row.Media || '').trim(),
+            UKURAN: String(row.UKURAN || row.Ukuran || '').trim(),
+            QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
+            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 20,
+            DATE_PRODUCTION: String(row.DATE_PRODUCTION || row['Date Production'] || '12-Aug-26').trim(),
+            SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
+            WELLEN_PIC: String(row.WELLEN_PIC || 'BPK. JHONNY').trim(),
+            SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
+            SENDER_EMAIL: String(row.SENDER_EMAIL || 'info@wellenprint.com').trim(),
+            VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim()
+          };
+        }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
+        setLabelData(cleanedData); setSelectedRows([]); alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
+      } catch (err) { alert('Gagal membaca file Excel: ' + err.message); }
+    };
+    reader.readAsBinaryString(file); e.target.value = '';
   };
+
+  const handleImageUploadRow = (e, index) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Url = evt.target.result;
+      setLabelData(prev => prev.map((item, i) => (i === index ? { ...item, VISUAL_IMAGE: base64Url } : item)));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const renderHeaderLogoHtml = () => {
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
+    return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000;">WELLEN<br><span style="font-size:13px; letter-spacing:6px;">PRINT</span></div>`;
+  };
+
   const handlePrintLabels = async () => {
-    if (!selectedRows.length) return alert('⚠️ Pilih data!');
-    const items = labelData.filter((_, i) => selectedRows.includes(i));
-    const pagesHtml = await Promise.all(items.map(async (item) => {
-      const totalKoli = Math.ceil(item.QTY_TOTAL / item.QTY_PER_KOLI) || 1;
-      let htmls = [];
+    if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
+    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
+    const pagesHtml = await Promise.all(itemsToPrint.map(async (item) => {
+      const totalQty = Number(item.QTY_TOTAL || 0); const qtyPerKoli = Number(item.QTY_PER_KOLI || 20);
+      const totalKoli = Math.ceil(totalQty / qtyPerKoli) || 1;
+      let koliHtmls = [];
       for (let k = 1; k <= totalKoli; k++) {
-        let qr = ''; try { qr = await QRCode.toDataURL(`SPK:${item.NO_SPK}|KOLI:${k}/${totalKoli}`, { width: 120, margin: 1 }); } catch (e) {}
-        htmls.push(`<div class="label-page"><div class="label-box"><table class="header-table"><tr><td style="width:25%;">${headerLogoUrl ? `<img src="${headerLogoUrl}" style="height:65px;">` : 'WELLEN PRINT'}</td><td style="text-align:center;"><strong style="font-size:13px;">PT. WELLEN PRINT</strong></td><td style="width:20%; text-align:right;">${qr ? `<img src="${qr}" style="width:65px;">` : ''}</td></tr></table><div class="content-grid"><div class="grid-box"><strong>SENDER:</strong> ${item.SENDER}</div><div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT}</div><div class="grid-box"><strong>NO. SPK:</strong> ${item.NO_SPK}<br><strong>QTY:</strong> ${item.QTY_PER_KOLI} PCS</div><div class="grid-box visual-box"><div class="koli-title">${k} OF ${totalKoli}</div></div></div></div></div>`);
-      } return htmls.join('');
+        const currentQty = (k === totalKoli && totalQty % qtyPerKoli !== 0) ? (totalQty % qtyPerKoli) : qtyPerKoli;
+        const qrAddress = item.NO_SPK ? `SPK:${item.NO_SPK}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
+        let qrDataUrl = ''; try { qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 }); } catch (e) { console.error(e); }
+        koliHtmls.push(`
+          <div class="label-page"><div class="label-box">
+            <table class="header-table"><tr>
+              <td style="width: 25%; vertical-align: middle;">${renderHeaderLogoHtml()}</td>
+              <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2; vertical-align: middle;">
+                <strong style="font-size:13px;">PT. WELLEN PRINT</strong><br>
+                Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
+                RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
+              </td>
+              <td style="width: 20%; text-align:right; vertical-align: middle;">${qrDataUrl ? `<img src="${qrDataUrl}" style="width:65px; height:65px; display:inline-block;">` : ''}</td>
+            </tr></table>
+            <div class="content-grid">
+              <div class="grid-box"><strong>SENDER:</strong> ${item.SENDER || 'WELLEN PRINT'}<br><strong>WELLEN PIC:</strong> ${item.WELLEN_PIC || 'BPK. JHONNY'}<br><strong>NO. TELP:</strong> ${item.SENDER_TELP || '021-5506999'}<br><strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'info@wellenprint.com'}</div>
+              <div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT || '-'}<br><strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || '-'}<br><strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || '-'}<br><strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || '-'}</div>
+              <div class="grid-box"><strong>PO NUMBER:</strong> ${item.PO_NUMBER || '-'}<br><strong>NO. SPK:</strong> ${item.NO_SPK || '-'}<br><strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || '-'}<br><strong>MEDIA:</strong> ${item.MEDIA || '-'}<br><strong>UKURAN:</strong> ${item.UKURAN || '-'}<br><strong>QUANTITY:</strong> ${currentQty} PCS<br><strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || '-'}</div>
+              <div class="grid-box visual-box"><div><strong>VISUAL IMAGE :</strong></div><div class="koli-title">${k} OF ${totalKoli}</div>${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>`}</div>
+            </div>
+          </div></div>
+        `);
+      }
+      return koliHtmls.join('');
     }));
     const printWin = window.open('', '_blank', 'width=900,height=800');
-    printWin.document.write(`<html><head><style>body{font-family:Arial;margin:0;}.label-page{width:210mm;height:148mm;padding:5mm;box-sizing:border-box;page-break-after:always;}.label-box{border:2px solid #000;height:100%;display:flex;flex-direction:column;}.header-table{width:100%;border-bottom:2px solid #000;}.header-table td{padding:6px;}.content-grid{display:grid;grid-template-columns:1fr 1fr;flex-grow:1;}.grid-box{border-right:1px solid #000;border-bottom:1px solid #000;padding:6px;font-size:11px;}.visual-box{text-align:center;}.koli-title{font-size:20px;font-weight:bold;}</style></head><body>${pagesHtml.join('')}</body></html>`);
-    printWin.document.close(); setTimeout(() => printWin.print(), 500);
+    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Label Wellen Print</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; } .label-page { width: 210mm; height: 148mm; padding: 5mm; box-sizing: border-box; page-break-after: always; break-after: page; } .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; } .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } .header-table td { border: none; padding: 6px; vertical-align: middle; } .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 6px; font-size: 11px; line-height: 1.4; box-sizing: border-box; } .grid-box:nth-child(2n) { border-right: none; } .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; } .koli-title { font-size: 20px; font-weight: bold; margin: 2px 0; } .preview-img { max-width: 95%; max-height: 90px; object-fit: contain; } @media print { body { padding: 0; } .label-page { page-break-after: always; break-after: page; } }</style></head><body>${pagesHtml.join('')}</body></html>`);
+    printWin.document.close(); setTimeout(() => { printWin.print(); }, 500);
+  };
+
+  const handlePrintSuratJalan = () => {
+    if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak Surat Jalan!');
+    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
+    const pagesHtml = itemsToPrint.map((item) => `
+      <div class="sj-page">
+        <div class="sj-top-header"><div class="logo-sec">${renderHeaderLogoHtml()}</div><div class="sj-title">Tanda Terima</div></div>
+        <div class="info-row">
+          <div class="info-box left-box"><div class="info-line">Kepada Yth :</div><div class="info-line font-bold">${item.CLIENT || '-'}</div><div class="info-line">${item.DELIVERY_ADDRESS || '-'}</div><div class="info-line">UP : ${item.RECIPIENT_NAME || '-'} ${item.RECIPIENT_PHONE || ''}</div></div>
+          <div class="right-box-container">
+            <table class="meta-table"><tr><td class="font-bold">NO PO</td><td>: ${item.PO_NUMBER || '-'}</td></tr><tr><td class="font-bold">BRAND</td><td>: ${item.BRAND || item.ITEM_DESCRIPTION || '-'}</td></tr><tr><td class="font-bold">NO SJ</td><td>: ${item.NO_SJ || '-'}</td></tr></table>
+            <div class="date-box"><div class="date-header">TANGGAL</div><div class="date-value">${item.DATE_PRODUCTION || '12-Aug-26'}</div></div>
+          </div>
+        </div>
+        <table class="item-grid-table">
+          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
+          <tbody><tr><td style="text-align: center;">1</td><td>AMO/DEPO</td><td></td><td style="text-align: right; padding-right: 15px;">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tbody>
+          <tfoot><tr><td colspan="3" class="text-center font-bold">TOTAL</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tfoot>
+        </table>
+        <div class="signature-row"><div class="sig-box">PENGIRIM</div><div class="sig-box">PENERIMA</div></div>
+      </div>
+    `).join('');
+
+    const printWin = window.open('', '_blank', 'width=900,height=800');
+    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Surat Jalan - Wellen Print</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; } .sj-page { width: 210mm; height: 148mm; padding: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; } .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .sj-title { font-size: 26px; font-weight: bold; text-align: right; } .info-row { display: flex; gap: 15px; margin-bottom: 10px; } .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; } .left-box { flex: 1; height: 75px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 6px; } .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } .meta-table td { padding: 2px 6px; border: none; } .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 10px; } .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; } .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; } .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; } .item-grid-table th { text-align: center; background: #f8f8f8; } .item-grid-table tfoot td { background: #f8f8f8; } .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; } .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; } @media print { body { padding: 0; } .sj-page { page-break-after: always; break-after: page; } }</style></head><body>${pagesHtml}</body></html>`);
+    printWin.document.close(); setTimeout(() => { printWin.print(); }, 500);
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4 mb-4"><label className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer">📂 Import Excel Label & SJ <input type="file" accept=".xlsx" onChange={handleExcelImport} className="hidden" /></label> <label className="px-4 py-2 bg-purple-600 text-white rounded cursor-pointer">🖼️ Upload Logo KOP <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" /></label> <button onClick={handlePrintLabels} disabled={!selectedRows.length} className="px-4 py-2 bg-indigo-600 text-white rounded">🏷️ Cetak Label ({selectedRows.length})</button></div>
-      <div className="overflow-x-auto rounded border bg-white dark:bg-neutral-800">
+      {/* Panel Upload Logo KOP Header */}
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-16 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
+            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold opacity-50 text-center">No Logo</span>}
+          </div>
+          <div>
+            <h4 className="font-bold text-xs">🖼️ Logo Header KOP (Label & Surat Jalan)</h4>
+            <p className="text-[11px] opacity-70">{headerLogoUrl ? '✅ Logo KOP aktif (Tersimpan)' : '⚠️ Menggunakan teks default "WELLEN PRINT"'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-purple-600 hover:bg-purple-500 transition-all active:scale-95">
+            🖼️ Upload Logo KOP Wellen <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          </label>
+          {headerLogoUrl && <button onClick={handleResetHeaderLogo} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">Reset</button>}
+        </div>
+      </div>
+
+      {/* Top Action Controls */}
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'}`}>
+            📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
+          </label>
+          <button onClick={handleDownloadTemplate} className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all">📥 Download Template Excel</button>
+          {labelData.length > 0 && <button onClick={() => { if(confirm('Bersihkan data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">🧹 Bersihkan Import</button>}
+          <span className="text-xs opacity-70 ml-2">Terisi: <strong>{labelData.length}</strong> Baris Valid</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrintSuratJalan} disabled={selectedRows.length === 0} className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${selectedRows.length > 0 ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95' : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 cursor-not-allowed'}`}>
+            📄 Cetak Surat Jalan ({selectedRows.length})
+          </button>
+          <button onClick={handlePrintLabels} disabled={selectedRows.length === 0} className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${selectedRows.length > 0 ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95' : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 cursor-not-allowed'}`}>
+            🏷️ Cetak Label ({selectedRows.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Table Data Preview */}
+      <div className={`overflow-x-auto rounded-2xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2]'}`}>
         <table className="w-full text-left text-xs">
-          <thead className="bg-stone-100 dark:bg-neutral-900"><tr><th className="p-3"><input type="checkbox" onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, i) => i))} /></th><th className="p-3">SPK</th><th className="p-3">Client</th><th className="p-3">Item</th><th className="p-3">Qty</th></tr></thead>
-          <tbody>{labelData.map((r, i) => (<tr key={i}><td className="p-3"><input type="checkbox" checked={selectedRows.includes(i)} onChange={() => setSelectedRows(p => p.includes(i) ? p.filter(x => x !== i) : [...p, i])} /></td><td className="p-3 text-blue-500 font-bold">{r.NO_SPK}</td><td className="p-3">{r.CLIENT}</td><td className="p-3">{r.ITEM_DESCRIPTION}</td><td className="p-3">{r.QTY_TOTAL}</td></tr>))}</tbody>
+          <thead className={`font-bold border-b ${isDarkMode ? 'bg-neutral-800 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
+            <tr>
+              <th className="p-3 text-center w-10"><input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600" /></th>
+              <th className="p-3">No SPK / PO / SJ</th>
+              <th className="p-3">Client & Brand</th>
+              <th className="p-3">Penerima & Alamat</th>
+              <th className="p-3">Deskripsi / Media / Ukuran</th>
+              <th className="p-3">Total Qty</th>
+              <th className="p-3">Isi/Koli</th>
+              <th className="p-3">Visual Image</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+            {labelData.length === 0 ? (
+              <tr><td colSpan="8" className="p-6 text-center opacity-60">Tabel kosong. Silakan klik tombol <strong>"Download Template Excel"</strong> di atas.</td></tr>
+            ) : (
+              labelData.map((row, idx) => {
+                const total = Number(row.QTY_TOTAL || 0); const koli = Number(row.QTY_PER_KOLI || 20); const isChecked = selectedRows.includes(idx);
+                return (
+                  <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
+                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
+                    <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span></td>
+                    <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
+                    <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
+                    <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'})</span></td>
+                    <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
+                    <td className="p-3">{koli} Pcs</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {row.VISUAL_IMAGE ? (
+                          <img src={row.VISUAL_IMAGE} alt="Preview" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual Item SPK: ${row.NO_SPK}`)} className="w-12 h-8 object-contain border rounded bg-white cursor-pointer hover:scale-105 transition-transform" />
+                        ) : (<span className="text-[10px] opacity-50">Belum ada</span>)}
+                        <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold">
+                          Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx)} className="hidden" />
+                        </label>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
         </table>
       </div>
     </div>
@@ -348,40 +352,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : 'dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
-
-  // State Modal Preview Gambar
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
-
-  // State Modal Link Google Sheet
   const [showGSheetModal, setShowGSheetModal] = useState(false);
   const [gSheetUrl, setGSheetUrl] = useState('');
   const [importingGSheet, setImportingGSheet] = useState(false);
-
-  // State Modal Scanner & Input Manual
   const [showScanModal, setShowScanModal] = useState(false);
   const [inputMode, setInputMode] = useState('scan');
   const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
   const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
   const [scannedInput, setScannedInput] = useState('');
   const [lastScanMessage, setLastScanMessage] = useState('');
-
-  // State Form Panel Finishing
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
 
-  // Login States
   const [currentAdmin, setCurrentAdmin] = useState(() => { const s = localStorage.getItem('kl_admin_session'); return s ? JSON.parse(s) : null; });
   const [currentBranch, setCurrentBranch] = useState(() => { const s = localStorage.getItem('kl_branch_session'); return s ? JSON.parse(s) : null; });
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
-
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // Trigger login jika masuk via link cabang tapi belum login
-  useEffect(() => {
-    if (isBranchMode && !currentBranch) setShowBranchLoginModal(true);
-  }, [isBranchMode, currentBranch]);
-
+  useEffect(() => { if (isBranchMode && !currentBranch) setShowBranchLoginModal(true); }, [isBranchMode, currentBranch]);
   useEffect(() => { fetchSpkData(); }, []);
 
   const openImageModal = (url, title) => { if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview' }); };
@@ -390,30 +380,21 @@ export default function App() {
 
   const fetchSpkData = async () => {
     const { data } = await supabase.from('spk_data').select('*').order('id', { ascending: false });
-    if (data) {
-      setSpkList(data);
-      if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]);
-    }
+    if (data) { setSpkList(data); if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]); }
   };
 
   const initFinishingForm = (item) => {
-    if (!item) return;
-    setSelectedSpkId(item.id);
+    if (!item) return; setSelectedSpkId(item.id);
     setFinishingForm({ finishing_type: item.finishing_type || 'inhouse', sub_vendor_name: item.sub_vendor_name || '', qty_finish_sub_out: item.qty_finish_sub_out || 0, qty_finish: item.qty_finish || 0 });
   };
 
   const handleSelectSpk = (spkId) => {
-    setSelectedSpkId(spkId);
-    const item = spkList.find(s => String(s.id) === String(spkId));
+    setSelectedSpkId(spkId); const item = spkList.find(s => String(s.id) === String(spkId));
     if (item) setFinishingForm({ finishing_type: item.finishing_type || 'inhouse', sub_vendor_name: item.sub_vendor_name || '', qty_finish_sub_out: item.qty_finish_sub_out || 0, qty_finish: item.qty_finish || 0 });
   };
 
   const handleToggleCheck = (id) => {
-    setSelectedSpkIds(prev => {
-      const exist = prev.includes(id);
-      if (!exist) handleSelectSpk(id);
-      return exist ? prev.filter(item => item !== id) : [...prev, id];
-    });
+    setSelectedSpkIds(prev => { const exist = prev.includes(id); if (!exist) handleSelectSpk(id); return exist ? prev.filter(item => item !== id) : [...prev, id]; });
   };
 
   const handleToggleSelectAll = (filteredItems) => {
@@ -506,84 +487,149 @@ export default function App() {
   const displayedList = spkList.filter(item => (item.no_spk||'').toLowerCase().includes(searchTerm.toLowerCase()) || (item.project||'').toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className={`min-h-screen p-4 font-sans ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-gray-50 text-black'}`}>
-      <div className="max-w-7xl mx-auto space-y-4">
-        {/* HEADER */}
-        <div className={`flex justify-between items-center p-4 rounded-xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white'}`}>
-          <div><h1 className="text-xl font-bold text-blue-500">{isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK ADMIN'}</h1></div>
-          <div className="flex gap-2">
-            <button onClick={toggleTheme} className="px-3 py-1.5 border rounded text-xs font-bold">Tema</button>
-            {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-3 py-1.5 bg-rose-600 text-white rounded text-xs font-bold">Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-bold">Login Admin</button>)}
-            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null);}} className="px-3 py-1.5 bg-rose-600 text-white rounded text-xs font-bold">Logout Cabang</button>}
-            {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-3 py-1.5 bg-purple-600 text-white rounded text-xs font-bold">📷 Scan QC</button>}
-            {!isBranchMode && <label className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-bold cursor-pointer">📁 Upload SPK<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
+    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-gradient-to-br from-[#FBF9F5] via-[#F3EFE6] to-[#E5E0D5] text-[#2F3E3B]'}`}>
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* HEADER UTAMA */}
+        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white/80 border-[#D8D2C2] backdrop-blur-md'} gap-4`}>
+          <div>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
+              {isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING'}
+            </h1>
+            <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
+              {isBranchMode ? 'Sistem Terpadu Portal Cabang' : 'Sistem Pelacak Progress Produksi & Pengiriman SPK'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={toggleTheme} className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-white hover:bg-stone-100 text-slate-700 border-[#D8D2C2]'}`}>
+              {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
+            </button>
+            {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔑 Login Admin</button>)}
+            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null);}} className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
+            {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">📷 Scan QC Station</button>}
+            {!isBranchMode && <label className={`px-3.5 py-2 rounded-xl cursor-pointer text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${isDarkMode ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-[#6B8E85] hover:bg-[#57756D] text-white'}`}>📁 Upload SPK Excel<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
           </div>
         </div>
 
-        {/* TABS (Admin Only) */}
+        {/* TABS MENU */}
         {!isBranchMode && (
-          <div className="flex gap-2 border-b pb-2 overflow-x-auto">
+          <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
             {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 rounded text-xs font-bold capitalize ${activeTab === t ? 'bg-blue-600 text-white' : 'border'}`}>{t.replace('_', ' ')}</button>
+              <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${activeTab === t ? (isDarkMode ? 'bg-blue-600 text-white shadow-sm' : 'bg-[#6B8E85] text-white shadow-sm') : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white/70 text-[#4A5D58] hover:bg-white border border-[#D8D2C2]/70')}`}>
+                {t === 'label' ? '🏷️ Cetak Label & SJ' : t === 'kawan_lama' ? '🏢 Project Kawan Lama' : t}
+              </button>
             ))}
           </div>
         )}
 
-        {/* ADMIN DASHBOARD PANELS */}
+        {/* DASHBOARD WIDGET */}
         {!isBranchMode && activeTab === 'dashboard' && (
-          <div className="grid grid-cols-4 gap-4">
-            <CircularGaugeCard title="Total SPK" percent={100} color="blue" detailText={`${totalSpk} Data Aktif`} />
-            <CircularGaugeCard title="Produksi" percent={80} color="orange" detailText="Print & Finish" />
-            <CircularGaugeCard title="Paking" percent={60} color="purple" detailText="Siap Kirim" />
-            <CircularGaugeCard title="Terkirim" percent={40} color="green" detailText="Delivery Done" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
+            <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
+            <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
+            <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
           </div>
         )}
 
         {/* TAB KAWAN LAMA */}
         {(isBranchMode || activeTab === 'kawan_lama') && (
-          <KawanLamaTab 
-            isDarkMode={isDarkMode} 
-            currentUser={isBranchMode ? currentBranch : currentAdmin} 
-            isBranchMode={isBranchMode} 
-          />
+          <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
         )}
         
-        {/* TAB CETAK LABEL */}
-        {!isBranchMode && activeTab === 'label' && <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />}
+        {/* TAB CETAK LABEL & SURAT JALAN (FULL VERSION) */}
+        {!isBranchMode && activeTab === 'label' && (
+          <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+        )}
 
-        {/* TRACKING TABLE FULL (Admin Tab) */}
+        {/* TRACKING TABLE FULL (Admin Tabs) */}
         {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 rounded-xl border bg-white dark:bg-neutral-800">
-              <input type="text" placeholder="Cari SPK / Cabang..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="p-2 border rounded text-xs w-64 text-black" />
-              <button onClick={handleBatchPrint} className="px-4 py-2 bg-indigo-600 text-white rounded text-xs font-bold">🖨️ Cetak {selectedSpkIds.length} Form</button>
+          <div className="space-y-4">
+            {/* Table Header Controls */}
+            <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'}`}>
+              <div className="flex items-center gap-2 flex-1 w-full">
+                <span className="text-sm">🔍</span>
+                <input type="text" placeholder="Cari SPK, Client, atau Store Name..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className={`w-full text-xs bg-transparent focus:outline-none ${isDarkMode ? 'text-white' : 'text-[#2F3E3B]'}`} />
+              </div>
+              <button onClick={handleBatchPrint} disabled={selectedSpkIds.length === 0} className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${selectedSpkIds.length > 0 ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95' : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 cursor-not-allowed'}`}>
+                🖨️ Cetak {selectedSpkIds.length} Surat Form Sekaligus
+              </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border bg-white dark:bg-neutral-900 shadow-sm">
+            {/* Main Table */}
+            <div className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'}`}>
               <table className="w-full text-xs text-left">
-                <thead className="bg-gray-100 dark:bg-neutral-800">
+                <thead className={`font-bold border-b transition-colors ${isDarkMode ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
                   <tr>
-                    <th className="p-3"><input type="checkbox" checked={spkList.length>0 && selectedSpkIds.length === spkList.length} onChange={() => handleToggleSelectAll(spkList)} /></th>
-                    <th className="p-3">SPK & Info</th>
-                    <th className="p-3">Print</th>
-                    <th className="p-3">Finish</th>
-                    <th className="p-3">Paking & Foto</th>
-                    <th className="p-3">QC Check</th>
-                    <th className="p-3">Ship & Surat Jalan</th>
+                    <th className="p-4 w-10 text-center"><input type="checkbox" checked={spkList.length>0 && selectedSpkIds.length === spkList.length} onChange={() => handleToggleSelectAll(spkList)} className="w-4 h-4 cursor-pointer accent-indigo-600" /></th>
+                    <th className="p-4">SPK & Info</th>
+                    <th className="p-4">Print</th>
+                    <th className="p-4">Finish</th>
+                    <th className="p-4">Paking & Foto</th>
+                    <th className="p-4">QC Check</th>
+                    <th className="p-4">Ship & Surat Jalan</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-neutral-700">
+                <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
                   {displayedList.map(i => {
                     const pPrint = getPercent(i.qty_print, i.qty_order); const pFinish = getPercent(i.qty_finish, i.qty_order); const pPack = getPercent(i.qty_pack, i.qty_order); const pShip = getPercent(i.qty_ship, i.qty_order);
+                    const isChecked = selectedSpkIds.includes(i.id);
                     return (
-                      <tr key={i.id} className={selectedSpkIds.includes(i.id) ? 'bg-blue-50 dark:bg-blue-900/30' : ''}>
-                        <td className="p-3"><input type="checkbox" checked={selectedSpkIds.includes(i.id)} onChange={() => handleToggleCheck(i.id)} /></td>
-                        <td className="p-3"><strong>{i.no_spk}</strong><br/>{i.client} - {i.project}<br/><span className="opacity-70">Order: {i.qty_order}</span></td>
-                        <td className="p-3"><span className={`px-2 py-1 rounded font-bold ${getStatusBadge(pPrint).text}`}>{pPrint}%</span><br/>{activeTab==='produksi' && <input type="number" value={i.qty_print||0} onChange={e=>handleUpdateQty(i.id, 'qty_print', e.target.value, i.qty_order)} className="mt-1 w-16 border text-black p-1" />}</td>
-                        <td className="p-3"><span className={`px-2 py-1 rounded font-bold ${getStatusBadge(pFinish).text}`}>{pFinish}%</span><br/>{activeTab==='finishing' && <input type="number" value={i.qty_finish||0} onChange={e=>handleUpdateQty(i.id, 'qty_finish', e.target.value, i.qty_order)} className="mt-1 w-16 border text-black p-1" />}</td>
-                        <td className="p-3"><span className={`px-2 py-1 rounded font-bold ${getStatusBadge(pPack).text}`}>{pPack}%</span><br/>{activeTab==='paking' && <div><input type="number" value={i.qty_pack||0} onChange={e=>handleUpdateQty(i.id, 'qty_pack', e.target.value, i.qty_finish)} className="my-1 w-16 border text-black p-1 block" /><label className="px-2 bg-stone-200 text-black rounded text-[10px] cursor-pointer">Foto<input type="file" accept="image/*" onChange={e => {const f=e.target.files[0]; if(f){const r=new FileReader(); r.onload=ev=>handleUpdateField(i.id, {packing_visual_url: ev.target.result}); r.readAsDataURL(f);}}} className="hidden" /></label></div>}</td>
-                        <td className="p-3 space-y-1"><select value={i.qc_checker||''} onChange={e=>handleUpdateField(i.id, {qc_checker: e.target.value})} className="block w-full border text-black p-1 text-[10px]"><option value="">-QC Check-</option>{STAFF_QC_LIST.map(s=><option key={s}>{s}</option>)}</select></td>
-                        <td className="p-3"><span className={`px-2 py-1 rounded font-bold ${getStatusBadge(pShip).text}`}>{pShip}%</span><br/>{activeTab==='pengiriman' && <div><input type="number" value={i.qty_ship||0} onChange={e=>handleUpdateQty(i.id, 'qty_ship', e.target.value, i.qty_pack)} className="my-1 w-16 border text-black p-1 block" /><label className="px-2 bg-stone-200 text-black rounded text-[10px] cursor-pointer">SJ+<input type="file" onChange={e=>handleUploadSuratJalan(e, i)} className="hidden"/></label></div>}{i.surat_jalan_url && <a href={i.surat_jalan_url} target="_blank" className="text-blue-500 text-[10px] block mt-1">Cek SJ</a>}</td>
+                      <tr key={i.id} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
+                        <td className="p-4 text-center"><input type="checkbox" checked={isChecked} onChange={() => handleToggleCheck(i.id)} className="w-4 h-4 cursor-pointer accent-indigo-600" /></td>
+                        <td className="p-4">
+                          <strong className={`font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>{i.no_spk}</strong><br/>
+                          <span className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>{i.client} - {i.project}</span><br/>
+                          <span className={`text-[10px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>Order: {i.qty_order} Pcs</span>
+                        </td>
+                        
+                        {/* Kolom Print */}
+                        <td className="p-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPrint).text}`}>{pPrint}%</span><br/>
+                          {activeTab==='produksi' && <input type="number" value={i.qty_print||0} onChange={e=>handleUpdateQty(i.id, 'qty_print', e.target.value, i.qty_order)} className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />}
+                        </td>
+                        
+                        {/* Kolom Finish */}
+                        <td className="p-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pFinish).text}`}>{pFinish}%</span><br/>
+                          {activeTab==='finishing' && <input type="number" value={i.qty_finish||0} onChange={e=>handleUpdateQty(i.id, 'qty_finish', e.target.value, i.qty_order)} className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />}
+                        </td>
+                        
+                        {/* Kolom Paking */}
+                        <td className="p-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPack).text}`}>{pPack}%</span><br/>
+                          {activeTab==='paking' && (
+                            <div className="mt-1.5 space-y-1.5">
+                              <input type="number" value={i.qty_pack||0} onChange={e=>handleUpdateQty(i.id, 'qty_pack', e.target.value, i.qty_finish)} className={`w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />
+                              <label className={`block text-center rounded-lg px-2 py-1 text-[10px] cursor-pointer font-bold transition-all border ${isDarkMode ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-600' : 'bg-[#EFECE6] hover:bg-[#E5E0D5] text-[#3D4F4B] border-[#D8D2C2]'}`}>
+                                📷 Upload Foto Paking
+                                <input type="file" accept="image/*" onChange={e => {const f=e.target.files[0]; if(f){const r=new FileReader(); r.onload=ev=>handleUpdateField(i.id, {packing_visual_url: ev.target.result}); r.readAsDataURL(f);}}} className="hidden" />
+                              </label>
+                              {i.packing_visual_url && <img src={i.packing_visual_url} alt="Paking" onClick={() => openImageModal(i.packing_visual_url, `Foto Paking: ${i.no_spk}`)} className="w-12 h-8 object-cover rounded border cursor-pointer hover:scale-110" />}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Kolom QC */}
+                        <td className="p-4 space-y-1.5">
+                          <select value={i.qc_checker||''} onChange={e=>handleUpdateField(i.id, {qc_checker: e.target.value})} className={`block w-full rounded-lg border p-1 text-[10px] focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`}><option value="">-- QC Checker --</option>{STAFF_QC_LIST.map(s=><option key={s}>{s}</option>)}</select>
+                          <select value={i.qc_paking||''} onChange={e=>handleUpdateField(i.id, {qc_paking: e.target.value})} className={`block w-full rounded-lg border p-1 text-[10px] focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`}><option value="">-- QC Paking --</option>{STAFF_QC_LIST.map(s=><option key={s}>{s}</option>)}</select>
+                        </td>
+
+                        {/* Kolom Pengiriman */}
+                        <td className="p-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pShip).text}`}>{pShip}%</span><br/>
+                          {activeTab==='pengiriman' && (
+                            <div className="mt-1.5 space-y-1.5">
+                              <input type="number" value={i.qty_ship||0} onChange={e=>handleUpdateQty(i.id, 'qty_ship', e.target.value, i.qty_pack)} className={`w-20 border rounded-lg px-2 py-1 focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'}`} />
+                              <label className={`block text-center rounded-lg px-2 py-1 text-[10px] cursor-pointer font-bold transition-all border ${isDarkMode ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-600' : 'bg-[#EFECE6] hover:bg-[#E5E0D5] text-[#3D4F4B] border-[#D8D2C2]'}`}>
+                                📤 Upload Surat Jalan
+                                <input type="file" onChange={e=>handleUploadSuratJalan(e, i)} accept="image/*,application/pdf" className="hidden"/>
+                              </label>
+                            </div>
+                          )}
+                          {i.surat_jalan_url && <a href={i.surat_jalan_url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-[10px] block mt-1">📄 Lihat SJ</a>}
+                        </td>
                       </tr>
                     );
                   })}
@@ -594,25 +640,34 @@ export default function App() {
         )}
       </div>
 
-      {/* SCAN MODAL */}
+      {/* MODAL SCAN QC */}
       {showScanModal && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
-          <div className="w-full max-w-sm p-6 bg-white dark:bg-neutral-800 rounded-3xl">
-            <div className="flex justify-between items-center mb-4"><h3 className="font-bold">📷 Scan QC</h3><button onClick={()=>setShowScanModal(false)}>✕</button></div>
-            <form onSubmit={handleSubmitInput} className="space-y-4">
-              <select value={scanTargetColumn} onChange={e=>setScanTargetColumn(e.target.value)} className="w-full p-2 border text-black rounded"><option value="qc_checker">QC Checker</option><option value="qc_paking">QC Paking</option><option value="qty_finish">Auto Finish</option></select>
-              <input type="text" autoFocus placeholder="Scan Barcode SPK..." value={scannedInput} onChange={e=>setScannedInput(e.target.value)} className="w-full p-3 border rounded font-mono text-black text-center" />
-              <button type="submit" className="w-full py-3 bg-purple-600 text-white font-bold rounded">Proses Scan</button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className={`w-full max-w-sm p-6 rounded-3xl border shadow-2xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+            <div className="flex justify-between items-center mb-4 border-b pb-2 dark:border-neutral-700 border-stone-200">
+              <h3 className="font-bold">📷 Scan QC Station</h3>
+              <button onClick={()=>setShowScanModal(false)} className="hover:text-red-500">✕</button>
+            </div>
+            <form onSubmit={handleSubmitInput} className="space-y-4 text-sm">
+              <select value={scanTargetColumn} onChange={e=>setScanTargetColumn(e.target.value)} className={`w-full p-2.5 rounded-xl border focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-[#C5BEAD] text-black'}`}>
+                <option value="qc_checker">QC Checker</option><option value="qc_paking">QC Paking</option><option value="qty_finish">Auto Set Finish (Max Qty)</option>
+              </select>
+              <input type="text" autoFocus placeholder="Arahkan Scanner Barcode Ke Sini..." value={scannedInput} onChange={e=>setScannedInput(e.target.value)} className={`w-full p-3 rounded-xl border font-mono text-center focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-[#C5BEAD] text-black'}`} />
+              <button type="submit" className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl active:scale-95 transition-all">⚡ Proses Scan Input</button>
             </form>
-            {lastScanMessage && <div className="mt-3 p-2 bg-stone-100 text-black text-center text-xs font-bold rounded">{lastScanMessage}</div>}
+            {lastScanMessage && <div className={`mt-3 p-3 text-center text-xs font-bold rounded-xl border ${lastScanMessage.includes('✅') ? 'bg-green-100 text-green-800 border-green-300' : 'bg-red-100 text-red-800 border-red-300'}`}>{lastScanMessage}</div>}
           </div>
         </div>
       )}
 
-      {/* PREVIEW GAMBAR MODAL */}
+      {/* MODAL IMAGE PREVIEW */}
       {modalImageInfo.isOpen && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]" onClick={closeImageModal}>
-          <img src={modalImageInfo.url} alt="Preview" className="max-w-[90%] max-h-[90%] object-contain" />
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={closeImageModal}>
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button onClick={closeImageModal} className="absolute -top-10 right-0 text-white hover:text-red-500 text-3xl">✕</button>
+            <img src={modalImageInfo.url} alt="Preview" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-stone-700" />
+            <div className="text-center mt-3 text-white font-bold text-sm tracking-widest">{modalImageInfo.title}</div>
+          </div>
         </div>
       )}
 
