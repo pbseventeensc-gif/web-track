@@ -74,16 +74,25 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif (Tanpa Nominal Budget) */}
-      <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-          Kampanye / Promo Aktif
-        </span>
-        <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
-        <p className="text-xs opacity-70 mt-1">{activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.'}</p>
+      {/* Keterangan Promo Aktif & Tombol Submit di Bagian Atas */}
+      <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+            Kampanye / Promo Aktif
+          </span>
+          <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
+          <p className="text-xs opacity-70 mt-1">{activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.'}</p>
+        </div>
+        <button 
+          onClick={submitOrder}
+          disabled={loading || !activePromo}
+          className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
+        >
+          {loading ? 'Memproses...' : '🚀 Submit Order Cabang'}
+        </button>
       </div>
 
-      {/* Grid Input Order Cabang (Master Data Tampil Lengkap, Harga Di-hide, Hanya Input Qty) */}
+      {/* Grid Input Order Cabang (Master Data Tampil Lengkap, Harga Di-hide) */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Form Permintaan / Order Logistik Cabang</h2>
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
@@ -122,13 +131,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             </tbody>
           </table>
         </div>
-        <button 
-          onClick={submitOrder}
-          disabled={loading || !activePromo}
-          className={`mt-6 w-full py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
-        >
-          {loading ? 'Memproses...' : '🚀 Submit Order Cabang'}
-        </button>
       </div>
     </div>
   );
