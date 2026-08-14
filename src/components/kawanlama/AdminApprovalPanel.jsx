@@ -93,15 +93,15 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Badge Nama Toko / Cabang Warna Hijau */}
-                    <span className="px-3 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    {/* Badge Nama Toko / Cabang Warna Biru */}
+                    <span className="px-3 py-1 rounded-xl text-xs font-black bg-blue-600 text-white">
                       🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
                     </span>
                     <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
                     
-                    {/* Badge Minta Buka Kunci Warna Merah Mencolok */}
+                    {/* Badge Minta Buka Kunci Warna Merah Senada Logout */}
                     {isRequestingUnlock && (
-                      <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 animate-pulse">
+                      <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-rose-600 text-white animate-pulse">
                         ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
                       </span>
                     )}
