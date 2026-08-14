@@ -51,8 +51,17 @@ export default function App() {
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
 
-  const [currentAdmin, setCurrentAdmin] = useState(() => { const s = localStorage.getItem('kl_admin_session'); return s ? JSON.parse(s) : null; });
-  const [currentBranch, setCurrentBranch] = useState(() => { const s = localStorage.getItem('kl_branch_session'); return s ? JSON.parse(s) : null; });
+  // Sesi Admin & Cabang menggunakan localStorage agar aman saat refresh
+  const [currentAdmin, setCurrentAdmin] = useState(() => { 
+    const s = localStorage.getItem('kl_admin_session'); 
+    return s ? JSON.parse(s) : null; 
+  });
+  
+  const [currentBranch, setCurrentBranch] = useState(() => { 
+    const s = localStorage.getItem('kl_branch_session'); 
+    return s ? JSON.parse(s) : null; 
+  });
+
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
@@ -277,7 +286,11 @@ export default function App() {
       <AdminLoginModal 
         isOpen={showAdminLoginModal} 
         onClose={() => setShowAdminLoginModal(false)} 
-        onLoginSuccess={(admin) => { setCurrentAdmin(admin); setShowAdminLoginModal(false); }} 
+        onLoginSuccess={(admin) => { 
+          localStorage.setItem('kl_admin_session', JSON.stringify(admin));
+          setCurrentAdmin(admin); 
+          setShowAdminLoginModal(false); 
+        }} 
       />
 
       <BranchLoginModal 
