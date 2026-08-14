@@ -48,13 +48,13 @@ export default function MainTrackingTable({
         </button>
       </div>
 
-      {/* Main Table */}
-      <div className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${
+      {/* Main Table dengan Sticky Header & Scrollable Body */}
+      <div className={`max-h-[650px] overflow-y-auto relative rounded-2xl border shadow-sm transition-colors ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'
       }`}>
-        <table className="w-full text-xs text-left">
-          <thead className={`font-bold border-b transition-colors ${
-            isDarkMode ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+        <table className="w-full text-xs text-left border-collapse">
+          <thead className={`sticky top-0 z-10 font-bold border-b transition-colors shadow-sm ${
+            isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
           }`}>
             <tr>
               <th className="p-4 w-10 text-center">
