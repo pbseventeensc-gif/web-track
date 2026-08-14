@@ -103,21 +103,26 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 
 /* =========================================================
    KOMPONEN TAB: PROJECT KAWAN LAMA
+   (DENGAN FIX DROPDOWN BUG & BROADCAST PROMO ADMIN)
    ========================================================= */
-function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
+function KawanLamaTab({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   
+  // Ref untuk mendeteksi klik di luar Dropdown Auto-Search
   const dropdownRef = useRef(null);
 
+  // State Auto Search Cabang
   const [branchSearch, setBranchSearch] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // State Nama Promo & Tipe Project / Budget
   const [promoName, setPromoName] = useState('PROMO TEMATIK AGUSTUS');
   const [projectType, setProjectType] = useState('Project C');
   const [customBudget, setCustomBudget] = useState(2500000);
 
+  // State Urutan A-Z atau Z-A
   const [sortAscending, setSortAscending] = useState(true);
 
   const [quantities, setQuantities] = useState({});
@@ -128,6 +133,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
   useEffect(() => {
     fetchMasterData();
 
+    // Event Listener Klik di Luar Dropdown untuk Menutupnya
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
@@ -140,14 +146,6 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (currentUser && currentUser.role === 'branch') {
-      setSelectedBranch(currentUser.branch_id);
-      setBranchSearch(currentUser.branch_name);
-      loadBranchOrder(currentUser.branch_id);
-    }
-  }, [currentUser]);
-
   const fetchMasterData = async () => {
     setLoading(true);
     const { data: bData } = await supabase.from('kl_branches').select('*').order('branch_name', { ascending: true });
@@ -159,12 +157,24 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
     setLoading(false);
   };
 
-  const loadBranchOrder = async (branchId) => {
+  // Handler Ganti Tipe Project (A, B, C, Custom)
+  const handleProjectTypeChange = (type) => {
+    setProjectType(type);
+    if (type === 'Project A') setCustomBudget(5000000);
+    else if (type === 'Project B') setCustomBudget(3500000);
+    else if (type === 'Project C') setCustomBudget(2500000);
+  };
+
+  const handleSelectBranchItem = async (branch) => {
+    setSelectedBranch(branch.id);
+    setBranchSearch(branch.branch_name);
+    setIsDropdownOpen(false);
+
     setLoading(true);
     const { data: orderData } = await supabase
       .from('kl_orders')
       .select('*, kl_order_items(*)')
-      .eq('branch_id', branchId)
+      .eq('branch_id', branch.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -190,20 +200,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
     setLoading(false);
   };
 
-  const handleProjectTypeChange = (type) => {
-    setProjectType(type);
-    if (type === 'Project A') setCustomBudget(5000000);
-    else if (type === 'Project B') setCustomBudget(3500000);
-    else if (type === 'Project C') setCustomBudget(2500000);
-  };
-
-  const handleSelectBranchItem = (branch) => {
-    setSelectedBranch(branch.id);
-    setBranchSearch(branch.branch_name);
-    setIsDropdownOpen(false);
-    loadBranchOrder(branch.id);
-  };
-
+  // Hitung Total Terpakai Saat Ini
   const totalUsedBudget = masterItems.reduce((acc, item) => {
     const qty = quantities[item.id] || 0;
     return acc + (qty * (item.price || 0));
@@ -230,14 +227,17 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
     }));
   };
 
+  // FITUR BARU: BROADCAST PROMO KE SELURUH CABANG BY ADMIN
   const handleBroadcastPromo = async () => {
     if (!promoName.trim()) return alert('⚠️ Silakan isi Nama Promo!');
     
-    if (!confirm(`📢 Bagikan Promo "${promoName}" (Budget Rp${Number(customBudget).toLocaleString()}) ke SELURUH CABANG?`)) {
+    if (!confirm(`📢 Apakah Anda yakin ingin membagikan Promo "${promoName}" dengan Budget Rp${Number(customBudget).toLocaleString()} ke SELURUH KANTOR CABANG?`)) {
       return;
     }
 
     setLoading(true);
+
+    // Update / Insert setting promo aktif di Supabase
     const { error } = await supabase
       .from('kl_orders')
       .update({ 
@@ -248,8 +248,11 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
 
     setLoading(false);
 
-    if (error) alert('Gagal membagikan promo: ' + error.message);
-    else alert(`✅ Promo "${promoName}" berhasil dibagikan!`);
+    if (error) {
+      alert('Gagal membagikan promo: ' + error.message);
+    } else {
+      alert(`✅ SUKSES! Promo "${promoName}" telah dibagikan dan akan otomatis aktif di seluruh cabang.`);
+    }
   };
 
   const handleSubmitOrder = async () => {
@@ -320,22 +323,26 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
 
     setLoading(false);
 
-    if (error) alert('Gagal permohonan revisi: ' + error.message);
-    else {
+    if (error) {
+      alert('Gagal mengirimkan permohonan revisi: ' + error.message);
+    } else {
       alert('✅ Permohonan revisi telah dikirim ke Admin!');
       setOrderStatus('REVISION_REQUESTED');
     }
   };
 
   const isFormLocked = orderStatus === 'SUBMITTED' || orderStatus === 'REVISION_REQUESTED';
-  const isBranchUser = isBranchMode || (currentUser && currentUser.role === 'branch');
 
   const filteredBranches = branches.filter(b => 
     b.branch_name.toLowerCase().includes(branchSearch.toLowerCase())
   );
 
   const sortedMasterItems = [...masterItems].sort((a, b) => {
-    return sortAscending ? a.item_name.localeCompare(b.item_name) : b.item_name.localeCompare(a.item_name);
+    if (sortAscending) {
+      return a.item_name.localeCompare(b.item_name);
+    } else {
+      return b.item_name.localeCompare(a.item_name);
+    }
   });
 
   return (
@@ -347,11 +354,10 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
           <h3 className="font-bold text-base flex items-center gap-2">
             <span>🏢</span> Input Form Cabang - Project Kawan Lama
           </h3>
-          <p className="text-xs opacity-70">
-            {isBranchUser ? `Halaman Pengisian Cabang` : 'Akses Admin Operasional'}
-          </p>
+          <p className="text-xs opacity-70">Pengisian master item dinamis (Hanya item terisi yang disimpan ke database)</p>
         </div>
 
+        {/* Status Badge */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold">Status:</span>
           <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -365,42 +371,45 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
         </div>
       </div>
 
+      {/* PANEL PENGATURAN PROMO, PROJECT, BUDGET & CABANG */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* 1. Nama Promo + Tombol Broadcast Admin */}
         <div className="space-y-1">
           <div className="flex justify-between items-center">
             <label className="block text-xs font-bold opacity-80">🏷️ Nama Promo / Project:</label>
-            {!isBranchUser && (
-              <button
-                onClick={handleBroadcastPromo}
-                className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
-              >
-                📢 Broadcast ke Cabang
-              </button>
-            )}
+            <button
+              onClick={handleBroadcastPromo}
+              title="Bagikan promo dan budget ini ke seluruh cabang"
+              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              📢 Broadcast ke Cabang
+            </button>
           </div>
           <input
             type="text"
             placeholder="Contoh: PROMO TEMATIK AGUSTUS..."
             value={promoName}
-            disabled={isFormLocked || isBranchUser}
+            disabled={isFormLocked}
             onChange={(e) => setPromoName(e.target.value)}
             className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
-              isFormLocked || isBranchUser
+              isFormLocked 
                 ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
                 : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
             }`}
           />
         </div>
 
+        {/* 2. Tipe Project (A, B, C, Custom) & Budget */}
         <div className="space-y-1">
           <label className="block text-xs font-bold opacity-80">💰 Tipe Budget / Project:</label>
           <div className="flex gap-2">
             <select
               value={projectType}
-              disabled={isFormLocked || isBranchUser}
+              disabled={isFormLocked}
               onChange={(e) => handleProjectTypeChange(e.target.value)}
               className={`p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
-                isFormLocked || isBranchUser
+                isFormLocked 
                   ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
                   : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
               }`}
@@ -414,10 +423,10 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
             <input
               type="number"
               value={customBudget}
-              disabled={isFormLocked || isBranchUser || projectType !== 'Custom'}
+              disabled={isFormLocked || projectType !== 'Custom'}
               onChange={(e) => setCustomBudget(Number(e.target.value) || 0)}
               className={`flex-1 p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
-                isFormLocked || isBranchUser || projectType !== 'Custom'
+                isFormLocked || projectType !== 'Custom'
                   ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
                   : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD]'
               }`}
@@ -425,6 +434,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
           </div>
         </div>
 
+        {/* 3. Auto Search Cabang Combobox (FIXED: CLICK OUTSIDE CLOSE) */}
         <div className="space-y-1 relative" ref={dropdownRef}>
           <label className="block text-xs font-bold opacity-80">🔍 Cari & Pilih Kantor Cabang:</label>
           <div className="relative">
@@ -441,7 +451,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
               onFocus={() => setIsDropdownOpen(true)}
               className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none ${
                 isFormLocked 
-                  ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-80 text-indigo-600 dark:text-indigo-400' 
+                  ? 'bg-stone-100 dark:bg-neutral-800 cursor-not-allowed opacity-60' 
                   : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
               }`}
             />
@@ -473,6 +483,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
         </div>
       </div>
 
+      {/* CARD KONTROL KALKULASI BUDGET REAL-TIME */}
       <div className={`grid grid-cols-3 gap-3 p-3 rounded-xl border text-xs font-bold ${
         isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-stone-200'
       }`}>
@@ -492,6 +503,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
         </div>
       </div>
 
+      {/* TABEL DATA MASTER (STICKY HEADER + SCROLLABLE BODY) */}
       <div className={`max-h-[60vh] overflow-y-auto rounded-xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
@@ -501,9 +513,11 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
           }`}>
             <tr>
               <th className="p-3 w-12 text-center">No</th>
+              
               <th 
                 className="p-3 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 onClick={() => setSortAscending(!sortAscending)}
+                title="Klik untuk mengurutkan A-Z"
               >
                 <div className="flex items-center gap-1.5">
                   <span>Nama Item</span>
@@ -512,6 +526,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
                   </span>
                 </div>
               </th>
+
               <th className="p-3">Material / Bahan</th>
               <th className="p-3">Ukuran</th>
               <th className="p-3">Harga Per PC</th>
@@ -547,12 +562,13 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
         </table>
       </div>
 
+      {/* TOMBOL AKSI (SUBMIT & REVISI) */}
       <div className="flex justify-end items-center gap-3 pt-2">
         {orderStatus === 'SUBMITTED' && (
           <button
             onClick={handleRequestRevision}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all active:scale-95"
+            className="px-5 py-2.5 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
           >
             🔒 Form Dikunci - Klik Minta ACC Revisi Admin
           </button>
@@ -568,7 +584,7 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
           <button
             onClick={handleSubmitOrder}
             disabled={loading || !selectedBranch || remainingBudget < 0}
-            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-all active:scale-95 ${
+            className={`px-6 py-2.5 rounded-xl font-bold text-xs text-white shadow-sm transition-all active:scale-95 flex items-center gap-1.5 ${
               !selectedBranch || loading || remainingBudget < 0
                 ? 'bg-stone-400 cursor-not-allowed opacity-60'
                 : 'bg-emerald-600 hover:bg-emerald-500'
@@ -582,9 +598,6 @@ function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
   );
 }
 
-/* =========================================================
-   KOMPONEN TAB: CETAK LABEL & SURAT JALAN (LENGKAP 100%)
-   ========================================================= */
 function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -895,6 +908,7 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const pagesHtml = itemsToPrint.map((item) => {
       return `
         <div class="sj-page">
+          <!-- Top Header -->
           <div class="sj-top-header">
             <div class="logo-sec">
               ${renderHeaderLogoHtml()}
@@ -902,6 +916,7 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             <div class="sj-title">Tanda Terima</div>
           </div>
 
+          <!-- Info Boxes Header -->
           <div class="info-row">
             <div class="info-box left-box">
               <div class="info-line">Kepada Yth :</div>
@@ -933,6 +948,7 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             </div>
           </div>
 
+          <!-- Main Table Detail Barang -->
           <table class="item-grid-table">
             <thead>
               <tr>
@@ -961,6 +977,7 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             </tfoot>
           </table>
 
+          <!-- Signature Box Bottom -->
           <div class="signature-row">
             <div class="sig-box">PENGIRIM</div>
             <div class="sig-box">PENERIMA</div>
@@ -1198,7 +1215,7 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                           <img 
                             src={row.VISUAL_IMAGE} 
                             alt="Preview" 
-                            onClick={() => onOpenImageModal && onOpenImageModal(row.VISUAL_IMAGE, `Visual Item SPK: ${row.NO_SPK}`)}
+                            onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual Item SPK: ${row.NO_SPK}`)}
                             className="w-12 h-8 object-contain border rounded bg-white cursor-pointer hover:scale-105 transition-transform" 
                           />
                         ) : (
@@ -1226,96 +1243,41 @@ function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   );
 }
 
-/* =========================================================
-   KOMPONEN MODAL LOGIN KHUSUS ADMIN
-   ========================================================= */
-function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDarkMode }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  if (!isOpen) return null;
-
-  const handleAdminLogin = (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (username.toUpperCase() === 'ADMIN' && password === '123456') {
-      const adminUser = { role: 'admin', name: 'Administrator System' };
-      localStorage.setItem('kl_admin_session', JSON.stringify(adminUser));
-      onLoginSuccess(adminUser);
-    } else {
-      setErrorMsg('❌ Username atau Password Admin salah!');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className={`w-full max-w-md p-6 rounded-3xl border shadow-2xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2]'}`}>
-        <div className="text-center mb-6">
-          <span className="text-4xl">🔐</span>
-          <h3 className="font-bold text-lg mt-2">Login Khusus Admin Operasional</h3>
-          <p className="text-xs opacity-70">Masukkan Akun Administrator System</p>
-        </div>
-
-        <form onSubmit={handleAdminLogin} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-bold mb-1">Username Admin:</label>
-            <input
-              type="text"
-              placeholder="ADMIN"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className={`w-full p-3 rounded-xl border font-mono font-bold focus:outline-none uppercase ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
-            />
-          </div>
-
-          <div>
-            <label className="block font-bold mb-1">Password Admin:</label>
-            <input
-              type="password"
-              placeholder="123456"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={`w-full p-3 rounded-xl border font-mono font-bold text-center tracking-widest focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0]'}`}
-            />
-          </div>
-
-          {errorMsg && <div className="p-2.5 rounded-xl bg-rose-100 text-rose-800 text-center font-bold">{errorMsg}</div>}
-
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl font-bold border">Batal</button>
-            <button type="submit" className="flex-1 py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
-              Masuk Dashboard Admin 🚀
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   KOMPONEN UTAMA (APP)
-   ========================================================= */
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [spkList, setSpkList] = useState([]);
-  
-  // DILENGKAPI DETEKSI LINK PARAMETER MODE CABANG VS ADMIN
-  const searchParams = new URLSearchParams(window.location.search);
-  const isBranchMode = searchParams.get('mode') === 'cabang';
-
-  const [currentAdmin, setCurrentAdmin] = useState(() => {
-    const saved = localStorage.getItem('kl_admin_session');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSpkIds, setSelectedSpkIds] = useState([]);
 
   // State Modal Preview Gambar
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
+
+  // State Modal Link Google Sheet
+  const [showGSheetModal, setShowGSheetModal] = useState(false);
+  const [gSheetUrl, setGSheetUrl] = useState('');
+  const [importingGSheet, setImportingGSheet] = useState(false);
+
+  // State Modal Scanner & Input Manual
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [inputMode, setInputMode] = useState('scan');
+  const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
+  const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
+  const [scannedInput, setScannedInput] = useState('');
+  const [lastScanMessage, setLastScanMessage] = useState('');
+
+  // State Form Panel Finishing
+  const [selectedSpkId, setSelectedSpkId] = useState('');
+  const [finishingForm, setFinishingForm] = useState({
+    finishing_type: 'inhouse',
+    sub_vendor_name: '',
+    qty_finish_sub_out: 0,
+    qty_finish: 0,
+  });
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
 
   useEffect(() => {
     fetchSpkData();
@@ -1330,11 +1292,6 @@ export default function App() {
     setModalImageModalInfo({ isOpen: false, url: '', title: '' });
   };
 
-  const fetchSpkData = async () => {
-    const { data } = await supabase.from('spk_data').select('*').order('id', { ascending: false });
-    if (data) setSpkList(data);
-  };
-
   const toggleTheme = () => {
     setIsDarkMode((prev) => {
       const nextMode = !prev;
@@ -1343,127 +1300,1381 @@ export default function App() {
     });
   };
 
-  const handleAdminLogout = () => {
-    localStorage.removeItem('kl_admin_session');
-    setCurrentAdmin(null);
-    setActiveTab('dashboard');
+  const fetchSpkData = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('spk_data')
+      .select('*')
+      .order('id', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching data:', error);
+    } else {
+      setSpkList(data || []);
+      if (data && data.length > 0 && !selectedSpkId) {
+        initFinishingForm(data[0]);
+      }
+    }
+    setLoading(false);
   };
 
-  const availableTabs = isBranchMode 
-    ? ['kawan_lama'] 
-    : ['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'];
+  const initFinishingForm = (item) => {
+    if (!item) return;
+    setSelectedSpkId(item.id);
+    setFinishingForm({
+      finishing_type: item.finishing_type || 'inhouse',
+      sub_vendor_name: item.sub_vendor_name || '',
+      qty_finish_sub_out: item.qty_finish_sub_out || 0,
+      qty_finish: item.qty_finish || 0,
+    });
+  };
+
+  const handleSelectSpk = (spkId) => {
+    setSelectedSpkId(spkId);
+    const item = spkList.find((s) => String(s.id) === String(spkId));
+    if (item) {
+      setFinishingForm({
+        finishing_type: item.finishing_type || 'inhouse',
+        sub_vendor_name: item.sub_vendor_name || '',
+        qty_finish_sub_out: item.qty_finish_sub_out || 0,
+        qty_finish: item.qty_finish || 0,
+      });
+    }
+  };
+
+  const handleToggleCheck = (id) => {
+    setSelectedSpkIds((prev) => {
+      const isExist = prev.includes(id);
+      const updated = isExist ? prev.filter((item) => item !== id) : [...prev, id];
+      
+      if (!isExist) {
+        handleSelectSpk(id);
+      }
+      return updated;
+    });
+  };
+
+  const handleToggleSelectAll = (filteredItems) => {
+    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedSpkIds([]);
+    } else {
+      setSelectedSpkIds(filteredItems.map((item) => item.id));
+      if (filteredItems.length > 0) {
+        handleSelectSpk(filteredItems[0].id);
+      }
+    }
+  };
+
+  const handleSubmitInput = (e) => {
+    if (e) e.preventDefault();
+    if (!scannedInput.trim()) return;
+    handleProcessScan(scannedInput);
+  };
+
+  const handleProcessScan = async (codeValue) => {
+    if (!codeValue) return;
+
+    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim();
+    const val = cleanCode.toLowerCase();
+    
+    const targetItem = spkList.find((item) => {
+      const qr = (item.qr_address || '').toLowerCase();
+      const store = (item.store_code || '').toLowerCase();
+      const spk = (item.no_spk || '').toLowerCase();
+      const proj = (item.project || '').toLowerCase();
+
+      return qr.includes(val) || store === val || spk.includes(val) || proj.includes(val) || val.includes(spk);
+    });
+
+    if (!targetItem) {
+      setLastScanMessage(`❌ Toko/Kode/SPK "${cleanCode}" tidak ditemukan di Webtrack!`);
+      setScannedInput('');
+      return;
+    }
+
+    const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
+
+    let updatePayload = { tes_scan: updaterValue };
+    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
+    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
+    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
+    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
+
+    setSpkList((prev) =>
+      prev.map((item) => (item.id === targetItem.id ? { ...item, ...updatePayload } : item))
+    );
+
+    const { error } = await supabase
+      .from('spk_data')
+      .update(updatePayload)
+      .eq('id', targetItem.id);
+
+    if (error) {
+      console.error("Error Supabase:", error);
+      setLastScanMessage(`⚠️ Webtrack terupdate, tapi Supabase error: ${error.message}`);
+      setScannedInput('');
+      return;
+    }
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append('scanned_code', cleanCode);
+      formData.append('qc_checker', updaterValue);
+      formData.append('column_target', scanTargetColumn);
+
+      await fetch(GOOGLE_SCRIPT_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData
+      });
+
+      setLastScanMessage(`✅ SUKSES! [${scanTargetColumn.toUpperCase()}] "${targetItem.project}" (${targetItem.no_spk}) terbaca di Webtrack & Google Sheets!`);
+    } catch (err) {
+      setLastScanMessage(`✅ Webtrack & Supabase terisi, tapi Sheets error: ${err.message}`);
+    }
+
+    setScannedInput('');
+  };
+
+  const handleBatchPrint = async () => {
+    const itemsToPrint = spkList.filter((item) => selectedSpkIds.includes(item.id));
+    
+    if (itemsToPrint.length === 0) {
+      alert('⚠️ Silakan centang minimal 1 SPK terlebih dahulu!');
+      return;
+    }
+
+    const labelsHtmlArray = await Promise.all(
+      itemsToPrint.map(async (item, idx) => {
+        const qrAddress = item.qr_address || `204A_${item.client || 'MINISO'}_${item.project}`;
+        let qrDataUrl = '';
+        
+        try {
+          qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 });
+        } catch (err) {
+          console.error("Gagal generate QR Code Base64:", err);
+        }
+
+        return `
+          <div class="label-card">
+            <table class="header-table">
+              <tr>
+                <td>
+                  <div class="title">${item.client || 'PT. KREASI DIGITAL INDOMAJU'}</div>
+                  <div>DELIVERY: <strong>${item.delivery_route || 'DALAM KOTA'}</strong></div>
+                  <div>PROJECT: POP A5 & WOBBLER (PR 204)</div>
+                </td>
+                <td style="text-align: right;">
+                  <div style="font-size: 16px; font-weight: bold;">NOMOR TOKO: ${item.store_code || '-'}</div>
+                  <div>SPK: ${item.no_spk}</div>
+                </td>
+              </tr>
+            </table>
+
+            <div style="margin-top: 5px;">NAMA STORE: <strong>${item.project}</strong></div>
+            <div>NO PO: ${item.po_number || '-'}</div>
+            <div>QR ADDRESS: <code>${qrAddress}</code></div>
+
+            <div class="qr-sec">
+              ${qrDataUrl ? `<img src="${qrDataUrl}" alt="QR Code" style="width: 100px; height: 100px; display: inline-block;" />` : `[QR: ${qrAddress}]`}
+            </div>
+
+            <table class="item-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Deskripsi Item</th>
+                  <th>Bahan / Ukuran</th>
+                  <th>Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>A5 Member 1</td><td>Art Paper (A5)</td><td>5 Pcs</td></tr>
+                <tr><td>2</td><td>A5 Member 2</td><td>Art Paper (A5)</td><td>5 Pcs</td></tr>
+                <tr><td>3</td><td>A5 Member 3</td><td>Art Paper (A5)</td><td>5 Pcs</td></tr>
+                <tr><td>4</td><td>Wobbler Member</td><td>Art Carton (10x10cm)</td><td>10 Pcs</td></tr>
+                <tr><td>5</td><td>A5 Payday</td><td>Art Paper (A5)</td><td>5 Pcs</td></tr>
+                <tr><td>6</td><td>Wobbler Payday</td><td>Art Carton (10x10cm)</td><td>10 Pcs</td></tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top: 10px; font-weight: bold;">
+              QC Paking: ${item.qc_paking || '-'} | QC Checker: ${item.qc_checker || '-'} | QC Deliver: ${item.qc_deliver || '-'}
+            </div>
+
+            <div class="footer">
+              TOTAL QTY PACKING: ${item.qty_order || 40} PCS (Halaman ${idx + 1} dari ${itemsToPrint.length})
+            </div>
+          </div>
+        `;
+      })
+    );
+
+    const printWindow = window.open('', '_blank', 'width=850,height=900');
+
+    const fullDocumentHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Batch Label Print (${itemsToPrint.length} Store)</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; font-size: 11px; background: #f8f9fa; }
+          .no-print-bar { 
+            position: sticky; top: 0; background: #ffffff; padding: 15px; 
+            border-bottom: 2px solid #e2e8f0; text-align: center; margin-bottom: 20px; z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+          }
+          .btn-print { 
+            padding: 10px 24px; font-size: 14px; font-weight: bold; 
+            background: #4F46E5; color: white; border: none; border-radius: 8px; cursor: pointer; 
+          }
+          .btn-print:hover { background: #4338CA; }
+          .label-card { 
+            border: 2px solid #000; padding: 15px; max-width: 580px; margin: 0 auto 30px auto; 
+            background: #ffffff; border-radius: 8px; page-break-after: always; break-after: page; 
+          }
+          .header-table { width: 100%; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+          .title { font-size: 14px; font-weight: bold; }
+          .qr-sec { text-align: center; margin: 10px 0; }
+          .item-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          .item-table th, .item-table td { border: 1px solid #000; padding: 5px; text-align: left; }
+          .item-table th { background: #f2f2f2; }
+          .footer { margin-top: 12px; font-weight: bold; text-align: right; font-size: 12px; }
+          @media print {
+            body { padding: 0; background: #ffffff; }
+            .no-print-bar { display: none; }
+            .label-card { border: 2px solid #000; margin: 0 auto; page-break-after: always; break-after: page; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print-bar">
+          <button class="btn-print" onclick="window.print()">🖨️ Cetak ${itemsToPrint.length} Label Sekaligus (Merge & Print PDF)</button>
+        </div>
+        ${labelsHtmlArray.join('')}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(fullDocumentHtml);
+    printWindow.document.close();
+  };
+
+  const handleTypeChange = (newType) => {
+    const activeItem = spkList.find((s) => String(s.id) === String(selectedSpkId));
+    const currentDbTypes = activeItem?.finishing_type || 'inhouse';
+
+    if (newType === currentDbTypes) {
+      setFinishingForm({
+        finishing_type: newType,
+        sub_vendor_name: activeItem?.sub_vendor_name || '',
+        qty_finish_sub_out: activeItem?.qty_finish_sub_out || 0,
+        qty_finish: activeItem?.qty_finish || 0,
+      });
+    } else {
+      setFinishingForm({
+        finishing_type: newType,
+        sub_vendor_name: '',
+        qty_finish_sub_out: 0,
+        qty_finish: 0,
+      });
+    }
+  };
+
+  const processImportData = async (rawData) => {
+    const formattedData = rawData
+      .filter((row) => (row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['SPK/WPP'] || row['No SPK']))
+      .map((row) => {
+        const rawSpk = String(row['SPK/WPP'] || row['No SPK'] || '-');
+        const cleanSpk = rawSpk.split('/')[0].trim();
+
+        return {
+          no_spk: cleanSpk,
+          client: String(row['COMPANY'] || row['Nama Klient'] || '-'),
+          project: String(row['Store Name'] || row['Nama Project'] || '-'),
+          bahan: String(row['Nama Bahan'] || 'Art Paper & Art Carton'),
+          ukuran: String(row['Ukuran'] || 'A5 & Wobbler 10x10cm'),
+          qty_order: Number(row['TOTAL QTY ORDER'] || row['qty Order'] || 40),
+          qty_print: 0,
+          qty_finish: 0,
+          qty_finish_sub_out: 0,
+          finishing_type: 'inhouse',
+          sub_vendor_name: '',
+          qty_pack: 0,
+          qty_ship: 0,
+          store_code: String(row['NO. STORE'] || row['Store ID'] || '-'),
+          delivery_route: String(row['DELIVERY'] || 'DALAM KOTA'),
+          po_number: String(row['NO. PO'] || '-'),
+          qr_address: String(row['QR ADDRESS'] || '-'),
+          qc_paking: String(row['QC Paking'] || row['qc_paking'] || ''),
+          qc_checker: String(row['QC Checker'] || row['qc_checker'] || ''),
+          qc_deliver: String(row['QC Deliver'] || row['qc_deliver'] || ''),
+          tes_scan: String(row['tes scan'] || row['Tes Scan'] || row['tes_scan'] || '')
+        };
+      })
+      .filter((item) => item.no_spk !== '-' || item.client !== '-');
+
+    if (formattedData.length === 0) {
+      alert('❌ Validasi Gagal: Data Excel kosong atau header tidak sesuai!');
+      return;
+    }
+
+    const { error } = await supabase.from('spk_data').insert(formattedData);
+    if (error) {
+      alert('Gagal simpan data ke Supabase: ' + error.message);
+    } else {
+      alert(`✅ Sukses! ${formattedData.length} Data SPK Valid Berhasil Diimport.`);
+      fetchSpkData();
+    }
+  };
+
+  const handleExcelUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        
+        const rawData = XLSX.utils.sheet_to_json(ws, { range: 2 });
+        await processImportData(rawData);
+      } catch (err) {
+        alert('Format file Excel tidak sesuai: ' + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleImportGoogleSheets = async () => {
+    if (!gSheetUrl) {
+      alert('⚠️ Masukkan link Google Sheets terlebih dahulu!');
+      return;
+    }
+
+    setImportingGSheet(true);
+    try {
+      const matches = gSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!matches || !matches[1]) {
+        throw new Error('Link Google Sheets tidak valid.');
+      }
+
+      const sheetId = matches[1];
+      const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error('Gagal mengambil data dari Google Sheets. Pastikan akses diset Publik.');
+      }
+
+      const csvText = await response.text();
+      const wb = XLSX.read(csvText, { type: 'string' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+
+      const rawData = XLSX.utils.sheet_to_json(ws, { range: 2 });
+      await processImportData(rawData);
+
+      setShowGSheetModal(false);
+      setGSheetUrl('');
+    } catch (err) {
+      alert('❌ Error Import Google Sheets: ' + err.message);
+    }
+    setImportingGSheet(false);
+  };
+
+  const handleUpdateField = async (id, payload) => {
+    const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
+    if (!error) {
+      setSpkList((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, ...payload } : item))
+      );
+    } else {
+      alert('Gagal memperbarui data: ' + error.message);
+    }
+  };
+
+  // FUNGSI GENERATE / EXPORT SELURUH DATA KE FILE EXCEL (.XLSX)
+  const handleExportAllToExcel = () => {
+    if (spkList.length === 0) {
+      alert('⚠️ Tidak ada data untuk diexport!');
+      return;
+    }
+
+    const exportRows = spkList.map((item) => {
+      const pPrint = getPercent(item.qty_print, item.qty_order);
+      const pFinish = getPercent(item.qty_finish, item.qty_order);
+      const pPack = getPercent(item.qty_pack, item.qty_order);
+      const pShip = getPercent(item.qty_ship, item.qty_order);
+      const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
+
+      return {
+        'NO SPK': item.no_spk || '-',
+        'NO PO': item.po_number || '-',
+        'NO SJ': item.no_sj || '-',
+        'CLIENT': item.client || '-',
+        'BRAND / PROJECT': item.project || '-',
+        'BAHAN / MEDIA': item.bahan || '-',
+        'UKURAN': item.ukuran || '-',
+        'QTY ORDER (PCS)': Number(item.qty_order || 0),
+        'QTY PRINT (PCS)': Number(item.qty_print || 0),
+        'PROGRESS PRINT (%)': `${pPrint}%`,
+        'TIPE FINISHING': item.finishing_type || 'inhouse',
+        'VENDOR SUB': item.sub_vendor_name || '-',
+        'QTY FINISHING (PCS)': Number(item.qty_finish || 0),
+        'PROGRESS FINISHING (%)': `${pFinish}%`,
+        'QTY PACK (PCS)': Number(item.qty_pack || 0),
+        'PROGRESS PACK (%)': `${pPack}%`,
+        'QC PAKING': item.qc_paking || '-',
+        'QC CHECKER': item.qc_checker || '-',
+        'QC DELIVER': item.qc_deliver || '-',
+        'QTY SHIP (PCS)': Number(item.qty_ship || 0),
+        'PROGRESS SHIP (%)': `${pShip}%`,
+        'TOTAL AVG PROGRESS (%)': `${totalAvg}%`
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "SPK_WebTrack_All");
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Report_WebTrack_Monitoring_${dateStr}.xlsx`);
+  };
+
+  // UPLOAD PACKING PHYSICAL VISUAL IMAGE DENGAN SAFE LOCAL STATE FIRST
+  const handleUploadPackingVisualImage = async (e, item) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const base64Url = evt.target.result;
+      
+      setSpkList((prev) =>
+        prev.map((spk) => (spk.id === item.id ? { ...spk, packing_visual_url: base64Url } : spk))
+      );
+
+      const { error } = await supabase
+        .from('spk_data')
+        .update({ packing_visual_url: base64Url })
+        .eq('id', item.id);
+
+      if (error) {
+        console.warn('Gagal sync ke Supabase (Pastikan kolom packing_visual_url sudah dibuat di DB):', error.message);
+      } else {
+        alert(`✅ Foto paking SPK ${item.no_spk} berhasil disimpan ke database!`);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
+    const val = Number(value) || 0;
+
+    if (val > maxAllowed) {
+      alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
+      return;
+    }
+
+    handleUpdateField(id, { [field]: val });
+  };
+
+  const handleSubmitFinishing = async (e) => {
+    e.preventDefault();
+    const activeItem = spkList.find((s) => String(s.id) === String(selectedSpkId));
+    if (!activeItem) return;
+
+    const { finishing_type, sub_vendor_name, qty_finish_sub_out, qty_finish } = finishingForm;
+
+    const outQty = Number(qty_finish_sub_out) || 0;
+    let backQty = Number(qty_finish) || 0;
+
+    const maxFinishingAllowed = Number(activeItem.qty_print > 0 ? activeItem.qty_print : activeItem.qty_order || 0);
+
+    if (finishing_type === 'sub') {
+      if (outQty > maxFinishingAllowed) {
+        alert(`❌ Gagal: Jumlah barang keluar ke vendor (${outQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
+        return;
+      }
+      if (outQty === 0 && backQty > 0) {
+        alert(`❌ Gagal: Barang belum pernah dikirim ke vendor (Out = 0 pcs). Tidak bisa mengisi Terima Back!`);
+        return;
+      }
+      if (backQty > outQty) {
+        alert(`❌ Gagal: Jumlah barang balik (${backQty} pcs) melebihi jumlah yang dikirim ke vendor (${outQty} pcs)!`);
+        return;
+      }
+    } else {
+      if (backQty > maxFinishingAllowed) {
+        alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
+        backQty = maxFinishingAllowed;
+      }
+    }
+
+    const payload = {
+      finishing_type,
+      sub_vendor_name: finishing_type === 'sub' ? sub_vendor_name : '',
+      qty_finish_sub_out: finishing_type === 'sub' ? outQty : 0,
+      qty_finish: backQty,
+    };
+
+    setSpkList((prev) =>
+      prev.map((item) => (item.id === activeItem.id ? { ...item, ...payload } : item))
+    );
+
+    const { error } = await supabase.from('spk_data').update(payload).eq('id', activeItem.id);
+    if (error) {
+      alert('Gagal menyimpan data finishing: ' + error.message);
+      fetchSpkData();
+    } else {
+      alert(`✅ Data Finishing SPK ${activeItem.no_spk} (${activeItem.client}) berhasil disimpan! Total Selesai: ${backQty} pcs.`);
+    }
+  };
+
+  const handleUploadSuratJalan = async (e, item) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `surat_jalan_${item.no_spk}_${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('surat-jalan')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      alert('Gagal mengunggah surat jalan: ' + uploadError.message);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('surat-jalan')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from('spk_data')
+      .update({ surat_jalan_url: publicUrl })
+      .eq('id', item.id);
+
+    if (updateError) {
+      alert('Gagal menyimpan URL Surat Jalan: ' + updateError.message);
+    } else {
+      alert('Surat Jalan berhasil diunggah!');
+      setSpkList((prev) =>
+        prev.map((spk) => (spk.id === item.id ? { ...spk, surat_jalan_url: publicUrl } : spk))
+      );
+    }
+  };
+
+  const getPercent = (qty, total) => {
+    if (!total || total <= 0) return 0;
+    const calc = Math.round((qty / total) * 100);
+    return calc > 100 ? 100 : calc;
+  };
+
+  const getStatusBadge = (percent) => {
+    if (isDarkMode) {
+      if (percent >= 100) return { icon: '🟢', text: 'text-green-400 bg-green-950/60 border-green-800' };
+      if (percent > 0) return { icon: '🟡', text: 'text-yellow-400 bg-yellow-950/60 border-yellow-800' };
+      return { icon: '🔴', text: 'text-red-400 bg-red-950/60 border-red-800' };
+    } else {
+      if (percent >= 100) return { icon: '🟢', text: 'text-[#2D5A27] bg-[#EAF2E8] border-[#C8E0C4]' };
+      if (percent > 0) return { icon: '🟡', text: 'text-[#8A6200] bg-[#FFF8E6] border-[#FFE299]' };
+      return { icon: '🔴', text: 'text-[#8C2B2B] bg-[#FCEAEA] border-[#F4C7C7]' };
+    }
+  };
+
+  // KPI Calculator
+  const totalSpk = spkList.length;
+  const totalOrderPcs = spkList.reduce((acc, curr) => acc + (Number(curr.qty_order) || 0), 0);
+  
+  const spkWithAvg = spkList.map((item) => {
+    const pPrint = getPercent(item.qty_print, item.qty_order);
+    const pFinish = getPercent(item.qty_finish, item.qty_order);
+    const pPack = getPercent(item.qty_pack, item.qty_order);
+    const pShip = getPercent(item.qty_ship, item.qty_order);
+    const avg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
+    return { ...item, avgProgress: avg, pPrint, pFinish, pPack, pShip };
+  });
+
+  const totalAvgProgress = totalSpk > 0 
+    ? Math.round(spkWithAvg.reduce((acc, c) => acc + c.avgProgress, 0) / totalSpk) 
+    : 0;
+
+  const completedSpkCount = spkWithAvg.filter((item) => item.avgProgress >= 100).length;
+
+  const filteredSpkList = spkWithAvg.filter((item) => {
+    const q = searchTerm.toLowerCase();
+    return (
+      item.no_spk?.toLowerCase().includes(q) ||
+      item.client?.toLowerCase().includes(q) ||
+      item.project?.toLowerCase().includes(q)
+    );
+  });
+
+  const activeSpkItem = spkList.find((item) => String(item.id) === String(selectedSpkId)) || spkList[0];
+  const displayedList = activeTab === 'dashboard' ? filteredSpkList : spkList;
 
   return (
-    <div className={`min-h-screen p-6 font-sans antialiased transition-colors ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-gradient-to-br from-[#FBF9F5] to-[#E5E0D5] text-[#2F3E3B]'}`}>
+    <div
+      className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${
+        isDarkMode
+          ? 'bg-neutral-900 text-neutral-100'
+          : 'bg-gradient-to-br from-[#FBF9F5] via-[#F3EFE6] to-[#E5E0D5] text-[#2F3E3B]'
+      }`}
+    >
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
-        <div className={`flex flex-col sm:flex-row justify-between items-center p-5 rounded-2xl shadow-sm border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+        <div
+          className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-2xl shadow-sm border transition-colors ${
+            isDarkMode
+              ? 'bg-neutral-800/90 border-neutral-700'
+              : 'bg-white/80 border-[#D8D2C2] backdrop-blur-md'
+          } gap-4`}
+        >
           <div>
             <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
-              {isBranchMode ? 'FORM INPUT CABANG - KAWAN LAMA' : 'WEB-TRACK MONITORING ADMIN'}
+              WEB-TRACK MONITORING
             </h1>
-            <p className="text-xs opacity-70">
-              {isBranchMode 
-                ? 'Portal Resmi Pengisian Barang Cabang' 
-                : currentAdmin ? `Akses: ${currentAdmin.name}` : 'Akses Admin Operasional Internal'}
+            <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
+              Sistem Pelacak Progress Produksi & Pengiriman SPK
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={toggleTheme} className="px-3 py-2 rounded-xl text-xs font-semibold border">
-              {isDarkMode ? '☀️ Terang' : '🌙 Gelap'}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={toggleTheme}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all border ${
+                isDarkMode
+                  ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600'
+                  : 'bg-white hover:bg-stone-100 text-slate-700 border-[#D8D2C2]'
+              }`}
+            >
+              {isDarkMode ? '☀️ Mode Terang' : '🌙 Mode Gelap'}
             </button>
 
-            {!isBranchMode && (
-              currentAdmin ? (
-                <button onClick={handleAdminLogout} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white">
-                  🔒 Logout Admin
-                </button>
-              ) : (
-                <button onClick={() => setShowAdminLoginModal(true)} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white">
-                  🔑 Login Admin
-                </button>
-              )
-            )}
+            {/* Tombol Scan / Input Manual Multi-Kolom */}
+            <button
+              onClick={() => setShowScanModal(true)}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all bg-purple-600 hover:bg-purple-500 text-white active:scale-95"
+            >
+              <span>📷 Scan & Input Station</span>
+            </button>
+
+            {/* Tombol Upload Excel File */}
+            <label
+              className={`px-3.5 py-2 rounded-xl cursor-pointer text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
+                isDarkMode
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-[#6B8E85] hover:bg-[#57756D] text-white'
+              }`}
+            >
+              <span>📁 Upload Excel SPK Store</span>
+              <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="hidden" />
+            </label>
+
+            {/* Tombol Import Link Google Sheets */}
+            <button
+              onClick={() => setShowGSheetModal(true)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
+                isDarkMode
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                  : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+              }`}
+            >
+              <span>🔗 Link Google Sheets</span>
+            </button>
           </div>
         </div>
 
-        {/* Tab Navigasi (Hanya Tampil Jika Bukan Link Cabang) */}
-        {!isBranchMode && (
-          <div className="flex gap-2 overflow-x-auto border-b pb-2">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize whitespace-nowrap ${
-                  activeTab === tab 
-                    ? 'bg-blue-600 text-white shadow-sm' 
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-400' : 'bg-white/70 text-[#4A5D58]'
-                }`}
-              >
-                {tab === 'label' ? '🏷️ Cetak Label & SJ' : tab === 'kawan_lama' ? '🏢 Project Kawan Lama' : tab}
-              </button>
-            ))}
-          </div>
+        {/* Navigation Tabs */}
+        <div className={`flex gap-2 overflow-x-auto border-b pb-2 ${isDarkMode ? 'border-neutral-800' : 'border-[#D8D2C2]'}`}>
+          {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize transition-all whitespace-nowrap ${
+                activeTab === tab
+                  ? isDarkMode
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'bg-[#6B8E85] text-white shadow-sm'
+                  : isDarkMode
+                  ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700'
+                  : 'bg-white/70 text-[#4A5D58] hover:bg-white border border-[#D8D2C2]/70'
+              }`}
+            >
+              {tab === 'label' 
+                ? '🏷️ Cetak Label & SJ' 
+                : tab === 'kawan_lama' 
+                ? '🏢 Project Kawan Lama' 
+                : tab}
+            </button>
+          ))}
+        </div>
+
+        {/* TAB BARU: PROJECT KAWAN LAMA */}
+        {activeTab === 'kawan_lama' && (
+          <KawanLamaTab isDarkMode={isDarkMode} />
         )}
 
-        {/* Dashboard Circular Gauge (Admin) */}
-        {!isBranchMode && activeTab === 'dashboard' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <CircularGaugeCard title="Completion Rate" percent={75} color="#2D5A27" detailText="Overall Progress" />
-            <CircularGaugeCard title="Total Target Order" percent={100} color="#4F46E5" detailText="Data SPK" />
-            <CircularGaugeCard title="Finishing Progress" percent={60} color="#D97706" detailText="Internal & Sub" />
-            <CircularGaugeCard title="Stage Pengiriman" percent={45} color="#0D9488" detailText="Status Delivery" />
-          </div>
-        )}
-
-        {/* Tab Kawan Lama (Tampil untuk Link Cabang & Link Admin) */}
-        {(isBranchMode || activeTab === 'kawan_lama') && (
-          <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={isBranchMode} />
-        )}
-
-        {/* Tab Label Generator (Admin) */}
-        {!isBranchMode && activeTab === 'label' && (
+        {/* TAB 6: FITUR CETAK LABEL & SURAT JALAN */}
+        {activeTab === 'label' && (
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
-        {/* Tabel Data SPK Operasional (Admin) */}
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
-          <div className={`overflow-x-auto rounded-2xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'}`}>
+        {/* Dashboard Circular */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CircularGaugeCard 
+                title="Completion Rate" 
+                percent={totalAvgProgress} 
+                color="#2D5A27" 
+                detailText={`${completedSpkCount} dari ${totalSpk} SPK Selesai`} 
+              />
+              <CircularGaugeCard 
+                title="Total Target Order" 
+                percent={totalSpk > 0 ? Math.round((spkWithAvg.reduce((a, b) => a + b.pPrint, 0) / (totalSpk * 100)) * 100) : 0} 
+                color="#4F46E5" 
+                detailText={`${totalOrderPcs.toLocaleString()} Pcs Order`} 
+              />
+              <CircularGaugeCard 
+                title="Finishing Progress" 
+                percent={totalSpk > 0 ? Math.round((spkWithAvg.reduce((a, b) => a + b.pFinish, 0) / (totalSpk * 100)) * 100) : 0} 
+                color="#D97706" 
+                detailText="Inhouse & Sub-Vendor" 
+              />
+              <CircularGaugeCard 
+                title="Stage Pengiriman" 
+                percent={totalSpk > 0 ? Math.round((spkWithAvg.reduce((a, b) => a + b.pShip, 0) / (totalSpk * 100)) * 100) : 0} 
+                color="#0D9488" 
+                detailText="Status Delivery SPK" 
+              />
+            </div>
+
+            {/* BARIS KONTROL SEARCH & EXCEL EXPORT DASHBOARD */}
+            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'}`}>
+              <div className="flex items-center gap-2 flex-1 w-full">
+                <span className="text-sm">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan No SPK, nama Klient, atau Store Name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={`w-full text-xs bg-transparent focus:outline-none ${isDarkMode ? 'text-white' : 'text-[#2F3E3B]'}`}
+                />
+                {searchTerm && (
+                  <button onClick={() => setSearchTerm('')} className="text-xs opacity-60 hover:opacity-100">
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={handleExportAllToExcel}
+                className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 transition-all active:scale-95 whitespace-nowrap"
+              >
+                <span>📊 Export Semua Data ke Excel (.xlsx)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Baris Tombol Aksi Batch Print (Merge & Print) */}
+        {activeTab !== 'label' && activeTab !== 'kawan_lama' && (
+          <div className={`p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 ${
+            isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white/90 border-[#D8D2C2]'
+          }`}>
+            <div className="flex items-center gap-3">
+              <span className="text-lg">🖨️</span>
+              <div>
+                <h3 className="font-bold text-xs">Aksi Cetak Masal (Merge & Print)</h3>
+                <p className="text-[11px] opacity-70">
+                  Dicentang: <strong>{selectedSpkIds.length}</strong> dari <strong>{displayedList.length}</strong> SPK Toko
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleBatchPrint}
+              disabled={selectedSpkIds.length === 0}
+              className={`px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${
+                selectedSpkIds.length > 0
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95'
+                  : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 dark:text-neutral-500 cursor-not-allowed'
+              }`}
+            >
+              <span>🏷️ Cetak {selectedSpkIds.length} Label Sekaligus (Merge & Print PDF)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Panel Kontrol Finishing */}
+        {activeTab === 'finishing' && activeSpkItem && (
+          <form
+            onSubmit={handleSubmitFinishing}
+            className={`p-5 rounded-2xl border shadow-sm transition-colors space-y-4 ${
+              isDarkMode
+                ? 'bg-neutral-800/80 border-neutral-700'
+                : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'
+            }`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-3 border-black/10 dark:border-white/10">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🛠️</span>
+                <div>
+                  <h3 className="font-bold text-sm">Panel Kontrol Finishing</h3>
+                  <p className="text-xs opacity-70">Kelola pengerjaan Inhouse & Sub-Finishing (Makloon)</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold">Pilih SPK:</label>
+                <select
+                  value={selectedSpkId}
+                  onChange={(e) => handleSelectSpk(e.target.value)}
+                  className={`text-xs px-3 py-1.5 rounded-xl font-bold border focus:outline-none ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                >
+                  {spkList.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.no_spk} - {item.client} ({item.project})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3 text-xs`}>
+              <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
+                <div className="opacity-70 text-[10px]">Qty Order</div>
+                <div className="text-base font-bold">{activeSpkItem.qty_order?.toLocaleString()} pcs</div>
+              </div>
+
+              <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-amber-950/30 border-amber-800/50' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="text-amber-600 dark:text-amber-400 font-medium text-[10px]">
+                  {finishingForm.finishing_type === 'sub' ? 'Sisa Order (Belum Out)' : 'Sisa Order (Belum Selesai)'}
+                </div>
+                <div className="text-base font-bold text-amber-700 dark:text-amber-300">
+                  {finishingForm.finishing_type === 'sub'
+                    ? Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish_sub_out) || 0)).toLocaleString()
+                    : Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()}{' '}
+                  pcs
+                </div>
+              </div>
+
+              {finishingForm.finishing_type === 'sub' ? (
+                <>
+                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-blue-950/30 border-blue-800/50' : 'bg-blue-50 border-blue-200'}`}>
+                    <div className="text-blue-600 dark:text-blue-400 font-medium text-[10px]">Dikirim ke Vendor (Out)</div>
+                    <div className="text-base font-bold text-blue-700 dark:text-blue-300">
+                      {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} pcs
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-green-950/30 border-green-800/50' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <div className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">Sudah Balik Vendor (Back)</div>
+                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
+                      {(Number(finishingForm.qty_finish) || 0).toLocaleString()} pcs
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-amber-950/30 border-amber-800/50' : 'bg-amber-50 border-amber-200'}`}>
+                    <div className="text-amber-600 dark:text-amber-400 font-medium text-[10px]">Belum Balik Vendor</div>
+                    <div className="text-base font-bold text-amber-700 dark:text-amber-300">
+                      {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} pcs
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-green-950/30 border-green-800/50' : 'bg-emerald-50 border-emerald-200'}`}>
+                    <div className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">Total Selesai Inhouse</div>
+                    <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
+                      {(Number(finishingForm.qty_finish) || 0).toLocaleString()} pcs
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
+                    <div className="opacity-70 text-[10px]">Progres Finishing</div>
+                    <div className="text-base font-bold">
+                      {getPercent(Number(finishingForm.qty_finish) || 0, activeSpkItem.qty_order || 1)}%
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end text-xs pt-2">
+              <div>
+                <label className="block font-bold mb-1 opacity-80">Tipe Pengerjaan:</label>
+                <select
+                  value={finishingForm.finishing_type}
+                  onChange={(e) => handleTypeChange(e.target.value)}
+                  className={`w-full p-2 rounded-xl font-semibold border ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                >
+                  <option value="inhouse">🏠 Inhouse (Internal)</option>
+                  <option value="sub">🏭 Sub-Finishing (Vendor/Luar)</option>
+                </select>
+              </div>
+
+              {finishingForm.finishing_type !== 'sub' ? (
+                <div>
+                  <label className="block font-bold mb-1 opacity-80">Jumlah Selesai (pcs):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
+                    value={finishingForm.qty_finish}
+                    onChange={(e) => {
+                      let val = Number(e.target.value) || 0;
+                      const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
+                      if (val > maxAllowed) {
+                        alert(`❌ Gagal: Jumlah Finishing (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                        val = maxAllowed;
+                      }
+                      setFinishingForm({ ...finishingForm, qty_finish: val });
+                    }}
+                    className={`w-full p-2 rounded-xl font-semibold border ${
+                      isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                    }`}
+                  />
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block font-bold mb-1 opacity-80">Nama Vendor / Makloon:</label>
+                    <input
+                      type="text"
+                      placeholder="Misal: CV Poly Mas"
+                      value={finishingForm.sub_vendor_name}
+                      onChange={(e) => setFinishingForm({ ...finishingForm, sub_vendor_name: e.target.value })}
+                      className={`w-full p-2 rounded-xl font-semibold border ${
+                        isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1 opacity-80">1. Kirim Out Vendor (pcs):</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
+                      value={finishingForm.qty_finish_sub_out}
+                      onChange={(e) => {
+                        let val = Number(e.target.value) || 0;
+                        const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
+                        if (val > maxAllowed) {
+                          alert(`❌ Gagal: Jumlah Out ke Vendor (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                          val = maxAllowed;
+                        }
+                        const currentBack = Number(finishingForm.qty_finish) || 0;
+                        const adjustedBack = currentBack > val ? val : currentBack;
+                        setFinishingForm({ ...finishingForm, qty_finish_sub_out: val, qty_finish: adjustedBack });
+                      }}
+                      className={`w-full p-2 rounded-xl font-semibold border ${
+                        isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1 opacity-80">2. Terima Back Vendor (pcs):</label>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={Number(finishingForm.qty_finish_sub_out) <= 0}
+                      max={finishingForm.qty_finish_sub_out}
+                      value={finishingForm.qty_finish}
+                      onChange={(e) => {
+                        let val = Number(e.target.value) || 0;
+                        const maxBack = Number(finishingForm.qty_finish_sub_out) || 0;
+                        if (val > maxBack) {
+                          alert(`❌ Jumlah terima back tidak boleh melebihi jumlah yang dikirim ke vendor (${maxBack} pcs)!`);
+                          val = maxBack;
+                        }
+                        setFinishingForm({ ...finishingForm, qty_finish: val });
+                      }}
+                      className={`w-full p-2 rounded-xl font-semibold border ${
+                        Number(finishingForm.qty_finish_sub_out) <= 0
+                          ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-800'
+                          : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                      }`}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="submit"
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all text-white ${
+                  isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'
+                }`}
+              >
+                💾 Submit / Simpan Progress Finishing
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Tabel Data Utama */}
+        {activeTab !== 'label' && activeTab !== 'kawan_lama' && (
+          <div
+            className={`overflow-x-auto rounded-2xl border shadow-sm transition-colors ${
+              isDarkMode
+                ? 'bg-[#121829] border-neutral-800'
+                : 'bg-white/90 border-[#D8D2C2] backdrop-blur-md'
+            }`}
+          >
             <table className="w-full text-left text-xs">
-              <thead className={isDarkMode ? 'bg-neutral-800 text-neutral-300' : 'bg-[#EFECE6] text-[#3D4F4B]'}>
+              <thead
+                className={`font-bold border-b transition-colors ${
+                  isDarkMode
+                    ? 'bg-neutral-800/80 text-neutral-300 border-neutral-800'
+                    : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
+                }`}
+              >
                 <tr>
+                  <th className="p-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={displayedList.length > 0 && selectedSpkIds.length === displayedList.length}
+                      onChange={() => handleToggleSelectAll(displayedList)}
+                      className="w-4 h-4 cursor-pointer accent-indigo-600"
+                    />
+                  </th>
                   <th className="p-4">No SPK</th>
                   <th className="p-4">Klient / Store Name</th>
                   <th className="p-4">Bahan / Ukuran</th>
                   <th className="p-4">Order</th>
+                  <th className="p-4">Print</th>
+                  <th className="p-4">Finish</th>
+                  <th className="p-4">Pack</th>
+                  {activeTab === 'paking' && <th className="p-4">Visual Image Paking</th>}
                   <th className="p-4">QC Paking</th>
                   <th className="p-4">QC Checker</th>
+                  <th className="p-4">QC Deliver</th>
+                  <th className="p-4">Tes Scan</th>
+                  <th className="p-4">Ship</th>
+                  <th className="p-4">Total Rata-Rata</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
-                {spkList.map((item) => (
-                  <tr key={item.id}>
-                    <td className="p-4 font-bold text-blue-500">{item.no_spk}</td>
-                    <td className="p-4"><strong>{item.client}</strong><br/><span className="text-[10px] opacity-70">{item.project}</span></td>
-                    <td className="p-4">{item.bahan} ({item.ukuran})</td>
-                    <td className="p-4 font-bold">{item.qty_order} Pcs</td>
-                    <td className="p-4">{item.qc_paking || '-'}</td>
-                    <td className="p-4">{item.qc_checker || '-'}</td>
-                  </tr>
-                ))}
+              <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+                {displayedList.map((item) => {
+                  const pPrint = getPercent(item.qty_print, item.qty_order);
+                  const pFinish = getPercent(item.qty_finish, item.qty_order);
+                  const pPack = getPercent(item.qty_pack, item.qty_order);
+                  const pShip = getPercent(item.qty_ship, item.qty_order);
+                  const totalAvg = Math.round((pPrint + pFinish + pPack + pShip) / 4);
+
+                  const isSubFinishing = item.finishing_type === 'sub';
+                  const maxPackAllowed = Number(item.qty_finish || 0);
+                  const maxShipAllowed = Number(item.qty_pack || 0);
+
+                  const isChecked = selectedSpkIds.includes(item.id);
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isChecked
+                          ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70'
+                          : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'
+                      }`}
+                    >
+                      <td className="p-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleCheck(item.id)}
+                          className="w-4 h-4 cursor-pointer accent-indigo-600"
+                        />
+                      </td>
+                      <td className={`p-4 font-bold ${isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'}`}>
+                        {item.no_spk}
+                      </td>
+                      <td className="p-4">
+                        <div className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
+                          {item.client}
+                        </div>
+                        <div className={`text-[11px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>
+                          {item.project}
+                        </div>
+                      </td>
+                      <td className={`p-4 text-[11px] ${isDarkMode ? 'text-neutral-300' : 'text-[#4A5D58]'}`}>
+                        <div className="font-medium">{item.bahan}</div>
+                        <div className={isDarkMode ? 'text-neutral-500' : 'text-[#8B9B96]'}>{item.ukuran}</div>
+                      </td>
+                      <td className={`p-4 font-bold ${isDarkMode ? 'text-neutral-200' : 'text-[#2F3E3B]'}`}>
+                        {item.qty_order?.toLocaleString()} pcs
+                      </td>
+
+                      {/* Print */}
+                      <td className="p-4">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPrint).text}`}>
+                          <span>{getStatusBadge(pPrint).icon}</span>
+                          <span>{pPrint}%</span>
+                          <span className="font-normal opacity-70">({item.qty_print?.toLocaleString()})</span>
+                        </div>
+                        {activeTab === 'produksi' && (
+                          <div className="mt-1.5">
+                            <input
+                              type="number"
+                              value={item.qty_print}
+                              disabled={item.qty_print >= item.qty_order}
+                              onChange={(e) => handleUpdateQty(
+                                item.id, 
+                                'qty_print', 
+                                e.target.value, 
+                                item.qty_order,
+                                `❌ Gagal: Qty Print tidak boleh melebihi Qty Order (${item.qty_order} pcs)!`
+                              )}
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_print >= item.qty_order
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
+                            />
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Finish */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pFinish).text}`}>
+                          <span>{getStatusBadge(pFinish).icon}</span>
+                          <span>{pFinish}%</span>
+                          <span className="font-normal opacity-70">({item.qty_finish?.toLocaleString()})</span>
+                        </div>
+
+                        {isSubFinishing && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            🛠️ Sub ({item.sub_vendor_name || 'Vendor'}) <br /> Out: {item.qty_finish_sub_out || 0} | Back: {item.qty_finish || 0} pcs
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Pack */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pPack).text}`}>
+                          <span>{getStatusBadge(pPack).icon}</span>
+                          <span>{pPack}%</span>
+                          <span className="font-normal opacity-70">({item.qty_pack?.toLocaleString()})</span>
+                        </div>
+
+                        {activeTab === 'paking' && (
+                          <div className="mt-1.5">
+                            <input
+                              type="number"
+                              value={item.qty_pack}
+                              disabled={item.qty_pack >= maxPackAllowed}
+                              onChange={(e) =>
+                                handleUpdateQty(
+                                  item.id,
+                                  'qty_pack',
+                                  e.target.value,
+                                  maxPackAllowed,
+                                  `❌ Gagal: Qty Paking (${e.target.value} pcs) tidak boleh melebihi Qty Finishing yang sudah selesai (${maxPackAllowed} pcs)!`
+                                )
+                              }
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_pack >= maxPackAllowed
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
+                            />
+                          </div>
+                        )}
+                      </td>
+
+                      {/* KOLOM VISUAL IMAGE KHUSUS TAB PAKING */}
+                      {activeTab === 'paking' && (
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            {item.packing_visual_url ? (
+                              <img
+                                src={item.packing_visual_url}
+                                alt="Hasil Paking"
+                                onClick={() => openImageModal(item.packing_visual_url, `Foto Paking Physical SPK: ${item.no_spk}`)}
+                                className="w-12 h-10 object-cover rounded border border-stone-300 dark:border-neutral-700 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <span className="text-[10px] opacity-50">[ Belum ada ]</span>
+                            )}
+                            <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold transition-all">
+                              Upload
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleUploadPackingVisualImage(e, item)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </td>
+                      )}
+
+                      {/* QC Paking */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_paking || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_paking: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
+                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        >
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* QC Checker */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_checker || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_checker: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] font-semibold focus:outline-none ${
+                            item.qc_checker 
+                              ? 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/40 dark:text-purple-300' 
+                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        >
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* QC Deliver */}
+                      <td className="p-4">
+                        <select
+                          value={item.qc_deliver || ''}
+                          onChange={(e) => handleUpdateField(item.id, { qc_deliver: e.target.value })}
+                          className={`p-1 rounded-lg border text-[11px] focus:outline-none ${
+                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        >
+                          <option value="">-- Pilih QC --</option>
+                          {STAFF_QC_LIST.map((staff) => (
+                            <option key={staff} value={staff}>{staff}</option>
+                          ))}
+                        </select>
+                      </td>
+
+                      {/* Tes Scan */}
+                      <td className="p-4">
+                        <input
+                          type="text"
+                          placeholder="Hasil Scan"
+                          value={item.tes_scan || ''}
+                          onChange={(e) => handleUpdateField(item.id, { tes_scan: e.target.value })}
+                          className={`w-28 p-1 rounded-lg border text-[11px] font-mono focus:outline-none ${
+                            item.tes_scan
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                          }`}
+                        />
+                      </td>
+
+                      {/* Ship & Surat Jalan */}
+                      <td className="p-4 space-y-1">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-bold ${getStatusBadge(pShip).text}`}>
+                          <span>{getStatusBadge(pShip).icon}</span>
+                          <span>{pShip}%</span>
+                          <span className="font-normal opacity-70">({item.qty_ship?.toLocaleString()})</span>
+                        </div>
+                        
+                        {activeTab === 'pengiriman' && (
+                          <div className="space-y-1.5 mt-1.5">
+                            <input
+                              type="number"
+                              value={item.qty_ship}
+                              disabled={item.qty_ship >= maxShipAllowed}
+                              onChange={(e) => handleUpdateQty(
+                                item.id, 
+                                'qty_ship', 
+                                e.target.value, 
+                                maxShipAllowed,
+                                `❌ Gagal: Qty Kirim (${e.target.value} pcs) tidak boleh melebihi Qty yang sudah di-Paking (${maxShipAllowed} pcs)!`
+                              )}
+                              className={`w-20 border rounded-lg px-2 py-1 text-xs focus:outline-none ${
+                                item.qty_ship >= maxShipAllowed
+                                  ? isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-[#EFECE6] border-[#D8D2C2] text-stone-500 cursor-not-allowed'
+                                  : isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                              }`}
+                            />
+                            
+                            <label
+                              className={`block rounded-lg px-2 py-1 text-[10px] cursor-pointer text-center font-semibold transition-colors w-max border ${
+                                isDarkMode
+                                  ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-neutral-600'
+                                  : 'bg-[#EFECE6] hover:bg-[#E5E0D5] text-[#3D4F4B] border-[#D8D2C2]'
+                              }`}
+                            >
+                              📤 Upload Surat Jalan
+                              <input
+                                type="file"
+                                accept="image/*,application/pdf"
+                                onChange={(e) => handleUploadSuratJalan(e, item)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        {item.surat_jalan_url && (
+                          <a
+                            href={item.surat_jalan_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`inline-flex items-center gap-1 text-[11px] font-bold mt-1 hover:underline ${
+                              isDarkMode ? 'text-blue-400' : 'text-[#5B7B70]'
+                            }`}
+                          >
+                            📄 Lihat Surat Jalan
+                          </a>
+                        )}
+                      </td>
+
+                      {/* Total Average Progress */}
+                      <td className="p-4">
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-xs ${getStatusBadge(totalAvg).text}`}>
+                          <span>{getStatusBadge(totalAvg).icon}</span>
+                          <span>{totalAvg}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
-
       </div>
 
-      {/* Pop-up Modal Preview Foto Visual */}
+      {/* POP-UP MODAL PREVIEW GAMBAR INTERAKTIF */}
       {modalImageInfo.isOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-4 animate-fade-in"
           onClick={closeImageModal}
         >
           <div 
@@ -1489,20 +2700,210 @@ export default function App() {
                 className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-md border dark:border-neutral-800"
               />
             </div>
+
+            <div className="w-full flex justify-end gap-2 pt-2 border-t dark:border-neutral-700 border-stone-200">
+              <a
+                href={modalImageInfo.url}
+                download="photo_preview.png"
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+              >
+                <span>💾 Buka / Download Gambar Ukuran Penuh</span>
+              </a>
+              <button
+                onClick={closeImageModal}
+                className="px-4 py-2 bg-stone-200 dark:bg-neutral-800 hover:bg-stone-300 dark:hover:bg-neutral-700 rounded-xl text-xs font-bold transition-all"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Modal Login Admin */}
-      <AdminLoginModal
-        isOpen={showAdminLoginModal}
-        isDarkMode={isDarkMode}
-        onClose={() => setShowAdminLoginModal(false)}
-        onLoginSuccess={(admin) => {
-          setCurrentAdmin(admin);
-          setShowAdminLoginModal(false);
-        }}
-      />
+      {/* Pop-Up Modal Scan & Input Manual */}
+      {showScanModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`w-full max-w-md p-6 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+            <div className="flex justify-between items-center border-b pb-3 mb-4 border-black/10 dark:border-white/10">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <span>{inputMode === 'scan' ? '📷' : '⌨️'}</span> Input Data QC & Progress
+              </h3>
+              <button onClick={() => setShowScanModal(false)} className="text-xs opacity-60 hover:opacity-100 font-bold">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="flex p-1 bg-stone-100 dark:bg-neutral-900 rounded-xl border dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => { setInputMode('scan'); setScannedInput(''); }}
+                  className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                    inputMode === 'scan'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-stone-600 dark:text-neutral-400 hover:text-stone-900'
+                  }`}
+                >
+                  📷 Mode Scan QR / Barcode
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setInputMode('manual'); setScannedInput(''); }}
+                  className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                    inputMode === 'manual'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-stone-600 dark:text-neutral-400 hover:text-stone-900'
+                  }`}
+                >
+                  ⌨️ Mode Input Manual
+                </button>
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1 opacity-80">1. Target Kolom Update:</label>
+                <select
+                  value={scanTargetColumn}
+                  onChange={(e) => setScanTargetColumn(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border focus:outline-none font-semibold ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                >
+                  <option value="qc_checker">🔍 QC Checker</option>
+                  <option value="qc_paking">📦 QC Paking</option>
+                  <option value="qc_deliver">🚚 QC Deliver / Driver</option>
+                  <option value="qty_finish">⚙️ Finishing (Auto Complete Qty)</option>
+                  <option value="tes_scan">🧪 Tes Scan Sahaja</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1 opacity-80">2. Petugas / Operator:</label>
+                <select
+                  value={qcStaffName}
+                  onChange={(e) => setQcStaffName(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border focus:outline-none font-semibold ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                >
+                  {STAFF_QC_LIST.map((staff) => (
+                    <option key={staff} value={staff}>{staff}</option>
+                  ))}
+                </select>
+              </div>
+
+              <form onSubmit={handleSubmitInput} className="space-y-3">
+                <div>
+                  <label className="block font-bold mb-1 opacity-80">
+                    {inputMode === 'scan' ? '3. Arahkan Scanner Ke Sini:' : '3. Ketik No SPK / Kode Toko / QR:'}
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={scannedInput}
+                    onChange={(e) => setScannedInput(e.target.value)}
+                    placeholder={
+                      inputMode === 'scan'
+                        ? 'Scan barcode disini (Otomatis Enter)...'
+                        : 'Contoh: SPK-001 atau Store 204A...'
+                    }
+                    className={`w-full p-2.5 rounded-xl border focus:outline-none font-mono text-xs ${
+                      isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                    }`}
+                  />
+                  <p className="text-[10px] opacity-60 mt-1">
+                    {inputMode === 'scan'
+                      ? '⚡ Hardware/HP Scanner akan otomatis memproses saat mendapat karakter Enter.'
+                      : '💡 Ketik manual lalu tekan Enter pada keyboard atau klik tombol Simpan.'}
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowScanModal(false)}
+                    className="px-4 py-2 rounded-xl font-bold opacity-70 hover:opacity-100 text-xs"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className={`px-5 py-2 rounded-xl font-bold text-white text-xs active:scale-95 transition-all ${
+                      inputMode === 'scan' ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'
+                    }`}
+                  >
+                    {inputMode === 'scan' ? '⚡ Proses Scan' : '💾 Simpan Input'}
+                  </button>
+                </div>
+              </form>
+
+              {lastScanMessage && (
+                <div className={`p-3 rounded-xl border text-xs font-semibold ${
+                  lastScanMessage.includes('✅')
+                    ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-950/60 dark:text-green-300'
+                    : 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/60 dark:text-red-300'
+                }`}>
+                  {lastScanMessage}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pop-Up Modal Import Google Sheets */}
+      {showGSheetModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`w-full max-w-lg p-6 rounded-3xl border shadow-xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+            <div className="flex justify-between items-center border-b pb-3 mb-4 border-black/10 dark:border-white/10">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <span>🔗</span> Import Data dari Google Sheets
+              </h3>
+              <button onClick={() => setShowGSheetModal(false)} className="text-xs opacity-60 hover:opacity-100 font-bold">
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <p className="opacity-80">
+                Masukkan link Google Sheets publik Anda. Pastikan akses Google Sheet disetting ke <strong>"Siapa saja yang memiliki link (Anyone with the link)"</strong>.
+              </p>
+
+              <div>
+                <label className="block font-bold mb-1">URL Google Sheets:</label>
+                <input
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                  value={gSheetUrl}
+                  onChange={(e) => setGSheetUrl(e.target.value)}
+                  className={`w-full p-2.5 rounded-xl border focus:outline-none font-mono text-[11px] ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
+                  }`}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setShowGSheetModal(false)}
+                  className="px-4 py-2 rounded-xl font-bold opacity-70 hover:opacity-100"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleImportGoogleSheets}
+                  disabled={importingGSheet}
+                  className={`px-5 py-2 rounded-xl font-bold text-white transition-all ${
+                    importingGSheet ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 active:scale-95'
+                  }`}
+                >
+                  {importingGSheet ? '⏳ Mengimport...' : '🚀 Import Data Google Sheets'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
