@@ -13,7 +13,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     const { data } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .eq('status', 'SUBMITTED')
+      .in('status', ['SUBMITTED'])
       .order('created_at', { ascending: false });
 
     if (data) setPendingOrders(data);
@@ -29,7 +29,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(true);
     const { error } = await supabase
       .from('kl_orders')
-      .update({ status: 'APPROVED' })
+      .update({ status: 'APPROVED', lock_status: 'LOCKED' })
       .eq('id', orderId);
 
     if (!error) {
@@ -37,6 +37,22 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       fetchPendingOrders();
     } else {
       alert('Gagal approve: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleUnlockOrder = async (orderId) => {
+    setLoading(true);
+    const { error } = await supabase
+      .from('kl_orders')
+      .update({ lock_status: 'UNLOCKED' })
+      .eq('id', orderId);
+
+    if (!error) {
+      alert('🔓 Berhasil membuka kunci! Cabang kini dapat mengedit dan merevisi pesanan mereka.');
+      fetchPendingOrders();
+    } else {
+      alert('Gagal membuka kunci: ' + error.message);
     }
     setLoading(false);
   };
@@ -49,7 +65,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     <div className="space-y-6">
       <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
-        <p className="text-xs opacity-70">Review kuantiti pesanan, koreksi qty, dan setujui order masuk dari kantor cabang.</p>
+        <p className="text-xs opacity-70">Review kuantiti pesanan, setujui order, atau berikan izin buka kunci (*unlock*) bagi cabang yang ingin merevisi.</p>
       </div>
 
       {pendingOrders.length === 0 ? (
@@ -64,30 +80,53 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             return acc + (price * qty);
           }, 0) || 0;
 
+          const isRequestingUnlock = order.lock_status === 'REQUEST_UNLOCK';
+
           return (
-            <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+            <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
+              isRequestingUnlock 
+                ? (isDarkMode ? 'bg-amber-950/30 border-amber-700/60 text-white' : 'bg-amber-50/60 border-amber-300 text-stone-800')
+                : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800')
+            }`}>
               
               {/* Header Card Order */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-3 py-1 rounded-xl text-xs font-black bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
                       🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
                     </span>
                     <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
+                    {isRequestingUnlock && (
+                      <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 animate-pulse">
+                        ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] opacity-70 mt-1.5">Waktu Submit: {new Date(order.created_at).toLocaleString()}</p>
                 </div>
-                <button 
-                  onClick={() => handleApproveOrder(order.id)}
-                  disabled={loading}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
-                >
-                  {loading ? 'Memproses...' : '✅ Approve & Teruskan Order'}
-                </button>
+
+                <div className="flex items-center gap-2">
+                  {isRequestingUnlock && (
+                    <button 
+                      onClick={() => handleUnlockOrder(order.id)}
+                      disabled={loading}
+                      className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+                    >
+                      🔓 Setujui Buka Kunci
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => handleApproveOrder(order.id)}
+                    disabled={loading}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+                  >
+                    {loading ? 'Memproses...' : '✅ Approve & Teruskan Order'}
+                  </button>
+                </div>
               </div>
 
-              {/* Tabel Item Pesanan dengan Kolom Ukuran Terpisah */}
+              {/* Tabel Item Pesanan */}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
