@@ -85,7 +85,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           return (
             <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
               isRequestingUnlock 
-                ? (isDarkMode ? 'bg-amber-950/30 border-amber-700/60 text-white' : 'bg-amber-50/60 border-amber-300 text-stone-800')
+                ? (isDarkMode ? 'bg-red-950/30 border-red-700/60 text-white' : 'bg-red-50/60 border-red-300 text-stone-800')
                 : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800')
             }`}>
               
@@ -93,12 +93,15 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-3 py-1 rounded-xl text-xs font-black bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                    {/* Badge Nama Toko / Cabang Warna Hijau */}
+                    <span className="px-3 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
                       🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
                     </span>
                     <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
+                    
+                    {/* Badge Minta Buka Kunci Warna Merah Mencolok */}
                     {isRequestingUnlock && (
-                      <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 animate-pulse">
+                      <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 animate-pulse">
                         ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
                       </span>
                     )}
