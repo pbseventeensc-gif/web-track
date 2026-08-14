@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient'; // Pastikan path ini benar (titik dua '../' karena file ini ada di dalam folder components)
 
-export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
+export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode })  {
   const [branches, setBranches] = useState([]);
   const [masterItems, setMasterItems] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
