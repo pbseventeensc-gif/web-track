@@ -31,12 +31,47 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     if (data) setActivePromo(data);
   };
 
+  // Hitung total estimasi harga pesanan saat ini berdasarkan item master dan qty yang diinput
+  const calculateTotalOrderValue = (currentQtyMap) => {
+    return items.reduce((acc, item) => {
+      const qty = Number(currentQtyMap[item.id] || 0);
+      const price = Number(item.price || 0);
+      return acc + (qty * price);
+    }, 0);
+  };
+
   const handleQtyChange = (itemId, val) => {
-    setOrderQty(prev => ({ ...prev, [itemId]: Number(val) }));
+    const newQty = Number(val) || 0;
+    const targetItem = items.find(i => i.id === itemId);
+    const itemPrice = Number(targetItem?.price || 0);
+
+    // Simulasi map qty baru
+    const simulatedQtyMap = { ...orderQty, [itemId]: newQty };
+    const projectedTotal = calculateTotalOrderValue(simulatedQtyMap);
+
+    // Ambil batas maksimal budget dari promo aktif (jika ada)
+    const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
+
+    // Validasi Over Budget secara Real-time sebelum submit
+    if (maxBudgetLimit > 0 && projectedTotal > maxBudgetLimit) {
+      alert(`⚠️ Peringatan: Penambahan kuantiti ini membuat total estimasi pesanan melebihi batas alokasi ${activePromo.budget_type}! Kuantiti dibatasi.`);
+      return; // Tolak perubahan jika melewati budget
+    }
+
+    setOrderQty(simulatedQtyMap);
   };
 
   const submitOrder = async () => {
     if (!currentUser) return alert('Silakan login cabang terlebih dahulu');
+    
+    const totalOrder = calculateTotalOrderValue(orderQty);
+    const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
+
+    if (maxBudgetLimit > 0 && totalOrder > maxBudgetLimit) {
+      alert(`❌ Gagal Submit: Total nilai pesanan Anda (${totalOrder}) melewati batas alokasi ${activePromo.budget_type}! Mohon kurangi kuantiti barang.`);
+      return;
+    }
+
     setLoading(true);
     
     const { data: orderData, error: orderError } = await supabase
@@ -74,12 +109,19 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6">
-      {/* Keterangan Promo Aktif & Tombol Submit di Bagian Atas */}
+      {/* Keterangan Promo Aktif & Tampilkan Jenis Budget (Tanpa Nominal Angka Budget) */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-            Kampanye / Promo Aktif
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+              Kampanye / Promo Aktif
+            </span>
+            {activePromo?.budget_type && (
+              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                Alokasi: {activePromo.budget_type}
+              </span>
+            )}
+          </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           <p className="text-xs opacity-70 mt-1">{activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.'}</p>
         </div>
@@ -92,7 +134,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </button>
       </div>
 
-      {/* Grid Input Order Cabang (Master Data Tampil Lengkap, Harga Di-hide) */}
+      {/* Grid Input Order Cabang (Master Data Lengkap, Harga Di-hide, Validasi Budget Aktif) */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Form Permintaan / Order Logistik Cabang</h2>
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
