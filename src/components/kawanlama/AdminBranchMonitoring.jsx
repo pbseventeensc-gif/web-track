@@ -165,9 +165,28 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
             📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
           </h3>
           
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm dark:bg-red-900/40 dark:border-red-800 dark:text-red-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>⏳ Belum ({unsubmittedList.length})</button>
             <button onClick={() => setActiveTabFilter('sudah')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'sudah' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>✅ Sudah ({submittedList.length})</button>
+            
+            {/* Tombol Blast WA Massal */}
+            {activeTabFilter === 'belum' && unsubmittedList.length > 0 && (
+              <button 
+                onClick={() => {
+                  if(window.confirm(`Yakin ingin mengirim Blast WA ke ${unsubmittedList.length} toko yang belum submit?`)) {
+                    unsubmittedList.forEach((b, index) => {
+                      setTimeout(() => {
+                        const text = encodeURIComponent(`Halo ${b.branch_name} (Batas Waktu: ${reminderHours} Jam),\n\n${customMessage}\n\nTerima kasih.`);
+                        window.open(`https://wa.me/${b.phone}?text=${text}`, '_blank');
+                      }, index * 1000);
+                    });
+                  }
+                }}
+                className="px-4 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
+              >
+                🚀 Blast WA ({unsubmittedList.length})
+              </button>
+            )}
           </div>
         </div>
 
