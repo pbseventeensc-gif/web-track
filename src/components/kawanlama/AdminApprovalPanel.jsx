@@ -8,10 +8,63 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [loading, setLoading] = useState(false);
   const [expandedApprovedId, setExpandedApprovedId] = useState(null);
   const [searchApproved, setSearchApproved] = useState('');
+  
+  // State untuk Notifikasi Real-time Toast
+  const [toastNotification, setToastNotification] = useState(null);
 
   useEffect(() => {
     fetchOrders();
+
+    // --- SETUP REAL-TIME LISTENER SUPABASE ---
+    const channel = supabase
+      .channel('kl_orders_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kl_orders' },
+        (payload) => {
+          fetchOrders(); // Ambil ulang data otomatis
+
+          // Munculkan Toast Notifikasi jika ada order atau request masuk
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newStatus = payload.new.status;
+            if (newStatus === 'SUBMITTED' || newStatus === 'submitted' || newStatus === 'REQUEST_UNLOCK' || newStatus === 'request_unlock') {
+              triggerToast('🔔 Ada order masuk atau permintaan buka kunci baru dari cabang!');
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup channel saat komponen ditutup
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const triggerToast = (message) => {
+    setToastNotification(message);
+    
+    // Mainkan efek suara bip pendek menggunakan Web Audio API
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nada D5
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    } catch (e) {
+      // Ignore jika browser memblokir audio otomatis
+    }
+
+    // Hilangkan toast setelah 5 detik
+    setTimeout(() => {
+      setToastNotification(null);
+    }, 5000);
+  };
 
   const fetchOrders = async () => {
     // 1. Ambil order yang menunggu approval / request unlock (mendukung status huruf besar/kecil)
@@ -87,6 +140,19 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
   return (
     <div className="space-y-8 relative">
+      
+      {/* --- TOAST NOTIFIKASI REAL-TIME MENGAMBANG DI ATAS --- */}
+      {toastNotification && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce bg-indigo-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-indigo-400">
+          <span className="text-xl">🚀</span>
+          <div>
+            <h5 className="font-black text-xs uppercase tracking-wider">Aktivitas Baru!</h5>
+            <p className="text-xs font-medium">{toastNotification}</p>
+          </div>
+          <button onClick={() => setToastNotification(null)} className="ml-4 text-indigo-200 hover:text-white font-bold text-sm">✕</button>
+        </div>
+      )}
+
       {/* Header Utama */}
       <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
