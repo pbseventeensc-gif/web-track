@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import * as XLSX from 'xlsx';
 
 export default function AdminApprovalPanel({ isDarkMode }) {
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -209,19 +210,46 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED (GRID & AKORDION) */}
       <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700 relative">
         
-        {/* --- BAGIAN HEADER STICKY (MENEMPEL DI ATAS) --- */}
+        {/* --- BAGIAN HEADER STICKY & TOMBOL EXPORT EXCEL --- */}
         <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800' : 'bg-white/90 border-stone-200'}`}>
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
           </h3>
           
-          <input 
-            type="text"
-            placeholder="🔍 Cari Nama Toko..."
-            value={searchApproved}
-            onChange={(e) => setSearchApproved(e.target.value)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-72 shadow-sm transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
-          />
+          <div className="flex gap-2 w-full sm:w-auto">
+            <input 
+              type="text"
+              placeholder="🔍 Cari Nama Toko..."
+              value={searchApproved}
+              onChange={(e) => setSearchApproved(e.target.value)}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-64 shadow-sm transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
+            />
+            
+            {/* Tombol Export Excel */}
+            <button 
+              onClick={() => {
+                const exportData = filteredApprovedOrders.flatMap(order => 
+                  order.kl_order_items.map(item => ({
+                    "Nama Cabang": order.kl_branches?.branch_name || "N/A",
+                    "Nama Barang": item.kl_master_items?.item_name || "N/A",
+                    "Bahan": item.kl_master_items?.material || "-",
+                    "Ukuran": item.kl_master_items?.size || "-",
+                    "Harga Satuan": Number(item.kl_master_items?.price || 0),
+                    "Qty": item.qty,
+                    "Subtotal": Number(item.kl_master_items?.price || 0) * item.qty,
+                    "Tgl Approved": order.updated_at
+                  }))
+                );
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Rekap Order");
+                XLSX.writeFile(wb, `Rekap_Order_Approved_${new Date().toLocaleDateString()}.xlsx`);
+              }}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+            >
+              📥 Excel
+            </button>
+          </div>
         </div>
         {/* --- AKHIR BAGIAN HEADER STICKY --- */}
 
