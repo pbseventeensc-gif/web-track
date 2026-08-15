@@ -12,31 +12,46 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
-    // 1. Ambil data promo yang sedang aktif saat ini
+    // 1. Ambil data promo aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Ambil seluruh data cabang
-    const { data: branches } = await supabase.from('kl_branches').select('id, branch_name, phone, email');
-    
-    // 3. Ambil data order, filter berdasarkan promo aktif jika ada
-    let query = supabase.from('kl_orders').select('branch_id, status, lock_status');
+    // 2. Ambil seluruh data cabang dari tabel master cabang
+    const { data: branches, error: branchError } = await supabase
+      .from('kl_branches')
+      .select('*');
+
+    if (branchError) {
+      console.error('Gagal ambil cabang:', branchError.message);
+      return;
+    }
+
+    // 3. Ambil seluruh order (filter berdasarkan promo aktif jika ada)
+    let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
-    const { data: orders } = await query;
+    const { data: orders, error: orderError } = await query;
 
-    // 4. Petakan status masing-masing cabang
-    const result = branches?.map(b => {
-      // Cari order berdasarkan branch_id
-      const branchOrder = orders?.find(o => o.branch_id === b.id);
-      
+    if (orderError) {
+      console.error('Gagal ambil order:', orderError.message);
+    }
+
+    // 4. Petakan secara manual untuk mencocokkan branch / store
+    const mappedData = branches.map(branch => {
+      // Cari apakah cabang ini sudah punya order (mencocokkan berbagai kemungkinan nama kolom ID cabang)
+      const matchedOrder = orders?.find(o => 
+        o.branch_id === branch.id || 
+        o.branch_id === branch.branch_id || 
+        o.store_id === branch.id
+      );
+
       let statusText = 'BELUM SUBMIT';
-      if (branchOrder) {
-        if (branchOrder.status === 'APPROVED' || branchOrder.lock_status === 'LOCKED') {
+      if (matchedOrder) {
+        if (matchedOrder.status === 'APPROVED' || matchedOrder.lock_status === 'LOCKED') {
           statusText = 'SUDAH SUBMIT & APPROVED';
         } else {
           statusText = 'SUDAH SUBMIT';
@@ -44,12 +59,15 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       }
 
       return {
-        ...b,
+        id: branch.id,
+        branch_name: branch.branch_name || branch.name || 'Cabang Tanpa Nama',
+        phone: branch.phone || branch.whatsapp || '628123456789',
+        email: branch.email || 'cabang@email.com',
         status: statusText
       };
     });
 
-    if (result) setBranchStatus(result);
+    setBranchStatus(mappedData);
   };
 
   const sendWhatsAppReminder = (branch) => {
