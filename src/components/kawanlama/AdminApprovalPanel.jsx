@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import * as XLSX from 'xlsx';
 
@@ -10,12 +10,22 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [expandedApprovedId, setExpandedApprovedId] = useState(null);
   const [searchApproved, setSearchApproved] = useState('');
   
-  // State untuk Notifikasi Real-time Toast
-  const [toastNotification, setToastNotification] = useState(null);
+  // State untuk Notifikasi & Dropdown Lonceng
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     fetchOrders();
     fetchAuditLogs();
+
+    // Tutup dropdown jika klik di luar area lonceng
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowNotificationDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
 
     // --- SETUP REAL-TIME LISTENER SUPABASE ---
     const channel = supabase
@@ -29,8 +39,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newStatus = payload.new.status;
-            if (newStatus === 'SUBMITTED' || newStatus === 'submitted' || newStatus === 'REQUEST_UNLOCK' || newStatus === 'request_unlock') {
-              triggerToast('🔔 Ada order masuk atau permintaan buka kunci baru dari cabang!');
+            const newLock = payload.new.lock_status;
+            if (newStatus === 'SUBMITTED' || newStatus === 'submitted' || newLock === 'REQUEST_UNLOCK' || newStatus === 'REQUEST_UNLOCK') {
+              const msg = '🔔 Ada order masuk atau permintaan BUKA KUNCI baru dari cabang!';
+              addNotification(msg);
+              playBeepSound();
             }
           }
         }
@@ -38,12 +51,22 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .subscribe();
 
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       supabase.removeChannel(channel);
     };
   }, []);
 
-  const triggerToast = (message) => {
-    setToastNotification(message);
+  const addNotification = (message) => {
+    const newNotif = {
+      id: Date.now(),
+      message,
+      time: new Date().toLocaleTimeString(),
+      read: false
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const playBeepSound = () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
@@ -56,17 +79,13 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       osc.start();
       osc.stop(audioCtx.currentTime + 0.15);
     } catch (e) {}
-
-    setTimeout(() => {
-      setToastNotification(null);
-    }, 5000);
   };
 
   const fetchOrders = async () => {
     const { data: pendingData, error: pendingError } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .in('status', ['SUBMITTED', 'submitted', 'REQUEST_UNLOCK', 'request_unlock'])
+      .or('status.in.(SUBMITTED,submitted,REQUEST_UNLOCK,request_unlock),lock_status.eq.REQUEST_UNLOCK')
       .order('created_at', { ascending: false });
 
     if (!pendingError && pendingData) {
@@ -151,25 +170,82 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     return branchName.toLowerCase().includes(searchApproved.toLowerCase());
   });
 
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleOpenNotifications = () => {
+    setShowNotificationDropdown(!showNotificationDropdown);
+    if (!showNotificationDropdown) {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    }
+  };
+
   return (
     <div className="space-y-8 relative">
       
-      {/* --- TOAST NOTIFIKASI REAL-TIME MENGAMBANG DI ATAS --- */}
-      {toastNotification && (
-        <div className="fixed top-6 right-6 z-50 animate-bounce bg-indigo-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-indigo-400">
-          <span className="text-xl">🚀</span>
-          <div>
-            <h5 className="font-black text-xs uppercase tracking-wider">Aktivitas Baru!</h5>
-            <p className="text-xs font-medium">{toastNotification}</p>
-          </div>
-          <button onClick={() => setToastNotification(null)} className="ml-4 text-indigo-200 hover:text-white font-bold text-sm">✕</button>
+      {/* Header Utama dengan Logo Lonceng di Pojok Kanan Atas */}
+      <div className={`p-5 rounded-3xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <div>
+          <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
+          <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
         </div>
-      )}
 
-      {/* Header Utama */}
-      <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
-        <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
+        {/* --- IKON LONCENG NOTIFIKASI --- */}
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={handleOpenNotifications}
+            className={`relative p-3 rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs shadow-sm ${
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-stone-700'
+            }`}
+          >
+            <span className="text-lg">🔔</span>
+            <span>Notifikasi</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-md">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* --- DROPDOWN ISI NOTIFIKASI --- */}
+          {showNotificationDropdown && (
+            <div className={`absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 ${
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
+            }`}>
+              <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white">
+                <h4 className="font-black text-xs uppercase tracking-wider">Pusat Notifikasi Real-Time</h4>
+                <button 
+                  onClick={() => setNotifications([])} 
+                  className="text-[10px] bg-indigo-700 hover:bg-indigo-800 px-2.5 py-1 rounded-xl font-bold transition-all"
+                >
+                  Hapus Semua
+                </button>
+              </div>
+
+              <div className="max-h-72 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+                {notifications.length === 0 ? (
+                  <div className="py-8 text-center text-xs opacity-50">
+                    📭 Belum ada notifikasi baru saat ini.
+                  </div>
+                ) : (
+                  notifications.map(notif => (
+                    <div 
+                      key={notif.id} 
+                      className={`p-3 rounded-2xl border text-xs flex flex-col gap-1 transition-all ${
+                        isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-stone-50 border-stone-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Order / Request Cabang</span>
+                        <span className="text-[10px] font-mono opacity-60">{notif.time}</span>
+                      </div>
+                      <p className="font-medium opacity-90">{notif.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SEKSI 1: ORDER MASUK YANG PERLU APPROVAL */}
@@ -196,7 +272,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             return (
               <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
                 isRequestingUnlock 
-                  ? (isDarkMode ? 'bg-red-950/30 border-red-700/60 text-white' : 'bg-red-50/60 border-red-300 text-stone-800')
+                  ? (isDarkMode ? 'bg-red-950/40 border-red-700/80 text-white' : 'bg-red-50/80 border-red-300 text-stone-800')
                   : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800')
               }`}>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
@@ -207,7 +283,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                       </span>
                       <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
                       {isRequestingUnlock && (
-                        <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-rose-600 text-white animate-pulse">
+                        <span className="px-3 py-1.5 rounded-xl text-[10px] font-black bg-rose-600 text-white animate-pulse">
                           ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
                         </span>
                       )}
@@ -220,7 +296,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                       <button 
                         onClick={() => handleUnlockOrder(order.id, branchNameStr)}
                         disabled={loading}
-                        className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+                        className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 animate-bounce"
                       >
                         {loading ? 'Memproses...' : '🔓 Setujui Buka Kunci'}
                       </button>
