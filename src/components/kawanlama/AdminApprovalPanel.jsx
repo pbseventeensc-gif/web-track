@@ -10,13 +10,19 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   }, []);
 
   const fetchPendingOrders = async () => {
-    const { data } = await supabase
+    // PERBAIKAN: Masukkan 'REQUEST_UNLOCK' ke dalam filter .in() 
+    // agar order yang minta buka kunci ikut muncul di panel admin
+    const { data, error } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .in('status', ['SUBMITTED'])
+      .in('status', ['SUBMITTED', 'REQUEST_UNLOCK'])
       .order('created_at', { ascending: false });
 
-    if (data) setPendingOrders(data);
+    if (error) {
+      console.error('Gagal memuat data order:', error.message);
+    } else if (data) {
+      setPendingOrders(data);
+    }
   };
 
   const handleUpdateItemQty = async (itemId, newQty) => {
@@ -43,9 +49,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
   const handleUnlockOrder = async (orderId) => {
     setLoading(true);
+    // PERBAIKAN: Ubah status kembali ke 'SUBMITTED' atau 'UNLOCKED' 
+    // serta ubah lock_status agar cabang bisa leluasa mengedit ulang pesanan mereka
     const { error } = await supabase
       .from('kl_orders')
-      .update({ lock_status: 'UNLOCKED' })
+      .update({ status: 'SUBMITTED', lock_status: 'UNLOCKED' })
       .eq('id', orderId);
 
     if (!error) {
@@ -70,7 +78,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
       {pendingOrders.length === 0 ? (
         <div className={`p-10 text-center rounded-3xl border text-xs opacity-60 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-          📭 Tidak ada order baru dari cabang yang menunggu approval.
+          📭 Tidak ada order baru atau permintaan buka kunci dari cabang yang menunggu approval.
         </div>
       ) : (
         pendingOrders.map(order => {
@@ -80,7 +88,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             return acc + (price * qty);
           }, 0) || 0;
 
-          const isRequestingUnlock = order.lock_status === 'REQUEST_UNLOCK';
+          // Mendeteksi apakah order sedang dalam status minta buka kunci
+          const isRequestingUnlock = order.status === 'REQUEST_UNLOCK' || order.lock_status === 'REQUEST_UNLOCK';
 
           return (
             <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
@@ -99,7 +108,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                     </span>
                     <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
                     
-                    {/* Badge Minta Buka Kunci Warna Merah Senada Logout */}
+                    {/* Badge Minta Buka Kunci Warna Merah */}
                     {isRequestingUnlock && (
                       <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-rose-600 text-white animate-pulse">
                         ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
@@ -110,22 +119,23 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {isRequestingUnlock && (
+                  {isRequestingUnlock ? (
                     <button 
                       onClick={() => handleUnlockOrder(order.id)}
                       disabled={loading}
                       className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
                     >
-                      🔓 Setujui Buka Kunci
+                      {loading ? 'Memproses...' : '🔓 Setujui Buka Kunci'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleApproveOrder(order.id)}
+                      disabled={loading}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+                    >
+                      {loading ? 'Memproses...' : '✅ Approve & Teruskan Order'}
                     </button>
                   )}
-                  <button 
-                    onClick={() => handleApproveOrder(order.id)}
-                    disabled={loading}
-                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
-                  >
-                    {loading ? 'Memproses...' : '✅ Approve & Teruskan Order'}
-                  </button>
                 </div>
               </div>
 
