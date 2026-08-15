@@ -78,7 +78,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         setLabelData(cleanedData); setSelectedRows([]); alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
       } catch (err) { alert('Gagal membaca file Excel: ' + err.message); }
     };
-    reader.readAsBinaryString(file); e.target.value = '';
+    reader.readAsDataURL(file); e.target.value = '';
   };
 
   const handleImageUploadRow = (e, index) => {
@@ -99,39 +99,92 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const handlePrintLabels = async () => {
     if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
     const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
-    const pagesHtml = await Promise.all(itemsToPrint.map(async (item) => {
-      const totalQty = Number(item.QTY_TOTAL || 0); const qtyPerKoli = Number(item.QTY_PER_KOLI || 20);
+    
+    // Kumpulkan semua koli dari item yang dipilih
+    let allKoliItems = [];
+    for (const item of itemsToPrint) {
+      const totalQty = Number(item.QTY_TOTAL || 0); 
+      const qtyPerKoli = Number(item.QTY_PER_KOLI || 20);
       const totalKoli = Math.ceil(totalQty / qtyPerKoli) || 1;
-      let koliHtmls = [];
+      
       for (let k = 1; k <= totalKoli; k++) {
         const currentQty = (k === totalKoli && totalQty % qtyPerKoli !== 0) ? (totalQty % qtyPerKoli) : qtyPerKoli;
         const qrAddress = item.NO_SPK ? `SPK:${item.NO_SPK}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
-        let qrDataUrl = ''; try { qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 }); } catch (e) { console.error(e); }
-        koliHtmls.push(`
-          <div class="label-page"><div class="label-box">
+        let qrDataUrl = ''; 
+        try { 
+          qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 }); 
+        } catch (e) { 
+          console.error(e); 
+        }
+
+        allKoliItems.push({
+          ...item,
+          currentKoli: k,
+          totalKoli: totalKoli,
+          currentQty: currentQty,
+          qrDataUrl: qrDataUrl
+        });
+      }
+    }
+
+    // Kelompokkan koli menjadi pasangan (2 label per 1 halaman A4 Landscape)
+    const pagePairs = [];
+    for (let i = 0; i < allKoliItems.length; i += 2) {
+      pagePairs.push(allKoliItems.slice(i, i + 2));
+    }
+
+    const pagesHtml = await Promise.all(pagePairs.map(async (pair) => {
+      const labelsHtml = await Promise.all(pair.map(async (item) => {
+        return `
+          <div class="label-box">
             <table class="header-table"><tr>
               <td style="width: 25%; vertical-align: middle;">${renderHeaderLogoHtml()}</td>
               <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2; vertical-align: middle;">
-                <strong style="font-size:13px;">PT. WELLEN PRINT</strong><br>
+                <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
                 RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
               </td>
-              <td style="width: 20%; text-align:right; vertical-align: middle;">${qrDataUrl ? `<img src="${qrDataUrl}" style="width:65px; height:65px; display:inline-block;">` : ''}</td>
+              <td style="width: 20%; text-align:right; vertical-align: middle;">${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:55px; height:55px; display:inline-block;">` : ''}</td>
             </tr></table>
             <div class="content-grid">
               <div class="grid-box"><strong>SENDER:</strong> ${item.SENDER || 'WELLEN PRINT'}<br><strong>WELLEN PIC:</strong> ${item.WELLEN_PIC || 'BPK. JHONNY'}<br><strong>NO. TELP:</strong> ${item.SENDER_TELP || '021-5506999'}<br><strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'info@wellenprint.com'}</div>
               <div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT || '-'}<br><strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || '-'}<br><strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || '-'}<br><strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || '-'}</div>
-              <div class="grid-box"><strong>PO NUMBER:</strong> ${item.PO_NUMBER || '-'}<br><strong>NO. SPK:</strong> ${item.NO_SPK || '-'}<br><strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || '-'}<br><strong>MEDIA:</strong> ${item.MEDIA || '-'}<br><strong>UKURAN:</strong> ${item.UKURAN || '-'}<br><strong>QUANTITY:</strong> ${currentQty} PCS<br><strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || '-'}</div>
-              <div class="grid-box visual-box"><div><strong>VISUAL IMAGE :</strong></div><div class="koli-title">${k} OF ${totalKoli}</div>${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>`}</div>
+              <div class="grid-box"><strong>PO NUMBER:</strong> ${item.PO_NUMBER || '-'}<br><strong>NO. SPK:</strong> ${item.NO_SPK || '-'}<br><strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || '-'}<br><strong>MEDIA:</strong> ${item.MEDIA || '-'}<br><strong>UKURAN:</strong> ${item.UKURAN || '-'}<br><strong>QUANTITY:</strong> ${item.currentQty} PCS<br><strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || '-'}</div>
+              <div class="grid-box visual-box"><div><strong>VISUAL IMAGE :</strong></div><div class="koli-title">${item.currentKoli} OF ${item.totalKoli}</div>${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>`}</div>
             </div>
-          </div></div>
-        `);
-      }
-      return koliHtmls.join('');
+          </div>
+        `;
+      }));
+
+      return `
+        <div class="label-page">
+          ${labelsHtml.join('')}
+        </div>
+      `;
     }));
+
     const printWin = window.open('', '_blank', 'width=900,height=800');
-    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Label Wellen Print</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; } .label-page { width: 210mm; height: 148mm; padding: 5mm; box-sizing: border-box; page-break-after: always; break-after: page; } .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; } .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } .header-table td { border: none; padding: 6px; vertical-align: middle; } .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 6px; font-size: 11px; line-height: 1.4; box-sizing: border-box; } .grid-box:nth-child(2n) { border-right: none; } .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; } .koli-title { font-size: 20px; font-weight: bold; margin: 2px 0; } .preview-img { max-width: 95%; max-height: 90px; object-fit: contain; } @media print { body { padding: 0; } .label-page { page-break-after: always; break-after: page; } }</style></head><body>${pagesHtml.join('')}</body></html>`);
-    printWin.document.close(); setTimeout(() => { printWin.print(); }, 500);
+    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Label Wellen Print (2 in 1 A4)</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; } 
+      .label-page { width: 297mm; height: 210mm; padding: 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; } 
+      .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; } 
+      .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
+      .header-table td { border: none; padding: 5px; vertical-align: middle; } 
+      .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 5px; font-size: 10.5px; line-height: 1.3; box-sizing: border-box; } 
+      .grid-box:nth-child(2n) { border-right: none; } 
+      .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
+      .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; } 
+      .koli-title { font-size: 18px; font-weight: bold; margin: 2px 0; } 
+      .preview-img { max-width: 95%; max-height: 75px; object-fit: contain; } 
+      @media print { 
+        body { padding: 0; } 
+        @page { size: A4 landscape; margin: 0; }
+        .label-page { page-break-after: always; break-after: page; width: 297mm; height: 210mm; } 
+      }
+    </style></head><body>${pagesHtml.join('')}</body></html>`);
+    printWin.document.close(); 
+    setTimeout(() => { printWin.print(); }, 500);
   };
 
   const handlePrintSuratJalan = () => {
@@ -148,7 +201,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           </div>
         </div>
         <table class="item-grid-table">
-          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
+          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
           <tbody><tr><td style="text-align: center;">1</td><td>AMO/DEPO</td><td></td><td style="text-align: right; padding-right: 15px;">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tbody>
           <tfoot><tr><td colspan="3" class="text-center font-bold">TOTAL</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tfoot>
         </table>
