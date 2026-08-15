@@ -1,326 +1,220 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
-export default function BranchOrderForm({ isDarkMode, currentUser }) {
-  const [items, setItems] = useState([]);
-  const [activePromo, setActivePromo] = useState(null);
-  const [existingOrder, setExistingOrder] = useState(null);
-  const [hasOrdered, setHasOrdered] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  const [orderQty, setOrderQty] = useState({});
-  const [loading, setLoading] = useState(false);
+export default function AdminPromoManager({ isDarkMode }) {
+  const [promos, setPromos] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
   
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [budgets, setBudgets] = useState([
+    { key: 'Budget A', name: 'Budget A', nominal: 5000000 },
+    { key: 'Budget B', name: 'Budget B', nominal: 3000000 },
+    { key: 'Budget C', name: 'Budget C', nominal: 1500000 }
+  ]);
 
-  useEffect(() => {
-    fetchMasterItems();
-    fetchActivePromo();
-  }, [currentUser]);
-
-  const fetchMasterItems = async () => {
-    const { data } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
-    if (data) setItems(data);
-  };
-
-  const fetchActivePromo = async () => {
-    const { data: promoData } = await supabase.from('kl_promos').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
-    if (promoData) {
-      setActivePromo(promoData);
-      if (currentUser) {
-        const { data: orderData } = await supabase.from('kl_orders').select('*, kl_order_items(item_id, qty)').eq('branch_id', currentUser.branch_id).eq('promo_id', promoData.id).maybeSingle();
-        if (orderData) {
-          setExistingOrder(orderData);
-          if (orderData.lock_status === 'UNLOCKED') {
-            setHasOrdered(false);
-            const qtyMap = {};
-            orderData.kl_order_items?.forEach(i => { qtyMap[i.item_id] = i.qty; });
-            setOrderQty(qtyMap);
-          } else {
-            setHasOrdered(true);
-          }
-        } else {
-          setHasOrdered(false);
-          setShowNotification(true);
-        }
-      }
-    }
-  };
-
-  const calculateTotalOrderValue = (currentQtyMap) => {
-    return items.reduce((acc, item) => {
-      const qty = Number(currentQtyMap[item.id] || 0);
-      const price = Number(item.price || 0);
-      return acc + (qty * price);
-    }, 0);
-  };
-
-  const handleQtyChange = (itemId, val) => {
-    if (hasOrdered) return;
-    const newQty = Number(val) || 0;
-    const simulatedQtyMap = { ...orderQty, [itemId]: newQty };
-    const projectedTotal = calculateTotalOrderValue(simulatedQtyMap);
-    const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
-
-    if (maxBudgetLimit > 0 && projectedTotal > maxBudgetLimit) {
-      alert(`⚠️ Peringatan: Penambahan kuantiti ini membuat total estimasi pesanan melebihi batas alokasi ${activePromo.budget_type}! Kuantiti dibatasi.`);
-      return;
-    }
-
-    setOrderQty(simulatedQtyMap);
-  };
-
-  const requestUnlock = async () => {
-    if (!existingOrder) return;
-    setLoading(true);
-    const { error } = await supabase
-      .from('kl_orders')
-      .update({ lock_status: 'REQUEST_UNLOCK' })
-      .eq('id', existingOrder.id);
-
-    if (!error) {
-      alert('🔓 Permintaan buka kunci telah dikirim ke Admin. Mohon tunggu persetujuan admin.');
-      fetchActivePromo();
-    } else {
-      alert('Gagal mengirim permintaan: ' + error.message);
-    }
-    setLoading(false);
-  };
-
-  const submitOrder = async () => {
-    if (!currentUser) return alert('Silakan login cabang terlebih dahulu');
-    
-    const totalOrder = calculateTotalOrderValue(orderQty);
-    const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
-
-    if (maxBudgetLimit > 0 && totalOrder > maxBudgetLimit) {
-      alert(`❌ Gagal Submit: Total nilai pesanan melewati batas alokasi ${activePromo.budget_type}! Mohon kurangi kuantiti barang.`);
-      return;
-    }
-
-    setLoading(true);
-    
-    let targetOrderId = existingOrder?.id;
-
-    if (targetOrderId) {
-      await supabase.from('kl_orders').update({
-        status: 'SUBMITTED',
-        lock_status: 'LOCKED',
-        project_name: activePromo ? activePromo.title : 'Order Cabang'
-      }).eq('id', targetOrderId);
-
-      await supabase.from('kl_order_items').delete().eq('order_id', targetOrderId);
-    } else {
-      const { data: orderData, error: orderError } = await supabase
-        .from('kl_orders')
-        .insert({ 
-          branch_id: currentUser.branch_id, 
-          promo_id: activePromo ? activePromo.id : null,
-          project_name: activePromo ? activePromo.title : 'Order Cabang',
-          status: 'SUBMITTED',
-          lock_status: 'LOCKED'
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        alert('Gagal submit order: ' + orderError.message);
-        setLoading(false);
-        return;
-      }
-      targetOrderId = orderData.id;
-    }
-
-    const orderItems = Object.entries(orderQty)
-      .filter(([_, qty]) => qty > 0)
-      .map(([itemId, qty]) => ({
-        order_id: targetOrderId,
-        item_id: itemId,
-        qty: qty
-      }));
-
-    if (orderItems.length > 0) {
-      await supabase.from('kl_order_items').insert(orderItems);
-    }
-    
-    alert('✅ Order Berhasil Disubmit / Diperbarui!');
-    setLoading(false);
-    fetchActivePromo();
-  };
-
-  const sortedItems = [...items].sort((a, b) => {
-    const nameA = (a.item_name || '').toLowerCase();
-    const nameB = (b.item_name || '').toLowerCase();
-    if (sortOrder === 'asc') {
-      return nameA.localeCompare(nameB);
-    } else {
-      return nameB.localeCompare(nameA);
-    }
+  const [form, setForm] = useState({ 
+    title: '', 
+    description: '', 
+    budget_type: 'Budget A', 
+    budget_nominal: 5000000, 
+    is_active: true 
   });
 
-  const toggleSort = () => {
-    setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+  const [isEditingBudgetNames, setIsEditingBudgetNames] = useState(false);
+
+  useEffect(() => { fetchPromos(); }, []);
+
+  const fetchPromos = async () => {
+    const { data } = await supabase.from('kl_promos').select('*').order('created_at', { ascending: false });
+    if (data) setPromos(data);
   };
 
-  const currentTotalOrder = calculateTotalOrderValue(orderQty);
-  const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
-  const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
+  const handleSelectBudget = (b) => {
+    setForm({ 
+      ...form, 
+      budget_type: b.name, 
+      budget_nominal: b.nominal 
+    });
+  };
 
-  let progressColor = 'bg-emerald-500'; 
-  if (percentage > 50 && percentage <= 90) {
-    progressColor = 'bg-amber-500'; 
-  } else if (percentage > 90) {
-    progressColor = 'bg-orange-500'; 
-  }
+  const handleUpdateBudgetDetail = (index, field, value) => {
+    const updated = [...budgets];
+    updated[index][field] = field === 'nominal' ? (Number(value) || 0) : value;
+    setBudgets(updated);
+
+    if (form.budget_type === updated[index].key || form.budget_type === updated[index].name) {
+      setForm({
+        ...form,
+        budget_type: updated[index].name,
+        budget_nominal: updated[index].nominal
+      });
+    }
+  };
+
+  const handleCreatePromo = async (e) => {
+    e.preventDefault();
+    if (!form.title) return alert('Judul promo wajib diisi!');
+    
+    const { error } = await supabase.from('kl_promos').insert([{
+      title: form.title,
+      description: form.description,
+      budget_type: form.budget_type,
+      custom_budget: Number(form.budget_nominal) || 0,
+      is_active: true
+    }]);
+
+    if (!error) {
+      setSuccessMessage(`🚀 Berhasil! Promo "${form.title}" (${form.budget_type} - ${formatRupiah(form.budget_nominal)}) telah sukses dibroadcast ke seluruh kantor cabang.`);
+      setTimeout(() => setSuccessMessage(''), 5000);
+
+      setForm({ title: '', description: '', budget_type: budgets[0]?.name || 'Budget A', budget_nominal: budgets[0]?.nominal || 0, is_active: true });
+      fetchPromos();
+    } else {
+      alert('Gagal broadcast promo: ' + error.message);
+    }
+  };
+
+  const formatRupiah = (angka) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
+  };
 
   return (
-    <div className="space-y-6 relative">
-      {showNotification && !hasOrdered && activePromo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-            <div className="text-4xl mb-3">📢</div>
-            <h2 className="font-black text-base uppercase mb-2 text-indigo-600 dark:text-indigo-400">Pengingat: Order Belum Disubmit!</h2>
-            <p className="text-xs opacity-80 mb-6 leading-relaxed">
-              Halo Cabang, kampanye atau promo aktif <strong>"{activePromo.title}"</strong> sedang berjalan. Anda belum melakukan submit order. Mohon segera isi formulir pesanan logistik Anda.
-            </p>
-            <button 
-              onClick={() => setShowNotification(false)}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs"
-            >
-              Saya Mengerti, Lanjutkan ke Form
-            </button>
+    <div className="space-y-6">
+      {successMessage && (
+        <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-lg animate-bounce ${
+          isDarkMode ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <span>✅</span>
+            <span>{successMessage}</span>
           </div>
+          <button onClick={() => setSuccessMessage('')} className="text-xs font-bold opacity-70 hover:opacity-100">✕</button>
         </div>
       )}
 
-      <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <div className="space-y-2 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-              Kampanye / Promo Aktif
-            </span>
-            {activePromo?.budget_type && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                Alokasi: {activePromo.budget_type}
-              </span>
-            )}
-            {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
-                🔒 Terkunci (Telah Disubmit)
-              </span>
-            )}
-            {existingOrder?.lock_status === 'REQUEST_UNLOCK' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                ⏳ Menunggu Persetujuan Admin Buka Kunci
-              </span>
-            )}
-            {existingOrder?.lock_status === 'UNLOCKED' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                🔓 Dibuka Admin (Silakan Edit & Resubmit)
-              </span>
-            )}
-          </div>
-          <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
+      {/* Form Buat Promo dengan Header Sticky */}
+      <div className={`p-6 rounded-3xl border shadow-sm sticky top-4 z-20 backdrop-blur-md ${isDarkMode ? 'bg-neutral-800/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'}`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">📢 Buat & Share Promo / Kampanye Baru</h3>
+          <button 
+            type="button"
+            onClick={() => setIsEditingBudgetNames(!isEditingBudgetNames)}
+            className="text-[11px] font-bold px-3 py-1.5 rounded-xl bg-stone-200 dark:bg-neutral-700 hover:opacity-80 transition-all"
+          >
+            {isEditingBudgetNames ? '💾 Selesai Edit Nama & Nominal Budget' : '✏️ Edit Nama & Nominal Budget'}
+          </button>
+        </div>
+
+        <form onSubmit={handleCreatePromo} className="space-y-4 text-xs">
           
-          {activePromo && (
-            <div className="pt-2 space-y-1.5 max-w-xl">
-              <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
-                  style={{ width: `${percentage}%` }}
-                ></div>
+          <div>
+            <label className="block font-bold mb-1 opacity-80">Judul Promo / Kampanye</label>
+            <input 
+              type="text" 
+              placeholder="Contoh: Promo Lebaran 2026" 
+              value={form.title} 
+              onChange={e => setForm({...form, title: e.target.value})} 
+              className={`w-full p-3 border rounded-xl font-semibold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+            />
+          </div>
+
+          {isEditingBudgetNames && (
+            <div className={`p-4 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-neutral-900/80 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
+              <p className="font-bold text-[11px] text-amber-600 dark:text-amber-400">💡 Ubah nama kategori budget dan nominal standarnya di bawah ini:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {budgets.map((b, idx) => (
+                  <div key={b.key} className="space-y-1">
+                    <label className="text-[10px] opacity-70">Nama Kategori {idx + 1}</label>
+                    <input 
+                      type="text"
+                      value={b.name}
+                      onChange={(e) => handleUpdateBudgetDetail(idx, 'name', e.target.value)}
+                      className={`w-full p-2 border rounded-lg font-bold ${isDarkMode ? 'bg-neutral-800 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'}`}
+                    />
+                    <label className="text-[10px] opacity-70">Nominal Standar (Rp)</label>
+                    <input 
+                      type="number"
+                      value={b.nominal}
+                      onChange={(e) => handleUpdateBudgetDetail(idx, 'nominal', e.target.value)}
+                      className={`w-full p-2 border rounded-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 ${isDarkMode ? 'bg-neutral-800 border-neutral-600' : 'bg-white border-stone-300'}`}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          <p className="text-xs opacity-70 mt-1">
-            {hasOrdered && existingOrder?.lock_status === 'LOCKED'
-              ? 'Anda sudah melakukan submit order. Jika ingin mengubah pesanan, silakan klik tombol "Minta Buka Kunci ke Admin".'
-              : (activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.')}
-          </p>
-        </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-80">Pilih Kategori Budget</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {budgets.map((b) => (
+                <button
+                  type="button"
+                  key={b.key}
+                  onClick={() => handleSelectBudget(b)}
+                  className={`py-3 px-3 rounded-xl font-bold border transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                    form.budget_type === b.name 
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
+                      : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-neutral-300' : 'bg-stone-50 border-stone-300 text-stone-700'
+                  }`}
+                >
+                  <span className="font-black">{b.name}</span>
+                  <span className="text-[10px] opacity-90 font-mono">
+                    {formatRupiah(b.nominal)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
-            <button 
-              onClick={requestUnlock}
-              disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK'}
-              className="px-5 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
-            >
-              🔑 Minta Buka Kunci ke Admin
-            </button>
-          )}
+          <div>
+            <label className="block font-bold mb-1 opacity-80">
+              Nominal Terpilih ({form.budget_type}) — Format Rupiah: <span className="text-emerald-600 dark:text-emerald-400 font-mono">{formatRupiah(form.budget_nominal)}</span>
+            </label>
+            <input 
+              type="number" 
+              value={form.budget_nominal} 
+              onChange={e => setForm({...form, budget_nominal: Number(e.target.value) || 0})} 
+              className={`w-full p-3 border rounded-xl font-mono font-bold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-emerald-400' : 'bg-stone-50 border-stone-300 text-emerald-600'}`} 
+            />
+          </div>
 
-          {!hasOrdered && (
-            <button 
-              onClick={submitOrder}
-              disabled={loading || !activePromo}
-              className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
-            >
-              {loading ? 'Memproses...' : (existingOrder?.lock_status === 'UNLOCKED' ? '🔄 Resubmit / Perbarui Order' : '🚀 Submit Order Cabang')}
-            </button>
-          )}
-        </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-80">Deskripsi / Instruksi Promo untuk Cabang</label>
+            <textarea 
+              placeholder="Tuliskan petunjuk atau catatan khusus untuk cabang..." 
+              value={form.description} 
+              onChange={e => setForm({...form, description: e.target.value})} 
+              className={`w-full p-3 border rounded-xl focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+              rows="3" 
+            />
+          </div>
+
+          <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95">
+            Broadcast / Share ke Seluruh Cabang 🚀
+          </button>
+        </form>
       </div>
 
+      {/* Riwayat Promo Terkirim */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h2 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
-            {hasOrdered ? 'Form Permintaan (Terkunci - Telah Disubmit)' : 'Form Permintaan / Order Logistik Cabang'}
-          </h2>
-
-          <button
-            onClick={toggleSort}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
-              isDarkMode 
-                ? 'bg-neutral-700 border-neutral-600 text-neutral-200 hover:bg-neutral-600' 
-                : 'bg-stone-100 border-stone-300 text-stone-700 hover:bg-stone-200'
-            }`}
-          >
-            🔤 Urutkan Nama: {sortOrder === 'asc' ? 'A → Z (Naik)' : 'Z → A (Turun)'}
-          </button>
-        </div>
-
-        {/* Tabel dengan Container Scroll dan Sticky Header */}
-        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
-          <table className="w-full text-xs border-collapse">
-            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
-              <tr>
-                <th className="p-3.5 text-left">Nama Barang</th>
-                <th className="p-3.5 text-left">Material / Bahan</th>
-                <th className="p-3.5 text-left">Ukuran (Size)</th>
-                <th className="p-3.5 text-center w-32">Qty Order</th>
-              </tr>
-            </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {sortedItems.map(item => {
-                const materialStr = item.material || '-';
-                const sizeStr = item.size || '-';
-
-                return (
-                  <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                    <td className="p-3.5 font-bold">{item.item_name}</td>
-                    <td className="p-3.5 opacity-80 uppercase font-medium">{materialStr}</td>
-                    <td className="p-3.5 opacity-80 uppercase font-mono">{sizeStr}</td>
-                    <td className="p-3.5 text-center">
-                      <input 
-                        type="number" 
-                        min="0"
-                        disabled={hasOrdered}
-                        value={orderQty[item.id] || ''}
-                        onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                        className={`w-24 p-2 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          hasOrdered 
-                            ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-900' 
-                            : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'
-                        }`}
-                        placeholder="0"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Riwayat Promo Terkirim</h3>
+        <div className="space-y-3">
+          {promos.p:map(p => (
+            <div key={p.id} className={`p-4 border rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-sm">{p.title}</span>
+                  <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                    {p.budget_type}: {formatRupiah(p.custom_budget)}
+                  </span>
+                </div>
+                <p className="opacity-70 text-[11px] mt-1">{p.description || 'Tidak ada deskripsi.'}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-xl text-[10px] font-bold ${p.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-stone-200 text-stone-700 dark:bg-neutral-700 dark:text-neutral-400'}`}>
+                {p.is_active ? 'AKTIF' : 'SELESAI'}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
