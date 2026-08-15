@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
 export default function AdminBranchMonitoring({ isDarkMode }) {
-  // === SIMULASI ROLE (Untuk Testing) ===
+  // === SIMULASI ROLE ===
   const [adminRole, setAdminRole] = useState('PUSAT'); // Pilihan: PUSAT, CIKOKOL, PASMING
 
   const [branchStatus, setBranchStatus] = useState([]);
@@ -21,7 +21,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     setIsLoading(true);
     setDbError(null);
     
-    // 1. Ambil Promo Aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
@@ -30,7 +29,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
     if (activePromo) setActivePromoId(activePromo.id);
 
-    // 2. Ambil Master Cabang
     const { data: branches, error: branchError } = await supabase
       .from('kl_branches')
       .select('*');
@@ -41,14 +39,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       return;
     }
 
-    // 3. Ambil data Order (Untuk melihat status & status lemparan)
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
-    // 4. Petakan Data Gabungan
     const mappedData = (branches || []).map(branch => {
       const matchedOrder = (orders || []).find(o => 
         String(o.branch_id) === String(branch.id) || 
@@ -65,12 +61,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       }
 
       const storeName = branch.branch_name || branch.name || branch.nama_cabang || `CABANG ID: ${branch.id}`;
-      const region = branch.region || 'PUSAT'; // Default ke pusat jika kosong
+      const region = branch.region || 'PUSAT'; 
       const isDelegated = matchedOrder?.is_delegated_to_pusat || false;
 
       return {
         id: branch.id,
-        order_id: matchedOrder?.id || null, // Penting untuk fungsi update nanti
+        order_id: matchedOrder?.id || null, 
         branch_name: storeName,
         region: region.toUpperCase(),
         phone: branch.phone || branch.whatsapp || '628123456789',
@@ -84,13 +80,10 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     setIsLoading(false);
   };
 
-  // === FILTERING DATA BERDASARKAN ROLE ===
   const displayedBranches = branchStatus.filter(b => {
     if (adminRole === 'PUSAT') {
-      // Pusat melihat cabang aslinya + cabang yang dilempar dari sub kantor
       return b.region === 'PUSAT' || b.is_delegated === true;
     } else {
-      // Cikokol/Pasming HANYA melihat cabangnya sendiri yang BELUM dilempar
       return b.region === adminRole && b.is_delegated === false;
     }
   });
@@ -98,7 +91,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const unsubmittedList = displayedBranches.filter(b => b.status === 'BELUM SUBMIT');
   const submittedList = displayedBranches.filter(b => b.status !== 'BELUM SUBMIT');
 
-  // === FUNGSI LEMPAR TUGAS KE PUSAT ===
   const handleDelegateToPusat = async (branch) => {
     if (!activePromoId) {
       alert("Tidak ada promo aktif, tidak bisa melempar tugas.");
@@ -108,7 +100,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     const confirmThrow = window.confirm(`Apakah Anda yakin ingin melempar ${branch.branch_name} ke Pusat? Toko ini akan hilang dari daftar Anda untuk sesi ini.`);
     if (!confirmThrow) return;
 
-    // Jika belum ada row order-nya, kita INSERT sekalian buat row kosong
     if (!branch.order_id) {
       await supabase.from('kl_orders').insert({
         branch_id: branch.id,
@@ -117,13 +108,11 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         is_delegated_to_pusat: true
       });
     } else {
-      // Jika sudah ada, tinggal UPDATE flag-nya
       await supabase.from('kl_orders').update({
         is_delegated_to_pusat: true
       }).eq('id', branch.order_id);
     }
     
-    // Refresh otomatis setelah lempar
     fetchBranchStatus();
   };
 
@@ -141,7 +130,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   return (
     <div className="space-y-6">
       
-      {/* KOTAK SIMULASI ROLE (KHUSUS UNTUK TESTING) */}
       <div className={`p-4 rounded-3xl border shadow-sm flex items-center justify-between ${isDarkMode ? 'bg-indigo-900/30 border-indigo-700 text-indigo-200' : 'bg-indigo-50 border-indigo-200 text-indigo-800'}`}>
         <div className="font-bold text-sm flex items-center gap-2">
           <span>🎭 Simulasi Login Sebagai:</span>
@@ -174,7 +162,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       <div className={`rounded-3xl border shadow-sm flex flex-col ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
         <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-neutral-700">
           <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-            📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} Toko)</span>
+            📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
           </h3>
           
           <div className="flex gap-2 w-full sm:w-auto">
@@ -183,9 +171,10 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-sm text-left">
-            <thead className={`text-xs uppercase tracking-wider font-extrabold ${isDarkMode ? 'bg-neutral-900/50 text-neutral-400' : 'bg-slate-50 text-slate-500'}`}>
+        {/* --- BAGIAN SCROLL & STICKY HEADER --- */}
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] w-full custom-scrollbar">
+          <table className="w-full text-sm text-left relative">
+            <thead className={`text-xs uppercase tracking-wider font-extrabold sticky top-0 z-10 shadow-sm ${isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-slate-50 text-slate-500'}`}>
               <tr>
                 <th className="px-6 py-4 rounded-tl-3xl">Nama Cabang</th>
                 <th className="px-6 py-4 text-center">Status</th>
@@ -204,7 +193,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                     <td className="px-6 py-4 font-bold text-xs sm:text-sm uppercase whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span>{b.branch_name}</span>
-                        {/* Label Khusus jika Pusat menerima titipan dari Sub Kantor */}
                         {adminRole === 'PUSAT' && b.is_delegated && (
                           <span className="text-[10px] bg-orange-100 text-orange-700 w-fit px-2 py-0.5 rounded-md border border-orange-200">
                             🚨 Titipan dari {b.region}
@@ -226,11 +214,10 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                             <button onClick={() => sendWhatsAppReminder(b)} className="px-3 py-1.5 bg-[#25D366] text-white rounded-lg font-bold text-xs hover:bg-[#20bd5a] shadow-sm">💬 WA</button>
                             <button onClick={() => sendEmailReminder(b)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 shadow-sm">✉️ Email</button>
                             
-                            {/* Tombol Lempar (Hanya muncul jika Role Sub Kantor) */}
                             {adminRole !== 'PUSAT' && (
                               <button 
                                 onClick={() => handleDelegateToPusat(b)} 
-                                className="px-3 py-1.5 bg-slate-200 text-slate-700 dark:bg-neutral-700 dark:text-neutral-300 rounded-lg font-bold text-xs hover:bg-orange-200 hover:text-orange-800 transition-colors shadow-sm border border-transparent hover:border-orange-300 flex items-center gap-1"
+                                className="px-3 py-1.5 bg-slate-800 text-slate-100 dark:bg-neutral-700 dark:text-neutral-300 rounded-lg font-bold text-xs hover:bg-orange-600 hover:text-white transition-colors shadow-sm flex items-center gap-1"
                                 title="Keteteran? Lempar follow-up toko ini ke Pusat"
                               >
                                 🏳️ Lempar Pusat
