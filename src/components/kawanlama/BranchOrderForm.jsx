@@ -10,7 +10,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [orderQty, setOrderQty] = useState({});
   const [loading, setLoading] = useState(false);
   
-  // State untuk sorting Nama Barang ('asc' untuk A-Z, 'desc' untuk Z-A)
   const [sortOrder, setSortOrder] = useState('asc');
 
   useEffect(() => {
@@ -94,7 +93,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
 
     if (maxBudgetLimit > 0 && totalOrder > maxBudgetLimit) {
-      alert(`❌ Gagal Submit: Total nilai pesanan Anda (${totalOrder}) melewati batas alokasi ${activePromo.budget_type}! Mohon kurangi kuantiti barang.`);
+      alert(`❌ Gagal Submit: Total nilai pesanan melewati batas alokasi ${activePromo.budget_type}! Mohon kurangi kuantiti barang.`);
       return;
     }
 
@@ -162,26 +161,19 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
   };
 
-  const formatRupiah = (angka) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
-  };
-
-  // Perhitungan untuk Range Budget & Progress Bar
   const currentTotalOrder = calculateTotalOrderValue(orderQty);
   const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
   const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
 
-  // Penentuan Warna Progress Bar Berdasarkan Persentase
-  let progressColor = 'bg-emerald-500'; // 1 - 50% Hijau
+  let progressColor = 'bg-emerald-500'; 
   if (percentage > 50 && percentage <= 90) {
-    progressColor = 'bg-amber-500'; // 50 - 90% Kuning
+    progressColor = 'bg-amber-500'; 
   } else if (percentage > 90) {
-    progressColor = 'bg-orange-500'; // 90 - 100% Orange
+    progressColor = 'bg-orange-500'; 
   }
 
   return (
     <div className="space-y-6 relative">
-      {/* MODAL NOTIFIKASI OTOMATIS JIKA BELUM SUBMIT */}
       {showNotification && !hasOrdered && activePromo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
@@ -200,7 +192,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </div>
       )}
 
-      {/* Header Info Promo & Tombol Aksi */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -209,7 +200,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             </span>
             {activePromo?.budget_type && (
               <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                Alokasi: {activePromo.budget_type} ({formatRupiah(maxBudget)})
+                Alokasi: {activePromo.budget_type}
               </span>
             )}
             {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
@@ -230,23 +221,18 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
-          {/* PROGRESS BAR & RANGE BUDGET ANIMASI */}
+          {/* PROGRESS BAR BERSIH (TANPA NOMINAL RUPIAH & TANPA KETERANGAN ANGKA 1-50%, 50-90%) */}
           {activePromo && (
             <div className="pt-2 space-y-1.5 max-w-xl">
               <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="opacity-80">Total Pesanan: <span className="text-indigo-600 dark:text-indigo-400 font-mono">{formatRupiah(currentTotalOrder)}</span></span>
-                <span className="font-mono">{percentage}% dari Alokasi ({formatRupiah(maxBudget)})</span>
+                <span className="opacity-80">Progress Penggunaan Alokasi Budget</span>
+                <span className="font-mono">{percentage}% dari Alokasi</span>
               </div>
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
                   style={{ width: `${percentage}%` }}
                 ></div>
-              </div>
-              <div className="flex justify-between text-[9px] opacity-60 font-mono">
-                <span>0% (Hijau: 1-50%)</span>
-                <span>(Kuning: 50-90%)</span>
-                <span>(Orange: 90-100%)</span>
               </div>
             </div>
           )}
@@ -281,16 +267,12 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </div>
       </div>
 
-      {/* Grid Input Order Cabang */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        
-        {/* Bagian Judul dan Tombol Sort */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <h2 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
             {hasOrdered ? 'Form Permintaan (Terkunci - Telah Disubmit)' : 'Form Permintaan / Order Logistik Cabang'}
           </h2>
 
-          {/* Tombol Sort A-Z / Z-A */}
           <button
             onClick={toggleSort}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
