@@ -42,13 +42,20 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleExcelImport = (e) => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0]; 
+    if (!file) return;
+    
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        if (!rawData || rawData.length === 0) return alert('❌ File Excel kosong atau tidak terbaca!');
+        
+        if (!rawData || rawData.length === 0) {
+          return alert('❌ File Excel kosong atau tidak terbaca!');
+        }
+
         const cleanedData = rawData.map((row) => {
           const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
           const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 20;
@@ -75,10 +82,16 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim()
           };
         }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
-        setLabelData(cleanedData); setSelectedRows([]); alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
-      } catch (err) { alert('Gagal membaca file Excel: ' + err.message); }
+
+        setLabelData(cleanedData); 
+        setSelectedRows([]); 
+        alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
+      } catch (err) { 
+        alert('Gagal membaca file Excel: ' + err.message); 
+      }
     };
-    reader.readAsDataURL(file); e.target.value = '';
+    reader.readAsArrayBuffer(file); 
+    e.target.value = '';
   };
 
   const handleImageUploadRow = (e, index) => {
@@ -100,7 +113,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
     const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
     
-    // Kumpulkan semua koli dari item yang dipilih
     let allKoliItems = [];
     for (const item of itemsToPrint) {
       const totalQty = Number(item.QTY_TOTAL || 0); 
@@ -127,7 +139,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     }
 
-    // Kelompokkan koli menjadi pasangan (2 label per 1 halaman A4 Landscape)
     const pagePairs = [];
     for (let i = 0; i < allKoliItems.length; i += 2) {
       pagePairs.push(allKoliItems.slice(i, i + 2));
@@ -201,7 +212,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           </div>
         </div>
         <table class="item-grid-table">
-          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
+          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
           <tbody><tr><td style="text-align: center;">1</td><td>AMO/DEPO</td><td></td><td style="text-align: right; padding-right: 15px;">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tbody>
           <tfoot><tr><td colspan="3" class="text-center font-bold">TOTAL</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tfoot>
         </table>
@@ -275,7 +286,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 const total = Number(row.QTY_TOTAL || 0); const koli = Number(row.QTY_PER_KOLI || 20); const isChecked = selectedRows.includes(idx);
                 return (
                   <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
-                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
+                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></th>
                     <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span></td>
                     <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
                     <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
