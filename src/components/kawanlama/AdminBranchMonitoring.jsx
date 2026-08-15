@@ -12,12 +12,14 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
+    // 1. Ambil data promo aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
+    // 2. Ambil seluruh data master cabang dari tabel kl_branch_access
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
       .select('*');
@@ -27,17 +29,20 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       return;
     }
 
+    // 3. Ambil seluruh order (filter berdasarkan promo aktif jika ada)
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
+    // 4. Petakan data dan cocokkan ID atau nama cabang secara akurat
     const mappedData = (branches || []).map(branch => {
+      // Cocokkan berdasarkan ID cabang atau teks namanya
       const matchedOrder = (orders || []).find(o => 
-        o.branch_id === branch.id || 
-        o.branch_id === branch.branch_name ||
-        o.branch_id === branch.name
+        Number(o.branch_id) === Number(branch.id) || 
+        String(o.branch_id).toLowerCase() === String(branch.id).toLowerCase() ||
+        String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase()
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -49,12 +54,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Memastikan nama toko/cabang yang diambil persis kolom branch_name dari database (misal: AZKO CIPINANG)
-      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || `Cabang ${branch.id}`;
+      // Mengambil nama asli secara pasti dari kolom branch_name di database Supabase
+      const realStoreName = branch.branch_name || branch.name || branch.store_name || `Cabang ID: ${branch.id}`;
 
       return {
         id: branch.id,
-        branch_name: storeName,
+        branch_name: realStoreName,
         phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
