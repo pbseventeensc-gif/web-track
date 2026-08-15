@@ -221,13 +221,9 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
-          {/* PROGRESS BAR BERSIH (TANPA NOMINAL RUPIAH & TANPA KETERANGAN ANGKA 1-50%, 50-90%) */}
+          {/* PROGRESS BAR BERSIH TANPA TEKS TOTAL & ALOKASI */}
           {activePromo && (
             <div className="pt-2 space-y-1.5 max-w-xl">
-              <div className="flex justify-between items-center text-[11px] font-bold">
-                <span className="opacity-80">Progress Penggunaan Alokasi Budget</span>
-                <span className="font-mono">{percentage}% dari Alokasi</span>
-              </div>
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
