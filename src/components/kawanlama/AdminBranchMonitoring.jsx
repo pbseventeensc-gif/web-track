@@ -49,12 +49,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Mengambil nama toko/cabang secara presisi dari database
-      const realBranchName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || `Cabang ID: ${branch.id}`;
+      // Memastikan nama toko/cabang yang diambil persis kolom branch_name dari database (misal: AZKO CIPINANG)
+      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || `Cabang ${branch.id}`;
 
       return {
         id: branch.id,
-        branch_name: realBranchName,
+        branch_name: storeName,
         phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
@@ -147,7 +147,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               ) : (
                 (activeTabFilter === 'belum' ? unsubmittedList : submittedList).map(b => (
                   <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                    <td className="p-3.5 font-bold">{b.branch_name}</td>
+                    <td className="p-3.5 font-bold uppercase">{b.branch_name}</td>
                     <td className="p-3.5 text-center">
                       <span className={`px-3 py-1 rounded-xl text-[10px] font-black ${b.status !== 'BELUM SUBMIT' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'}`}>
                         {b.status}
