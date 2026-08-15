@@ -12,31 +12,37 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
+    // 1. Ambil Promo Aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
-    // Mengambil semua data dari kl_branch_access
+    // 2. Ambil data dari tabel master cabang yang BENAR (kl_branches) yang berisi nama toko
     const { data: branches, error: branchError } = await supabase
-      .from('kl_branch_access')
+      .from('kl_branches')
       .select('*');
 
     if (branchError) {
-      console.error('Gagal ambil cabang:', branchError.message);
+      console.error('Gagal ambil data kl_branches:', branchError.message);
       return;
     }
 
+    // 3. Ambil data order
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
+    // 4. Petakan data
     const mappedData = (branches || []).map(branch => {
+      // Cocokkan order dengan ID cabang
       const matchedOrder = (orders || []).find(o => 
-        String(o.branch_id) === String(branch.id)
+        String(o.branch_id) === String(branch.id) || 
+        String(o.branch_id) === String(branch.branch_id) ||
+        (o.branch_id && branch.branch_name && String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase())
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -48,25 +54,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // 💡 FITUR DETEKSI OTOMATIS & DEBUGGING
-      // Kita coba semua kemungkinan nama standar
-      let detectedName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang;
-      
-      // Jika masih kosong, kita cari kolom apapun yang mengandung kata "name"
-      if (!detectedName) {
-        const possibleNameKey = Object.keys(branch).find(k => k.toLowerCase().includes('name'));
-        if (possibleNameKey) {
-          detectedName = branch[possibleNameKey];
-        } else {
-          // JIKA SEMUANYA GAGAL: Kita tampilkan RAW JSON Data dari database ke layar.
-          // Ini akan membongkar rahasia kenapa namanya tidak muncul!
-          detectedName = `🔍 BONGKAR DATA DB: ${JSON.stringify(branch)}`;
-        }
-      }
+      // Ambil nama cabang dari kl_branches
+      const storeName = branch.branch_name || branch.name || branch.nama_cabang || branch.store_name || `Cabang ID: ${branch.id}`;
 
       return {
         id: branch.id,
-        branch_name: detectedName,
+        branch_name: storeName,
         phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
