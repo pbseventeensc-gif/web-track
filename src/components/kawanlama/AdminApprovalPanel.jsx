@@ -93,7 +93,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800')
             }`}>
               
-              {/* Header Card Order */}
+              {/* Header Card Order (Fixed / Tidak Ikut Scroll) */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -132,8 +132,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 </div>
               </div>
 
-              {/* Tabel Item Pesanan dengan Container Sticky dan Scroll yang Benar */}
-              <div className="max-h-[450px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+              {/* Tabel Item Pesanan dengan Container Scroll (Sticky Header di Dalamnya) */}
+              <div className="max-h-[400px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
                 <table className="w-full text-xs border-collapse">
                   <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
                     <tr>
