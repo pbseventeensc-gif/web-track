@@ -66,8 +66,8 @@ export default function MainTrackingTable({
                 />
               </th>
               <th className="p-4">SPK & Info</th>
-              <th className="p-4">Print</th>
-              <th className="p-4">Finish</th>
+              {activeTab !== 'paking' && <th className="p-4">Print</th>}
+              {activeTab !== 'paking' && <th className="p-4">Finish</th>}
               <th className="p-4">Paking & Foto</th>
               <th className="p-4">QC Check</th>
               <th className="p-4">Ship & Surat Jalan</th>
@@ -76,7 +76,7 @@ export default function MainTrackingTable({
           <tbody className={`divide-y transition-colors ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
             {displayedList.length === 0 ? (
               <tr>
-                <td colSpan="7" className="p-6 text-center opacity-60">Tidak ada data SPK yang ditemukan.</td>
+                <td colSpan={activeTab === 'paking' ? "5" : "7"} className="p-6 text-center opacity-60">Tidak ada data SPK yang ditemukan.</td>
               </tr>
             ) : (
               displayedList.map(i => {
@@ -105,35 +105,39 @@ export default function MainTrackingTable({
                       <span className={`text-[10px] ${isDarkMode ? 'text-neutral-400' : 'text-[#6B7C77]'}`}>Order: {i.qty_order} Pcs</span>
                     </td>
                     
-                    {/* Kolom Print */}
-                    <td className="p-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPrint).text}`}>{pPrint}%</span><br/>
-                      {activeTab === 'produksi' && (
-                        <input 
-                          type="number" 
-                          value={i.qty_print || 0} 
-                          onChange={e => handleUpdateQty(i.id, 'qty_print', e.target.value, i.qty_order)} 
-                          className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${
-                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'
-                          }`} 
-                        />
-                      )}
-                    </td>
+                    {/* Kolom Print (Disembunyikan jika di tab paking) */}
+                    {activeTab !== 'paking' && (
+                      <td className="p-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pPrint).text}`}>{pPrint}%</span><br/>
+                        {activeTab === 'produksi' && (
+                          <input 
+                            type="number" 
+                            value={i.qty_print || 0} 
+                            onChange={e => handleUpdateQty(i.id, 'qty_print', e.target.value, i.qty_order)} 
+                            className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'
+                            }`} 
+                          />
+                        )}
+                      </td>
+                    )}
                     
-                    {/* Kolom Finish */}
-                    <td className="p-4">
-                      <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pFinish).text}`}>{pFinish}%</span><br/>
-                      {activeTab === 'finishing' && (
-                        <input 
-                          type="number" 
-                          value={i.qty_finish || 0} 
-                          onChange={e => handleUpdateQty(i.id, 'qty_finish', e.target.value, i.qty_order)} 
-                          className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${
-                            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'
-                          }`} 
-                        />
-                      )}
-                    </td>
+                    {/* Kolom Finish (Disembunyikan jika di tab paking) */}
+                    {activeTab !== 'paking' && (
+                      <td className="p-4">
+                        <span className={`inline-flex px-2 py-0.5 rounded-md border font-bold ${getStatusBadge(pFinish).text}`}>{pFinish}%</span><br/>
+                        {activeTab === 'finishing' && (
+                          <input 
+                            type="number" 
+                            value={i.qty_finish || 0} 
+                            onChange={e => handleUpdateQty(i.id, 'qty_finish', e.target.value, i.qty_order)} 
+                            className={`mt-1.5 w-20 border rounded-lg px-2 py-1 focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-black'
+                            }`} 
+                          />
+                        )}
+                      </td>
+                    )}
                     
                     {/* Kolom Paking */}
                     <td className="p-4">
