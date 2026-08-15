@@ -118,11 +118,11 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           </div>
         </div>
 
-        {/* Tabel Data Berdasarkan Tab yang Dipilih */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className={`border-b font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 text-neutral-300' : 'bg-stone-100 border-stone-300 text-stone-700'}`}>
+        {/* Tabel Data Berdasarkan Tab yang Dipilih dengan Container Scroll & Sticky Header */}
+        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+          <table className="w-full text-xs border-collapse">
+            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+              <tr>
                 <th className="p-3.5 text-left">Nama Cabang</th>
                 <th className="p-3.5 text-center">Status Respon</th>
                 <th className="p-3.5 text-center">Aksi / Reminder</th>
