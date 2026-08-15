@@ -48,8 +48,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Mencari nama toko dari semua kemungkinan kolom teks yang ada di baris database
-      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || branch.title || Object.values(branch).find(val => typeof val === 'string' && val.length > 3 && !val.includes('@') && !val.includes('-')) || `Cabang ID: ${branch.id}`;
+      // Mengambil secara tepat dari kolom branch_name atau name (bukan angka/pin)
+      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || `Cabang ID: ${branch.id}`;
 
       return {
         id: branch.id,
