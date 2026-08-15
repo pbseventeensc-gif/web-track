@@ -12,36 +12,31 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
-    // 1. Ambil Promo Aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Kembalikan ke select('*') agar tidak error jika kolom phone/email tidak ada di tabel
+    // Mengambil semua data dari kl_branch_access
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
       .select('*');
 
     if (branchError) {
-      console.error('⚠️ Error saat mengambil tabel kl_branch_access:', branchError.message);
+      console.error('Gagal ambil cabang:', branchError.message);
       return;
     }
 
-    // 3. Ambil data order
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
-    // 4. Petakan data
     const mappedData = (branches || []).map(branch => {
-      // Pastikan pencocokan ID tepat
       const matchedOrder = (orders || []).find(o => 
-        String(o.branch_id) === String(branch.id) || 
-        (o.branch_id && branch.branch_name && String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase())
+        String(o.branch_id) === String(branch.id)
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -53,10 +48,25 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
+      // 💡 FITUR DETEKSI OTOMATIS & DEBUGGING
+      // Kita coba semua kemungkinan nama standar
+      let detectedName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang;
+      
+      // Jika masih kosong, kita cari kolom apapun yang mengandung kata "name"
+      if (!detectedName) {
+        const possibleNameKey = Object.keys(branch).find(k => k.toLowerCase().includes('name'));
+        if (possibleNameKey) {
+          detectedName = branch[possibleNameKey];
+        } else {
+          // JIKA SEMUANYA GAGAL: Kita tampilkan RAW JSON Data dari database ke layar.
+          // Ini akan membongkar rahasia kenapa namanya tidak muncul!
+          detectedName = `🔍 BONGKAR DATA DB: ${JSON.stringify(branch)}`;
+        }
+      }
+
       return {
         id: branch.id,
-        // Fokus hanya pada branch_name sesuai nama kolom di database Anda
-        branch_name: branch.branch_name || `Cabang ID: ${branch.id}`,
+        branch_name: detectedName,
         phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
@@ -135,8 +145,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
               <tr>
                 <th className="p-3.5 text-left">Nama Cabang</th>
-                <th className="p-3.5 text-center">Status Respon</th>
-                <th className="p-3.5 text-center">Aksi / Reminder</th>
+                <th className="p-3.5 text-center w-32">Status Respon</th>
+                <th className="p-3.5 text-center w-40">Aksi / Reminder</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
@@ -149,7 +159,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               ) : (
                 (activeTabFilter === 'belum' ? unsubmittedList : submittedList).map(b => (
                   <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                    <td className="p-3.5 font-bold uppercase">{b.branch_name}</td>
+                    <td className="p-3.5 font-bold text-[11px] uppercase break-words">{b.branch_name}</td>
                     <td className="p-3.5 text-center">
                       <span className={`px-3 py-1 rounded-xl text-[10px] font-black ${b.status !== 'BELUM SUBMIT' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'}`}>
                         {b.status}
@@ -162,7 +172,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                             onClick={() => sendWhatsAppReminder(b)} 
                             className="px-3 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-500 shadow-sm transition-all active:scale-95"
                           >
-                            💬 WA ({reminderHours} Jam)
+                            💬 WA
                           </button>
                           <button 
                             onClick={() => sendEmailReminder(b)} 
@@ -173,7 +183,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                         </>
                       ) : (
                         <span className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 rounded-xl font-bold">
-                          ✅ DONE (Selesai)
+                          ✅ DONE
                         </span>
                       )}
                     </td>
