@@ -12,31 +12,36 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
+    // 1. Ambil Promo Aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
+    // 2. Paksa ambil HANYA kolom id, branch_name, phone, dan email dari tabel kl_branch_access
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
-      .select('*');
+      .select('id, branch_name, phone, email');
 
     if (branchError) {
-      console.error('Gagal ambil cabang:', branchError.message);
+      console.error('⚠️ Error saat mengambil tabel kl_branch_access:', branchError.message);
       return;
     }
 
+    // 3. Ambil data order
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
+    // 4. Petakan data
     const mappedData = (branches || []).map(branch => {
+      // Pastikan pencocokan ID tepat
       const matchedOrder = (orders || []).find(o => 
-        Number(o.branch_id) === Number(branch.id) || 
-        String(o.branch_id).toLowerCase() === String(branch.id).toLowerCase()
+        String(o.branch_id) === String(branch.id) || 
+        (o.branch_id && branch.branch_name && String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase())
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -48,13 +53,13 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Mengambil secara tepat dari kolom branch_name atau name (bukan angka/pin)
-      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || `Cabang ID: ${branch.id}`;
+      // Ambil nama cabang TEPAT dari branch.branch_name
+      const namaTokoAsli = branch.branch_name ? branch.branch_name : `TIDAK TERBACA (ID: ${branch.id})`;
 
       return {
         id: branch.id,
-        branch_name: storeName,
-        phone: branch.phone || branch.whatsapp || '628123456789',
+        branch_name: namaTokoAsli,
+        phone: branch.phone || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
       };
