@@ -6,12 +6,17 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const [activeTabFilter, setActiveTabFilter] = useState('belum'); 
   const [reminderHours, setReminderHours] = useState(24);
   const [customMessage, setCustomMessage] = useState('Mohon segera melakukan input dan submit order promosi melalui portal Kawan Lama.');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dbError, setDbError] = useState(null);
 
   useEffect(() => {
     fetchBranchStatus();
   }, []);
 
   const fetchBranchStatus = async () => {
+    setIsLoading(true);
+    setDbError(null);
+    
     // 1. Ambil Promo Aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
@@ -19,17 +24,24 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Ambil data dari tabel master cabang yang BENAR (kl_branches) yang berisi nama toko
+    // 2. Ambil HANYA data yang benar-benar ada (pakai tanda bintang / all)
     const { data: branches, error: branchError } = await supabase
       .from('kl_branches')
       .select('*');
 
     if (branchError) {
-      console.error('Gagal ambil data kl_branches:', branchError.message);
+      setDbError(`Error DB kl_branches: ${branchError.message}`);
+      setIsLoading(false);
       return;
     }
 
-    // 3. Ambil data order
+    if (!branches || branches.length === 0) {
+      setDbError(`Tabel kl_branches kosong atau terblokir RLS.`);
+      setIsLoading(false);
+      return;
+    }
+
+    // 3. Ambil data Order
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
@@ -38,11 +50,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
     // 4. Petakan data
     const mappedData = (branches || []).map(branch => {
-      // Cocokkan order dengan ID cabang
       const matchedOrder = (orders || []).find(o => 
         String(o.branch_id) === String(branch.id) || 
-        String(o.branch_id) === String(branch.branch_id) ||
-        (o.branch_id && branch.branch_name && String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase())
+        String(o.branch_id) === String(branch.branch_id)
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -54,32 +64,32 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Ambil nama cabang dari kl_branches
-      const storeName = branch.branch_name || branch.name || branch.nama_cabang || branch.store_name || `Cabang ID: ${branch.id}`;
+      // Ambil nama cabang TEPAT dari kolom branch_name
+      const storeName = branch.branch_name || branch.name || branch.nama_cabang || `CABANG ID: ${branch.id}`;
 
       return {
         id: branch.id,
         branch_name: storeName,
-        phone: branch.phone || branch.whatsapp || '628123456789',
-        email: branch.email || 'cabang@email.com',
+        // Karena phone & email tidak ada di database, kita pakai data dummy agar tombol WA/Email tetap jalan
+        phone: '628123456789',
+        email: 'cabang@email.com',
         status: statusText
       };
     });
 
     setBranchStatus(mappedData);
+    setIsLoading(false);
   };
 
   const sendWhatsAppReminder = (branch) => {
-    const phone = branch.phone || '628123456789';
     const text = encodeURIComponent(`Halo ${branch.branch_name} (Batas Waktu: ${reminderHours} Jam),\n\n${customMessage}\n\nTerima kasih.`);
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    window.open(`https://wa.me/${branch.phone}?text=${text}`, '_blank');
   };
 
   const sendEmailReminder = (branch) => {
-    const email = branch.email || 'cabang@email.com';
     const subject = encodeURIComponent(`REMINDER: Submit Order Kawan Lama (Deadline ${reminderHours} Jam)`);
-    const body = encodeURIComponent(`Halo ${branch.branch_name},\n\n${customMessage}\n\nMohon segera diselesaikan dalam waktu ${reminderHours} jam ke depan.\n\nTerima kasih.`);
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`);
+    const body = encodeURIComponent(`Halo ${branch.branch_name},\n\n${customMessage}\n\nMohon segera diselesaikan.\n\nTerima kasih.`);
+    window.open(`mailto:${branch.email}?subject=${subject}&body=${body}`);
   };
 
   const unsubmittedList = branchStatus.filter(b => b.status === 'BELUM SUBMIT');
@@ -100,7 +110,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               className={`w-full p-3 border rounded-xl font-bold font-mono focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-amber-400' : 'bg-stone-50 border-stone-300 text-amber-600'}`} 
             />
           </div>
-
           <div>
             <label className="block font-bold mb-1 opacity-80">Isi Pesan Custom Pengingat</label>
             <input 
@@ -122,31 +131,39 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               onClick={() => setActiveTabFilter('belum')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTabFilter === 'belum' ? 'bg-amber-600 text-white shadow-md' : isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-stone-100 text-stone-600'}`}
             >
-              ⏳ Belum Submit ({unsubmittedList.length})
+              ⏳ Belum ({unsubmittedList.length})
             </button>
             <button 
               onClick={() => setActiveTabFilter('sudah')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${activeTabFilter === 'sudah' ? 'bg-emerald-600 text-white shadow-md' : isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-stone-100 text-stone-600'}`}
             >
-              ✅ Sudah Submit / Done ({submittedList.length})
+              ✅ Sudah ({submittedList.length})
             </button>
           </div>
         </div>
+
+        {dbError && (
+          <div className="p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-100 border border-red-200 dark:bg-red-900/30 dark:text-red-400" role="alert">
+            <span className="font-bold">⚠️ Error:</span> {dbError}
+          </div>
+        )}
 
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
           <table className="w-full text-xs border-collapse">
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
               <tr>
                 <th className="p-3.5 text-left">Nama Cabang</th>
-                <th className="p-3.5 text-center w-32">Status Respon</th>
-                <th className="p-3.5 text-center w-40">Aksi / Reminder</th>
+                <th className="p-3.5 text-center w-32">Status</th>
+                <th className="p-3.5 text-center w-40">Reminder</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {(activeTabFilter === 'belum' ? unsubmittedList : submittedList).length === 0 ? (
+              {isLoading ? (
+                <tr><td colSpan="3" className="p-8 text-center font-bold animate-pulse">Memuat data cabang...</td></tr>
+              ) : (activeTabFilter === 'belum' ? unsubmittedList : submittedList).length === 0 ? (
                 <tr>
                   <td colSpan="3" className="p-8 text-center opacity-60">
-                    {activeTabFilter === 'belum' ? '🎉 Luar biasa! Semua cabang sudah melakukan submit order.' : 'Belum ada cabang yang menyelesaikan order.'}
+                    {dbError ? 'Error memuat data.' : 'Kosong / Selesai.'}
                   </td>
                 </tr>
               ) : (
@@ -161,23 +178,11 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                     <td className="p-3.5 text-center space-x-2">
                       {b.status === 'BELUM SUBMIT' ? (
                         <>
-                          <button 
-                            onClick={() => sendWhatsAppReminder(b)} 
-                            className="px-3 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-500 shadow-sm transition-all active:scale-95"
-                          >
-                            💬 WA
-                          </button>
-                          <button 
-                            onClick={() => sendEmailReminder(b)} 
-                            className="px-3 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 shadow-sm transition-all active:scale-95"
-                          >
-                            ✉️ Email
-                          </button>
+                          <button onClick={() => sendWhatsAppReminder(b)} className="px-3 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-500 shadow-sm transition-all active:scale-95">💬 WA</button>
+                          <button onClick={() => sendEmailReminder(b)} className="px-3 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 shadow-sm transition-all active:scale-95">✉️ Email</button>
                         </>
                       ) : (
-                        <span className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 rounded-xl font-bold">
-                          ✅ DONE
-                        </span>
+                        <span className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 rounded-xl font-bold">✅ DONE</span>
                       )}
                     </td>
                   </tr>
