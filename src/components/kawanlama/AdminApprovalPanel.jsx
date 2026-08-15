@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 export default function AdminApprovalPanel({ isDarkMode }) {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [approvedOrders, setApprovedOrders] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedApprovedId, setExpandedApprovedId] = useState(null);
   const [searchApproved, setSearchApproved] = useState('');
@@ -14,6 +15,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
   useEffect(() => {
     fetchOrders();
+    fetchAuditLogs();
 
     // --- SETUP REAL-TIME LISTENER SUPABASE ---
     const channel = supabase
@@ -22,9 +24,9 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kl_orders' },
         (payload) => {
-          fetchOrders(); // Ambil ulang data otomatis
+          fetchOrders(); 
+          fetchAuditLogs();
 
-          // Munculkan Toast Notifikasi jika ada order atau request masuk
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newStatus = payload.new.status;
             if (newStatus === 'SUBMITTED' || newStatus === 'submitted' || newStatus === 'REQUEST_UNLOCK' || newStatus === 'request_unlock') {
@@ -35,7 +37,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       )
       .subscribe();
 
-    // Cleanup channel saat komponen ditutup
     return () => {
       supabase.removeChannel(channel);
     };
@@ -43,31 +44,25 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
   const triggerToast = (message) => {
     setToastNotification(message);
-    
-    // Mainkan efek suara bip pendek menggunakan Web Audio API
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nada D5
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); 
       gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.15);
-    } catch (e) {
-      // Ignore jika browser memblokir audio otomatis
-    }
+    } catch (e) {}
 
-    // Hilangkan toast setelah 5 detik
     setTimeout(() => {
       setToastNotification(null);
     }, 5000);
   };
 
   const fetchOrders = async () => {
-    // 1. Ambil order yang menunggu approval / request unlock (mendukung status huruf besar/kecil)
     const { data: pendingData, error: pendingError } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
@@ -78,7 +73,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       setPendingOrders(pendingData);
     }
 
-    // 2. Ambil order yang sudah APPROVED (mendukung status 'APPROVED' atau 'approved')
     const { data: approvedData, error: approvedError } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
@@ -90,13 +84,31 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     }
   };
 
-  const handleUpdateItemQty = async (itemId, newQty) => {
+  const fetchAuditLogs = async () => {
+    const { data, error } = await supabase
+      .from('kl_audit_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setAuditLogs(data);
+    }
+  };
+
+  const recordAudit = async (actionText) => {
+    await supabase.from('kl_audit_logs').insert([{ action: actionText }]);
+    fetchAuditLogs();
+  };
+
+  const handleUpdateItemQty = async (itemId, newQty, itemName) => {
     const qty = Number(newQty) || 0;
     await supabase.from('kl_order_items').update({ qty }).eq('id', itemId);
+    await recordAudit(`Mengubah qty barang "${itemName || 'Item'}" menjadi ${qty}`);
     fetchOrders();
   };
 
-  const handleApproveOrder = async (orderId) => {
+  const handleApproveOrder = async (orderId, branchName) => {
     setLoading(true);
     const { error } = await supabase
       .from('kl_orders')
@@ -104,6 +116,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .eq('id', orderId);
 
     if (!error) {
+      await recordAudit(`Menyetujui (Approve) order dari cabang: ${branchName || 'Cabang'}`);
       alert('✅ Order berhasil disetujui (Approved)! Toko masuk ke daftar rekap.');
       fetchOrders();
     } else {
@@ -112,7 +125,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(false);
   };
 
-  const handleUnlockOrder = async (orderId) => {
+  const handleUnlockOrder = async (orderId, branchName) => {
     setLoading(true);
     const { error } = await supabase
       .from('kl_orders')
@@ -120,6 +133,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .eq('id', orderId);
 
     if (!error) {
+      await recordAudit(`Membuka kunci (Unlock) order untuk cabang: ${branchName || 'Cabang'}`);
       alert('🔓 Berhasil membuka kunci! Cabang kini dapat mengedit pesanan.');
       fetchOrders();
     } else {
@@ -132,7 +146,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
   };
 
-  // Filter pencarian toko yang sudah approved
   const filteredApprovedOrders = approvedOrders.filter(order => {
     const branchName = order.kl_branches?.branch_name || order.project_name || '';
     return branchName.toLowerCase().includes(searchApproved.toLowerCase());
@@ -178,6 +191,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             }, 0) || 0;
 
             const isRequestingUnlock = order.status === 'REQUEST_UNLOCK' || order.status === 'request_unlock' || order.lock_status === 'REQUEST_UNLOCK';
+            const branchNameStr = order.kl_branches?.branch_name || 'Kantor Cabang';
 
             return (
               <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
@@ -189,7 +203,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-3 py-1 rounded-xl text-xs font-black bg-blue-600 text-white">
-                        🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
+                        🏢 {branchNameStr}
                       </span>
                       <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
                       {isRequestingUnlock && (
@@ -204,7 +218,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                   <div className="flex items-center gap-2">
                     {isRequestingUnlock ? (
                       <button 
-                        onClick={() => handleUnlockOrder(order.id)}
+                        onClick={() => handleUnlockOrder(order.id, branchNameStr)}
                         disabled={loading}
                         className="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
                       >
@@ -212,7 +226,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                       </button>
                     ) : (
                       <button 
-                        onClick={() => handleApproveOrder(order.id)}
+                        onClick={() => handleApproveOrder(order.id, branchNameStr)}
                         disabled={loading}
                         className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
                       >
@@ -238,9 +252,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                       {order.kl_order_items?.map((item) => {
                         const unitPrice = Number(item.kl_master_items?.price || 0);
                         const subtotal = unitPrice * Number(item.qty || 0);
+                        const itemName = item.kl_master_items?.item_name || 'Barang Logistik';
                         return (
                           <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                            <td className="p-3.5 font-bold">{item.kl_master_items?.item_name || 'Barang Logistik'}</td>
+                            <td className="p-3.5 font-bold">{itemName}</td>
                             <td className="p-3.5 opacity-80 uppercase font-medium">{item.kl_master_items?.material || '-'}</td>
                             <td className="p-3.5 opacity-80 uppercase font-mono">{item.kl_master_items?.size || '-'}</td>
                             <td className="p-3.5 text-right font-mono opacity-90">{formatRupiah(unitPrice)}</td>
@@ -249,7 +264,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                                 type="number"
                                 min="0"
                                 value={item.qty}
-                                onChange={(e) => handleUpdateItemQty(item.id, e.target.value)}
+                                onChange={(e) => handleUpdateItemQty(item.id, e.target.value, itemName)}
                                 className={`w-20 p-1.5 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'}`}
                               />
                             </td>
@@ -273,10 +288,9 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         )}
       </div>
 
-      {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED (GRID & AKORDION) */}
+      {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED */}
       <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700 relative">
         
-        {/* --- BAGIAN HEADER STICKY & TOMBOL EXPORT EXCEL --- */}
         <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800' : 'bg-white/90 border-stone-200'}`}>
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
@@ -291,7 +305,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               className={`px-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-64 shadow-sm transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
             />
             
-            {/* Tombol Export Excel */}
             <button 
               onClick={() => {
                 const exportData = filteredApprovedOrders.flatMap(order => 
@@ -317,7 +330,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             </button>
           </div>
         </div>
-        {/* --- AKHIR BAGIAN HEADER STICKY --- */}
 
         {filteredApprovedOrders.length === 0 ? (
           <div className={`p-6 text-center rounded-3xl border text-xs opacity-60 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
@@ -411,6 +423,27 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           </div>
         )}
       </div>
+
+      {/* SEKSI 3: AUDIT TRAIL / LOG AKTIVITAS TERBARU */}
+      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+          <span>📜</span> Audit Trail & Riwayat Aktivitas Admin (10 Terakhir)
+        </h3>
+        
+        {auditLogs.length === 0 ? (
+          <p className="text-xs opacity-60">Belum ada riwayat aktivitas tercatat.</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+            {auditLogs.map((log) => (
+              <div key={log.id} className={`p-3 rounded-xl border text-xs flex justify-between items-center ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-stone-200'}`}>
+                <span className="font-medium">⚡ {log.action}</span>
+                <span className="font-mono text-[10px] opacity-60">{new Date(log.created_at).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
