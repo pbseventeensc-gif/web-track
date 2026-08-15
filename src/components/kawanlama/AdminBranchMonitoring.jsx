@@ -19,9 +19,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Ambil seluruh data cabang dari tabel master cabang
+    // 2. Ambil seluruh data cabang dari tabel 'kl_branch_access' (sesuai database Anda)
     const { data: branches, error: branchError } = await supabase
-      .from('kl_branches')
+      .from('kl_branch_access')
       .select('*');
 
     if (branchError) {
@@ -40,13 +40,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       console.error('Gagal ambil order:', orderError.message);
     }
 
-    // 4. Petakan secara manual untuk mencocokkan branch / store
-    const mappedData = branches.map(branch => {
-      // Cari apakah cabang ini sudah punya order (mencocokkan berbagai kemungkinan nama kolom ID cabang)
-      const matchedOrder = orders?.find(o => 
+    // 4. Petakan data dari tabel kl_branch_access
+    const mappedData = (branches || []).map(branch => {
+      // Cocokkan ID cabang dengan branch_id di tabel orders
+      const matchedOrder = (orders || []).find(o => 
         o.branch_id === branch.id || 
-        o.branch_id === branch.branch_id || 
-        o.store_id === branch.id
+        o.branch_id === branch.branch_name
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -60,8 +59,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
       return {
         id: branch.id,
-        branch_name: branch.branch_name || branch.name || 'Cabang Tanpa Nama',
-        phone: branch.phone || branch.whatsapp || '628123456789',
+        branch_name: branch.branch_name || 'Cabang Tanpa Nama',
+        phone: branch.phone || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
       };
@@ -118,7 +117,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       {/* Tab Pemisah: Belum Submit vs Sudah Submit */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-          <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">📊 Status Monitoring Broadcast Cabang</h3>
+          <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">📊 Status Monitoring Broadcast Cabang ({branchStatus.length} Total Toko)</h3>
           
           <div className="flex gap-2">
             <button 
