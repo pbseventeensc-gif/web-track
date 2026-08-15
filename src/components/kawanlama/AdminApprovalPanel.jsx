@@ -85,7 +85,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
       {/* Header Utama */}
       <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
@@ -207,9 +207,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       </div>
 
       {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED (GRID & AKORDION) */}
-      <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider px-1 text-emerald-600 dark:text-emerald-400">
+      <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700 relative">
+        
+        {/* --- BAGIAN HEADER STICKY (MENEMPEL DI ATAS) --- */}
+        <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800' : 'bg-white/90 border-stone-200'}`}>
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
           </h3>
           
@@ -218,9 +220,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             placeholder="🔍 Cari Nama Toko..."
             value={searchApproved}
             onChange={(e) => setSearchApproved(e.target.value)}
-            className={`px-4 py-2 rounded-xl text-xs border font-medium focus:outline-none w-full sm:w-64 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-72 shadow-sm transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
           />
         </div>
+        {/* --- AKHIR BAGIAN HEADER STICKY --- */}
 
         {filteredApprovedOrders.length === 0 ? (
           <div className={`p-6 text-center rounded-3xl border text-xs opacity-60 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
@@ -316,4 +319,4 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       </div>
     </div>
   );
-}ls
+}
