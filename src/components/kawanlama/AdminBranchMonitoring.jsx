@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 
 export default function AdminBranchMonitoring({ isDarkMode }) {
   const [branchStatus, setBranchStatus] = useState([]);
-  const [activeTabFilter, setActiveTabFilter] = useState('belum'); // 'belum' atau 'sudah'
+  const [activeTabFilter, setActiveTabFilter] = useState('belum'); 
   const [reminderHours, setReminderHours] = useState(24);
   const [customMessage, setCustomMessage] = useState('Mohon segera melakukan input dan submit order promosi melalui portal Kawan Lama.');
 
@@ -12,14 +12,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
-    // 1. Ambil data promo aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Ambil seluruh data cabang dari tabel 'kl_branch_access' (sesuai database Anda)
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
       .select('*');
@@ -29,38 +27,35 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       return;
     }
 
-    // 3. Ambil seluruh order (filter berdasarkan promo aktif jika ada)
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
-    const { data: orders, error: orderError } = await query;
+    const { data: orders } = await query;
 
-    if (orderError) {
-      console.error('Gagal ambil order:', orderError.message);
-    }
-
-    // 4. Petakan data dari tabel kl_branch_access
     const mappedData = (branches || []).map(branch => {
-      // Cocokkan ID cabang dengan branch_id di tabel orders
       const matchedOrder = (orders || []).find(o => 
         o.branch_id === branch.id || 
-        o.branch_id === branch.branch_name
+        o.branch_id === branch.branch_name ||
+        o.branch_id === branch.name
       );
 
       let statusText = 'BELUM SUBMIT';
       if (matchedOrder) {
-        if (matchedOrder.status === 'APPROVED' || matchedOrder.lock_status === 'LOCKED') {
+        if (matchedOrder.status === 'APPROVED' || matchedOrder.status === 'approved' || matchedOrder.lock_status === 'LOCKED') {
           statusText = 'SUDAH SUBMIT & APPROVED';
         } else {
           statusText = 'SUDAH SUBMIT';
         }
       }
 
+      // Mengambil nama cabang dari berbagai kemungkinan kolom di database
+      const realBranchName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || `Cabang ID: ${branch.id}`;
+
       return {
         id: branch.id,
-        branch_name: branch.branch_name || 'Cabang Tanpa Nama',
-        phone: branch.phone || '628123456789',
+        branch_name: realBranchName,
+        phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
       };
@@ -87,7 +82,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
   return (
     <div className="space-y-6">
-      {/* Panel Pengaturan Jam & Pesan Reminder */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">⚙️ Pengaturan Pengingat (Reminder) Cabang</h3>
         
@@ -114,10 +108,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Tab Pemisah: Belum Submit vs Sudah Submit */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-4">
-          <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">📊 Status Monitoring Broadcast Cabang ({branchStatus.length} Total Toko)</h3>
+          <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">📊 STATUS MONITORING BROADCAST CABANG ({branchStatus.length} TOTAL TOKO)</h3>
           
           <div className="flex gap-2">
             <button 
@@ -135,7 +128,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           </div>
         </div>
 
-        {/* Tabel Data Berdasarkan Tab yang Dipilih dengan Container Scroll & Sticky Header */}
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
           <table className="w-full text-xs border-collapse">
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
