@@ -175,6 +175,12 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     }));
 
     const printWin = window.open('', '_blank', 'width=900,height=800');
+    if (!printWin) {
+      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
+      return;
+    }
+
+    printWin.document.open();
     printWin.document.write(`<!DOCTYPE html><html><head><title>Print Label Wellen Print (2 in 1 A4)</title><style>
       body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; } 
       .label-page { width: 297mm; height: 210mm; padding: 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; } 
@@ -195,7 +201,12 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>${pagesHtml.join('')}</body></html>`);
     printWin.document.close(); 
-    setTimeout(() => { printWin.print(); }, 500);
+    
+    // Berikan jeda agar gambar dan QR code termuat sempurna sebelum dialog print muncul
+    setTimeout(() => {
+      printWin.focus();
+      printWin.print();
+    }, 800);
   };
 
   const handlePrintSuratJalan = () => {
@@ -221,8 +232,19 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     `).join('');
 
     const printWin = window.open('', '_blank', 'width=900,height=800');
+    if (!printWin) {
+      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
+      return;
+    }
+
+    printWin.document.open();
     printWin.document.write(`<!DOCTYPE html><html><head><title>Print Surat Jalan - Wellen Print</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; } .sj-page { width: 210mm; height: 148mm; padding: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; } .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .sj-title { font-size: 26px; font-weight: bold; text-align: right; } .info-row { display: flex; gap: 15px; margin-bottom: 10px; } .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; } .left-box { flex: 1; height: 75px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 6px; } .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } .meta-table td { padding: 2px 6px; border: none; } .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 10px; } .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; } .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; } .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; } .item-grid-table th { text-align: center; background: #f8f8f8; } .item-grid-table tfoot td { background: #f8f8f8; } .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; } .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; } @media print { body { padding: 0; } .sj-page { page-break-after: always; break-after: page; } }</style></head><body>${pagesHtml}</body></html>`);
-    printWin.document.close(); setTimeout(() => { printWin.print(); }, 500);
+    printWin.document.close(); 
+    
+    setTimeout(() => {
+      printWin.focus();
+      printWin.print();
+    }, 800);
   };
 
   return (
@@ -290,7 +312,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                     <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span></td>
                     <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
                     <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
-                    <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'})</span></td>
+                    <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'} )</span></td>
                     <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
                     <td className="p-3">{koli} Pcs</td>
                     <td className="p-3">
