@@ -286,7 +286,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 const total = Number(row.QTY_TOTAL || 0); const koli = Number(row.QTY_PER_KOLI || 20); const isChecked = selectedRows.includes(idx);
                 return (
                   <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
-                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></th>
+                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
                     <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span></td>
                     <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
                     <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
