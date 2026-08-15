@@ -9,6 +9,9 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [showNotification, setShowNotification] = useState(false);
   const [orderQty, setOrderQty] = useState({});
   const [loading, setLoading] = useState(false);
+  
+  // STATE BARU: Untuk mengatur arah sorting Nama Barang ('asc' untuk A-Z, 'desc' untuk Z-A)
+  const [sortOrder, setSortOrder] = useState('asc');
 
   useEffect(() => {
     fetchMasterItems();
@@ -145,6 +148,21 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     fetchActivePromo();
   };
 
+  // FUNGSI SORTING ITEM BERDASARKAN NAMA BARANG (A-Z / Z-A)
+  const sortedItems = [...items].sort((a, b) => {
+    const nameA = (a.item_name || '').toLowerCase();
+    const nameB = (b.item_name || '').toLowerCase();
+    if (sortOrder === 'asc') {
+      return nameA.localeCompare(nameB);
+    } else {
+      return nameB.localeCompare(nameA);
+    }
+  });
+
+  const toggleSort = () => {
+    setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+  };
+
   return (
     <div className="space-y-6 relative">
       {/* MODAL NOTIFIKASI OTOMATIS JIKA BELUM SUBMIT */}
@@ -227,9 +245,26 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
       {/* Grid Input Order Cabang */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h2 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
-          {hasOrdered ? 'Form Permintaan (Terkunci - Telah Disubmit)' : 'Form Permintaan / Order Logistik Cabang'}
-        </h2>
+        
+        {/* Bagian Judul dan Tombol Sort */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <h2 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
+            {hasOrdered ? 'Form Permintaan (Terkunci - Telah Disubmit)' : 'Form Permintaan / Order Logistik Cabang'}
+          </h2>
+
+          {/* Tombol Sort A-Z / Z-A */}
+          <button
+            onClick={toggleSort}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
+              isDarkMode 
+                ? 'bg-neutral-700 border-neutral-600 text-neutral-200 hover:bg-neutral-600' 
+                : 'bg-stone-100 border-stone-300 text-stone-700 hover:bg-stone-200'
+            }`}
+          >
+            🔤 Urutkan Nama: {sortOrder === 'asc' ? 'A → Z (Naik)' : 'Z → A (Turun)'}
+          </button>
+        </div>
+
         <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
           <table className="w-full text-xs border-collapse">
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
@@ -241,7 +276,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {items.map(item => {
+              {sortedItems.map(item => {
                 const materialStr = item.material || '-';
                 const sizeStr = item.size || '-';
 
