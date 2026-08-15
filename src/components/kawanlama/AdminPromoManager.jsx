@@ -199,7 +199,7 @@ export default function AdminPromoManager({ isDarkMode }) {
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Riwayat Promo Terkirim</h3>
         <div className="space-y-3">
-          {promos.p:map(p => (
+          {promos.map(p => (
             <div key={p.id} className={`p-4 border rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
