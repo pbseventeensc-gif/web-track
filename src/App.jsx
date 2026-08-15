@@ -207,12 +207,35 @@ export default function App() {
 
         {/* TABS MENU */}
         {!isBranchMode && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => (
-              <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm ${activeTab === t ? 'bg-indigo-600 text-white shadow-md' : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')}`}>
-                {t === 'label' ? '🏷️ Cetak Label & SJ' : t === 'kawan_lama' ? '🏢 Project Kawan Lama' : t}
-              </button>
-            ))}
+          <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+            {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => {
+              // LOGIKA KUNCI: Tab Kawan Lama terkunci jika belum login Admin
+              const isLocked = t === 'kawan_lama' && !currentAdmin;
+
+              return (
+                <button 
+                  key={t} 
+                  onClick={() => !isLocked && setActiveTab(t)} 
+                  disabled={isLocked}
+                  title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
+                    ${isLocked 
+                      // Style jika Terkunci (Kusam & Disabled)
+                      ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
+                      // Style jika Aktif
+                      : activeTab === t 
+                        ? 'bg-indigo-600 text-white shadow-md' 
+                        : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
+                    }`}
+                >
+                  {t === 'label' 
+                    ? '🏷️ Cetak Label & SJ' 
+                    : t === 'kawan_lama' 
+                      ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
+                      : t}
+                </button>
+              );
+            })}
           </div>
         )}
 
