@@ -12,14 +12,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
-    // 1. Ambil data promo aktif
     const { data: activePromo } = await supabase
       .from('kl_promos')
       .select('id')
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Ambil seluruh data master cabang dari tabel kl_branch_access
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
       .select('*');
@@ -29,20 +27,16 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       return;
     }
 
-    // 3. Ambil seluruh order (filter berdasarkan promo aktif jika ada)
     let query = supabase.from('kl_orders').select('*');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }
     const { data: orders } = await query;
 
-    // 4. Petakan data dan cocokkan ID atau nama cabang secara akurat
     const mappedData = (branches || []).map(branch => {
-      // Cocokkan berdasarkan ID cabang atau teks namanya
       const matchedOrder = (orders || []).find(o => 
         Number(o.branch_id) === Number(branch.id) || 
-        String(o.branch_id).toLowerCase() === String(branch.id).toLowerCase() ||
-        String(o.branch_id).toLowerCase() === String(branch.branch_name).toLowerCase()
+        String(o.branch_id).toLowerCase() === String(branch.id).toLowerCase()
       );
 
       let statusText = 'BELUM SUBMIT';
@@ -54,12 +48,12 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Mengambil nama asli secara pasti dari kolom branch_name di database Supabase
-      const realStoreName = branch.branch_name || branch.name || branch.store_name || `Cabang ID: ${branch.id}`;
+      // Mencari nama toko dari semua kemungkinan kolom teks yang ada di baris database
+      const storeName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || branch.title || Object.values(branch).find(val => typeof val === 'string' && val.length > 3 && !val.includes('@') && !val.includes('-')) || `Cabang ID: ${branch.id}`;
 
       return {
         id: branch.id,
-        branch_name: realStoreName,
+        branch_name: storeName,
         phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
