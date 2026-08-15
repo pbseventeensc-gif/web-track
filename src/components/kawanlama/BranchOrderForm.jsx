@@ -198,7 +198,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
               Kampanye / Promo Aktif
             </span>
-            {/* HANYA MENAMPILKAN TIPE BUDGET TANPA NOMINAL RUPIAH */}
+            {/* HANYA MENAMPILKAN TIPE BUDGET TANPA NOMINAL RUPIAH DI BADGE */}
             {activePromo?.budget_type && (
               <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
                 Alokasi: {activePromo.budget_type}
@@ -222,7 +222,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
-          {/* PROGRESS BAR BERSIH TANPA NOMINAL RUPIAH */}
+          {/* PROGRESS BAR BERSIH TANPA NOMINAL RUPIAH & TANPA KETERANGAN (Rp5.000.000) */}
           {activePromo && (
             <div className="pt-2 space-y-1.5 max-w-xl">
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
