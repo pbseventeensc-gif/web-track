@@ -49,8 +49,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Mengambil nama cabang dari berbagai kemungkinan kolom di database
-      const realBranchName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || `Cabang ID: ${branch.id}`;
+      // Mengambil nama toko/cabang secara presisi dari database
+      const realBranchName = branch.branch_name || branch.name || branch.store_name || branch.nama_cabang || branch.store || `Cabang ID: ${branch.id}`;
 
       return {
         id: branch.id,
