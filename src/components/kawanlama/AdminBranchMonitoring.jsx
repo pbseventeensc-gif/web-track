@@ -19,10 +19,10 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       .eq('is_active', true)
       .maybeSingle();
 
-    // 2. Paksa ambil HANYA kolom id, branch_name, phone, dan email dari tabel kl_branch_access
+    // 2. Kembalikan ke select('*') agar tidak error jika kolom phone/email tidak ada di tabel
     const { data: branches, error: branchError } = await supabase
       .from('kl_branch_access')
-      .select('id, branch_name, phone, email');
+      .select('*');
 
     if (branchError) {
       console.error('⚠️ Error saat mengambil tabel kl_branch_access:', branchError.message);
@@ -53,13 +53,11 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         }
       }
 
-      // Ambil nama cabang TEPAT dari branch.branch_name
-      const namaTokoAsli = branch.branch_name ? branch.branch_name : `TIDAK TERBACA (ID: ${branch.id})`;
-
       return {
         id: branch.id,
-        branch_name: namaTokoAsli,
-        phone: branch.phone || '628123456789',
+        // Fokus hanya pada branch_name sesuai nama kolom di database Anda
+        branch_name: branch.branch_name || `Cabang ID: ${branch.id}`,
+        phone: branch.phone || branch.whatsapp || '628123456789',
         email: branch.email || 'cabang@email.com',
         status: statusText
       };
