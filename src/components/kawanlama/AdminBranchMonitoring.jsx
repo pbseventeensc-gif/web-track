@@ -12,14 +12,40 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   }, []);
 
   const fetchBranchStatus = async () => {
-    const { data: branches } = await supabase.from('kl_branches').select('id, branch_name, phone, email');
-    const { data: orders } = await supabase.from('kl_orders').select('branch_id, status');
+    // 1. Ambil data promo yang sedang aktif saat ini
+    const { data: activePromo } = await supabase
+      .from('kl_promos')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle();
 
+    // 2. Ambil seluruh data cabang
+    const { data: branches } = await supabase.from('kl_branches').select('id, branch_name, phone, email');
+    
+    // 3. Ambil data order, filter berdasarkan promo aktif jika ada
+    let query = supabase.from('kl_orders').select('branch_id, status, lock_status');
+    if (activePromo) {
+      query = query.eq('promo_id', activePromo.id);
+    }
+    const { data: orders } = await query;
+
+    // 4. Petakan status masing-masing cabang
     const result = branches?.map(b => {
-      const hasSubmitted = orders?.some(o => o.branch_id === b.id);
+      // Cari order berdasarkan branch_id
+      const branchOrder = orders?.find(o => o.branch_id === b.id);
+      
+      let statusText = 'BELUM SUBMIT';
+      if (branchOrder) {
+        if (branchOrder.status === 'APPROVED' || branchOrder.lock_status === 'LOCKED') {
+          statusText = 'SUDAH SUBMIT & APPROVED';
+        } else {
+          statusText = 'SUDAH SUBMIT';
+        }
+      }
+
       return {
         ...b,
-        status: hasSubmitted ? 'SUDAH SUBMIT' : 'BELUM SUBMIT'
+        status: statusText
       };
     });
 
@@ -40,7 +66,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   };
 
   const unsubmittedList = branchStatus.filter(b => b.status === 'BELUM SUBMIT');
-  const submittedList = branchStatus.filter(b => b.status === 'SUDAH SUBMIT');
+  const submittedList = branchStatus.filter(b => b.status !== 'BELUM SUBMIT');
 
   return (
     <div className="space-y-6">
@@ -114,7 +140,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                   <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
                     <td className="p-3.5 font-bold">{b.branch_name}</td>
                     <td className="p-3.5 text-center">
-                      <span className={`px-3 py-1 rounded-xl text-[10px] font-black ${b.status === 'SUDAH SUBMIT' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'}`}>
+                      <span className={`px-3 py-1 rounded-xl text-[10px] font-black ${b.status !== 'BELUM SUBMIT' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'}`}>
                         {b.status}
                       </span>
                     </td>
