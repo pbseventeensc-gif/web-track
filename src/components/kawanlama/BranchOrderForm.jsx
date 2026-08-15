@@ -10,7 +10,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [orderQty, setOrderQty] = useState({});
   const [loading, setLoading] = useState(false);
   
-  // STATE BARU: Untuk mengatur arah sorting Nama Barang ('asc' untuk A-Z, 'desc' untuk Z-A)
+  // State untuk sorting Nama Barang ('asc' untuk A-Z, 'desc' untuk Z-A)
   const [sortOrder, setSortOrder] = useState('asc');
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           }
         } else {
           setHasOrdered(false);
-          setShowNotification(true); // Munculkan pop-up otomatis jika belum submit
+          setShowNotification(true);
         }
       }
     }
@@ -148,7 +148,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     fetchActivePromo();
   };
 
-  // FUNGSI SORTING ITEM BERDASARKAN NAMA BARANG (A-Z / Z-A)
   const sortedItems = [...items].sort((a, b) => {
     const nameA = (a.item_name || '').toLowerCase();
     const nameB = (b.item_name || '').toLowerCase();
@@ -162,6 +161,23 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const toggleSort = () => {
     setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
   };
+
+  const formatRupiah = (angka) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
+  };
+
+  // Perhitungan untuk Range Budget & Progress Bar
+  const currentTotalOrder = calculateTotalOrderValue(orderQty);
+  const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
+  const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
+
+  // Penentuan Warna Progress Bar Berdasarkan Persentase
+  let progressColor = 'bg-emerald-500'; // 1 - 50% Hijau
+  if (percentage > 50 && percentage <= 90) {
+    progressColor = 'bg-amber-500'; // 50 - 90% Kuning
+  } else if (percentage > 90) {
+    progressColor = 'bg-orange-500'; // 90 - 100% Orange
+  }
 
   return (
     <div className="space-y-6 relative">
@@ -186,14 +202,14 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
       {/* Header Info Promo & Tombol Aksi */}
       <div className={`p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <div>
+        <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
               Kampanye / Promo Aktif
             </span>
             {activePromo?.budget_type && (
               <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
-                Alokasi: {activePromo.budget_type}
+                Alokasi: {activePromo.budget_type} ({formatRupiah(maxBudget)})
               </span>
             )}
             {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
@@ -213,6 +229,28 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             )}
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
+          
+          {/* PROGRESS BAR & RANGE BUDGET ANIMASI */}
+          {activePromo && (
+            <div className="pt-2 space-y-1.5 max-w-xl">
+              <div className="flex justify-between items-center text-[11px] font-bold">
+                <span className="opacity-80">Total Pesanan: <span className="text-indigo-600 dark:text-indigo-400 font-mono">{formatRupiah(currentTotalOrder)}</span></span>
+                <span className="font-mono">{percentage}% dari Alokasi ({formatRupiah(maxBudget)})</span>
+              </div>
+              <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
+                  style={{ width: `${percentage}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-[9px] opacity-60 font-mono">
+                <span>0% (Hijau: 1-50%)</span>
+                <span>(Kuning: 50-90%)</span>
+                <span>(Orange: 90-100%)</span>
+              </div>
+            </div>
+          )}
+
           <p className="text-xs opacity-70 mt-1">
             {hasOrdered && existingOrder?.lock_status === 'LOCKED'
               ? 'Anda sudah melakukan submit order. Jika ingin mengubah pesanan, silakan klik tombol "Minta Buka Kunci ke Admin".'
