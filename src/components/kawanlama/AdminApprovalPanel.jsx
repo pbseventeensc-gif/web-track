@@ -10,8 +10,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   }, []);
 
   const fetchPendingOrders = async () => {
-    // PERBAIKAN: Masukkan 'REQUEST_UNLOCK' ke dalam filter .in() 
-    // agar order yang minta buka kunci ikut muncul di panel admin
     const { data, error } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
@@ -49,8 +47,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
   const handleUnlockOrder = async (orderId) => {
     setLoading(true);
-    // PERBAIKAN: Ubah status kembali ke 'SUBMITTED' atau 'UNLOCKED' 
-    // serta ubah lock_status agar cabang bisa leluasa mengedit ulang pesanan mereka
     const { error } = await supabase
       .from('kl_orders')
       .update({ status: 'SUBMITTED', lock_status: 'UNLOCKED' })
@@ -88,7 +84,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             return acc + (price * qty);
           }, 0) || 0;
 
-          // Mendeteksi apakah order sedang dalam status minta buka kunci
           const isRequestingUnlock = order.status === 'REQUEST_UNLOCK' || order.lock_status === 'REQUEST_UNLOCK';
 
           return (
@@ -102,13 +97,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-3 gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Badge Nama Toko / Cabang Warna Biru */}
                     <span className="px-3 py-1 rounded-xl text-xs font-black bg-blue-600 text-white">
                       🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
                     </span>
                     <span className="text-[10px] font-mono opacity-60">ID: {order.id.slice(0, 8)}</span>
                     
-                    {/* Badge Minta Buka Kunci Warna Merah */}
                     {isRequestingUnlock && (
                       <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-rose-600 text-white animate-pulse">
                         ⚠️ MINTA BUKA KUNCI (REQUEST UNLOCK)
@@ -139,17 +132,17 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 </div>
               </div>
 
-              {/* Tabel Item Pesanan */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className={`border-b font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 text-neutral-300' : 'bg-stone-100 border-stone-300 text-stone-700'}`}>
-                      <th className="p-3 text-left">Nama Barang</th>
-                      <th className="p-3 text-left">Material / Bahan</th>
-                      <th className="p-3 text-left">Ukuran (Size)</th>
-                      <th className="p-3 text-right">Harga Satuan</th>
-                      <th className="p-3 text-center w-28">Qty Order</th>
-                      <th className="p-3 text-right">Subtotal Harga</th>
+              {/* Tabel Item Pesanan dengan Container Sticky dan Scroll yang Benar */}
+              <div className="max-h-[450px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+                <table className="w-full text-xs border-collapse">
+                  <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+                    <tr>
+                      <th className="p-3.5 text-left">Nama Barang</th>
+                      <th className="p-3.5 text-left">Material / Bahan</th>
+                      <th className="p-3.5 text-left">Ukuran (Size)</th>
+                      <th className="p-3.5 text-right">Harga Satuan</th>
+                      <th className="p-3.5 text-center w-28">Qty Order</th>
+                      <th className="p-3.5 text-right">Subtotal Harga</th>
                     </tr>
                   </thead>
                   <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
