@@ -5,11 +5,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [approvedOrders, setApprovedOrders] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // State untuk melacak toko yang sedang dibuka detailnya (Accordion)
   const [expandedApprovedId, setExpandedApprovedId] = useState(null);
-  
-  // State pencarian toko untuk cabang yang sudah approve
   const [searchApproved, setSearchApproved] = useState('');
 
   useEffect(() => {
@@ -17,26 +13,30 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   }, []);
 
   const fetchOrders = async () => {
-    // 1. Ambil order yang menunggu approval / request unlock
+    // 1. Ambil order yang menunggu approval / request unlock (mendukung status huruf besar/kecil)
     const { data: pendingData, error: pendingError } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .in('status', ['SUBMITTED', 'REQUEST_UNLOCK'])
+      .in('status', ['SUBMITTED', 'submitted', 'REQUEST_UNLOCK', 'request_unlock'])
       .order('created_at', { ascending: false });
 
-    if (!pendingError && pendingData) setPendingOrders(pendingData);
+    if (!pendingError && pendingData) {
+      setPendingOrders(pendingData);
+    }
 
-    // 2. Ambil order yang sudah APPROVED (untuk rekap 103 toko)
+    // 2. Ambil order yang sudah APPROVED (mendukung status 'APPROVED' atau 'approved')
     const { data: approvedData, error: approvedError } = await supabase
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .eq('status', 'APPROVED')
+      .in('status', ['APPROVED', 'approved'])
       .order('updated_at', { ascending: false });
 
-    if (!approvedError && approvedData) setApprovedOrders(approvedData);
+    if (!approvedError && approvedData) {
+      setApprovedOrders(approvedData);
+    }
   };
 
-  const handleUpdateItemQty = async (itemId, newQty, isApprovedList = false) => {
+  const handleUpdateItemQty = async (itemId, newQty) => {
     const qty = Number(newQty) || 0;
     await supabase.from('kl_order_items').update({ qty }).eq('id', itemId);
     fetchOrders();
@@ -46,7 +46,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(true);
     const { error } = await supabase
       .from('kl_orders')
-      .update({ status: 'APPROVED', lock_status: 'LOCKED' })
+      .update({ status: 'approved', lock_status: 'LOCKED' })
       .eq('id', orderId);
 
     if (!error) {
@@ -79,9 +79,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   };
 
   // Filter pencarian toko yang sudah approved
-  const filteredApprovedOrders = approvedOrders.filter(order => 
-    (order.kl_branches?.branch_name || '').toLowerCase().includes(searchApproved.toLowerCase())
-  );
+  const filteredApprovedOrders = approvedOrders.filter(order => {
+    const branchName = order.kl_branches?.branch_name || order.project_name || '';
+    return branchName.toLowerCase().includes(searchApproved.toLowerCase());
+  });
 
   return (
     <div className="space-y-8">
@@ -109,7 +110,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               return acc + (price * qty);
             }, 0) || 0;
 
-            const isRequestingUnlock = order.status === 'REQUEST_UNLOCK' || order.lock_status === 'REQUEST_UNLOCK';
+            const isRequestingUnlock = order.status === 'REQUEST_UNLOCK' || order.status === 'request_unlock' || order.lock_status === 'REQUEST_UNLOCK';
 
             return (
               <div key={order.id} className={`p-6 rounded-3xl border shadow-sm space-y-4 transition-all ${
@@ -205,14 +206,13 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         )}
       </div>
 
-      {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED (DENGAN AKORDION / KLIK UNTUK LIHAT DETAIL) */}
+      {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED (GRID & AKORDION) */}
       <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <h3 className="font-extrabold text-sm uppercase tracking-wider px-1 text-emerald-600 dark:text-emerald-400">
             ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
           </h3>
           
-          {/* Kolom Pencarian Cepat Nama Toko */}
           <input 
             type="text"
             placeholder="🔍 Cari Nama Toko..."
@@ -236,18 +236,19 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 return acc + (price * qty);
               }, 0) || 0;
 
+              const storeName = order.kl_branches?.branch_name || 'Cabang';
+
               return (
                 <div key={order.id} className={`rounded-2xl border transition-all overflow-hidden shadow-sm ${
                   isExpanded ? 'col-span-1 sm:col-span-2 md:col-span-3 p-5 space-y-4' : 'p-4'
                 } ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
                   
-                  {/* Bagian Ringkas (Selalu Tampil Hanya Nama Toko & Tombol Buka) */}
                   <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedApprovedId(isExpanded ? null : order.id)}>
                     <div className="flex items-center gap-2">
                       <span className="text-base">🏢</span>
                       <div>
                         <h4 className="font-extrabold text-xs uppercase text-indigo-600 dark:text-indigo-400">
-                          {order.kl_branches?.branch_name || 'Cabang'}
+                          {storeName}
                         </h4>
                         <span className="text-[10px] opacity-60 font-mono">Total Item: {order.kl_order_items?.length || 0} Jenis</span>
                       </div>
@@ -262,7 +263,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                     </button>
                   </div>
 
-                  {/* Bagian Detail Order (Hanya Muncul Jika Kartu Diklik) */}
                   {isExpanded && (
                     <div className="space-y-4 pt-3 border-t border-stone-200 dark:border-neutral-700 animate-in fade-in">
                       <div className="flex justify-between items-center text-xs opacity-70">
