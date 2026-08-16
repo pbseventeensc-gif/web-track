@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import * as XLSX from 'xlsx'; // Import pustaka xlsx untuk baca file excel
+import * as XLSX from 'xlsx';
 
 export default function AdminMasterData({ isDarkMode }) {
   const [items, setItems] = useState([]);
   const [form, setForm] = useState({ item_name: '', material: '', size: '', price: '' });
   const [loadingImport, setLoadingImport] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  useEffect(() => { fetchItems(); }, []);
+  // State untuk Inline Edit Barang
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    item_name: '',
+    material: '',
+    size: '',
+    price: 0
+  });
+
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
   const fetchItems = async () => {
     const { data } = await supabase
@@ -17,20 +30,33 @@ export default function AdminMasterData({ isDarkMode }) {
     if (data) setItems(data);
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    if (!form.item_name) return alert('Nama barang wajib diisi!');
-    await supabase.from('kl_master_items').insert([{
-      item_name: form.item_name,
-      material: form.material,
-      size: form.size,
-      price: Number(form.price) || 0
-    }]);
-    setForm({ item_name: '', material: '', size: '', price: '' });
-    fetchItems();
+  const showNotification = (msg) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 4000);
   };
 
-  // FUNGSI IMPORT EXCEL
+  // 1. Tambah Barang Manual
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!form.item_name.trim()) return alert('Nama barang wajib diisi!');
+    
+    const { error } = await supabase.from('kl_master_items').insert([{
+      item_name: form.item_name.trim(),
+      material: form.material.trim() || '-',
+      size: form.size.trim() || '-',
+      price: Number(form.price) || 0
+    }]);
+
+    if (!error) {
+      showNotification(`✅ Barang "${form.item_name}" berhasil ditambahkan!`);
+      setForm({ item_name: '', material: '', size: '', price: '' });
+      fetchItems();
+    } else {
+      alert('Gagal menambah barang: ' + error.message);
+    }
+  };
+
+  // 2. Import Master Data via File Excel
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -52,43 +78,119 @@ export default function AdminMasterData({ isDarkMode }) {
           return;
         }
 
-        // Mapping data dari Excel ke struktur tabel Supabase
-        // Sesuaikan nama kolom Excel Anda: item_name / nama_barang, material, size / ukuran, price / harga
         const formattedItems = data.map(row => ({
-          item_name: row.item_name || row.nama_barang || row['Nama Barang'] || 'Barang Baru',
-          material: row.material || row['Material'] || '-',
-          size: row.size || row.ukuran || row['Ukuran'] || '-',
+          item_name: String(row.item_name || row.nama_barang || row['Nama Barang'] || 'Barang Baru').trim(),
+          material: String(row.material || row['Material'] || '-').trim(),
+          size: String(row.size || row.ukuran || row['Ukuran'] || '-').trim(),
           price: Number(row.price || row.harga || row['Harga'] || 0)
         }));
 
-        // Masukkan data secara massal (bulk insert) ke Supabase
         const { error } = await supabase.from('kl_master_items').insert(formattedItems);
 
         if (error) {
           alert('Gagal mengimpor data ke database: ' + error.message);
         } else {
-          alert(`✅ Berhasil mengimpor ${formattedItems.length} data barang baru!`);
-          fetchItems(); // Refresh data agar langsung tampil dan terurut A-Z
+          showNotification(`✅ Berhasil mengimpor ${formattedItems.length} data barang baru!`);
+          fetchItems();
         }
       } catch (err) {
         alert('Terjadi kesalahan saat membaca file Excel: ' + err.message);
       } finally {
         setLoadingImport(false);
-        e.target.value = null; // Reset input file
+        e.target.value = null;
       }
     };
 
     reader.readAsBinaryString(file);
   };
 
+  // 3. Mulai Edit Baris
+  const handleStartEdit = (item) => {
+    setEditingId(item.id);
+    setEditForm({
+      item_name: item.item_name || '',
+      material: item.material || '',
+      size: item.size || '',
+      price: Number(item.price) || 0
+    });
+  };
+
+  // 4. Batal Edit
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ item_name: '', material: '', size: '', price: 0 });
+  };
+
+  // 5. Simpan Hasil Edit ke Supabase
+  const handleSaveEdit = async (id) => {
+    if (!editForm.item_name.trim()) return alert('Nama barang tidak boleh kosong!');
+
+    const { error } = await supabase
+      .from('kl_master_items')
+      .update({
+        item_name: editForm.item_name.trim(),
+        material: editForm.material.trim(),
+        size: editForm.size.trim(),
+        price: Number(editForm.price) || 0
+      })
+      .eq('id', id);
+
+    if (!error) {
+      setItems(prev => prev.map(item => item.id === id ? { ...item, ...editForm } : item));
+      setEditingId(null);
+      showNotification(`💾 Data barang "${editForm.item_name}" berhasil diperbarui!`);
+    } else {
+      alert('Gagal memperbarui barang: ' + error.message);
+    }
+  };
+
+  // 6. Hapus Barang Master
+  const handleDeleteItem = async (id, itemName) => {
+    if (window.confirm(`⚠️ Yakin ingin menghapus barang "${itemName}" dari Master Data?`)) {
+      const { error } = await supabase
+        .from('kl_master_items')
+        .delete()
+        .eq('id', id);
+
+      if (!error) {
+        setItems(prev => prev.filter(item => item.id !== id));
+        showNotification(`🗑️ Barang "${itemName}" berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus barang: ' + error.message);
+      }
+    }
+  };
+
   const formatRupiah = (angka) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
   };
 
+  const filteredItems = items.filter(item => {
+    const q = searchTerm.toLowerCase();
+    return (
+      (item.item_name || '').toLowerCase().includes(q) ||
+      (item.material || '').toLowerCase().includes(q) ||
+      (item.size || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
       
-      {/* Panel Atas: Form Tambah Satuan & Import Excel */}
+      {/* Notifikasi Pop-up */}
+      {successMessage && (
+        <div className={`p-4 rounded-2xl border flex items-center justify-between shadow-lg animate-bounce ${
+          isDarkMode ? 'bg-emerald-950/80 border-emerald-700 text-emerald-200' : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+        }`}>
+          <div className="flex items-center gap-2 text-xs font-bold">
+            <span>✅</span>
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-xs font-bold opacity-70 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* Panel Atas: Import Excel & Form Tambah Manual */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         
         {/* Bagian Import Excel */}
@@ -116,10 +218,11 @@ export default function AdminMasterData({ isDarkMode }) {
           <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
             <input 
               type="text" 
-              placeholder="Nama Barang" 
+              placeholder="Nama Barang *" 
               value={form.item_name} 
               onChange={e => setForm({...form, item_name: e.target.value})} 
               className={`p-3 border rounded-xl font-semibold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`} 
+              required
             />
             <input 
               type="text" 
@@ -137,6 +240,7 @@ export default function AdminMasterData({ isDarkMode }) {
             />
             <input 
               type="number" 
+              min="0"
               placeholder="Harga Satuan (Rp)" 
               value={form.price} 
               onChange={e => setForm({...form, price: e.target.value})} 
@@ -150,30 +254,172 @@ export default function AdminMasterData({ isDarkMode }) {
 
       </div>
 
-      {/* Tabel Master Data dengan Urutan A-Z */}
-      <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h3 className="font-extrabold text-sm mb-4 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">Daftar Master Data Barang (Urut A-Z)</h3>
-        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+      {/* Tabel Master Data dengan Fitur Pencarian & Inline Edit */}
+      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        
+        {/* Toolbar Header Tabel */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
+              Daftar Master Data Barang (Urut A-Z)
+            </h3>
+            <p className="text-xs opacity-60">Klik tombol <strong>Edit</strong> untuk langsung mengubah data barang di tabel.</p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-72">
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="Cari Barang / Bahan / Ukuran..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className={`w-full p-2 border rounded-xl text-xs font-semibold focus:outline-none ${
+                isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-800'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Tabel Container */}
+        <div className="max-h-[520px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
           <table className="w-full text-xs border-collapse">
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
               <tr>
-                <th className="p-3.5 text-left">Nama Barang</th>
-                <th className="p-3.5 text-left">Material / Bahan</th>
-                <th className="p-3.5 text-left">Ukuran (Size)</th>
-                <th className="p-3.5 text-right">Harga Satuan</th>
+                <th className="p-3.5 text-left min-w-[200px]">Nama Barang</th>
+                <th className="p-3.5 text-left min-w-[160px]">Material / Bahan</th>
+                <th className="p-3.5 text-left min-w-[130px]">Ukuran (Size)</th>
+                <th className="p-3.5 text-right min-w-[140px]">Harga Satuan</th>
+                <th className="p-3.5 text-center w-36">Aksi</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {items.map(i => (
-                <tr key={i.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                  <td className="p-3.5 font-bold">{i.item_name}</td>
-                  <td className="p-3.5 opacity-80 uppercase font-medium">{i.material || '-'}</td>
-                  <td className="p-3.5 opacity-80 uppercase font-mono">{i.size || '-'}</td>
-                  <td className="p-3.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatRupiah(i.price)}
-                  </td>
+              {filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center opacity-60">Tidak ada barang yang cocok dengan pencarian.</td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map(i => {
+                  const isEditing = editingId === i.id;
+
+                  return (
+                    <tr key={i.id} className={`transition-colors ${
+                      isEditing 
+                        ? (isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70') 
+                        : (isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50')
+                    }`}>
+                      {/* Kolom 1: Nama Barang */}
+                      <td className="p-3.5 align-middle">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.item_name}
+                            onChange={e => setEditForm({ ...editForm, item_name: e.target.value })}
+                            className={`w-full p-2 rounded-xl border text-xs font-bold focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'
+                            }`}
+                            placeholder="Nama Barang"
+                          />
+                        ) : (
+                          <div className="font-bold">{i.item_name}</div>
+                        )}
+                      </td>
+
+                      {/* Kolom 2: Material */}
+                      <td className="p-3.5 align-middle">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.material}
+                            onChange={e => setEditForm({ ...editForm, material: e.target.value })}
+                            className={`w-full p-2 rounded-xl border text-xs font-semibold focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'
+                            }`}
+                            placeholder="Material"
+                          />
+                        ) : (
+                          <span className="opacity-80 uppercase font-medium">{i.material || '-'}</span>
+                        )}
+                      </td>
+
+                      {/* Kolom 3: Ukuran */}
+                      <td className="p-3.5 align-middle">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.size}
+                            onChange={e => setEditForm({ ...editForm, size: e.target.value })}
+                            className={`w-full p-2 rounded-xl border text-xs font-mono font-semibold focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'
+                            }`}
+                            placeholder="Ukuran"
+                          />
+                        ) : (
+                          <span className="opacity-80 uppercase font-mono">{i.size || '-'}</span>
+                        )}
+                      </td>
+
+                      {/* Kolom 4: Harga Satuan */}
+                      <td className="p-3.5 text-right align-middle font-mono">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={editForm.price}
+                            onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) || 0 })}
+                            className={`w-28 p-2 rounded-xl border text-xs text-right font-mono font-bold focus:outline-none ${
+                              isDarkMode ? 'bg-neutral-900 border-neutral-600 text-emerald-400' : 'bg-white border-stone-300 text-emerald-600'
+                            }`}
+                          />
+                        ) : (
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatRupiah(i.price)}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Kolom 5: Tombol Aksi */}
+                      <td className="p-3.5 text-center align-middle">
+                        {isEditing ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSaveEdit(i.id)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-[11px] shadow-sm transition-all active:scale-95"
+                            >
+                              💾 Simpan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-2.5 py-1.5 bg-stone-300 hover:bg-stone-400 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-stone-800 dark:text-white rounded-xl font-bold text-[11px] transition-all"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(i)}
+                              className="px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-bold text-[11px] transition-all active:scale-95 flex items-center gap-1"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(i.id, i.item_name)}
+                              className="p-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 rounded-xl transition-all"
+                              title="Hapus barang ini"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
