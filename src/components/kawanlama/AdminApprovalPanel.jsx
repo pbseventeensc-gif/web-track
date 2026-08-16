@@ -9,6 +9,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [loading, setLoading] = useState(false);
   const [expandedApprovedId, setExpandedApprovedId] = useState(null);
   const [searchApproved, setSearchApproved] = useState('');
+  const [selectedApprovedIds, setSelectedApprovedIds] = useState([]);
   
   // State untuk Notifikasi & Dropdown Lonceng
   const [notifications, setNotifications] = useState([]);
@@ -27,7 +28,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     };
     document.addEventListener('mousedown', handleClickOutside);
 
-    // --- SETUP REAL-TIME LISTENER SUPABASE ---
+    // Setup Realtime Supabase Listener
     const channel = supabase
       .channel('kl_orders_realtime')
       .on(
@@ -161,6 +162,42 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(false);
   };
 
+  // Fungsi Hapus 1 Order (Pending atau Approved)
+  const handleDeleteOrder = async (orderId, branchName) => {
+    if (window.confirm(`⚠️ Hapus permanen order pesanan untuk toko "${branchName}"? Semua rincian item order ini akan dibersihkan.`)) {
+      await supabase.from('kl_order_items').delete().eq('order_id', orderId);
+      const { error } = await supabase.from('kl_orders').delete().eq('id', orderId);
+
+      if (!error) {
+        await recordAudit(`Menghapus data order toko: ${branchName || 'Cabang'}`);
+        setPendingOrders(prev => prev.filter(o => o.id !== orderId));
+        setApprovedOrders(prev => prev.filter(o => o.id !== orderId));
+        setSelectedApprovedIds(prev => prev.filter(id => id !== orderId));
+        alert(`✅ Order ${branchName} berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus order: ' + error.message);
+      }
+    }
+  };
+
+  // Fungsi Hapus Massal Order Approved Terpilih
+  const handleBatchDeleteApproved = async () => {
+    if (selectedApprovedIds.length === 0) return alert('⚠️ Centang minimal 1 toko yang ingin dihapus!');
+    if (window.confirm(`🚨 YAKIN HAPUS ${selectedApprovedIds.length} DATA ORDER TOKO TERPILIH? Tindakan ini permanen.`)) {
+      await supabase.from('kl_order_items').delete().in('order_id', selectedApprovedIds);
+      const { error } = await supabase.from('kl_orders').delete().in('id', selectedApprovedIds);
+
+      if (!error) {
+        await recordAudit(`Menghapus massal ${selectedApprovedIds.length} order toko approved`);
+        setApprovedOrders(prev => prev.filter(o => !selectedApprovedIds.includes(o.id)));
+        setSelectedApprovedIds([]);
+        alert('✅ Semua order toko terpilih berhasil dihapus.');
+      } else {
+        alert('Gagal hapus massal: ' + error.message);
+      }
+    }
+  };
+
   const formatRupiah = (angka) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(angka || 0);
   };
@@ -189,7 +226,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
         </div>
 
-        {/* --- IKON LONCENG NOTIFIKASI --- */}
+        {/* IKON LONCENG NOTIFIKASI */}
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={handleOpenNotifications}
@@ -206,7 +243,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             )}
           </button>
 
-          {/* --- DROPDOWN ISI NOTIFIKASI --- */}
+          {/* DROPDOWN ISI NOTIFIKASI */}
           {showNotificationDropdown && (
             <div className={`absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 ${
               isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
@@ -291,12 +328,12 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                     <p className="text-[11px] opacity-70 mt-1.5">Waktu Submit: {new Date(order.created_at).toLocaleString()}</p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {isRequestingUnlock ? (
                       <button 
                         onClick={() => handleUnlockOrder(order.id, branchNameStr)}
                         disabled={loading}
-                        className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 animate-bounce"
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 animate-bounce"
                       >
                         {loading ? 'Memproses...' : '🔓 Setujui Buka Kunci'}
                       </button>
@@ -304,11 +341,19 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                       <button 
                         onClick={() => handleApproveOrder(order.id, branchNameStr)}
                         disabled={loading}
-                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95"
                       >
                         {loading ? 'Memproses...' : '✅ Approve & Masukkan ke Rekap'}
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOrder(order.id, branchNameStr)}
+                      className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                    >
+                      🗑️ Hapus
+                    </button>
                   </div>
                 </div>
 
@@ -368,9 +413,20 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700 relative">
         
         <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800' : 'bg-white/90 border-stone-200'}`}>
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-            ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
-          </h3>
+          <div className="flex items-center gap-3">
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
+            </h3>
+            {selectedApprovedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleBatchDeleteApproved}
+                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+              >
+                🗑️ Hapus ({selectedApprovedIds.length})
+              </button>
+            )}
+          </div>
           
           <div className="flex gap-2 w-full sm:w-auto">
             <input 
@@ -415,6 +471,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {filteredApprovedOrders.map(order => {
               const isExpanded = expandedApprovedId === order.id;
+              const isSelected = selectedApprovedIds.includes(order.id);
               const grandTotal = order.kl_order_items?.reduce((acc, item) => {
                 const price = Number(item.kl_master_items?.price || 0);
                 const qty = Number(item.qty || 0);
@@ -425,27 +482,55 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
               return (
                 <div key={order.id} className={`rounded-2xl border transition-all overflow-hidden shadow-sm ${
-                  isExpanded ? 'col-span-1 sm:col-span-2 md:col-span-3 p-5 space-y-4' : 'p-4'
-                } ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+                  isSelected ? (isDarkMode ? 'ring-2 ring-indigo-500 bg-indigo-950/20' : 'ring-2 ring-indigo-500 bg-indigo-50/50') : ''
+                } ${isExpanded ? 'col-span-1 sm:col-span-2 md:col-span-3 p-5 space-y-4' : 'p-4'} ${
+                  isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'
+                }`}>
                   
-                  <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedApprovedId(isExpanded ? null : order.id)}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">🏢</span>
-                      <div>
-                        <h4 className="font-extrabold text-xs uppercase text-indigo-600 dark:text-indigo-400">
-                          {storeName}
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedApprovedIds(prev => 
+                            prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+                          );
+                        }}
+                        className="cursor-pointer accent-indigo-600 w-4 h-4 rounded"
+                      />
+                      <div onClick={() => setExpandedApprovedId(isExpanded ? null : order.id)} className="cursor-pointer">
+                        <h4 className="font-extrabold text-xs uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                          <span>🏢</span> {storeName}
                         </h4>
                         <span className="text-[10px] opacity-60 font-mono">Total Item: {order.kl_order_items?.length || 0} Jenis</span>
                       </div>
                     </div>
                     
-                    <button className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                      isExpanded 
-                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' 
-                        : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
-                    }`}>
-                      {isExpanded ? 'Tutup Detail ▲' : 'Lihat Detail Order ▼'}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button 
+                        onClick={() => setExpandedApprovedId(isExpanded ? null : order.id)}
+                        className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                          isExpanded 
+                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' 
+                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                        }`}
+                      >
+                        {isExpanded ? 'Tutup ▲' : 'Detail ▼'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteOrder(order.id, storeName);
+                        }}
+                        className="p-1.5 rounded-xl bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 transition-colors"
+                        title="Hapus order toko ini"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
 
                   {isExpanded && (
