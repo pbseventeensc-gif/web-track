@@ -52,7 +52,6 @@ export default function App() {
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
 
-  // Sesi Admin & Cabang menggunakan localStorage agar aman saat refresh
   const [currentAdmin, setCurrentAdmin] = useState(() => { 
     const s = localStorage.getItem('kl_admin_session'); 
     return s ? JSON.parse(s) : null; 
@@ -71,7 +70,6 @@ export default function App() {
     if (isBranchMode && !currentBranch) setShowBranchLoginModal(true); 
   }, [isBranchMode, currentBranch]);
 
-  // Listener Realtime Supabase untuk tabel spk_data
   useEffect(() => { 
     fetchSpkData(); 
 
@@ -96,7 +94,6 @@ export default function App() {
   const toggleTheme = () => setIsDarkMode(prev => { localStorage.setItem('theme', !prev ? 'dark' : 'light'); return !prev; });
 
   const fetchSpkData = async () => {
-    // Urutkan id secara descending (terbaru selalu paling atas)
     const { data } = await supabase
       .from('spk_data')
       .select('*')
@@ -162,6 +159,35 @@ export default function App() {
     const val = Number(value) || 0;
     if (val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
     handleUpdateField(id, { [field]: val });
+  };
+
+  // Fungsi Hapus 1 Baris SPK
+  const handleDeleteSpk = async (id, noSpk) => {
+    if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
+      const { error } = await supabase.from('spk_data').delete().eq('id', id);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => item.id !== id));
+        setSelectedSpkIds(prev => prev.filter(selectedId => selectedId !== id));
+        alert(`✅ SPK "${noSpk}" berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus SPK: ' + error.message);
+      }
+    }
+  };
+
+  // Fungsi Hapus Banyak SPK Sekaligus (Batch Delete)
+  const handleBatchDelete = async () => {
+    if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
+    if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
+      const { error } = await supabase.from('spk_data').delete().in('id', selectedSpkIds);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => !selectedSpkIds.includes(item.id)));
+        setSelectedSpkIds([]);
+        alert('✅ Semua SPK terpilih berhasil dibersihkan.');
+      } else {
+        alert('Gagal hapus massal: ' + error.message);
+      }
+    }
   };
 
   const handleProcessScan = async (codeValue) => {
@@ -354,6 +380,8 @@ export default function App() {
             handleToggleSelectAll={handleToggleSelectAll}
             handleUpdateQty={handleUpdateQty}
             handleUpdateField={handleUpdateField}
+            handleDeleteSpk={handleDeleteSpk}
+            handleBatchDelete={handleBatchDelete}
             handleBatchPrint={handleBatchPrint}
             openImageModal={openImageModal}
             handleUploadSuratJalan={handleUploadSuratJalan}
