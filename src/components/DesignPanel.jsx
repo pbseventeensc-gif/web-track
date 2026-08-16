@@ -57,12 +57,16 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       return;
     }
 
-    // Jika diubah menjadi READY, otomatis buatkan SPK di tabel spk_data (Produksi)
+    // 1 TOKO = 1 SPK (Paket Promo Toko)
     if (newStatus === 'READY') {
       const generatedSpkNo = `SPK-KL-${orderId.slice(0, 6).toUpperCase()}`;
       const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
+      
+      // Rangkum item pesanan toko ke deskripsi bahan/ukuran
+      const itemSummaries = order.kl_order_items?.map(
+        i => `${i.kl_master_items?.item_name || 'Item'} (${i.qty} pcs)`
+      ).join(', ') || 'Paket Material Promo';
 
-      // Cek apakah SPK sudah pernah dibuat sebelumnya agar tidak duplikat
       const { data: existingSpk } = await supabase
         .from('spk_data')
         .select('id')
@@ -72,24 +76,24 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       if (!existingSpk) {
         const { error: spkError } = await supabase.from('spk_data').insert([{
           no_spk: generatedSpkNo,
-          client: `Kawan Lama (${branchName})`,
-          project: promoTitle,
-          bahan: 'Logistik Material Promo',
-          ukuran: 'Standard Store',
-          qty_order: totalQty,
+          client: `KAWAN LAMA (${branchName})`,
+          project: `${promoTitle} - [${branchName}]`,
+          bahan: itemSummaries,
+          ukuran: 'Paket Bundling Toko',
+          qty_order: totalQty > 0 ? totalQty : 1,
           qty_print: 0,
           qty_finish: 0,
           qty_pack: 0,
           qty_ship: 0,
           store_code: branchName,
-          delivery_route: 'DISTRIBUSI LOGISTIK'
+          delivery_route: 'DISTRIBUSI LOGISTIK TOKO'
         }]);
 
         if (!spkError) {
-          alert(`✅ Sukses! Status READY CETAK dan otomatis diterbitkan SPK Baru: "${generatedSpkNo}" ke Tab Produksi.`);
+          alert(`✅ Sukses! Status READY CETAK. 1 SPK Toko "${generatedSpkNo}" (${totalQty} pcs total) diterbitkan ke Tab Produksi.`);
         }
       } else {
-        alert(`✅ Status diperbarui ke READY CETAK (SPK ${generatedSpkNo} sudah terdaftar di Produksi).`);
+        alert(`✅ Status READY CETAK aktif (SPK Toko ${generatedSpkNo} sudah terdaftar di Produksi).`);
       }
     }
 
@@ -115,9 +119,12 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     ? orders[0].project_name 
     : 'PROMO NASIONAL KAWAN LAMA GROUP';
 
+  const pendingCount = orders.filter(o => o.design_status !== 'READY').length;
+  const readyCount = orders.filter(o => o.design_status === 'READY').length;
+
   return (
     <div className="space-y-6">
-      {/* Sticky Header: Info Promo Berjalan & Filter */}
+      {/* Sticky Header: Info Promo & Status Indikator Realtime */}
       <div className={`sticky top-0 z-20 p-4 rounded-2xl border shadow-md backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-colors ${
         isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'
       }`}>
@@ -148,17 +155,29 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
           </div>
 
           <div className="flex items-center gap-3 text-[11px] whitespace-nowrap">
-            <span className="flex items-center gap-1 font-bold text-amber-500">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> ⏳ Proses File
-            </span>
+            {pendingCount > 0 ? (
+              <span className="flex items-center gap-1.5 font-bold text-amber-500">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                ⏳ {pendingCount} Toko Menunggu
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 font-bold text-stone-400 opacity-60">
+                <span className="w-2 h-2 rounded-full bg-stone-400"></span>
+                ✨ Semua Siap (0 Antrean)
+              </span>
+            )}
+
             <span className="flex items-center gap-1 font-bold text-emerald-500">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ✅ Ready Cetak
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ✅ {readyCount} Toko Ready
             </span>
           </div>
         </div>
       </div>
 
-      {/* Grid Tabel Pemantauan File Desain dengan Sticky Header */}
+      {/* Grid Tabel Pemantauan File Desain Per Toko */}
       <div className={`max-h-[620px] overflow-y-auto relative rounded-2xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
@@ -167,8 +186,8 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
             isDarkMode ? 'bg-neutral-900 text-neutral-200 border-neutral-700' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
           }`}>
             <tr>
-              <th className="p-3.5">Nama Promo & Cabang</th>
-              <th className="p-3.5">Detail Item Order</th>
+              <th className="p-3.5">Nama Promo & Cabang Toko</th>
+              <th className="p-3.5">Paket Item Order Toko</th>
               <th className="p-3.5 w-44 text-center">Status Kesiapan File</th>
               <th className="p-3.5">Catatan Teknis Desain</th>
               <th className="p-3.5 text-center w-36">Aksi Checklist</th>
@@ -185,6 +204,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
               filteredOrders.map(order => {
                 const isReady = order.design_status === 'READY';
                 const promoTitle = order.project_name || activePromoName;
+                const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
 
                 return (
                   <tr key={order.id} className={`transition-colors ${
@@ -200,7 +220,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
                       </strong>
                       <span className="text-[10px] font-mono opacity-50 block mt-0.5">
-                        ID: {order.id.slice(0, 8)}
+                        ID: {order.id.slice(0, 8)} | Total: <strong>{totalQty} pcs</strong>
                       </span>
                     </td>
 
@@ -230,7 +250,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         type="text"
                         defaultValue={order.design_notes || ''}
                         onBlur={e => handleSaveNotes(order.id, e.target.value)}
-                        placeholder="Contoh: File resolusi 300dpi OK, siap print..."
+                        placeholder="Catatan ukuran/file untuk toko ini..."
                         className={`w-full p-2 rounded-xl border text-xs focus:outline-none transition-all ${
                           isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'
                         }`}
