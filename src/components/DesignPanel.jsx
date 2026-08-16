@@ -57,12 +57,10 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       return;
     }
 
-    // 1 TOKO = 1 SPK (Paket Promo Toko)
     if (newStatus === 'READY') {
       const generatedSpkNo = `SPK-KL-${orderId.slice(0, 6).toUpperCase()}`;
       const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
       
-      // Rangkum item pesanan toko ke deskripsi bahan/ukuran
       const itemSummaries = order.kl_order_items?.map(
         i => `${i.kl_master_items?.item_name || 'Item'} (${i.qty} pcs)`
       ).join(', ') || 'Paket Material Promo';
@@ -100,6 +98,21 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, design_status: newStatus } : o));
   };
 
+  // Hapus order dari tabel Supabase
+  const handleDeleteOrder = async (orderId, branchName) => {
+    if (confirm(`⚠️ Hapus order toko "${branchName}" beserta item pesanannya?`)) {
+      await supabase.from('kl_order_items').delete().eq('order_id', orderId);
+      const { error } = await supabase.from('kl_orders').delete().eq('id', orderId);
+
+      if (!error) {
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+        alert(`✅ Order "${branchName}" berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus order: ' + error.message);
+      }
+    }
+  };
+
   const handleSaveNotes = async (orderId, notes) => {
     await supabase
       .from('kl_orders')
@@ -124,7 +137,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
 
   return (
     <div className="space-y-6">
-      {/* Sticky Header: Info Promo & Status Indikator Realtime */}
+      {/* Sticky Header: Info Promo & Status Indikator */}
       <div className={`sticky top-0 z-20 p-4 rounded-2xl border shadow-md backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-colors ${
         isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'
       }`}>
@@ -177,7 +190,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* Grid Tabel Pemantauan File Desain Per Toko */}
+      {/* Grid Tabel Pemantauan File Desain */}
       <div className={`max-h-[620px] overflow-y-auto relative rounded-2xl border shadow-sm ${
         isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
       }`}>
@@ -190,7 +203,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
               <th className="p-3.5">Paket Item Order Toko</th>
               <th className="p-3.5 w-44 text-center">Status Kesiapan File</th>
               <th className="p-3.5">Catatan Teknis Desain</th>
-              <th className="p-3.5 text-center w-36">Aksi Checklist</th>
+              <th className="p-3.5 text-center w-44">Aksi</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-stone-100'}`}>
@@ -205,6 +218,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                 const isReady = order.design_status === 'READY';
                 const promoTitle = order.project_name || activePromoName;
                 const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
+                const branchName = order.kl_branches?.branch_name || 'Kantor Cabang';
 
                 return (
                   <tr key={order.id} className={`transition-colors ${
@@ -217,7 +231,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         🏷️ {promoTitle}
                       </span>
                       <strong className="text-xs block mt-0.5">
-                        🏢 {order.kl_branches?.branch_name || 'Kantor Cabang'}
+                        🏢 {branchName}
                       </strong>
                       <span className="text-[10px] font-mono opacity-50 block mt-0.5">
                         ID: {order.id.slice(0, 8)} | Total: <strong>{totalQty} pcs</strong>
@@ -257,17 +271,27 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                       />
                     </td>
 
+                    {/* Tombol Aksi (Ready Cetak + Hapus Order) */}
                     <td className="p-3.5 text-center align-top">
-                      <button
-                        onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
-                        className={`px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 whitespace-nowrap ${
-                          isReady
-                            ? 'bg-neutral-600 hover:bg-neutral-500 text-white'
-                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                        }`}
-                      >
-                        {isReady ? '↩ Batalkan Ready' : '✔ Set Ready Cetak'}
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 whitespace-nowrap ${
+                            isReady
+                              ? 'bg-neutral-600 hover:bg-neutral-500 text-white'
+                              : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          }`}
+                        >
+                          {isReady ? '↩ Batal' : '✔ Ready'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(order.id, branchName)}
+                          title="Hapus order ini"
+                          className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all active:scale-95"
+                        >
+                          🗑️ Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
