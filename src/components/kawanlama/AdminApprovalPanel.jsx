@@ -20,7 +20,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     fetchOrders();
     fetchAuditLogs();
 
-    // Tutup dropdown jika klik di luar area lonceng
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowNotificationDropdown(false);
@@ -162,9 +161,9 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(false);
   };
 
-  // Fungsi Hapus 1 Order (Pending atau Approved)
+  // 1. Hapus 1 Order Satuan
   const handleDeleteOrder = async (orderId, branchName) => {
-    if (window.confirm(`⚠️ Hapus permanen order pesanan untuk toko "${branchName}"? Semua rincian item order ini akan dibersihkan.`)) {
+    if (window.confirm(`⚠️ Hapus permanen order untuk toko "${branchName}"? Data item pesanan toko ini akan dibersihkan.`)) {
       await supabase.from('kl_order_items').delete().eq('order_id', orderId);
       const { error } = await supabase.from('kl_orders').delete().eq('id', orderId);
 
@@ -180,10 +179,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     }
   };
 
-  // Fungsi Hapus Massal Order Approved Terpilih
+  // 2. Hapus Massal Order Approved Terpilih
   const handleBatchDeleteApproved = async () => {
     if (selectedApprovedIds.length === 0) return alert('⚠️ Centang minimal 1 toko yang ingin dihapus!');
     if (window.confirm(`🚨 YAKIN HAPUS ${selectedApprovedIds.length} DATA ORDER TOKO TERPILIH? Tindakan ini permanen.`)) {
+      setLoading(true);
       await supabase.from('kl_order_items').delete().in('order_id', selectedApprovedIds);
       const { error } = await supabase.from('kl_orders').delete().in('id', selectedApprovedIds);
 
@@ -195,6 +195,28 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       } else {
         alert('Gagal hapus massal: ' + error.message);
       }
+      setLoading(false);
+    }
+  };
+
+  // 3. Hapus Seluruh Toko Approved (Reset Total)
+  const handleDeleteAllApproved = async () => {
+    if (approvedOrders.length === 0) return alert('Tidak ada data toko approved yang dapat dihapus.');
+    if (window.confirm(`🚨 PERINGATAN: YAKIN HAPUS SELURUH ${approvedOrders.length} TOKO APPROVED DARI SISTEM?`)) {
+      setLoading(true);
+      const allIds = approvedOrders.map(o => o.id);
+      await supabase.from('kl_order_items').delete().in('order_id', allIds);
+      const { error } = await supabase.from('kl_orders').delete().in('id', allIds);
+
+      if (!error) {
+        await recordAudit(`Reset & menghapus seluruh (${allIds.length}) data toko approved`);
+        setApprovedOrders([]);
+        setSelectedApprovedIds([]);
+        alert('✅ Seluruh data toko approved berhasil dibersihkan.');
+      } else {
+        alert('Gagal reset: ' + error.message);
+      }
+      setLoading(false);
     }
   };
 
@@ -206,6 +228,16 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     const branchName = order.kl_branches?.branch_name || order.project_name || '';
     return branchName.toLowerCase().includes(searchApproved.toLowerCase());
   });
+
+  const isAllApprovedSelected = filteredApprovedOrders.length > 0 && selectedApprovedIds.length === filteredApprovedOrders.length;
+
+  const handleToggleSelectAllApproved = () => {
+    if (isAllApprovedSelected) {
+      setSelectedApprovedIds([]);
+    } else {
+      setSelectedApprovedIds(filteredApprovedOrders.map(o => o.id));
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -219,14 +251,14 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   return (
     <div className="space-y-8 relative">
       
-      {/* Header Utama dengan Logo Lonceng di Pojok Kanan Atas */}
+      {/* Header Utama */}
       <div className={`p-5 rounded-3xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
           <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
           <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
         </div>
 
-        {/* IKON LONCENG NOTIFIKASI */}
+        {/* Lonceng Notifikasi */}
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={handleOpenNotifications}
@@ -243,7 +275,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
             )}
           </button>
 
-          {/* DROPDOWN ISI NOTIFIKASI */}
           {showNotificationDropdown && (
             <div className={`absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 ${
               isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
@@ -412,29 +443,64 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       {/* SEKSI 2: REKAPITULASI TOKO YANG SUDAH APPROVED */}
       <div className="space-y-4 pt-4 border-t border-stone-300 dark:border-neutral-700 relative">
         
-        <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 backdrop-blur-md border-b transition-colors ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800' : 'bg-white/90 border-stone-200'}`}>
-          <div className="flex items-center gap-3">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              ✅ Rekapitulasi Toko Sudah Approved ({approvedOrders.length} Toko)
+        {/* Sticky Action Toolbar */}
+        <div className={`sticky top-0 z-20 py-3 -my-3 mb-2 px-1 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 backdrop-blur-md border-b transition-colors ${
+          isDarkMode ? 'bg-neutral-900/95 border-neutral-800' : 'bg-white/95 border-stone-200'
+        }`}>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <span>✅</span> Rekapitulasi Toko Approved ({approvedOrders.length} Toko)
             </h3>
+
+            {/* Checkbox PILIH SEMUA */}
+            {filteredApprovedOrders.length > 0 && (
+              <label className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                isAllApprovedSelected 
+                  ? 'bg-indigo-600 text-white border-indigo-600' 
+                  : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700' : 'bg-stone-100 border-stone-300 text-stone-700 hover:bg-stone-200')
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={isAllApprovedSelected}
+                  onChange={handleToggleSelectAllApproved}
+                  className="cursor-pointer accent-indigo-600 w-4 h-4 rounded"
+                />
+                <span>Pilih Semua ({filteredApprovedOrders.length})</span>
+              </label>
+            )}
+
+            {/* Tombol HAPUS TERPILIH / MASSAL */}
             {selectedApprovedIds.length > 0 && (
               <button
                 type="button"
                 onClick={handleBatchDeleteApproved}
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1.5 animate-pulse"
               >
-                🗑️ Hapus ({selectedApprovedIds.length})
+                <span>🗑️</span> Hapus Terpilih ({selectedApprovedIds.length})
+              </button>
+            )}
+
+            {/* Tombol HAPUS SEMUA REKAP */}
+            {approvedOrders.length > 0 && selectedApprovedIds.length === 0 && (
+              <button
+                type="button"
+                onClick={handleDeleteAllApproved}
+                className="px-3 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-bold transition-all active:scale-95"
+              >
+                🗑️ Bersihkan Semua Rekap
               </button>
             )}
           </div>
           
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full md:w-auto">
             <input 
               type="text"
               placeholder="🔍 Cari Nama Toko..."
               value={searchApproved}
               onChange={(e) => setSearchApproved(e.target.value)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-64 shadow-sm transition-all ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'}`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-60 shadow-sm transition-all ${
+                isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'
+              }`}
             />
             
             <button 
@@ -456,7 +522,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 XLSX.utils.book_append_sheet(wb, ws, "Rekap Order");
                 XLSX.writeFile(wb, `Rekap_Order_Approved_${new Date().toLocaleDateString()}.xlsx`);
               }}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
             >
               📥 Excel
             </button>
@@ -482,10 +548,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
               return (
                 <div key={order.id} className={`rounded-2xl border transition-all overflow-hidden shadow-sm ${
-                  isSelected ? (isDarkMode ? 'ring-2 ring-indigo-500 bg-indigo-950/20' : 'ring-2 ring-indigo-500 bg-indigo-50/50') : ''
-                } ${isExpanded ? 'col-span-1 sm:col-span-2 md:col-span-3 p-5 space-y-4' : 'p-4'} ${
-                  isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'
-                }`}>
+                  isSelected 
+                    ? (isDarkMode ? 'ring-2 ring-indigo-500 bg-indigo-950/30' : 'ring-2 ring-indigo-500 bg-indigo-50/70') 
+                    : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800')
+                } ${isExpanded ? 'col-span-1 sm:col-span-2 md:col-span-3 p-5 space-y-4' : 'p-4'}`}>
                   
                   <div className="flex justify-between items-center gap-2">
                     <div className="flex items-center gap-2.5">
@@ -585,7 +651,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         )}
       </div>
 
-      {/* SEKSI 3: AUDIT TRAIL / LOG AKTIVITAS TERBARU */}
+      {/* SEKSI 3: AUDIT TRAIL */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
           <span>📜</span> Audit Trail & Riwayat Aktivitas Admin (10 Terakhir)
