@@ -5,6 +5,7 @@ import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
 import MainTrackingTable from './components/MainTrackingTable';
 import FinishingPanel from './components/FinishingPanel';
+import DesignPanel from './components/DesignPanel';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 
 const STAFF_QC_LIST = [
@@ -208,7 +209,7 @@ export default function App() {
         {/* TABS MENU */}
         {!isBranchMode && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {['dashboard', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => {
+            {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => {
               // LOGIKA KUNCI: Tab Kawan Lama terkunci jika belum login Admin
               const isLocked = t === 'kawan_lama' && !currentAdmin;
 
@@ -232,7 +233,9 @@ export default function App() {
                     ? '🏷️ Cetak Label & SJ' 
                     : t === 'kawan_lama' 
                       ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
-                      : t}
+                      : t === 'design'
+                        ? '🎨 Desain & Pra-Cetak'
+                        : t}
                 </button>
               );
             })}
@@ -247,6 +250,11 @@ export default function App() {
             <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
             <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
           </div>
+        )}
+
+        {/* PANEL KONTROL DESAIN & PRA-CETAK */}
+        {!isBranchMode && activeTab === 'design' && (
+          <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
         {/* PANEL KONTROL FINISHING */}
@@ -265,7 +273,7 @@ export default function App() {
         )}
 
         {/* TRACKING TABLE FULL */}
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && (
+        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && (
           <MainTrackingTable 
             isDarkMode={isDarkMode}
             activeTab={activeTab}
