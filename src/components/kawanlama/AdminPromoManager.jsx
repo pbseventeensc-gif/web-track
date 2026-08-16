@@ -24,7 +24,10 @@ export default function AdminPromoManager({ isDarkMode }) {
   useEffect(() => { fetchPromos(); }, []);
 
   const fetchPromos = async () => {
-    const { data } = await supabase.from('kl_promos').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('kl_promos')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (data) setPromos(data);
   };
 
@@ -70,6 +73,41 @@ export default function AdminPromoManager({ isDarkMode }) {
       fetchPromos();
     } else {
       alert('Gagal broadcast promo: ' + error.message);
+    }
+  };
+
+  // Fungsi Hapus Promo
+  const handleDeletePromo = async (promoId, promoTitle) => {
+    if (window.confirm(`⚠️ Yakin ingin menghapus promo "${promoTitle}"?\n\nPromo ini akan dihapus dari daftar sistem.`)) {
+      const { error } = await supabase
+        .from('kl_promos')
+        .delete()
+        .eq('id', promoId);
+
+      if (!error) {
+        setPromos(prev => prev.filter(p => p.id !== promoId));
+        setSuccessMessage(`🗑️ Promo "${promoTitle}" berhasil dihapus.`);
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } else {
+        alert('Gagal menghapus promo: ' + error.message);
+      }
+    }
+  };
+
+  // Fungsi Ubah Status Promo (Aktif / Nonaktif)
+  const handleTogglePromoStatus = async (promoId, currentStatus, promoTitle) => {
+    const nextStatus = !currentStatus;
+    const { error } = await supabase
+      .from('kl_promos')
+      .update({ is_active: nextStatus })
+      .eq('id', promoId);
+
+    if (!error) {
+      setPromos(prev => prev.map(p => p.id === promoId ? { ...p, is_active: nextStatus } : p));
+      setSuccessMessage(`Status promo "${promoTitle}" berhasil diubah menjadi ${nextStatus ? 'AKTIF' : 'SELESAI'}.`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } else {
+      alert('Gagal update status promo: ' + error.message);
     }
   };
 
@@ -194,7 +232,7 @@ export default function AdminPromoManager({ isDarkMode }) {
         </form>
       </div>
 
-      {/* Riwayat Promo Terkirim dengan Sticky Header Grid */}
+      {/* Riwayat Promo Terkirim dengan Kontrol Status & Tombol Hapus */}
       <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div className={`sticky top-28 z-10 py-3 mb-4 border-b backdrop-blur-md flex justify-between items-center ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white/90 border-stone-200'}`}>
           <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
@@ -202,29 +240,59 @@ export default function AdminPromoManager({ isDarkMode }) {
           </h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {promos.map(p => (
-            <div key={p.id} className={`p-5 border rounded-2xl flex flex-col justify-between gap-3 text-xs shadow-sm transition-all ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 hover:border-indigo-500' : 'bg-stone-50 border-[#E5E0D5] hover:border-indigo-400'}`}>
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">{p.title}</span>
-                  <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black ${p.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-stone-200 text-stone-700 dark:bg-neutral-700 dark:text-neutral-400'}`}>
-                    {p.is_active ? 'AKTIF' : 'SELESAI'}
-                  </span>
+        {promos.length === 0 ? (
+          <p className="text-center text-xs opacity-60 py-8">Belum ada promo yang dibuat.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {promos.map(p => (
+              <div key={p.id} className={`p-5 border rounded-2xl flex flex-col justify-between gap-3 text-xs shadow-sm transition-all ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700 hover:border-indigo-500' : 'bg-stone-50 border-[#E5E0D5] hover:border-indigo-400'}`}>
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">{p.title}</span>
+                    <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black ${p.is_active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-stone-200 text-stone-700 dark:bg-neutral-700 dark:text-neutral-400'}`}>
+                      {p.is_active ? 'AKTIF' : 'SELESAI'}
+                    </span>
+                  </div>
+                  <div className="mb-2">
+                    <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 inline-block">
+                      {p.budget_type}: {formatRupiah(p.custom_budget)}
+                    </span>
+                  </div>
+                  <p className="opacity-75 text-[11px] leading-relaxed">{p.description || 'Tidak ada deskripsi.'}</p>
                 </div>
-                <div className="mb-2">
-                  <span className="px-3 py-1 rounded-xl text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 inline-block">
-                    {p.budget_type}: {formatRupiah(p.custom_budget)}
+
+                {/* Footer Card: Waktu Pembuatan & Tombol Aksi */}
+                <div className="pt-3 border-t border-stone-200 dark:border-neutral-800 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] opacity-60 font-mono">
+                    Dibuat: {new Date(p.created_at).toLocaleDateString()}
                   </span>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePromoStatus(p.id, p.is_active, p.title)}
+                      className={`px-2.5 py-1.5 rounded-xl font-bold text-[10px] transition-all active:scale-95 ${
+                        p.is_active 
+                          ? 'bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 dark:text-amber-400' 
+                          : 'bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500/30 dark:text-emerald-400'
+                      }`}
+                    >
+                      {p.is_active ? '⏸️ Selesaikan' : '▶️ Aktifkan'}
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePromo(p.id, p.title)}
+                      className="px-2.5 py-1.5 rounded-xl font-bold text-[10px] bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                    >
+                      🗑️ Hapus
+                    </button>
+                  </div>
                 </div>
-                <p className="opacity-75 text-[11px] leading-relaxed">{p.description || 'Tidak ada deskripsi.'}</p>
               </div>
-              <div className="pt-2 border-t border-stone-200 dark:border-neutral-800 text-[10px] opacity-60 font-mono">
-                Dibuat: {new Date(p.created_at).toLocaleString()}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
