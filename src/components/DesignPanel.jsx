@@ -9,7 +9,6 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
   useEffect(() => {
     fetchApprovedOrders();
 
-    // Listener realtime untuk mendeteksi order baru yang di-approve
     const channel = supabase
       .channel('kl_design_realtime')
       .on(
@@ -40,7 +39,11 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     setLoading(false);
   };
 
-  const handleUpdateDesignStatus = async (orderId, newStatus) => {
+  const handleUpdateDesignStatus = async (order, newStatus) => {
+    const orderId = order.id;
+    const branchName = order.kl_branches?.branch_name || 'Cabang';
+    const promoTitle = order.project_name || activePromoName;
+
     const { error } = await supabase
       .from('kl_orders')
       .update({ 
@@ -49,11 +52,48 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       })
       .eq('id', orderId);
 
-    if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, design_status: newStatus } : o));
-    } else {
+    if (error) {
       alert('Gagal update status desain: ' + error.message);
+      return;
     }
+
+    // Jika diubah menjadi READY, otomatis buatkan SPK di tabel spk_data (Produksi)
+    if (newStatus === 'READY') {
+      const generatedSpkNo = `SPK-KL-${orderId.slice(0, 6).toUpperCase()}`;
+      const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
+
+      // Cek apakah SPK sudah pernah dibuat sebelumnya agar tidak duplikat
+      const { data: existingSpk } = await supabase
+        .from('spk_data')
+        .select('id')
+        .eq('no_spk', generatedSpkNo)
+        .maybeSingle();
+
+      if (!existingSpk) {
+        const { error: spkError } = await supabase.from('spk_data').insert([{
+          no_spk: generatedSpkNo,
+          client: `Kawan Lama (${branchName})`,
+          project: promoTitle,
+          bahan: 'Logistik Material Promo',
+          ukuran: 'Standard Store',
+          qty_order: totalQty,
+          qty_print: 0,
+          qty_finish: 0,
+          qty_pack: 0,
+          qty_ship: 0,
+          store_code: branchName,
+          delivery_route: 'DISTRIBUSI LOGISTIK'
+        }]);
+
+        if (!spkError) {
+          alert(`✅ Sukses! Status READY CETAK dan otomatis diterbitkan SPK Baru: "${generatedSpkNo}" ke Tab Produksi.`);
+        }
+      } else {
+        alert(`✅ Status diperbarui ke READY CETAK (SPK ${generatedSpkNo} sudah terdaftar di Produksi).`);
+      }
+    }
+
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, design_status: newStatus } : o));
   };
 
   const handleSaveNotes = async (orderId, notes) => {
@@ -71,14 +111,13 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     return branchName.toLowerCase().includes(q) || projectName.toLowerCase().includes(q) || idStr.includes(q);
   });
 
-  // Mengambil nama promo aktif terbaru dari order
   const activePromoName = orders.length > 0 && orders[0].project_name 
     ? orders[0].project_name 
     : 'PROMO NASIONAL KAWAN LAMA GROUP';
 
   return (
     <div className="space-y-6">
-      {/* Sticky Header Banner: Promo Aktif & Kontrol Filter */}
+      {/* Sticky Header: Info Promo Berjalan & Filter */}
       <div className={`sticky top-0 z-20 p-4 rounded-2xl border shadow-md backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-colors ${
         isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'
       }`}>
@@ -200,7 +239,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
 
                     <td className="p-3.5 text-center align-top">
                       <button
-                        onClick={() => handleUpdateDesignStatus(order.id, isReady ? 'PROSES' : 'READY')}
+                        onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
                         className={`px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 whitespace-nowrap ${
                           isReady
                             ? 'bg-neutral-600 hover:bg-neutral-500 text-white'
