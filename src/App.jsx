@@ -67,41 +67,95 @@ export default function App() {
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  useEffect(() => { if (isBranchMode && !currentBranch) setShowBranchLoginModal(true); }, [isBranchMode, currentBranch]);
-  useEffect(() => { fetchSpkData(); }, []);
+  useEffect(() => { 
+    if (isBranchMode && !currentBranch) setShowBranchLoginModal(true); 
+  }, [isBranchMode, currentBranch]);
+
+  // Listener Realtime Supabase untuk tabel spk_data
+  useEffect(() => { 
+    fetchSpkData(); 
+
+    const channel = supabase
+      .channel('spk_data_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'spk_data' },
+        () => {
+          fetchSpkData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const openImageModal = (url, title) => { if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview' }); };
   const closeImageModal = () => setModalImageModalInfo({ isOpen: false, url: '', title: '' });
   const toggleTheme = () => setIsDarkMode(prev => { localStorage.setItem('theme', !prev ? 'dark' : 'light'); return !prev; });
 
   const fetchSpkData = async () => {
-    const { data } = await supabase.from('spk_data').select('*').order('id', { ascending: false });
-    if (data) { setSpkList(data); if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]); }
+    // Urutkan id secara descending (terbaru selalu paling atas)
+    const { data } = await supabase
+      .from('spk_data')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (data) { 
+      setSpkList(data); 
+      if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]); 
+    }
   };
 
   const initFinishingForm = (item) => {
-    if (!item) return; setSelectedSpkId(item.id);
-    setFinishingForm({ finishing_type: item.finishing_type || 'inhouse', sub_vendor_name: item.sub_vendor_name || '', qty_finish_sub_out: item.qty_finish_sub_out || 0, qty_finish: item.qty_finish || 0 });
+    if (!item) return; 
+    setSelectedSpkId(item.id);
+    setFinishingForm({ 
+      finishing_type: item.finishing_type || 'inhouse', 
+      sub_vendor_name: item.sub_vendor_name || '', 
+      qty_finish_sub_out: item.qty_finish_sub_out || 0, 
+      qty_finish: item.qty_finish || 0 
+    });
   };
 
   const handleSelectSpk = (spkId) => {
-    setSelectedSpkId(spkId); const item = spkList.find(s => String(s.id) === String(spkId));
-    if (item) setFinishingForm({ finishing_type: item.finishing_type || 'inhouse', sub_vendor_name: item.sub_vendor_name || '', qty_finish_sub_out: item.qty_finish_sub_out || 0, qty_finish: item.qty_finish || 0 });
+    setSelectedSpkId(spkId); 
+    const item = spkList.find(s => String(s.id) === String(spkId));
+    if (item) {
+      setFinishingForm({ 
+        finishing_type: item.finishing_type || 'inhouse', 
+        sub_vendor_name: item.sub_vendor_name || '', 
+        qty_finish_sub_out: item.qty_finish_sub_out || 0, 
+        qty_finish: item.qty_finish || 0 
+      });
+    }
   };
 
   const handleToggleCheck = (id) => {
-    setSelectedSpkIds(prev => { const exist = prev.includes(id); if (!exist) handleSelectSpk(id); return exist ? prev.filter(item => item !== id) : [...prev, id]; });
+    setSelectedSpkIds(prev => { 
+      const exist = prev.includes(id); 
+      if (!exist) handleSelectSpk(id); 
+      return exist ? prev.filter(item => item !== id) : [...prev, id]; 
+    });
   };
 
   const handleToggleSelectAll = (filteredItems) => {
-    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) setSelectedSpkIds([]);
-    else { setSelectedSpkIds(filteredItems.map(item => item.id)); if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); }
+    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedSpkIds([]);
+    } else { 
+      setSelectedSpkIds(filteredItems.map(item => item.id)); 
+      if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); 
+    }
   };
 
   const handleUpdateField = async (id, payload) => {
     const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
-    if (!error) setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
-    else alert('Gagal memperbarui data: ' + error.message);
+    if (!error) {
+      setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+    } else {
+      alert('Gagal memperbarui data: ' + error.message);
+    }
   };
 
   const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
@@ -113,8 +167,17 @@ export default function App() {
   const handleProcessScan = async (codeValue) => {
     if (!codeValue) return;
     const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim().toLowerCase();
-    const targetItem = spkList.find(item => (item.qr_address||'').toLowerCase().includes(cleanCode) || (item.store_code||'').toLowerCase() === cleanCode || (item.no_spk||'').toLowerCase().includes(cleanCode) || (item.project||'').toLowerCase().includes(cleanCode));
-    if (!targetItem) { setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); setScannedInput(''); return; }
+    const targetItem = spkList.find(item => 
+      (item.qr_address || '').toLowerCase().includes(cleanCode) || 
+      (item.store_code || '').toLowerCase() === cleanCode || 
+      (item.no_spk || '').toLowerCase().includes(cleanCode) || 
+      (item.project || '').toLowerCase().includes(cleanCode)
+    );
+    if (!targetItem) { 
+      setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); 
+      setScannedInput(''); 
+      return; 
+    }
     
     const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
     let updatePayload = { tes_scan: updaterValue };
@@ -124,7 +187,8 @@ export default function App() {
     if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
 
     await handleUpdateField(targetItem.id, updatePayload);
-    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); setScannedInput('');
+    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); 
+    setScannedInput('');
   };
 
   const handleSubmitInput = (e) => { e.preventDefault(); handleProcessScan(scannedInput); };
@@ -133,11 +197,15 @@ export default function App() {
     const items = spkList.filter(item => selectedSpkIds.includes(item.id));
     if (items.length === 0) return alert('⚠️ Centang minimal 1 SPK!');
     const html = items.map(item => `<div style="page-break-after:always; padding:20px; font-family:Arial; border:2px solid #000;"><h2>STORE: ${item.project}</h2><p>SPK: ${item.no_spk}</p></div>`).join('');
-    const pw = window.open('', '_blank', 'width=800,height=800'); pw.document.write(`<html><body>${html}</body></html>`); pw.document.close(); setTimeout(() => pw.print(), 500);
+    const pw = window.open('', '_blank', 'width=800,height=800'); 
+    pw.document.write(`<html><body>${html}</body></html>`); 
+    pw.document.close(); 
+    setTimeout(() => pw.print(), 500);
   };
 
   const handleUploadSuratJalan = async (e, item) => {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0]; 
+    if (!file) return;
     const fileName = `sj_${item.no_spk}_${Date.now()}`;
     const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
     if (!error) {
@@ -160,7 +228,8 @@ export default function App() {
     }));
     if (formattedData.length > 0) {
       await supabase.from('spk_data').insert(formattedData);
-      alert(`✅ Sukses Import ${formattedData.length} SPK`); fetchSpkData();
+      alert(`✅ Sukses Import ${formattedData.length} SPK`); 
+      fetchSpkData();
     }
   };
 
@@ -179,7 +248,11 @@ export default function App() {
   const getStatusBadge = (p) => p >= 100 ? { text: 'text-green-800 bg-green-100', icon: '🟢' } : p > 0 ? { text: 'text-yellow-800 bg-yellow-100', icon: '🟡' } : { text: 'text-red-800 bg-red-100', icon: '🔴' };
 
   const totalSpk = spkList.length;
-  const displayedList = spkList.filter(item => (item.no_spk||'').toLowerCase().includes(searchTerm.toLowerCase()) || (item.project||'').toLowerCase().includes(searchTerm.toLowerCase()));
+  const displayedList = spkList.filter(item => 
+    (item.no_spk || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (item.project || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.client || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
@@ -210,7 +283,6 @@ export default function App() {
         {!isBranchMode && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
             {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => {
-              // LOGIKA KUNCI: Tab Kawan Lama terkunci jika belum login Admin
               const isLocked = t === 'kawan_lama' && !currentAdmin;
 
               return (
@@ -221,9 +293,7 @@ export default function App() {
                   title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
                   className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
                     ${isLocked 
-                      // Style jika Terkunci (Kusam & Disabled)
                       ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
-                      // Style jika Aktif
                       : activeTab === t 
                         ? 'bg-indigo-600 text-white shadow-md' 
                         : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
