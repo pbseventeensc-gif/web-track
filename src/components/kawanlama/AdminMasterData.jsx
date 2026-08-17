@@ -20,8 +20,9 @@ export default function AdminMasterData({ isDarkMode }) {
     price: 0
   });
 
-  // State untuk Fitur Reset PIN Cabang Darurat
+  // State untuk Fitur Reset PIN Cabang Darurat & Pencarian Cabang
   const [branches, setBranches] = useState([]);
+  const [branchSearchTerm, setBranchSearchTerm] = useState(''); // <-- State Search Cabang
   const [selectedBranchForPin, setSelectedBranchForPin] = useState(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
@@ -221,6 +222,17 @@ export default function AdminMasterData({ isDarkMode }) {
       (item.item_name || '').toLowerCase().includes(q) ||
       (item.material || '').toLowerCase().includes(q) ||
       (item.size || '').toLowerCase().includes(q)
+    );
+  });
+
+  // Filter untuk daftar cabang pada tabel Reset PIN
+  const filteredBranches = branches.filter(b => {
+    const q = branchSearchTerm.toLowerCase();
+    return (
+      String(b.id).toLowerCase().includes(q) ||
+      (b.branch_name || '').toLowerCase().includes(q) ||
+      (b.access_code || '').toLowerCase().includes(q) ||
+      (b.region || '').toLowerCase().includes(q)
     );
   });
 
@@ -475,13 +487,30 @@ export default function AdminMasterData({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Tambahan Bagian: Manajemen Reset PIN Cabang Darurat */}
+      {/* Tambahan Bagian: Manajemen Reset PIN Cabang Darurat + Search Bar */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <div>
-          <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
-            🔐 Manajemen Reset PIN Cabang (Darurat)
-          </h3>
-          <p className="text-xs opacity-60">Gunakan fitur ini jika ada cabang yang lupa PIN akses login mereka.</p>
+        
+        {/* Header & Search Bar Cabang */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
+              🔐 Manajemen Reset PIN Cabang (Darurat)
+            </h3>
+            <p className="text-xs opacity-60">Gunakan fitur ini jika ada cabang yang lupa PIN akses login mereka.</p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-72">
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="Cari nama cabang / kode akses..."
+              value={branchSearchTerm}
+              onChange={e => setBranchSearchTerm(e.target.value)}
+              className={`w-full p-2 border rounded-xl text-xs font-semibold focus:outline-none ${
+                isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-800'
+              }`}
+            />
+          </div>
         </div>
 
         <div className="max-h-[300px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
@@ -495,27 +524,33 @@ export default function AdminMasterData({ isDarkMode }) {
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {branches.map(b => (
-                <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                  <td className="p-3 font-bold">{b.id} - {b.branch_name}</td>
-                  <td className="p-3 font-mono opacity-80">{b.access_code}</td>
-                  <td className="p-3 uppercase font-semibold">{b.region}</td>
-                  <td className="p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleAutoGenerateAndReset(b)}
-                      className="px-3 py-1.5 bg-stone-700 hover:bg-stone-800 text-white rounded-xl font-bold text-[11px] shadow-sm"
-                    >
-                      🎲 Auto-Generate PIN
-                    </button>
-                    <button
-                      onClick={() => handleOpenResetPinModal(b)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-[11px] shadow-sm"
-                    >
-                      ✏️ Set PIN Manual
-                    </button>
-                  </td>
+              {filteredBranches.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="p-6 text-center opacity-60">Tidak ada cabang yang cocok dengan pencarian.</td>
                 </tr>
-              ))}
+              ) : (
+                filteredBranches.map(b => (
+                  <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
+                    <td className="p-3 font-bold">{b.id} - {b.branch_name}</td>
+                    <td className="p-3 font-mono opacity-80">{b.access_code}</td>
+                    <td className="p-3 uppercase font-semibold">{b.region}</td>
+                    <td className="p-3 text-center space-x-2">
+                      <button
+                        onClick={() => handleAutoGenerateAndReset(b)}
+                        className="px-3 py-1.5 bg-stone-700 hover:bg-stone-800 text-white rounded-xl font-bold text-[11px] shadow-sm"
+                      >
+                        🎲 Auto-Generate PIN
+                      </button>
+                      <button
+                        onClick={() => handleOpenResetPinModal(b)}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-[11px] shadow-sm"
+                      >
+                        ✏️ Set PIN Manual
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
