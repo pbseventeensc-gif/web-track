@@ -169,9 +169,12 @@ export default function AdminPromoManager({ isDarkMode }) {
                     />
                     <label className="text-[10px] opacity-70">Nominal Standar (Rp)</label>
                     <input 
-                      type="number"
-                      value={b.nominal}
-                      onChange={(e) => handleUpdateBudgetDetail(idx, 'nominal', e.target.value)}
+                      type="text"
+                      value={b.nominal === 0 ? '' : b.nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, '');
+                        handleUpdateBudgetDetail(idx, 'nominal', raw);
+                      }}
                       className={`w-full p-2 border rounded-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 ${isDarkMode ? 'bg-neutral-800 border-neutral-600' : 'bg-white border-stone-300'}`}
                     />
                   </div>
@@ -208,9 +211,12 @@ export default function AdminPromoManager({ isDarkMode }) {
               Nominal Terpilih ({form.budget_type}) — Format Rupiah: <span className="text-emerald-600 dark:text-emerald-400 font-mono">{formatRupiah(form.budget_nominal)}</span>
             </label>
             <input 
-              type="number" 
-              value={form.budget_nominal} 
-              onChange={e => setForm({...form, budget_nominal: Number(e.target.value) || 0})} 
+              type="text" 
+              value={form.budget_nominal === 0 ? '' : form.budget_nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} 
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '');
+                setForm({...form, budget_nominal: Number(raw) || 0});
+              }}
               className={`w-full p-3 border rounded-xl font-mono font-bold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-emerald-400' : 'bg-stone-50 border-stone-300 text-emerald-600'}`} 
             />
           </div>
