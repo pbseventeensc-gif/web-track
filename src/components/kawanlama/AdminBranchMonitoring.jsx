@@ -196,7 +196,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           className={`p-2.5 rounded-xl text-xs sm:text-sm font-bold border focus:outline-none ${isDarkMode ? 'bg-indigo-950 border-indigo-700 text-white' : 'bg-white border-indigo-300 text-stone-800'}`}
         >
           <option value="NASIONAL">🌐 Nasional (Semua 103 Cabang)</option>
-          <option value="PUSAT">👑 Admin Pusat (Khusus Wilayah Pusat)</option>
+          <option value="PUSAT">👑 Admin Pusat (DM)</option>
           <option value="CIKOKOL">📍 Admin Sub Cikokol</option>
           <option value="PASMING">📍 Admin Sub Pasming</option>
         </select>
