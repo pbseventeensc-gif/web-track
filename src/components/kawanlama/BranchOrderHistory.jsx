@@ -10,10 +10,15 @@ export default function BranchOrderHistory({ isDarkMode, currentUser }) {
   }, [currentUser]);
 
   const fetchOrders = async () => {
+    // Ambil ID Cabang yang sedang login secara aman
+    const currentBranchId = currentUser?.branch_id || currentUser?.id;
+
+    if (!currentBranchId) return;
+
     const { data } = await supabase
       .from('kl_orders')
       .select('*, kl_promos(title), kl_order_items(*, kl_master_items(*))')
-      .eq('branch_id', currentUser.branch_id)
+      .eq('branch_id', currentBranchId) // <-- FILTER WAJIB: Kunci hanya untuk ID cabang yang login
       .order('created_at', { ascending: false });
       
     if (data) setOrders(data);
