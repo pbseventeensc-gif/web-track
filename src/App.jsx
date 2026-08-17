@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
 import supabase from './supabaseClient';
-import App from './App';
 import DesignPanel from './components/DesignPanel';
 import FinishingPanel from './components/FinishingPanel';
 import KawanLamaTab from './components/KawanLamaTab';
@@ -14,8 +13,15 @@ import AdminPromoManager from './components/kawanlama/AdminPromoManager';
 import BranchOrderForm from './components/kawanlama/BranchOrderForm';
 import BranchOrderHistory from './components/kawanlama/BranchOrderHistory';
 
-function App() {
+function MainApp() {
   const [spkList, setSpkList] = useState([]);
+  const [selectedSpkId, setSelectedSpkId] = useState(null);
+  const [finishingForm, setFinishingForm] = useState({
+    finishing_type: 'inhouse',
+    sub_vendor_name: '',
+    qty_finish_sub_out: 0,
+    qty_finish: 0
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
@@ -135,7 +141,7 @@ function App() {
   };
 
   const processImportData = async (rawData) => {
-    const formattedData = rawData.filter(row => row['Store Name'] || row['Nama Project'] || row['CO
+    const formattedData = rawData.filter(row => row['Store Name'] || row['Nama Project'] || row['COMPANY']).map(row => ({
       no_spk: String(row['SPK/WPP'] || row['No SPK'] || '-').split('/')[0].trim(),
       client: String(row['COMPANY'] || 'Nama Klient' || '-'),
       project: String(row['Store Name'] || row['Nama Project'] || '-'),
@@ -143,11 +149,23 @@ function App() {
       ukuran: String(row['Ukuran'] || 'A5'),
       qty_order: Number(row['TOTAL QTY ORDER'] || 40),
       qty_print: 0, qty_finish: 0, qty_pack: 0, qty_ship: 0,
-      store_code: String(row['NO. STORE'] || '-'), delivery_route: String(row['DELIVERY'] || 'DALAM
+      store_code: String(row['NO. STORE'] || '-'), 
+      delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
+    }));
+    return formattedData;
   };
 
   const getPercent = (qty, total) => (!total || total <= 0) ? 0 : Math.min(100, Math.round((qty / total) * 100));
 
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-bold mb-4">Dashboard Utama SPK</h1>
+      <p className="text-slate-600">Total SPK Tersimpan: {spkList.length}</p>
+    </div>
+  );
+}
+
+export default function App() {
   return (
     <Router>
       <Switch>
@@ -162,10 +180,8 @@ function App() {
         <Route path="/admin/promo-manager" component={AdminPromoManager} />
         <Route path="/branch/order-form" component={BranchOrderForm} />
         <Route path="/branch/order-history" component={BranchOrderHistory} />
-        <Route path="/" exact component={App} />
+        <Route path="/" exact component={MainApp} />
       </Switch>
     </Router>
   );
 }
-
-export default App;
