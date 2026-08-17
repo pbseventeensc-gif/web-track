@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 
 export default function AdminBranchMonitoring({ isDarkMode }) {
-  // === SIMULASI ROLE ===
-  const [adminRole, setAdminRole] = useState('PUSAT'); // Pilihan: PUSAT, CIKOKOL, PASMING
+  // Pilihan: ALL / PUSAT (Nasional), CIKOKOL, PASMING
+  const [adminRole, setAdminRole] = useState('ALL'); 
 
   const [branchStatus, setBranchStatus] = useState([]);
   const [activeTabFilter, setActiveTabFilter] = useState('belum'); 
@@ -13,20 +13,19 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const [dbError, setDbError] = useState(null);
   const [activePromoId, setActivePromoId] = useState(null);
 
-  // State untuk Pencarian (Search)
+  // State Pencarian (Search)
   const [searchQuery, setSearchQuery] = useState('');
 
-  // State untuk checkbox pilihan massal
+  // State Checkbox Pilihan Massal
   const [selectedBranchIds, setSelectedBranchIds] = useState([]);
   
-  // State untuk menyimpan ID cabang yang disembunyikan sementara dari layar
+  // State Menyembunyikan Cabang dari Layar
   const [hiddenBranchIds, setHiddenBranchIds] = useState([]);
 
   useEffect(() => {
     fetchBranchStatus();
   }, []);
 
-  // Setiap kali tab filter atau role berubah, reset pilihan checkbox
   useEffect(() => {
     setSelectedBranchIds([]);
   }, [activeTabFilter, adminRole]);
@@ -45,7 +44,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
     const { data: branches, error: branchError } = await supabase
       .from('kl_branches')
-      .select('*');
+      .select('*')
+      .order('id', { ascending: true });
 
     if (branchError) {
       setDbError(`Error DB kl_branches: ${branchError.message}`);
@@ -95,16 +95,16 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   };
 
   const displayedBranches = branchStatus.filter(b => {
-    // 1. Sembunyikan cabang jika ID-nya ada di dalam daftar hiddenBranchIds
+    // Sembunyikan jika ada di list hidden
     if (hiddenBranchIds.includes(b.id)) return false;
 
-    // 2. Filter berdasarkan Pencarian (Search)
+    // Filter Pencarian
     const matchSearch = b.branch_name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchSearch) return false;
 
-    // 3. Filter berdasarkan Role
-    if (adminRole === 'PUSAT') {
-      return b.region === 'PUSAT' || b.is_delegated === true;
+    // Logika Filter Role: Admin Pusat (ALL) melihat seluruh 103 cabang
+    if (adminRole === 'ALL') {
+      return true;
     } else {
       return b.region === adminRole && b.is_delegated === false;
     }
@@ -114,7 +114,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const submittedList = displayedBranches.filter(b => b.status !== 'BELUM SUBMIT');
   const currentList = activeTabFilter === 'belum' ? unsubmittedList : submittedList;
 
-  // Toggle checkbox satuan
   const handleToggleSelect = (branchId) => {
     if (selectedBranchIds.includes(branchId)) {
       setSelectedBranchIds(selectedBranchIds.filter(id => id !== branchId));
@@ -123,7 +122,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     }
   };
 
-  // Toggle select all di tab yang sedang aktif
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       const allIds = currentList.map(b => b.id);
@@ -133,17 +131,15 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     }
   };
 
-  // Eksekusi Sembunyikan Massal (HANYA DARI TAMPILAN LAYAR, DATABASE AMAN)
   const handleHideSelected = () => {
     if (selectedBranchIds.length === 0) {
       alert("Silakan centang minimal 1 toko yang ingin disembunyikan.");
       return;
     }
     setHiddenBranchIds(prev => [...prev, ...selectedBranchIds]);
-    setSelectedBranchIds([]); // Kosongkan pilihan setelah disembunyikan
+    setSelectedBranchIds([]);
   };
 
-  // Eksekusi Tampilkan Kembali Semua yang Disembunyikan
   const handleShowAllHidden = () => {
     setHiddenBranchIds([]);
   };
@@ -189,14 +185,14 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       
       <div className={`p-4 rounded-3xl border shadow-sm flex items-center justify-between ${isDarkMode ? 'bg-indigo-900/30 border-indigo-700 text-indigo-200' : 'bg-indigo-50 border-indigo-200 text-indigo-800'}`}>
         <div className="font-bold text-sm flex items-center gap-2">
-          <span>🎭 Simulasi Login Sebagai:</span>
+          <span>🎭 Filter Wilayah / Role:</span>
         </div>
         <select 
           value={adminRole} 
           onChange={(e) => setAdminRole(e.target.value)}
           className={`p-2 rounded-xl text-sm font-bold border focus:outline-none ${isDarkMode ? 'bg-indigo-950 border-indigo-700' : 'bg-white border-indigo-300'}`}
         >
-          <option value="PUSAT">👑 Admin Pusat (DM)</option>
+          <option value="ALL">👑 Admin Pusat (Semua 103 Cabang Nasional)</option>
           <option value="CIKOKOL">📍 Admin Sub Cikokol</option>
           <option value="PASMING">📍 Admin Sub Pasming</option>
         </select>
@@ -219,7 +215,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       <div className={`rounded-3xl border shadow-sm flex flex-col ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
         <div className="p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 dark:border-neutral-700">
           
-          {/* Judul & Tombol Show Hidden */}
           <div className="flex flex-col">
             <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
               📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
@@ -231,10 +226,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
             )}
           </div>
           
-          {/* Filter, Search & Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-start sm:items-center">
             
-            {/* Search Input */}
             <div className="relative w-full sm:w-56">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 text-sm">🔍</span>
               <input 
@@ -248,12 +241,10 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               />
             </div>
 
-            {/* Tab Filter & Action Buttons */}
             <div className="flex gap-2 w-full sm:w-auto flex-wrap items-center">
               <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm dark:bg-red-900/40 dark:border-red-800 dark:text-red-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>⏳ Belum ({unsubmittedList.length})</button>
               <button onClick={() => setActiveTabFilter('sudah')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'sudah' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>✅ Sudah ({submittedList.length})</button>
               
-              {/* Tombol Blast WA Massal */}
               {activeTabFilter === 'belum' && unsubmittedList.length > 0 && (
                 <button 
                   onClick={() => {
@@ -272,7 +263,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                 </button>
               )}
 
-              {/* Tombol Sembunyikan Massal (Aman) */}
               {selectedBranchIds.length > 0 && (
                 <button 
                   onClick={handleHideSelected}
@@ -285,7 +275,6 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           </div>
         </div>
 
-        {/* --- BAGIAN SCROLL & STICKY HEADER --- */}
         <div className="overflow-x-auto overflow-y-auto max-h-[60vh] w-full custom-scrollbar">
           <table className="w-full text-sm text-left relative">
             <thead className={`text-xs uppercase tracking-wider font-extrabold sticky top-0 z-10 shadow-sm ${isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-slate-50 text-slate-500'}`}>
@@ -328,11 +317,16 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                     <td className="px-6 py-4 font-bold text-xs sm:text-sm uppercase whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span>{b.branch_name}</span>
-                        {adminRole === 'PUSAT' && b.is_delegated && (
-                          <span className="text-[10px] bg-orange-100 text-orange-700 w-fit px-2 py-0.5 rounded-md border border-orange-200">
-                            🚨 Titipan dari {b.region}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-stone-100 dark:bg-neutral-900 opacity-60">
+                            Region: {b.region}
                           </span>
-                        )}
+                          {adminRole !== 'ALL' && b.is_delegated && (
+                            <span className="text-[10px] bg-orange-100 text-orange-700 w-fit px-2 py-0.5 rounded-md border border-orange-200">
+                              🚨 Titipan
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
 
@@ -349,7 +343,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                             <button onClick={() => sendWhatsAppReminder(b)} className="px-3 py-1.5 bg-[#25D366] text-white rounded-lg font-bold text-xs hover:bg-[#20bd5a] shadow-sm">💬 WA</button>
                             <button onClick={() => sendEmailReminder(b)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 shadow-sm">✉️ Email</button>
                             
-                            {adminRole !== 'PUSAT' && (
+                            {adminRole !== 'ALL' && (
                               <button 
                                 onClick={() => handleDelegateToPusat(b)} 
                                 className="px-3 py-1.5 bg-slate-800 text-slate-100 dark:bg-neutral-700 dark:text-neutral-300 rounded-lg font-bold text-xs hover:bg-orange-600 hover:text-white transition-colors shadow-sm flex items-center gap-1"
