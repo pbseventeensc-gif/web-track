@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import * as XLSX from 'xlsx';
+import PinModal from './PinModal';
+import { updateBranchPin, generateRandomPin } from './PinManager';
 
 export default function AdminMasterData({ isDarkMode }) {
   const [items, setItems] = useState([]);
@@ -18,8 +20,14 @@ export default function AdminMasterData({ isDarkMode }) {
     price: 0
   });
 
+  // State untuk Fitur Reset PIN Cabang Darurat
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchForPin, setSelectedBranchForPin] = useState(null);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
   useEffect(() => {
     fetchItems();
+    fetchBranches();
   }, []);
 
   const fetchItems = async () => {
@@ -28,6 +36,14 @@ export default function AdminMasterData({ isDarkMode }) {
       .select('*')
       .order('item_name', { ascending: true });
     if (data) setItems(data);
+  };
+
+  const fetchBranches = async () => {
+    const { data } = await supabase
+      .from('kl_branches')
+      .select('*')
+      .order('id', { ascending: true });
+    if (data) setBranches(data);
   };
 
   const showNotification = (msg) => {
@@ -158,6 +174,40 @@ export default function AdminMasterData({ isDarkMode }) {
       } else {
         alert('Gagal menghapus barang: ' + error.message);
       }
+    }
+  };
+
+  // 7. Handler Reset PIN Cabang Darurat oleh Admin
+  const handleOpenResetPinModal = (branch) => {
+    setSelectedBranchForPin(branch);
+    setIsPinModalOpen(true);
+  };
+
+  const handleAdminResetPinSubmit = async ({ newPin }) => {
+    if (!selectedBranchForPin) return;
+
+    const res = await updateBranchPin(selectedBranchForPin.id, newPin);
+    if (res.success) {
+      showNotification(`🔑 PIN untuk toko "${selectedBranchForPin.branch_name}" berhasil direset.`);
+      setIsPinModalOpen(false);
+      setSelectedBranchForPin(null);
+      fetchBranches();
+    } else {
+      alert(`Gagal mereset PIN: ${res.error}`);
+    }
+  };
+
+  const handleAutoGenerateAndReset = async (branch) => {
+    const randomPin = generateRandomPin();
+    const confirmAction = window.confirm(`Generate PIN otomatis baru (${randomPin}) untuk toko "${branch.branch_name}"?`);
+    if (!confirmAction) return;
+
+    const res = await updateBranchPin(branch.id, randomPin);
+    if (res.success) {
+      alert(`PIN Berhasil direset!\n\nToko: ${branch.branch_name}\nPIN Sementara Baru: ${randomPin}\n\nSilakan berikan PIN ini kepada PIC toko.`);
+      fetchBranches();
+    } else {
+      alert(`Gagal mereset PIN: ${res.error}`);
     }
   };
 
@@ -424,6 +474,67 @@ export default function AdminMasterData({ isDarkMode }) {
           </table>
         </div>
       </div>
+
+      {/* Tambahan Bagian: Manajemen Reset PIN Cabang Darurat */}
+      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <div>
+          <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
+            🔐 Manajemen Reset PIN Cabang (Darurat)
+          </h3>
+          <p className="text-xs opacity-60">Gunakan fitur ini jika ada cabang yang lupa PIN akses login mereka.</p>
+        </div>
+
+        <div className="max-h-[300px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+          <table className="w-full text-xs border-collapse">
+            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+              <tr>
+                <th className="p-3 text-left">ID & Nama Cabang</th>
+                <th className="p-3 text-left">Kode Akses</th>
+                <th className="p-3 text-left">Region</th>
+                <th className="p-3 text-center">Aksi Reset PIN</th>
+              </tr>
+            </thead>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
+              {branches.map(b => (
+                <tr key={b.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
+                  <td className="p-3 font-bold">{b.id} - {b.branch_name}</td>
+                  <td className="p-3 font-mono opacity-80">{b.access_code}</td>
+                  <td className="p-3 uppercase font-semibold">{b.region}</td>
+                  <td className="p-3 text-center space-x-2">
+                    <button
+                      onClick={() => handleAutoGenerateAndReset(b)}
+                      className="px-3 py-1.5 bg-stone-700 hover:bg-stone-800 text-white rounded-xl font-bold text-[11px] shadow-sm"
+                    >
+                      🎲 Auto-Generate PIN
+                    </button>
+                    <button
+                      onClick={() => handleOpenResetPinModal(b)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-[11px] shadow-sm"
+                    >
+                      ✏️ Set PIN Manual
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal Input PIN Baru */}
+      <PinModal 
+        isOpen={isPinModalOpen}
+        onClose={() => {
+          setIsPinModalOpen(false);
+          setSelectedBranchForPin(null);
+        }}
+        onSubmit={handleAdminResetPinSubmit}
+        title={`Reset PIN untuk: ${selectedBranchForPin?.branch_name || ''}`}
+        subtitle="Masukkan PIN baru 6 digit untuk cabang ini."
+        isDarkMode={isDarkMode}
+        requireOldPin={false}
+      />
+
     </div>
   );
 }
