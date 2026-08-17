@@ -66,8 +66,11 @@ export default function App() {
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
+  // 🛡️ SECURITY GUARD: Paksa login jika mode cabang tapi session belum ada
   useEffect(() => { 
-    if (isBranchMode && !currentBranch) setShowBranchLoginModal(true); 
+    if (isBranchMode && !currentBranch) {
+      setShowBranchLoginModal(true); 
+    }
   }, [isBranchMode, currentBranch]);
 
   useEffect(() => { 
@@ -161,7 +164,6 @@ export default function App() {
     handleUpdateField(id, { [field]: val });
   };
 
-  // Fungsi Hapus 1 Baris SPK
   const handleDeleteSpk = async (id, noSpk) => {
     if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
       const { error } = await supabase.from('spk_data').delete().eq('id', id);
@@ -175,7 +177,6 @@ export default function App() {
     }
   };
 
-  // Fungsi Hapus Banyak SPK Sekaligus (Batch Delete)
   const handleBatchDelete = async () => {
     if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
     if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
@@ -281,6 +282,34 @@ export default function App() {
     (item.client || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // 🛡️ BLOKIR AKSES JIKA MODE CABANG TAPI BELUM LOGIN
+  if (isBranchMode && !currentBranch) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-6 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
+        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+          <div className="text-4xl">🔒</div>
+          <h2 className="text-lg font-black uppercase text-rose-600">Akses Portal Cabang Dikunci</h2>
+          <p className="text-xs opacity-75">Anda harus melakukan login dengan Kode Akses dan PIN Cabang yang valid untuk masuk ke halaman ini.</p>
+          <button 
+            onClick={() => setShowBranchLoginModal(true)}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all"
+          >
+            🔑 Buka Form Login Cabang
+          </button>
+        </div>
+
+        <BranchLoginModal 
+          isOpen={true} 
+          onLoginSuccess={(branch) => { 
+            setCurrentBranch(branch); 
+            localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
+            setShowBranchLoginModal(false); 
+          }} 
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -292,7 +321,7 @@ export default function App() {
               {isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING'}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {isBranchMode ? 'Sistem Terpadu Portal Cabang' : 'Sistem Pelacak Progress Produksi & Pengiriman SPK'}
+              {isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : 'Sistem Pelacak Progress Produksi & Pengiriman SPK'}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -300,7 +329,7 @@ export default function App() {
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
             {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔑 Login Admin</button>)}
-            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null);}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
+            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
             {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">📷 Scan QC Station</button>}
             {!isBranchMode && <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">📁 Upload SPK Excel<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
           </div>
@@ -425,7 +454,11 @@ export default function App() {
 
       <BranchLoginModal 
         isOpen={showBranchLoginModal} 
-        onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} 
+        onLoginSuccess={(branch) => { 
+          setCurrentBranch(branch); 
+          localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
+          setShowBranchLoginModal(false); 
+        }} 
       />
     </div>
   );
