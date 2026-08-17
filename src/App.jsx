@@ -282,24 +282,50 @@ export default function App() {
     (item.client || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 🛡️ BLOKIR AKSES JIKA MODE CABANG TAPI BELUM LOGIN
-  if (isBranchMode && !currentBranch) {
+  // 🛡️ GLOBAL AUTH CHECK: Jika belum ada admin maupun cabang yang login, tampilkan halaman gerbang login utama
+  const isAuthenticated = currentAdmin || currentBranch;
+
+  if (!isAuthenticated) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-6 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
-        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-          <div className="text-4xl">🔒</div>
-          <h2 className="text-lg font-black uppercase text-rose-600">Akses Portal Cabang Dikunci</h2>
-          <p className="text-xs opacity-75">Anda harus melakukan login dengan Kode Akses dan PIN Cabang yang valid untuk masuk ke halaman ini.</p>
-          <button 
-            onClick={() => setShowBranchLoginModal(true)}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all"
-          >
-            🔑 Buka Form Login Cabang
-          </button>
+      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
+        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+          <div className="text-5xl">🔐</div>
+          <div>
+            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Web-Track Monitoring</h1>
+            <p className="text-xs opacity-60 mt-1">Sistem Terpadu Manajemen SPK & Kawan Lama</p>
+          </div>
+          
+          <div className="space-y-3 pt-2">
+            <button 
+              onClick={() => setShowAdminLoginModal(true)}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95"
+            >
+              🔑 LOGIN ADMIN PUSAT
+            </button>
+            <button 
+              onClick={() => setShowBranchLoginModal(true)}
+              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95"
+            >
+              🏢 LOGIN CABANG KAWAN LAMA
+            </button>
+          </div>
         </div>
 
+        {/* Modal Login Admin Pusat */}
+        <AdminLoginModal 
+          isOpen={showAdminLoginModal} 
+          onClose={() => setShowAdminLoginModal(false)} 
+          onLoginSuccess={(admin) => { 
+            localStorage.setItem('kl_admin_session', JSON.stringify(admin));
+            setCurrentAdmin(admin); 
+            setShowAdminLoginModal(false); 
+          }} 
+        />
+
+        {/* Modal Login Cabang */}
         <BranchLoginModal 
-          isOpen={true} 
+          isOpen={showBranchLoginModal} 
+          onClose={() => setShowBranchLoginModal(false)}
           onLoginSuccess={(branch) => { 
             setCurrentBranch(branch); 
             localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
@@ -321,15 +347,15 @@ export default function App() {
               {isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING'}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : 'Sistem Pelacak Progress Produksi & Pengiriman SPK'}
+              {isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : `Admin Login: ${currentAdmin?.username || 'Aktif'}`}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
-            {!isBranchMode && (currentAdmin ? <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button> : <button onClick={() => setShowAdminLoginModal(true)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔑 Login Admin</button>)}
-            {isBranchMode && currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
+            {currentAdmin && <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button>}
+            {currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
             {!isBranchMode && <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">📷 Scan QC Station</button>}
             {!isBranchMode && <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">📁 Upload SPK Excel<input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" /></label>}
           </div>
@@ -454,6 +480,7 @@ export default function App() {
 
       <BranchLoginModal 
         isOpen={showBranchLoginModal} 
+        onClose={() => setShowBranchLoginModal(false)}
         onLoginSuccess={(branch) => { 
           setCurrentBranch(branch); 
           localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
