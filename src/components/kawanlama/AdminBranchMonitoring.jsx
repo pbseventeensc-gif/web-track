@@ -20,7 +20,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     fetchBranchStatus();
   }, []);
 
-  // Setiap kali tab filter berubah, reset pilihan checkbox agar tidak salah aksi
+  // Setiap kali tab filter atau role berubah, reset pilihan checkbox
   useEffect(() => {
     setSelectedBranchIds([]);
   }, [activeTabFilter, adminRole]);
@@ -98,10 +98,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
   const unsubmittedList = displayedBranches.filter(b => b.status === 'BELUM SUBMIT');
   const submittedList = displayedBranches.filter(b => b.status !== 'BELUM SUBMIT');
-
   const currentList = activeTabFilter === 'belum' ? unsubmittedList : submittedList;
 
-  // Handler Checkbox Satuan
+  // Toggle checkbox satuan
   const handleToggleSelect = (branchId) => {
     if (selectedBranchIds.includes(branchId)) {
       setSelectedBranchIds(selectedBranchIds.filter(id => id !== branchId));
@@ -110,7 +109,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     }
   };
 
-  // Handler Checkbox Pilih Semua di Tab Aktif
+  // Toggle select all di tab yang sedang aktif
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       const allIds = currentList.map(b => b.id);
@@ -120,34 +119,37 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     }
   };
 
-  // === FITUR HAPUS MASAL (BERDASARKAN TAB AKTIF / PILIHAN) ===
+  // Eksekusi Hapus Massal (Menghapus Branch & Order terkait dari Database)
   const handleDeleteSelected = async () => {
     if (selectedBranchIds.length === 0) {
-      alert("Pilih minimal satu toko terlebih dahulu.");
+      alert("Silakan centang minimal 1 toko yang ingin dihapus.");
       return;
     }
 
-    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus/mereset ${selectedBranchIds.length} data toko yang dipilih dari daftar ini?`);
+    const confirmDelete = window.confirm(`🚨 YAKIN HAPUS ${selectedBranchIds.length} CABANG/TOKO TERPILIH? Tindakan ini akan menghapus data cabang beserta histori order terkait secara permanen.`);
     if (!confirmDelete) return;
 
-    // Ambil order_id dari branch yang dipilih yang memiliki order_id
-    const ordersToDelete = branchStatus
-      .filter(b => selectedBranchIds.includes(b.id) && b.order_id)
-      .map(b => b.order_id);
+    setIsLoading(true);
 
-    if (ordersToDelete.length > 0) {
-      const { error } = await supabase
-        .from('kl_orders')
-        .delete()
-        .in('id', ordersToDelete);
+    // 1. Hapus data order terkait terlebih dahulu
+    await supabase
+      .from('kl_orders')
+      .delete()
+      .in('branch_id', selectedBranchIds);
 
-      if (error) {
-        alert(`Gagal menghapus data: ${error.message}`);
-        return;
-      }
+    // 2. Hapus data cabang dari tabel master kl_branches
+    const { error: branchDelError } = await supabase
+      .from('kl_branches')
+      .delete()
+      .in('id', selectedBranchIds);
+
+    if (branchDelError) {
+      alert(`Gagal menghapus cabang: ${branchDelError.message}`);
+      setIsLoading(false);
+      return;
     }
 
-    alert("Data berhasil dihapus/direset.");
+    alert(`✅ Berhasil menghapus ${selectedBranchIds.length} data cabang.`);
     setSelectedBranchIds([]);
     fetchBranchStatus();
   };
@@ -249,11 +251,11 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               </button>
             )}
 
-            {/* --- TOMBOL HAPUS MASSAL --- */}
+            {/* Tombol Hapus Massal */}
             {selectedBranchIds.length > 0 && (
               <button 
                 onClick={handleDeleteSelected}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
               >
                 🗑️ Hapus Terpilih ({selectedBranchIds.length})
               </button>
