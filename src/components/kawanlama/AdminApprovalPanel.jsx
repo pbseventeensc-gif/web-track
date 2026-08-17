@@ -11,6 +11,9 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [searchApproved, setSearchApproved] = useState('');
   const [selectedApprovedIds, setSelectedApprovedIds] = useState([]);
   
+  // State untuk Modal Audit Trail
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  
   // State untuk Notifikasi & Dropdown Lonceng
   const [notifications, setNotifications] = useState([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
@@ -108,7 +111,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .from('kl_audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(15); // Ditambah jadi 15 karena sekarang pakai modal yang lega
 
     if (!error && data) {
       setAuditLogs(data);
@@ -161,7 +164,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     setLoading(false);
   };
 
-  // 1. Hapus 1 Order Satuan
   const handleDeleteOrder = async (orderId, branchName) => {
     if (window.confirm(`⚠️ Hapus permanen order untuk toko "${branchName}"? Data item pesanan toko ini akan dibersihkan.`)) {
       await supabase.from('kl_order_items').delete().eq('order_id', orderId);
@@ -179,7 +181,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     }
   };
 
-  // 2. Hapus Massal Order Approved Terpilih
   const handleBatchDeleteApproved = async () => {
     if (selectedApprovedIds.length === 0) return alert('⚠️ Centang minimal 1 toko yang ingin dihapus!');
     if (window.confirm(`🚨 YAKIN HAPUS ${selectedApprovedIds.length} DATA ORDER TOKO TERPILIH? Tindakan ini permanen.`)) {
@@ -199,7 +200,6 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     }
   };
 
-  // 3. Hapus Seluruh Toko Approved (Reset Total)
   const handleDeleteAllApproved = async () => {
     if (approvedOrders.length === 0) return alert('Tidak ada data toko approved yang dapat dihapus.');
     if (window.confirm(`🚨 PERINGATAN: YAKIN HAPUS SELURUH ${approvedOrders.length} TOKO APPROVED DARI SISTEM?`)) {
@@ -251,6 +251,48 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   return (
     <div className="space-y-8 relative">
       
+      {/* MODAL AUDIT TRAIL */}
+      {showAuditModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className={`w-full max-w-2xl rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] animate-in zoom-in-95 ${
+            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
+          }`}>
+            <div className="p-5 border-b flex justify-between items-center bg-indigo-600 text-white rounded-t-3xl">
+              <h3 className="font-extrabold text-sm uppercase tracking-wider flex items-center gap-2">
+                <span>📜</span> Riwayat Aktivitas Admin (15 Terakhir)
+              </h3>
+              <button 
+                onClick={() => setShowAuditModal(false)}
+                className="text-white hover:text-rose-200 font-bold text-lg leading-none transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-5 overflow-y-auto custom-scrollbar flex-1 bg-stone-50/50 dark:bg-neutral-900/50">
+              {auditLogs.length === 0 ? (
+                <div className="py-10 text-center opacity-60 text-sm font-medium">
+                  Belum ada riwayat aktivitas yang tercatat dalam sistem.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className={`p-3.5 rounded-2xl border text-xs flex justify-between items-center shadow-sm ${
+                      isDarkMode ? 'bg-neutral-800 border-neutral-700 hover:border-neutral-600' : 'bg-white border-stone-200 hover:border-stone-300'
+                    }`}>
+                      <span className="font-bold opacity-90">⚡ {log.action}</span>
+                      <span className="font-mono text-[11px] opacity-50 bg-stone-100 dark:bg-neutral-900 px-2 py-1 rounded-lg">
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header Utama */}
       <div className={`p-5 rounded-3xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
@@ -258,61 +300,74 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
         </div>
 
-        {/* Lonceng Notifikasi */}
-        <div className="relative" ref={dropdownRef}>
+        {/* Grup Tombol Header: Log Audit & Notifikasi */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Tombol Buka Modal Audit Trail */}
           <button 
-            onClick={handleOpenNotifications}
-            className={`relative p-3 rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs shadow-sm ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-stone-700'
+            onClick={() => setShowAuditModal(true)}
+            className={`px-4 py-3 rounded-2xl border transition-all flex justify-center items-center gap-2 font-bold text-xs shadow-sm w-full sm:w-auto ${
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-indigo-400' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-indigo-700'
             }`}
           >
-            <span className="text-lg">🔔</span>
-            <span>Notifikasi</span>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-md">
-                {unreadCount}
-              </span>
-            )}
+            <span>📜</span> Lihat Log Audit
           </button>
 
-          {showNotificationDropdown && (
-            <div className={`absolute right-0 mt-3 w-80 sm:w-96 rounded-3xl border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
-            }`}>
-              <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white">
-                <h4 className="font-black text-xs uppercase tracking-wider">Pusat Notifikasi Real-Time</h4>
-                <button 
-                  onClick={() => setNotifications([])} 
-                  className="text-[10px] bg-indigo-700 hover:bg-indigo-800 px-2.5 py-1 rounded-xl font-bold transition-all"
-                >
-                  Hapus Semua
-                </button>
-              </div>
+          {/* Lonceng Notifikasi */}
+          <div className="relative w-full sm:w-auto" ref={dropdownRef}>
+            <button 
+              onClick={handleOpenNotifications}
+              className={`relative p-3 w-full sm:w-auto justify-center rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs shadow-sm ${
+                isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-stone-700'
+              }`}
+            >
+              <span className="text-lg">🔔</span>
+              <span className="sm:hidden">Notifikasi</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-md">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
 
-              <div className="max-h-72 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-xs opacity-50">
-                    📭 Belum ada notifikasi baru saat ini.
-                  </div>
-                ) : (
-                  notifications.map(notif => (
-                    <div 
-                      key={notif.id} 
-                      className={`p-3 rounded-2xl border text-xs flex flex-col gap-1 transition-all ${
-                        isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-stone-50 border-stone-200'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">Order / Request Cabang</span>
-                        <span className="text-[10px] font-mono opacity-60">{notif.time}</span>
-                      </div>
-                      <p className="font-medium opacity-90">{notif.message}</p>
+            {showNotificationDropdown && (
+              <div className={`absolute right-0 mt-3 w-full sm:w-96 rounded-3xl border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 ${
+                isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
+              }`}>
+                <div className="p-4 border-b flex justify-between items-center bg-indigo-600 text-white">
+                  <h4 className="font-black text-xs uppercase tracking-wider">Pusat Notifikasi Real-Time</h4>
+                  <button 
+                    onClick={() => setNotifications([])} 
+                    className="text-[10px] bg-indigo-700 hover:bg-indigo-800 px-2.5 py-1 rounded-xl font-bold transition-all"
+                  >
+                    Hapus Semua
+                  </button>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs opacity-50">
+                      📭 Belum ada notifikasi baru saat ini.
                     </div>
-                  ))
-                )}
+                  ) : (
+                    notifications.map(notif => (
+                      <div 
+                        key={notif.id} 
+                        className={`p-3 rounded-2xl border text-xs flex flex-col gap-1 transition-all ${
+                          isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-stone-50 border-stone-200'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-indigo-600 dark:text-indigo-400">Order / Request Cabang</span>
+                          <span className="text-[10px] font-mono opacity-60">{notif.time}</span>
+                        </div>
+                        <p className="font-medium opacity-90">{notif.message}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -650,27 +705,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           </div>
         )}
       </div>
-
-      {/* SEKSI 3: AUDIT TRAIL */}
-      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-        <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-          <span>📜</span> Audit Trail & Riwayat Aktivitas Admin (10 Terakhir)
-        </h3>
-        
-        {auditLogs.length === 0 ? (
-          <p className="text-xs opacity-60">Belum ada riwayat aktivitas tercatat.</p>
-        ) : (
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-            {auditLogs.map((log) => (
-              <div key={log.id} className={`p-3 rounded-xl border text-xs flex justify-between items-center ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-stone-200'}`}>
-                <span className="font-medium">⚡ {log.action}</span>
-                <span className="font-mono text-[10px] opacity-60">{new Date(log.created_at).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
+      
     </div>
   );
 }
