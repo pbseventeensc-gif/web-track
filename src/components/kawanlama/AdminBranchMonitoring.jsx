@@ -15,6 +15,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
   // State untuk checkbox pilihan massal
   const [selectedBranchIds, setSelectedBranchIds] = useState([]);
+  
+  // State untuk menyimpan ID cabang yang disembunyikan sementara dari layar
+  const [hiddenBranchIds, setHiddenBranchIds] = useState([]);
 
   useEffect(() => {
     fetchBranchStatus();
@@ -89,6 +92,9 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   };
 
   const displayedBranches = branchStatus.filter(b => {
+    // Sembunyikan cabang jika ID-nya ada di dalam daftar hiddenBranchIds
+    if (hiddenBranchIds.includes(b.id)) return false;
+
     if (adminRole === 'PUSAT') {
       return b.region === 'PUSAT' || b.is_delegated === true;
     } else {
@@ -119,39 +125,19 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
     }
   };
 
-  // Eksekusi Hapus Massal (Menghapus Branch & Order terkait dari Database)
-  const handleDeleteSelected = async () => {
+  // Eksekusi Sembunyikan Massal (HANYA DARI TAMPILAN LAYAR, DATABASE AMAN)
+  const handleHideSelected = () => {
     if (selectedBranchIds.length === 0) {
-      alert("Silakan centang minimal 1 toko yang ingin dihapus.");
+      alert("Silakan centang minimal 1 toko yang ingin disembunyikan.");
       return;
     }
+    setHiddenBranchIds(prev => [...prev, ...selectedBranchIds]);
+    setSelectedBranchIds([]); // Kosongkan pilihan setelah disembunyikan
+  };
 
-    const confirmDelete = window.confirm(`🚨 YAKIN HAPUS ${selectedBranchIds.length} CABANG/TOKO TERPILIH? Tindakan ini akan menghapus data cabang beserta histori order terkait secara permanen.`);
-    if (!confirmDelete) return;
-
-    setIsLoading(true);
-
-    // 1. Hapus data order terkait terlebih dahulu
-    await supabase
-      .from('kl_orders')
-      .delete()
-      .in('branch_id', selectedBranchIds);
-
-    // 2. Hapus data cabang dari tabel master kl_branches
-    const { error: branchDelError } = await supabase
-      .from('kl_branches')
-      .delete()
-      .in('id', selectedBranchIds);
-
-    if (branchDelError) {
-      alert(`Gagal menghapus cabang: ${branchDelError.message}`);
-      setIsLoading(false);
-      return;
-    }
-
-    alert(`✅ Berhasil menghapus ${selectedBranchIds.length} data cabang.`);
-    setSelectedBranchIds([]);
-    fetchBranchStatus();
+  // Eksekusi Tampilkan Kembali Semua yang Disembunyikan
+  const handleShowAllHidden = () => {
+    setHiddenBranchIds([]);
   };
 
   const handleDelegateToPusat = async (branch) => {
@@ -224,9 +210,16 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
       <div className={`rounded-3xl border shadow-sm flex flex-col ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
         <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 dark:border-neutral-700">
-          <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-            📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
-          </h3>
+          <div className="flex flex-col">
+            <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
+              📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
+            </h3>
+            {hiddenBranchIds.length > 0 && (
+              <button onClick={handleShowAllHidden} className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1 text-left hover:underline">
+                👀 Tampilkan kembali {hiddenBranchIds.length} toko yang disembunyikan
+              </button>
+            )}
+          </div>
           
           <div className="flex gap-2 w-full sm:w-auto flex-wrap items-center">
             <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm dark:bg-red-900/40 dark:border-red-800 dark:text-red-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>⏳ Belum ({unsubmittedList.length})</button>
@@ -251,13 +244,13 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               </button>
             )}
 
-            {/* Tombol Hapus Massal */}
+            {/* Tombol Sembunyikan Massal (Aman) */}
             {selectedBranchIds.length > 0 && (
               <button 
-                onClick={handleDeleteSelected}
-                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
+                onClick={handleHideSelected}
+                className="px-4 py-2.5 bg-stone-600 hover:bg-stone-700 dark:bg-neutral-600 dark:hover:bg-neutral-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5"
               >
-                🗑️ Hapus Terpilih ({selectedBranchIds.length})
+                👁️‍🗨️ Sembunyikan ({selectedBranchIds.length})
               </button>
             )}
           </div>
