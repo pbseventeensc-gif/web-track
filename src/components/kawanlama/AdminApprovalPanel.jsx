@@ -11,8 +11,9 @@ export default function AdminApprovalPanel({ isDarkMode }) {
   const [searchApproved, setSearchApproved] = useState('');
   const [selectedApprovedIds, setSelectedApprovedIds] = useState([]);
   
-  // State untuk Modal Audit Trail
+  // State untuk Modal Audit Trail & Search
   const [showAuditModal, setShowAuditModal] = useState(false);
+  const [searchAudit, setSearchAudit] = useState('');
   
   // State untuk Notifikasi & Dropdown Lonceng
   const [notifications, setNotifications] = useState([]);
@@ -111,7 +112,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .from('kl_audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(15); // Ditambah jadi 15 karena sekarang pakai modal yang lega
+      .limit(15); 
 
     if (!error && data) {
       setAuditLogs(data);
@@ -248,6 +249,11 @@ export default function AdminApprovalPanel({ isDarkMode }) {
     }
   };
 
+  // Logika Filter untuk Modal Audit Trail
+  const filteredAuditLogs = auditLogs.filter(log => 
+    log.action.toLowerCase().includes(searchAudit.toLowerCase())
+  );
+
   return (
     <div className="space-y-8 relative">
       
@@ -257,26 +263,45 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           <div className={`w-full max-w-2xl rounded-3xl shadow-2xl border flex flex-col max-h-[85vh] animate-in zoom-in-95 ${
             isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
           }`}>
+            
+            {/* Modal Header */}
             <div className="p-5 border-b flex justify-between items-center bg-indigo-600 text-white rounded-t-3xl">
               <h3 className="font-extrabold text-sm uppercase tracking-wider flex items-center gap-2">
                 <span>📜</span> Riwayat Aktivitas Admin (15 Terakhir)
               </h3>
               <button 
                 onClick={() => setShowAuditModal(false)}
-                className="text-white hover:text-rose-200 font-bold text-lg leading-none transition-colors"
+                className="text-white hover:text-rose-200 font-bold text-xl leading-none transition-colors"
               >
                 ✕
               </button>
             </div>
+
+            {/* Modal Search Bar */}
+            <div className={`p-4 border-b ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-stone-100 border-stone-200'}`}>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 text-sm">🔍</span>
+                <input 
+                  type="text"
+                  placeholder="Cari aktivitas (cth: MOI, Hapus, Approve)..."
+                  value={searchAudit}
+                  onChange={(e) => setSearchAudit(e.target.value)}
+                  className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all ${
+                    isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white placeholder-neutral-500' : 'bg-white border-stone-300 text-stone-800'
+                  }`}
+                />
+              </div>
+            </div>
             
+            {/* Modal Body / Daftar Log */}
             <div className="p-5 overflow-y-auto custom-scrollbar flex-1 bg-stone-50/50 dark:bg-neutral-900/50">
-              {auditLogs.length === 0 ? (
+              {filteredAuditLogs.length === 0 ? (
                 <div className="py-10 text-center opacity-60 text-sm font-medium">
-                  Belum ada riwayat aktivitas yang tercatat dalam sistem.
+                  {searchAudit ? 'Tidak ada riwayat yang cocok dengan pencarian Anda.' : 'Belum ada riwayat aktivitas yang tercatat dalam sistem.'}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {auditLogs.map((log) => (
+                  {filteredAuditLogs.map((log) => (
                     <div key={log.id} className={`p-3.5 rounded-2xl border text-xs flex justify-between items-center shadow-sm ${
                       isDarkMode ? 'bg-neutral-800 border-neutral-700 hover:border-neutral-600' : 'bg-white border-stone-200 hover:border-stone-300'
                     }`}>
@@ -293,7 +318,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         </div>
       )}
       
-      {/* Header Utama */}
+      {/* Header Utama Panel */}
       <div className={`p-5 rounded-3xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
           <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
@@ -304,7 +329,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
         <div className="flex items-center gap-3 w-full sm:w-auto">
           {/* Tombol Buka Modal Audit Trail */}
           <button 
-            onClick={() => setShowAuditModal(true)}
+            onClick={() => {
+              setSearchAudit(''); // Reset pencarian setiap kali modal dibuka
+              setShowAuditModal(true);
+            }}
             className={`px-4 py-3 rounded-2xl border transition-all flex justify-center items-center gap-2 font-bold text-xs shadow-sm w-full sm:w-auto ${
               isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-indigo-400' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-indigo-700'
             }`}
