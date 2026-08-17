@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import PinModal from './PinModal';
+import { updateBranchPin } from './PinManager';
 
 export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [items, setItems] = useState([]);
@@ -11,6 +13,9 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [loading, setLoading] = useState(false);
   
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // State untuk Modal Ganti PIN Mandiri di Sisi Cabang
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   // Ambil ID cabang yang sedang aktif secara aman
   const currentBranchId = currentUser?.branch_id || currentUser?.id;
@@ -40,7 +45,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     if (promoData) {
       setActivePromo(promoData);
       if (currentBranchId) {
-        // Query spesifik HANYA untuk cabang yang sedang login
         const { data: orderData } = await supabase
           .from('kl_orders')
           .select('*, kl_order_items(item_id, qty)')
@@ -172,6 +176,35 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     fetchActivePromo();
   };
 
+  // Handler Ganti PIN Mandiri oleh Cabang
+  const handleBranchChangePinSubmit = async ({ oldPin, newPin }) => {
+    if (!currentBranchId) {
+      alert("ID Cabang tidak valid.");
+      return;
+    }
+
+    // 1. Verifikasi PIN lama ke database terlebih dahulu
+    const { data: branchData, error: fetchErr } = await supabase
+      .from('kl_branches')
+      .select('pin_code')
+      .eq('id', currentBranchId)
+      .single();
+
+    if (fetchErr || !branchData || String(branchData.pin_code) !== String(oldPin)) {
+      alert("❌ PIN Lama yang Anda masukkan salah!");
+      return;
+    }
+
+    // 2. Jika benar, perbarui ke PIN baru menggunakan PinManager
+    const res = await updateBranchPin(currentBranchId, newPin);
+    if (res.success) {
+      alert("✅ PIN Berhasil diubah! Silakan gunakan PIN baru untuk sesi login berikutnya.");
+      setIsPinModalOpen(false);
+    } else {
+      alert("❌ Gagal memperbarui PIN: " + res.error);
+    }
+  };
+
   const sortedItems = [...items].sort((a, b) => {
     const nameA = (a.item_name || '').toLowerCase();
     const nameB = (b.item_name || '').toLowerCase();
@@ -199,6 +232,17 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6 relative">
+      
+      {/* Tombol Akses Cepat Ganti PIN di Sudut Kanan Atas Portal Cabang */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsPinModalOpen(true)}
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+        >
+          🔒 Ganti PIN Mandiri
+        </button>
+      </div>
+
       {showNotification && !hasOrdered && activePromo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
@@ -347,6 +391,18 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           </table>
         </div>
       </div>
+
+      {/* Modal Ganti PIN Mandiri untuk Cabang */}
+      <PinModal 
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onSubmit={handleBranchChangePinSubmit}
+        title="Ganti PIN Mandiri"
+        subtitle="Masukkan PIN lama Anda untuk verifikasi, lalu masukkan 6 digit PIN baru."
+        isDarkMode={isDarkMode}
+        requireOldPin={true}
+      />
+
     </div>
   );
 }
