@@ -8,7 +8,8 @@ import AdminBranchMonitoring from './kawanlama/AdminBranchMonitoring';
 import { supabase } from '../supabaseClient';
 
 export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
-  const [activeSubTab, setActiveSubTab] = useState(isBranchMode ? 'order_baru' : 'approval');
+  // Tab default untuk Admin diubah ke 'master'
+  const [activeSubTab, setActiveSubTab] = useState(isBranchMode ? 'order_baru' : 'master');
   const [branchName, setBranchName] = useState('');
 
   // Deteksi role admin (admin pusat, admin wilayah pasming/cikokol)
@@ -74,36 +75,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
       <div className="flex gap-2.5 border-b border-stone-200 dark:border-neutral-800 pb-3 overflow-x-auto custom-scrollbar">
         {isAdmin && (
           <>
-            <button 
-              onClick={() => setActiveSubTab('approval')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                activeSubTab === 'approval' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-              }`}
-            >
-              🔒 Approval & Grouping Order
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('monitoring')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                activeSubTab === 'monitoring' 
-                  ? 'bg-purple-600 text-white shadow-md' 
-                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-              }`}
-            >
-              📊 Status Cabang (Submit / Belum)
-            </button>
-            <button 
-              onClick={() => setActiveSubTab('promo')}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                activeSubTab === 'promo' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-              }`}
-            >
-              📢 Kelola & Hapus Promo
-            </button>
+            {/* 1. Master Data */}
             <button 
               onClick={() => setActiveSubTab('master')}
               className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
@@ -114,8 +86,45 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
             >
               📦 Master Data
             </button>
+            
+            {/* 2. Kelola & Hapus Promo */}
+            <button 
+              onClick={() => setActiveSubTab('promo')}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                activeSubTab === 'promo' 
+                  ? 'bg-indigo-600 text-white shadow-md' 
+                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              📢 Kelola & Hapus Promo
+            </button>
+
+            {/* 3. Approval & Grouping Order */}
+            <button 
+              onClick={() => setActiveSubTab('approval')}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                activeSubTab === 'approval' 
+                  ? 'bg-emerald-600 text-white shadow-md' 
+                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              🔒 Approval & Grouping Order
+            </button>
+
+            {/* 4. Status Cabang */}
+            <button 
+              onClick={() => setActiveSubTab('monitoring')}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                activeSubTab === 'monitoring' 
+                  ? 'bg-purple-600 text-white shadow-md' 
+                  : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              📊 Status Cabang (Submit / Belum)
+            </button>
           </>
         )}
+        
         {isBranchMode && (
           <>
             <button 
@@ -143,17 +152,17 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
       </div>
 
       {/* Routing Konten Sub-Panel */}
+      {isAdmin && activeSubTab === 'master' && (
+        <AdminMasterData isDarkMode={isDarkMode} currentUser={currentUser} />
+      )}
+      {isAdmin && activeSubTab === 'promo' && (
+        <AdminPromoManager isDarkMode={isDarkMode} currentUser={currentUser} />
+      )}
       {isAdmin && activeSubTab === 'approval' && (
         <AdminApprovalPanel isDarkMode={isDarkMode} currentUser={currentUser} />
       )}
       {isAdmin && activeSubTab === 'monitoring' && (
         <AdminBranchMonitoring isDarkMode={isDarkMode} currentUser={currentUser} />
-      )}
-      {isAdmin && activeSubTab === 'promo' && (
-        <AdminPromoManager isDarkMode={isDarkMode} currentUser={currentUser} />
-      )}
-      {isAdmin && activeSubTab === 'master' && (
-        <AdminMasterData isDarkMode={isDarkMode} currentUser={currentUser} />
       )}
 
       {isBranchMode && activeSubTab === 'order_baru' && (
