@@ -13,9 +13,17 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const [dbError, setDbError] = useState(null);
   const [activePromoId, setActivePromoId] = useState(null);
 
+  // State untuk checkbox pilihan massal
+  const [selectedBranchIds, setSelectedBranchIds] = useState([]);
+
   useEffect(() => {
     fetchBranchStatus();
   }, []);
+
+  // Setiap kali tab filter berubah, reset pilihan checkbox agar tidak salah aksi
+  useEffect(() => {
+    setSelectedBranchIds([]);
+  }, [activeTabFilter, adminRole]);
 
   const fetchBranchStatus = async () => {
     setIsLoading(true);
@@ -91,6 +99,59 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const unsubmittedList = displayedBranches.filter(b => b.status === 'BELUM SUBMIT');
   const submittedList = displayedBranches.filter(b => b.status !== 'BELUM SUBMIT');
 
+  const currentList = activeTabFilter === 'belum' ? unsubmittedList : submittedList;
+
+  // Handler Checkbox Satuan
+  const handleToggleSelect = (branchId) => {
+    if (selectedBranchIds.includes(branchId)) {
+      setSelectedBranchIds(selectedBranchIds.filter(id => id !== branchId));
+    } else {
+      setSelectedBranchIds([...selectedBranchIds, branchId]);
+    }
+  };
+
+  // Handler Checkbox Pilih Semua di Tab Aktif
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = currentList.map(b => b.id);
+      setSelectedBranchIds(allIds);
+    } else {
+      setSelectedBranchIds([]);
+    }
+  };
+
+  // === FITUR HAPUS MASAL (BERDASARKAN TAB AKTIF / PILIHAN) ===
+  const handleDeleteSelected = async () => {
+    if (selectedBranchIds.length === 0) {
+      alert("Pilih minimal satu toko terlebih dahulu.");
+      return;
+    }
+
+    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus/mereset ${selectedBranchIds.length} data toko yang dipilih dari daftar ini?`);
+    if (!confirmDelete) return;
+
+    // Ambil order_id dari branch yang dipilih yang memiliki order_id
+    const ordersToDelete = branchStatus
+      .filter(b => selectedBranchIds.includes(b.id) && b.order_id)
+      .map(b => b.order_id);
+
+    if (ordersToDelete.length > 0) {
+      const { error } = await supabase
+        .from('kl_orders')
+        .delete()
+        .in('id', ordersToDelete);
+
+      if (error) {
+        alert(`Gagal menghapus data: ${error.message}`);
+        return;
+      }
+    }
+
+    alert("Data berhasil dihapus/direset.");
+    setSelectedBranchIds([]);
+    fetchBranchStatus();
+  };
+
   const handleDelegateToPusat = async (branch) => {
     if (!activePromoId) {
       alert("Tidak ada promo aktif, tidak bisa melempar tugas.");
@@ -165,7 +226,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
             📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
           </h3>
           
-          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap items-center">
             <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm dark:bg-red-900/40 dark:border-red-800 dark:text-red-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>⏳ Belum ({unsubmittedList.length})</button>
             <button onClick={() => setActiveTabFilter('sudah')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'sudah' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>✅ Sudah ({submittedList.length})</button>
             
@@ -187,6 +248,16 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                 🚀 Blast WA ({unsubmittedList.length})
               </button>
             )}
+
+            {/* --- TOMBOL HAPUS MASSAL --- */}
+            {selectedBranchIds.length > 0 && (
+              <button 
+                onClick={handleDeleteSelected}
+                className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1"
+              >
+                🗑️ Hapus Terpilih ({selectedBranchIds.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -195,20 +266,37 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           <table className="w-full text-sm text-left relative">
             <thead className={`text-xs uppercase tracking-wider font-extrabold sticky top-0 z-10 shadow-sm ${isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-slate-50 text-slate-500'}`}>
               <tr>
-                <th className="px-6 py-4 rounded-tl-3xl">Nama Cabang</th>
+                <th className="px-4 py-4 rounded-tl-3xl w-12 text-center">
+                  <input 
+                    type="checkbox" 
+                    onChange={handleSelectAll}
+                    checked={currentList.length > 0 && selectedBranchIds.length === currentList.length}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                </th>
+                <th className="px-6 py-4">Nama Cabang</th>
                 <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4 text-center rounded-tr-3xl">Aksi / Reminder</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700' : 'divide-slate-100'}`}>
               {isLoading ? (
-                <tr><td colSpan="3" className="px-6 py-12 text-center font-bold animate-pulse">Memuat data...</td></tr>
-              ) : (activeTabFilter === 'belum' ? unsubmittedList : submittedList).length === 0 ? (
-                <tr><td colSpan="3" className="px-6 py-12 text-center text-slate-400 font-medium">Tidak ada toko di daftar ini.</td></tr>
+                <tr><td colSpan="4" className="px-6 py-12 text-center font-bold animate-pulse">Memuat data...</td></tr>
+              ) : currentList.length === 0 ? (
+                <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-medium">Tidak ada toko di daftar ini.</td></tr>
               ) : (
-                (activeTabFilter === 'belum' ? unsubmittedList : submittedList).map(b => (
+                currentList.map(b => (
                   <tr key={b.id} className={`group transition-colors ${isDarkMode ? 'hover:bg-neutral-700/40' : 'hover:bg-slate-50/70'}`}>
                     
+                    <td className="px-4 py-4 text-center">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedBranchIds.includes(b.id)}
+                        onChange={() => handleToggleSelect(b.id)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </td>
+
                     <td className="px-6 py-4 font-bold text-xs sm:text-sm uppercase whitespace-nowrap">
                       <div className="flex flex-col gap-1">
                         <span>{b.branch_name}</span>
