@@ -12,22 +12,42 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   
   const [sortOrder, setSortOrder] = useState('asc');
 
+  // Ambil ID cabang yang sedang aktif secara aman
+  const currentBranchId = currentUser?.branch_id || currentUser?.id;
+
   useEffect(() => {
     fetchMasterItems();
     fetchActivePromo();
   }, [currentUser]);
 
   const fetchMasterItems = async () => {
-    const { data } = await supabase.from('kl_master_items').select('*').order('item_name', { ascending: true });
+    const { data } = await supabase
+      .from('kl_master_items')
+      .select('*')
+      .order('item_name', { ascending: true });
     if (data) setItems(data);
   };
 
   const fetchActivePromo = async () => {
-    const { data: promoData } = await supabase.from('kl_promos').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const { data: promoData } = await supabase
+      .from('kl_promos')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     if (promoData) {
       setActivePromo(promoData);
-      if (currentUser) {
-        const { data: orderData } = await supabase.from('kl_orders').select('*, kl_order_items(item_id, qty)').eq('branch_id', currentUser.branch_id).eq('promo_id', promoData.id).maybeSingle();
+      if (currentBranchId) {
+        // Query spesifik HANYA untuk cabang yang sedang login
+        const { data: orderData } = await supabase
+          .from('kl_orders')
+          .select('*, kl_order_items(item_id, qty)')
+          .eq('branch_id', currentBranchId)
+          .eq('promo_id', promoData.id)
+          .maybeSingle();
+
         if (orderData) {
           setExistingOrder(orderData);
           if (orderData.lock_status === 'UNLOCKED') {
@@ -37,8 +57,13 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             setOrderQty(qtyMap);
           } else {
             setHasOrdered(true);
+            const qtyMap = {};
+            orderData.kl_order_items?.forEach(i => { qtyMap[i.item_id] = i.qty; });
+            setOrderQty(qtyMap);
           }
         } else {
+          setExistingOrder(null);
+          setOrderQty({});
           setHasOrdered(false);
           setShowNotification(true);
         }
@@ -87,7 +112,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   };
 
   const submitOrder = async () => {
-    if (!currentUser) return alert('Silakan login cabang terlebih dahulu');
+    if (!currentUser || !currentBranchId) return alert('Silakan login cabang terlebih dahulu');
     
     const totalOrder = calculateTotalOrderValue(orderQty);
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
@@ -113,7 +138,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       const { data: orderData, error: orderError } = await supabase
         .from('kl_orders')
         .insert({ 
-          branch_id: currentUser.branch_id, 
+          branch_id: currentBranchId, 
           promo_id: activePromo ? activePromo.id : null,
           project_name: activePromo ? activePromo.title : 'Order Cabang',
           status: 'SUBMITTED',
@@ -198,7 +223,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
               Kampanye / Promo Aktif
             </span>
-            {/* HANYA MENAMPILKAN TIPE BUDGET TANPA NOMINAL RUPIAH DI BADGE */}
             {activePromo?.budget_type && (
               <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
                 Alokasi: {activePromo.budget_type}
@@ -222,7 +246,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
-          {/* PROGRESS BAR BERSIH TANPA NOMINAL RUPIAH & TANPA KETERANGAN (Rp5.000.000) */}
           {activePromo && (
             <div className="pt-2 space-y-1.5 max-w-xl">
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
