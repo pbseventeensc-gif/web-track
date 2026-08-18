@@ -22,9 +22,17 @@ export default function AdminMasterData({ isDarkMode }) {
 
   // State untuk Fitur Reset PIN Cabang Darurat & Pencarian Cabang
   const [branches, setBranches] = useState([]);
-  const [branchSearchTerm, setBranchSearchTerm] = useState(''); // <-- State Search Cabang
+  const [branchSearchTerm, setBranchSearchTerm] = useState(''); 
   const [selectedBranchForPin, setSelectedBranchForPin] = useState(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  // State untuk Tambah Cabang Baru
+  const [newBranchForm, setNewBranchForm] = useState({
+    branch_name: '',
+    access_code: '',
+    region: '',
+    pin_code: '123456' // Default PIN awal
+  });
 
   useEffect(() => {
     fetchItems();
@@ -178,7 +186,30 @@ export default function AdminMasterData({ isDarkMode }) {
     }
   };
 
-  // 7. Handler Reset PIN Cabang Darurat oleh Admin
+  // 7. Handler Tambah Cabang Baru
+  const handleAddBranchSubmit = async (e) => {
+    e.preventDefault();
+    if (!newBranchForm.branch_name.trim() || !newBranchForm.access_code.trim()) {
+      return alert('Nama Cabang dan Kode Akses wajib diisi!');
+    }
+
+    const { error } = await supabase.from('kl_branches').insert([{
+      branch_name: newBranchForm.branch_name.trim(),
+      access_code: newBranchForm.access_code.trim().toUpperCase(),
+      region: newBranchForm.region.trim() || 'PUSAT',
+      pin_code: newBranchForm.pin_code.trim() || '123456'
+    }]);
+
+    if (!error) {
+      showNotification(`✅ Cabang "${newBranchForm.branch_name}" berhasil ditambahkan!`);
+      setNewBranchForm({ branch_name: '', access_code: '', region: '', pin_code: '123456' });
+      fetchBranches();
+    } else {
+      alert('Gagal menambah cabang (Pastikan Kode Akses belum pernah digunakan): ' + error.message);
+    }
+  };
+
+  // 8. Handler Reset PIN Cabang Darurat oleh Admin
   const handleOpenResetPinModal = (branch) => {
     setSelectedBranchForPin(branch);
     setIsPinModalOpen(true);
@@ -225,7 +256,6 @@ export default function AdminMasterData({ isDarkMode }) {
     );
   });
 
-  // Filter untuk daftar cabang pada tabel Reset PIN
   const filteredBranches = branches.filter(b => {
     const q = branchSearchTerm.toLowerCase();
     return (
@@ -319,7 +349,6 @@ export default function AdminMasterData({ isDarkMode }) {
       {/* Tabel Master Data dengan Fitur Pencarian & Inline Edit */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         
-        {/* Toolbar Header Tabel */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
@@ -342,7 +371,6 @@ export default function AdminMasterData({ isDarkMode }) {
           </div>
         </div>
 
-        {/* Tabel Container */}
         <div className="max-h-[520px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
           <table className="w-full text-xs border-collapse">
             <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
@@ -369,7 +397,6 @@ export default function AdminMasterData({ isDarkMode }) {
                         ? (isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70') 
                         : (isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50')
                     }`}>
-                      {/* Kolom 1: Nama Barang */}
                       <td className="p-3.5 align-middle">
                         {isEditing ? (
                           <input
@@ -386,7 +413,6 @@ export default function AdminMasterData({ isDarkMode }) {
                         )}
                       </td>
 
-                      {/* Kolom 2: Material */}
                       <td className="p-3.5 align-middle">
                         {isEditing ? (
                           <input
@@ -403,7 +429,6 @@ export default function AdminMasterData({ isDarkMode }) {
                         )}
                       </td>
 
-                      {/* Kolom 3: Ukuran */}
                       <td className="p-3.5 align-middle">
                         {isEditing ? (
                           <input
@@ -420,7 +445,6 @@ export default function AdminMasterData({ isDarkMode }) {
                         )}
                       </td>
 
-                      {/* Kolom 4: Harga Satuan */}
                       <td className="p-3.5 text-right align-middle font-mono">
                         {isEditing ? (
                           <input
@@ -439,7 +463,6 @@ export default function AdminMasterData({ isDarkMode }) {
                         )}
                       </td>
 
-                      {/* Kolom 5: Tombol Aksi */}
                       <td className="p-3.5 text-center align-middle">
                         {isEditing ? (
                           <div className="flex items-center justify-center gap-1.5">
@@ -487,10 +510,51 @@ export default function AdminMasterData({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Tambahan Bagian: Manajemen Reset PIN Cabang Darurat + Search Bar */}
+      {/* Bagian Baru: Form Tambah Cabang / Toko Baru */}
+      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+        <div>
+          <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
+            🏢 Tambah Cabang / Toko Baru
+          </h3>
+          <p className="text-xs opacity-60">Daftarkan cabang baru ke sistem agar bisa langsung melakukan login dan pemesanan logistik.</p>
+        </div>
+
+        <form onSubmit={handleAddBranchSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <input 
+            type="text"
+            placeholder="Nama Cabang / Toko *"
+            value={newBranchForm.branch_name}
+            onChange={e => setNewBranchForm({...newBranchForm, branch_name: e.target.value})}
+            className={`p-3 border rounded-xl font-semibold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            required
+          />
+          <input 
+            type="text"
+            placeholder="Kode Akses (Cth: KL0104) *"
+            value={newBranchForm.access_code}
+            onChange={e => setNewBranchForm({...newBranchForm, access_code: e.target.value})}
+            className={`p-3 border rounded-xl font-mono uppercase focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            required
+          />
+          <input 
+            type="text"
+            placeholder="Region (Cth: JABODETABEK)"
+            value={newBranchForm.region}
+            onChange={e => setNewBranchForm({...newBranchForm, region: e.target.value})}
+            className={`p-3 border rounded-xl uppercase focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+          />
+          <button 
+            type="submit"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl py-3 transition-all active:scale-95 shadow-sm"
+          >
+            ➕ Tambahkan Cabang
+          </button>
+        </form>
+      </div>
+
+      {/* Manajemen Reset PIN Cabang Darurat + Search Bar */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         
-        {/* Header & Search Bar Cabang */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
