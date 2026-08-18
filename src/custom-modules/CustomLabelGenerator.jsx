@@ -42,7 +42,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const fetchDestinations = async () => {
     const { data } = await supabase.from('pmg_destinations').select('*').order('client_name');
     if (data) {
-      setDestinations(data.filter(d => d.client_name && !d.client_name.includes('Kolom')));
+      const cleanData = data.filter(d => d.client_name && !d.client_name.includes('Kolom'));
+      setDestinations(cleanData);
     }
   };
 
@@ -97,18 +98,23 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="space-y-8">
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
-                const koliText = `Koli ${koliIdx + 1} of ${totalKoli} (${form.pcs_per_koli} Pcs)`;
+                const currentKoliNumber = koliIdx + 1;
+                const koliText = `Koli ${currentKoliNumber} of ${totalKoli} (${form.pcs_per_koli} Pcs)`;
                 return (
                   <div key={koliIdx} className="p-6 border-2 border-dashed border-stone-400 rounded-xl relative page-break">
                     <div className="absolute top-2 right-3 font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md text-[11px]">{koliText}</div>
                     {templateType === 'product_identity' ? (
                       <div style={{ border: '2px solid #000', padding: '18px', fontSize: '12px' }}>
                         <table style={{ width: '100%', borderBottom: '2px solid #000', marginBottom: '10px' }}>
-                          <tr><td>{form.logoLeftUrl ? <img src={form.logoLeftUrl} style={{maxHeight:'40px'}}/> : 'PMG GROUP'}</td><td style={{textAlign:'center'}}>PRODUCT IDENTITY</td><td>{form.logoRightUrl ? <img src={form.logoRightUrl} style={{maxHeight:'40px'}}/> : form.brand_name}</td></tr>
+                          <tr>
+                            <td>{form.logoLeftUrl ? <img src={form.logoLeftUrl} style={{maxHeight:'40px'}}/> : 'PMG GROUP'}</td>
+                            <td style={{textAlign:'center', fontWeight:'bold'}}>PRODUCT IDENTITY</td>
+                            <td style={{textAlign:'right'}}>{form.logoRightUrl ? <img src={form.logoRightUrl} style={{maxHeight:'40px'}}/> : form.brand_name}</td>
+                          </tr>
                         </table>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>KOLI</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {koliText}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '25%' }}>KOLI</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {koliText}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name || '...'}</td></tr>
                         </table>
                         <div style={{ textAlign: 'center', marginTop: '10px' }}>
                            <div style={{display:'flex', gap:'5px', justifyContent:'center'}}>
@@ -120,11 +126,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                       </div>
                     ) : (
                       <div style={{ border: '2px solid #000', padding: '18px', fontSize: '12px' }}>
-                        <h2 style={{textAlign:'center', color:'red'}}>COCA-COLA HANGING POSTER</h2>
-                        <table style={{width:'100%', borderCollapse:'collapse'}}>
-                          <tr><td style={{border:'1px solid black', padding:'5px', fontWeight:'bold'}}>KOLI</td><td style={{border:'1px solid black', padding:'5px'}}>{koliText}</td></tr>
+                        <h2 style={{textAlign:'center', color:'red', fontWeight:'bold'}}>COCA-COLA HANGING POSTER</h2>
+                        <table style={{width:'100%', borderCollapse:'collapse', marginTop:'10px'}}>
+                          <tr><td style={{border:'1px solid black', padding:'5px', fontWeight:'bold', width:'25%'}}>KOLI</td><td style={{border:'1px solid black', padding:'5px'}}>: {koliText}</td></tr>
                         </table>
-                        <div style={{marginTop:'10px', background:'#ffffcc', padding:'5px', fontWeight:'bold'}}>TOTAL QTY: {form.qty_powerade} PCS POWERADE | {form.qty_sprite} PCS SPRITE</div>
+                        <div style={{marginTop:'10px', background:'#ffffcc', padding:'8px', fontWeight:'bold', textAlign:'center'}}>TOTAL QTY: {form.qty_powerade} PCS POWERADE | {form.qty_sprite} PCS SPRITE</div>
                       </div>
                     )}
                   </div>
