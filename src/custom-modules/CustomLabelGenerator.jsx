@@ -82,7 +82,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Atur total Qty & isi per koli (otomatis jadi 1 of 4), upload 2 gambar produk berdampingan.</p>
+          <p className="text-xs opacity-60">Atur total Qty & isi per koli (otomatis jadi Koli X of Y), upload 2 gambar produk berdampingan.</p>
         </div>
       </div>
       
@@ -138,7 +138,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
         <div className="sm:col-span-1 flex items-end">
           <div className="w-full p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center font-bold text-indigo-600 dark:text-indigo-400">
-            📦 Total Koli: {totalKoli} Label (1 of {totalKoli} s.d {totalKoli} of {totalKoli})
+            📦 Total Koli: {totalKoli} Label (Koli 1 of {totalKoli} s.d {totalKoli} of {totalKoli})
           </div>
         </div>
 
@@ -180,7 +180,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>
 
-      {/* MODAL PRATINJAU CETAK SELURUH KOLI (1 OF X) */}
+      {/* MODAL PRATINJAU CETAK SELURUH KOLI */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -192,7 +192,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               </div>
             </div>
 
-            {/* LOOPING CETAK SEJUMLAH KOLI OTOMATIS (1 OF 4, DST) */}
+            {/* LOOPING CETAK SEJUMLAH KOLI OTOMATIS */}
             <div className="space-y-8">
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
                 const currentKoliNumber = koliIdx + 1;
@@ -223,7 +223,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'black', fontSize: '14px', background: '#eef2f7' }}>
-                              : {form.qty_total} {form.unit} (Koli {currentKoliNumber} of {totalKoli} - @{form.pcs_per_koli} Pcs)
+                              : Koli {currentKoliNumber} of {totalKoli}
                             </td>
                           </tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name || 'Belum dipilih'}</td></tr>
