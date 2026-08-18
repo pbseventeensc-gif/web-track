@@ -12,7 +12,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     periode: '16-Agu-26',
     channel: 'GT/MT/LSM/LMM/SPM/HPM/OT',
     qty_total: '20',     // Total seluruh barang (Cth: 20 pcs)
-    pcs_per_koli: '5',   // Isi per koli (Cth: 5 pcs/koli -> total 4 koli)
+    pcs_per_koli: '5',   // Isi per koli (Cth: 5 pcs/koli)
     unit: 'PCS',
     pic_name: '',
     phone: '0852 3636 3673',
@@ -82,7 +82,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Atur total Qty & isi per koli (otomatis jadi Koli X of Y), upload 2 gambar produk berdampingan.</p>
+          <p className="text-xs opacity-60">Atur total Qty & isi per koli, upload 2 gambar produk berdampingan.</p>
         </div>
       </div>
       
@@ -138,7 +138,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
         <div className="sm:col-span-1 flex items-end">
           <div className="w-full p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center font-bold text-indigo-600 dark:text-indigo-400">
-            📦 Total Koli: {totalKoli} Label (Koli 1 of {totalKoli} s.d {totalKoli} of {totalKoli})
+            📦 Total Koli: {totalKoli} Label
           </div>
         </div>
 
@@ -223,7 +223,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'black', fontSize: '14px', background: '#eef2f7' }}>
-                              : Koli {currentKoliNumber} of {totalKoli}
+                              : {form.qty_total} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
                             </td>
                           </tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name || 'Belum dipilih'}</td></tr>
@@ -287,7 +287,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <div style={{ background: '#000', color: '#fff', padding: '4px 8px', fontWeight: 'bold', fontSize: '11px' }}>TOTAL QTY (Koli {currentKoliNumber} of {totalKoli})</div>
                           <table style={{ width: '100%', fontWeight: 'bold', fontSize: '12px', padding: '6px' }}>
                             <tr><td style={{ padding: '4px' }}>POWERADE</td><td style={{ textAlign: 'center' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_powerade} PCS</td></tr>
-                            <tr><td style={{ padding: '4px', borderTop: '1px dashed #ccc' }}>SPRITE NIPIS MINT</td><td style={{ textAlign: 'center', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
+                            <tr><td style={{ padding: '4px', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
                           </table>
                         </div>
                       </div>
