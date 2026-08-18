@@ -21,11 +21,36 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const currentBranchId = currentUser?.branch_id || currentUser?.id;
 
   useEffect(() => {
-    fetchMasterItems();
     fetchActivePromo();
   }, [currentUser]);
 
-  const fetchMasterItems = async () => {
+  // Fungsi untuk memfilter item berdasarkan promo aktif atau mengambil semua jika tidak ada item khusus
+  const fetchMasterItems = async (activePromoId) => {
+    if (activePromoId) {
+      // 1. Cek apakah promo ini punya daftar item khusus di kl_promo_items
+      const { data: promoItemsData } = await supabase
+        .from('kl_promo_items')
+        .select('item_id')
+        .eq('promo_id', activePromoId);
+
+      if (promoItemsData && promoItemsData.length > 0) {
+        const specificItemIds = promoItemsData.map(pi => pi.item_id);
+        
+        // Ambil HANYA item yang dipilih admin untuk promo ini
+        const { data: filteredItems } = await supabase
+          .from('kl_master_items')
+          .select('*')
+          .in('id', specificItemIds)
+          .order('item_name', { ascending: true });
+
+        if (filteredItems) {
+          setItems(filteredItems);
+          return;
+        }
+      }
+    }
+
+    // 2. Fallback: Jika admin tidak memilih item khusus, tampilkan semua master item
     const { data } = await supabase
       .from('kl_master_items')
       .select('*')
@@ -44,6 +69,8 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
     if (promoData) {
       setActivePromo(promoData);
+      fetchMasterItems(promoData.id);
+
       if (currentBranchId) {
         const { data: orderData } = await supabase
           .from('kl_orders')
@@ -72,7 +99,25 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           setShowNotification(true);
         }
       }
+    } else {
+      fetchMasterItems(null);
     }
+  };
+
+  // Logika Pengecekan H-3 Deadline
+  const isLockedByDeadline = (deadlineDateStr) => {
+    if (!deadlineDateStr) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const deadline = new Date(deadlineDateStr);
+    deadline.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadline - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays <= 3;
   };
 
   const calculateTotalOrderValue = (currentQtyMap) => {
@@ -183,7 +228,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       return;
     }
 
-    // 1. Verifikasi PIN lama ke database terlebih dahulu
     const { data: branchData, error: fetchErr } = await supabase
       .from('kl_branches')
       .select('pin_code')
@@ -195,7 +239,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       return;
     }
 
-    // 2. Jika benar, perbarui ke PIN baru menggunakan PinManager
     const res = await updateBranchPin(currentBranchId, newPin);
     if (res.success) {
       alert("✅ PIN Berhasil diubah! Silakan gunakan PIN baru untuk sesi login berikutnya.");
@@ -229,6 +272,8 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   } else if (percentage > 90) {
     progressColor = 'bg-orange-500'; 
   }
+
+  const isDeadlineLocked = isLockedByDeadline(activePromo?.deadline_date);
 
   return (
     <div className="space-y-6 relative">
@@ -287,6 +332,11 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
                 🔓 Dibuka Admin (Silakan Edit & Resubmit)
               </span>
             )}
+            {isDeadlineLocked && (
+              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">
+                ⚠️ H-3 Deadline (Lempar Pusat Dikunci)
+              </span>
+            )}
           </div>
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
@@ -312,21 +362,36 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
             <button 
               onClick={requestUnlock}
-              disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK'}
-              className="px-5 py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
+              disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK' || isDeadlineLocked}
+              className={`px-5 py-3.5 font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap ${
+                isDeadlineLocked 
+                  ? 'bg-stone-400 cursor-not-allowed text-white' 
+                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+              }`}
             >
-              🔑 Minta Buka Kunci ke Admin
+              {isDeadlineLocked ? '🔒 Terkunci (H-3 Deadline)' : '🔑 Minta Buka Kunci ke Admin'}
             </button>
           )}
 
           {!hasOrdered && (
-            <button 
-              onClick={submitOrder}
-              disabled={loading || !activePromo}
-              className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${!activePromo ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`}
-            >
-              {loading ? 'Memproses...' : (existingOrder?.lock_status === 'UNLOCKED' ? '🔄 Resubmit / Perbarui Order' : '🚀 Submit Order Cabang')}
-            </button>
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <button 
+                onClick={submitOrder}
+                disabled={loading || !activePromo || isDeadlineLocked}
+                className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${
+                  !activePromo || isDeadlineLocked 
+                    ? 'bg-stone-400 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+              >
+                {loading ? 'Memproses...' : (isDeadlineLocked ? '🔒 Lempar Pusat Dikunci (H-3 Deadline)' : (existingOrder?.lock_status === 'UNLOCKED' ? '🔄 Resubmit / Perbarui Order' : '🚀 Submit Order Cabang'))}
+              </button>
+              {isDeadlineLocked && (
+                <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold text-center">
+                  ⚠️ Pengiriman/lempar pusat telah dikunci karena memasuki H-3 deadline.
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -360,39 +425,44 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
-              {sortedItems.map(item => {
-                const materialStr = item.material || '-';
-                const sizeStr = item.size || '-';
+              {sortedItems.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center opacity-60">Tidak ada item barang tersedia untuk promo ini.</td>
+                </tr>
+              ) : (
+                sortedItems.map(item => {
+                  const materialStr = item.material || '-';
+                  const sizeStr = item.size || '-';
 
-                return (
-                  <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                    <td className="p-3.5 font-bold">{item.item_name}</td>
-                    <td className="p-3.5 opacity-80 uppercase font-medium">{materialStr}</td>
-                    <td className="p-3.5 opacity-80 uppercase font-mono">{sizeStr}</td>
-                    <td className="p-3.5 text-center">
-                      <input 
-                        type="number" 
-                        min="0"
-                        disabled={hasOrdered}
-                        value={orderQty[item.id] || ''}
-                        onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                        className={`w-24 p-2 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          hasOrdered 
-                            ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-900' 
-                            : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'
-                        }`}
-                        placeholder="0"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
+                      <td className="p-3.5 font-bold">{item.item_name}</td>
+                      <td className="p-3.5 opacity-80 uppercase font-medium">{materialStr}</td>
+                      <td className="p-3.5 opacity-80 uppercase font-mono">{sizeStr}</td>
+                      <td className="p-3.5 text-center">
+                        <input 
+                          type="number" 
+                          min="0"
+                          disabled={hasOrdered || isDeadlineLocked}
+                          value={orderQty[item.id] || ''}
+                          onChange={(e) => handleQtyChange(item.id, e.target.value)}
+                          className={`w-24 p-2 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            hasOrdered || isDeadlineLocked
+                              ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-900' 
+                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'
+                          }`}
+                          placeholder="0"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Modal Ganti PIN Mandiri untuk Cabang */}
       <PinModal 
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
