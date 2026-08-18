@@ -11,8 +11,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     po_project: '2300001762 SHOPBLIND FRISKIES',
     periode: '16-Agu-26',
     channel: 'GT/MT/LSM/LMM/SPM/HPM/OT',
-    qty_total: '20',     // Total seluruh barang (Cth: 20 pcs)
-    pcs_per_koli: '5',   // Isi per koli (Cth: 5 pcs/koli -> total 4 koli)
+    qty_total: '20',
+    pcs_per_koli: '5',
     unit: 'PCS',
     pic_name: '',
     phone: '0852 3636 3673',
@@ -21,7 +21,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     brand_name: 'NESTLÉ / PURINA',
     item_title: 'SHOPBLIND FRISKIES FELIX - PURINA ( UK 200 X 100 CM )',
     
-    // Field Hanging Poster
     ops: '-',
     brand_cc: 'COCA - COLA',
     item_cc: 'AC 260 2MUKA LAM 2MUKA GLOSSY ( UK A4 )',
@@ -29,7 +28,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     qty_sprite: '20',
 
     imageUrl: '',
-    imageUrl2: '', // Foto produk kedua berdampingan
+    imageUrl2: '',
     logoLeftUrl: '', 
     logoRightUrl: '' 
   });
@@ -72,18 +71,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     }
   };
 
-  // Kalkulasi jumlah koli otomatis
   const totalQty = parseInt(form.qty_total) || 1;
   const koliCapacity = parseInt(form.pcs_per_koli) || 1;
   const totalKoli = Math.ceil(totalQty / koliCapacity);
 
   return (
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Atur total Qty & isi per koli (otomatis jadi 1 of 4), upload 2 gambar produk berdampingan.</p>
-        </div>
+      <div>
+        <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
+        <p className="text-xs opacity-60">Atur total Qty & isi per koli, upload gambar/logo, dan cetak label koli berurutan.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -112,7 +108,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* PENGATURAN QTY & KALKULASI KOLI */}
+      {/* INPUT QTY TANPA TOMBOL ATAS/BAWAH (SPINNER) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
         <div className="sm:col-span-1">
           <label className="block font-bold mb-1 text-indigo-500">Total Qty Keseluruhan</label>
@@ -138,7 +134,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
         <div className="sm:col-span-1 flex items-end">
           <div className="w-full p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center font-bold text-indigo-600 dark:text-indigo-400">
-            📦 Total Koli: {totalKoli} Label (1 of {totalKoli} s.d {totalKoli} of {totalKoli})
+            📦 Total Koli: {totalKoli} Label (1 of {totalKoli})
           </div>
         </div>
 
@@ -153,7 +149,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* UPLOAD GAMBAR & LOGO GANDA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
         <div>
           <label className="block font-bold mb-1 opacity-70">Logo Kiri (PMG)</label>
@@ -180,7 +175,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>
 
-      {/* MODAL PRATINJAU CETAK SELURUH KOLI (1 OF X) */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -192,7 +186,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               </div>
             </div>
 
-            {/* LOOPING CETAK SEJUMLAH KOLI OTOMATIS (1 OF 4, DST) */}
             <div className="space-y-8">
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
                 const currentKoliNumber = koliIdx + 1;
@@ -231,7 +224,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
                         </table>
 
-                        {/* DUA GAMBAR PRODUK BERDAMPINGAN */}
                         <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px', background: '#fafafa' }}>
                           <tr>
                             <td style={{ textAlign: 'center', padding: '8px', width: '50%', borderRight: '1px solid #000' }}>
