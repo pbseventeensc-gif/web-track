@@ -5,7 +5,8 @@ import * as XLSX from 'xlsx';
 export default function PmgProjectManager({ isDarkMode }) {
   const [projects, setProjects] = useState([]);
   const [destinations, setDestinations] = useState([]);
-  const [printData, setPrintData] = useState(null); // State untuk preview cetak di dalam halaman
+  const [printData, setPrintData] = useState(null);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]); // State untuk hapus massal
   
   const [form, setForm] = useState({
     dr_number: '',
@@ -53,7 +54,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // Fitur Import Alokasi Item via Excel
   const handleImportItemsExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -73,7 +73,6 @@ export default function PmgProjectManager({ isDarkMode }) {
           const qtyVal = row[3] ? Number(row[3]) : 1;
 
           if (itemNameText && !itemNameText.toLowerCase().includes('nama')) {
-            // Cocokkan nama klien dengan master destinations
             const matchedDest = destinations.find(d => d.client_name.toLowerCase().includes(clientNameText.toLowerCase()));
             
             importedItems.push({
@@ -134,6 +133,51 @@ export default function PmgProjectManager({ isDarkMode }) {
     }
   };
 
+  // FITUR HAPUS SATUAN
+  const handleDeleteSingle = async (id, name) => {
+    if (!window.confirm(`Hapus surat jalan "${name}"?`)) return;
+    
+    // Hapus relasi item terlebih dahulu
+    await supabase.from('pmg_project_items').delete().eq('project_id', id);
+    const { error } = await supabase.from('pmg_projects').delete().eq('id', id);
+
+    if (!error) {
+      fetchProjects();
+      setSelectedProjectIds(prev => prev.filter(itemId => itemId !== id));
+    } else {
+      alert('Gagal menghapus: ' + error.message);
+    }
+  };
+
+  // FITUR HAPUS MASSAL (BULK DELETE)
+  const handleBulkDelete = async () => {
+    if (selectedProjectIds.length === 0) return alert('Pilih minimal satu surat jalan yang ingin dihapus!');
+    if (!window.confirm(`Hapus ${selectedProjectIds.length} surat jalan yang dipilih?`)) return;
+
+    for (const id of selectedProjectIds) {
+      await supabase.from('pmg_project_items').delete().eq('project_id', id);
+      await supabase.from('pmg_projects').delete().eq('id', id);
+    }
+
+    alert('✅ Berhasil menghapus surat jalan yang dipilih.');
+    setSelectedProjectIds([]);
+    fetchProjects();
+  };
+
+  const handleSelectAllCheckbox = (e) => {
+    if (e.target.checked) {
+      setSelectedProjectIds(projects.map(p => p.id));
+    } else {
+      setSelectedProjectIds([]);
+    }
+  };
+
+  const handleCheckboxChange = (id) => {
+    setSelectedProjectIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   return (
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
@@ -178,7 +222,6 @@ export default function PmgProjectManager({ isDarkMode }) {
           </div>
         </div>
 
-        {/* Dynamic Items & Destination Allocations + Import Excel */}
         <div className="border rounded-2xl p-4 space-y-3 dark:border-neutral-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <h4 className="font-bold text-xs uppercase text-indigo-500">Daftar Item & Alokasi Tujuan Klien</h4>
@@ -229,15 +272,14 @@ export default function PmgProjectManager({ isDarkMode }) {
                   className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
                 />
               </div>
-              {/* QTY DIPERBESAR */}
               <div className="sm:col-span-1">
                 <input 
-                  type="number"
-                  placeholder="Qty"
+                  type="text"
+                  inputMode="numeric"
                   value={item.qty}
-                  onChange={e => handleItemChange(idx, 'qty', e.target.value)}
+                  onChange={e => handleItemChange(idx, 'qty', e.target.value.replace(/\D/g, ''))}
                   className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-center text-sm ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
-                  min="1"
+                  placeholder="1"
                 />
               </div>
               <div className="sm:col-span-1 text-center">
@@ -254,51 +296,76 @@ export default function PmgProjectManager({ isDarkMode }) {
         </button>
       </form>
 
-      {/* Daftar Project & Tombol Preview Lokal */}
+      {/* RIWAYAT SURAT JALAN & TOMBOL HAPUS MASSAL/SATUAN */}
       <div className="mt-8 space-y-3">
-        <h4 className="font-bold text-xs uppercase text-stone-500">Riwayat Surat Jalan PMG Tersimpan</h4>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div className="flex items-center gap-2">
+            <input 
+              type="checkbox" 
+              onChange={handleSelectAllCheckbox}
+              checked={projects.length > 0 && selectedProjectIds.length === projects.length}
+              className="w-4 h-4 accent-indigo-600 cursor-pointer"
+            />
+            <span className="font-bold text-xs uppercase text-stone-500">Pilih Semua / Riwayat Surat Jalan PMG</span>
+          </div>
+
+          {selectedProjectIds.length > 0 && (
+            <button 
+              onClick={handleBulkDelete}
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all animate-pulse"
+            >
+              🗑️ Hapus Terpilih ({selectedProjectIds.length})
+            </button>
+          )}
+        </div>
+
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {projects.map(p => (
             <div key={p.id} className="p-4 border rounded-2xl flex justify-between items-center gap-4 dark:border-neutral-700">
-              <div>
-                <p className="font-bold text-indigo-500">{p.project_name}</p>
-                <p className="opacity-70 text-[11px]">Trx Code: {p.transaction_code} | Tgl: {p.delivery_date}</p>
+              <div className="flex items-center gap-3">
+                <input 
+                  type="checkbox" 
+                  checked={selectedProjectIds.includes(p.id)}
+                  onChange={() => handleCheckboxChange(p.id)}
+                  className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                />
+                <div>
+                  <p className="font-bold text-indigo-500">{p.project_name}</p>
+                  <p className="opacity-70 text-[11px]">Trx Code: {p.transaction_code} | Tgl: {p.delivery_date}</p>
+                </div>
               </div>
-              <button 
-                onClick={() => setPrintData(p)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs whitespace-nowrap"
-              >
-                👁️ Lihat & Cetak Surat Jalan
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setPrintData(p)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs whitespace-nowrap shadow-sm"
+                >
+                  👁️ Lihat & Cetak
+                </button>
+                <button 
+                  onClick={() => handleDeleteSingle(p.id, p.project_name)}
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 font-bold rounded-xl text-xs whitespace-nowrap"
+                >
+                  🗑️ Hapus
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* MODAL PRATINJAU CETAK LANGSUNG DI HALAMAN (SOLUSI BLANK LOKAL) */}
+      {/* MODAL PRATINJAU CETAK */}
       {printData && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Dokumen Surat Jalan</h3>
               <div className="flex gap-2">
-                <button 
-                  onClick={() => window.print()} 
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs"
-                >
-                  🖨️ Cetak / Print Dokumen
-                </button>
-                <button 
-                  onClick={() => setPrintData(null)} 
-                  className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs"
-                >
-                  ✕ Tutup
-                </button>
+                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Print Dokumen</button>
+                <button onClick={() => setPrintData(null)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
 
-            {/* AREA DOKUMEN CETAK RESMI PMG */}
-            <div id="printable-area" className="p-6 bg-white text-black font-sans text-xs border rounded-xl">
+            <div className="p-6 bg-white text-black font-sans text-xs border rounded-xl">
               <div style={{ borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
                 <h2 style={{ margin: 0, fontSize: '15px', color: '#003366' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
                 <p style={{ margin: '3px 0', fontSize: '10px' }}>EightyEight@Kasablanka Tower A.30B Floor, Jl. Raya Casablanca Kav 88 Jakarta 12870</p>
