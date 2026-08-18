@@ -7,9 +7,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const [selectedDest, setSelectedDest] = useState('');
   const [templateType, setTemplateType] = useState('product_identity');
   
-  // URL Logo Default PMG
-  const defaultPmgLogo = "https://i.imgur.com/your-pmg-logo-link.png";
-
   const [form, setForm] = useState({
     po_project: '2300001762 SHOPBLIND FRISKIES',
     periode: '16-Agu-26',
@@ -32,6 +29,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
     imageUrl: '',
     imageUrl2: '', 
+    logoLeftUrl: '', 
     logoRightUrl: '' 
   });
 
@@ -82,7 +80,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Atur total Qty & isi per koli, upload 2 gambar produk berdampingan.</p>
+          <p className="text-xs opacity-60">Atur total Qty & isi per koli, upload 4 field gambar & logo lengkap.</p>
         </div>
       </div>
       
@@ -152,7 +150,12 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2">
+      {/* 4 FIELD UPLOAD LENGKAP */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Logo Kiri (PMG)</label>
+          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoLeftUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        </div>
         <div>
           <label className="block font-bold mb-1 opacity-70">Logo Kanan (Brand)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoRightUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
@@ -174,6 +177,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>
 
+      {/* MODAL PRATINJAU CETAK SELURUH KOLI */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -199,11 +203,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              <img src={defaultPmgLogo} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} />
+                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} /> : <span style={{ fontWeight: 'bold', color: '#003366', fontSize: '13px' }}>PMG GROUP</span>}
                             </td>
                             <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '18px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1></td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
-                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>}
+                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>}
                             </td>
                           </tr>
                         </table>
@@ -243,14 +247,14 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              <img src={defaultPmgLogo} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} />
+                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} /> : <span style={{ fontWeight: 'bold', color: '#003366', fontSize: '13px' }}>PMG GROUP</span>}
                             </td>
                             <td style={{ textAlign: 'center', width: '50%' }}>
                               <h2 style={{ margin: 0, color: '#cc0000', fontSize: '18px', fontStyle: 'italic' }}>Coca-Cola</h2>
                               <h1 style={{ margin: '3px 0 0 0', fontSize: '14px', background: '#000', color: '#fff', padding: '3px' }}>HANGING POSTER</h1>
                             </td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
-                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>COCA-COLA</span>}
+                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>COCA-COLA</span>}
                             </td>
                           </tr>
                         </table>
