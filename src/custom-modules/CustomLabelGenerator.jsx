@@ -150,7 +150,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* 4 FIELD UPLOAD LENGKAP */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
         <div>
           <label className="block font-bold mb-1 opacity-70">Logo Kiri (PMG)</label>
@@ -181,10 +180,10 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-3">
+            <div className="flex justify-between items-center border-b pb-3 print:hidden">
               <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Koli Label (Total: {totalKoli} Halaman)</h3>
               <div className="flex gap-2">
-                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak Semua Koli</button>
+                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Buka Pengaturan Printer</button>
                 <button onClick={() => setPrintDataModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
@@ -194,7 +193,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                 const currentKoliNumber = koliIdx + 1;
                 return (
                   <div key={koliIdx} className="p-6 bg-white text-black font-sans text-xs border-2 border-dashed border-stone-400 rounded-xl space-y-3 relative page-break">
-                    <div className="absolute top-2 right-3 font-bold text-indigo-600 text-[11px] bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                    <div className="absolute top-2 right-3 font-bold text-indigo-600 text-[11px] bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 print:hidden">
                       Label Koli: {currentKoliNumber} of {totalKoli}
                     </div>
 
