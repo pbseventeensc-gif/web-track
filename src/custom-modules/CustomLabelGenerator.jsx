@@ -71,7 +71,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
         <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label PMG</h2>
-        <p className="text-xs opacity-60">Atur koli, upload gambar, dan cetak label bersih.</p>
+        <p className="text-xs opacity-60">Atur koli, upload logo/gambar, dan cetak label bersih.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -83,6 +83,26 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           <option value="product_identity">Product Identity (2 Gambar)</option>
           <option value="hanging_poster">Hanging Poster (Coca-Cola)</option>
         </select>
+      </div>
+
+      {/* INPUT UPLOAD LOGO & GAMBAR PRODUK */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Logo Kiri (PMG)</label>
+          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoLeftUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        </div>
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Logo Kanan (Brand)</label>
+          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoRightUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        </div>
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Foto Produk 1 (Kiri)</label>
+          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        </div>
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Foto Produk 2 (Kanan)</label>
+          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl2')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
