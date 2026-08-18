@@ -7,6 +7,7 @@ import MainTrackingTable from './components/MainTrackingTable';
 import FinishingPanel from './components/FinishingPanel';
 import DesignPanel from './components/DesignPanel';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
+import CustomModulesIndex from './custom-modules/Index';
 
 const STAFF_QC_LIST = [
   "Budi (QC Paking)", "Siti (QC Paking)", "Agus (QC Checker)",
@@ -364,7 +365,7 @@ export default function App() {
         {/* TABS MENU */}
         {!isBranchMode && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama'].map(t => {
+            {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
               const isLocked = t === 'kawan_lama' && !currentAdmin;
 
               return (
@@ -387,7 +388,9 @@ export default function App() {
                       ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
                       : t === 'design'
                         ? '🎨 Desain & Pra-Cetak'
-                        : t}
+                        : t === 'custom_modules'
+                          ? '👥 Customer & Label Custom'
+                          : t}
                 </button>
               );
             })}
@@ -424,8 +427,13 @@ export default function App() {
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
+        {/* TAB CUSTOM MODULES (DI LUAR KAWAN LAMA) */}
+        {!isBranchMode && activeTab === 'custom_modules' && (
+          <CustomModulesIndex isDarkMode={isDarkMode} />
+        )}
+
         {/* TRACKING TABLE FULL */}
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && (
+        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && (
           <MainTrackingTable 
             isDarkMode={isDarkMode}
             activeTab={activeTab}
