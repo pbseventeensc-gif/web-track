@@ -18,9 +18,9 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const handlePrint = () => {
     if (!selectedCustomer) return alert('Pilih customer terlebih dahulu!');
     
-    // Di sini nanti kita arahkan ke logika cetak berdasarkan templateType
+    // Logika cetak berdasarkan templateType
     alert(`Mencetak label untuk ${selectedCustomer} dengan format: ${templateType.toUpperCase()}`);
-    // Logika window.print() akan dipanggil di sini setelah kita buat layout cetaknya
+    // Logika window.print() dapat ditambahkan di sini
   };
 
   return (
