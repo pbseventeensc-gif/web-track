@@ -5,7 +5,6 @@ export default function PmgProjectManager({ isDarkMode }) {
   const [projects, setProjects] = useState([]);
   const [destinations, setDestinations] = useState([]);
   
-  // Form state untuk Proyek / Surat Jalan PMG
   const [form, setForm] = useState({
     dr_number: '',
     transaction_code: '',
@@ -16,7 +15,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     sender_name: 'NINING'
   });
 
-  // State untuk item barang di dalam surat jalan
   const [items, setItems] = useState([
     { destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }
   ]);
@@ -33,7 +31,11 @@ export default function PmgProjectManager({ isDarkMode }) {
 
   const fetchDestinations = async () => {
     const { data } = await supabase.from('pmg_destinations').select('*').order('client_name');
-    if (data) setDestinations(data);
+    if (data) {
+      // Filter otomatis untuk membuang baris header jika masih ada
+      const cleanData = data.filter(d => d.client_name && !d.client_name.includes('Kolom'));
+      setDestinations(cleanData);
+    }
   };
 
   const handleAddItemRow = () => {
@@ -54,7 +56,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     e.preventDefault();
     if (!form.transaction_code || !form.project_name) return alert('Transaction Code dan Project Name wajib diisi!');
 
-    // 1. Insert ke tabel pmg_projects
     const { data: projData, error: projError } = await supabase
       .from('pmg_projects')
       .insert([form])
@@ -64,10 +65,9 @@ export default function PmgProjectManager({ isDarkMode }) {
 
     const projectId = projData[0].id;
 
-    // 2. Insert items ke tabel pmg_project_items
     const itemsToInsert = items.map(item => ({
       project_id: projectId,
-      destination_id: item.destination_id || null,
+      destination_id: item.destination_id ? Number(item.destination_id) : null,
       item_name: item.item_name,
       dimensions: item.dimensions,
       qty: Number(item.qty),
@@ -76,104 +76,13 @@ export default function PmgProjectManager({ isDarkMode }) {
 
     const { error: itemError } = await supabase.from('pmg_project_items').insert(itemsToInsert);
     if (itemError) {
-      alert('Project tersimpan, namun ada kendala pada item barang: ' + itemError.message);
+      alert('Kendala pada item barang: ' + itemError.message);
     } else {
       alert('✅ Surat Jalan & Alokasi PMG Berhasil Disimpan!');
       setForm({ dr_number: '', transaction_code: '', project_name: '', delivery_date: new Date().toISOString().split('T')[0], vehicle_no: '', phone_no: '', sender_name: 'NINING' });
       setItems([{ destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }]);
       fetchProjects();
     }
-  };
-
-  // Fungsi Cetak Surat Jalan Ala PMG
-  const handlePrintPmgSJ = (proj) => {
-    const printWindow = window.open('', '_blank', 'width=900,height=900');
-    const itemsHtml = proj.pmg_project_items.map((item, idx) => `
-      <tr>
-        <td style="border: 1px solid #000; padding: 6px; text-align: center;">${idx + 1}</td>
-        <td style="border: 1px solid #000; padding: 6px;">
-          <b>${item.item_name}</b><br/>
-          <span style="font-size: 11px; color: #555;">${item.dimensions || ''}</span><br/>
-          <small style="color: #0066cc;">Deliver to: ${item.pmg_destinations?.client_name || 'Umum'}</small>
-        </td>
-        <td style="border: 1px solid #000; padding: 6px; text-align: center;">${item.qty}</td>
-        <td style="border: 1px solid #000; padding: 6px; text-align: center;">${item.unit}</td>
-      </tr>
-    `).join('');
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Surat Jalan - ${proj.transaction_code}</title>
-          <style>
-            body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
-            .header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
-            .title { text-align: center; font-weight: bold; font-size: 16px; margin: 15px 0; text-decoration: underline; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #f2f2f2; border: 1px solid #000; padding: 8px; font-size: 11px; }
-            .footer-sign { display: flex; justify-content: space-between; margin-top: 40px; text-align: center; }
-            .sign-box { width: 200px; height: 70px; border-bottom: 1px solid #000; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h2 style="margin: 0; font-size: 15px; color: #003366;">PT. PMG INTEGRASI KOMUNIKASI</h2>
-            <p style="margin: 3px 0; font-size: 10px;">EightyEight@Kasablanka Tower A.30B Floor, Jl. Raya Casablanca Kav 88 Jakarta 12870</p>
-            <p style="margin: 3px 0; font-size: 10px;">Tlp. +62 21 29820243 | Fax: +62 21 29820244 | Web: www.pmgasia.com</p>
-          </div>
-
-          <div class="title">DELIVERY ORDER / SURAT JALAN</div>
-
-          <table style="border: none; margin-bottom: 15px;">
-            <tr>
-              <td><b>DR No.</b> : ${proj.dr_number || '-'}</td>
-              <td><b>Project Name</b> : ${proj.project_name}</td>
-            </tr>
-            <tr>
-              <td><b>Date</b> : ${proj.delivery_date}</td>
-              <td><b>Transaction Code</b> : ${proj.transaction_code}</td>
-            </tr>
-            <tr>
-              <td><b>Vehicle No.</b> : ${proj.vehicle_no || '-'}</td>
-              <td><b>Phone No.</b> : ${proj.phone_no || '-'}</td>
-            </tr>
-          </table>
-
-          <table>
-            <thead>
-              <tr>
-                <th>NO.</th>
-                <th>ITEM & TUJUAN CLIENT</th>
-                <th>QUANTITIES</th>
-                <th>UNIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHtml}
-            </tbody>
-          </table>
-
-          <p style="font-size: 10px; margin-top: 15px; font-style: italic;">
-            * Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
-          </p>
-
-          <div style="display: flex; justify-content: space-between; margin-top: 50px;">
-            <div style="text-align: center; width: 200px;">
-              <p>Pengirim,</p>
-              <br/><br/><br/>
-              <p><b>(${proj.sender_name || 'NINING'})</b></p>
-            </div>
-            <div style="text-align: center; width: 200px;">
-              <p>Penerima,</p>
-              <br/><br/><br/>
-              <p><b>( Tanda Tangan & Stampel )</b></p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
   };
 
   return (
@@ -220,7 +129,6 @@ export default function PmgProjectManager({ isDarkMode }) {
           </div>
         </div>
 
-        {/* Dynamic Items & Destination Allocations */}
         <div className="border rounded-2xl p-4 space-y-3 dark:border-neutral-700">
           <div className="flex justify-between items-center">
             <h4 className="font-bold text-xs uppercase text-indigo-500">Daftar Item & Alokasi Tujuan Klien</h4>
@@ -277,47 +185,17 @@ export default function PmgProjectManager({ isDarkMode }) {
               </div>
               <div className="sm:col-span-1 text-center">
                 {items.length > 1 && (
-                  <button 
-                    type="button" 
-                    onClick={() => handleRemoveItemRow(idx)}
-                    className="text-rose-500 font-bold p-2"
-                  >
-                    ❌
-                  </button>
+                  <button type="button" onClick={() => handleRemoveItemRow(idx)} className="text-rose-500 font-bold p-2">❌</button>
                 )}
               </div>
             </div>
           ))}
         </div>
 
-        <button 
-          type="submit" 
-          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
-        >
+        <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-md active:scale-95">
           💾 Simpan & Terbitkan Surat Jalan PMG
         </button>
       </form>
-
-      {/* Daftar Project Tersimpan */}
-      <div className="mt-8 space-y-3">
-        <h4 className="font-bold text-xs uppercase text-stone-500">Riwayat Surat Jalan PMG Tersimpan</h4>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {projects.map(p => (
-            <div key={p.id} className="p-4 border rounded-2xl flex justify-between items-center gap-4 dark:border-neutral-700">
-              <div>
-                <p className="font-bold text-indigo-500">{p.project_name}</p>
-                <p className="opacity-70 text-[11px]">Trx Code: {p.transaction_code} | Tgl: {p.delivery_date}</p>
-              </div>
-              <button 
-                onClick={() => handlePrintPmgSJ(p)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs whitespace-nowrap"
-              >
-                🖨️ Cetak Surat Jalan PMG
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
