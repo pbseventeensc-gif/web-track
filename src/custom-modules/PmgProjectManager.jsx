@@ -198,7 +198,7 @@ export default function PmgProjectManager({ isDarkMode }) {
 
       {/* UPLOAD LOGO PMG DI HEADER SURAT JALAN */}
       <div className="p-4 border rounded-2xl dark:border-neutral-700 text-xs">
-        <label className="block font-bold mb-1 opacity-75">Upload Logo PMG (Header Kiri Surat Jalan):</label>
+        <label className="block font-bold mb-1 opacity-75">Upload Logo PMG (Header Kanan Surat Jalan):</label>
         <input type="file" accept="image/*" onChange={handleLogoUpload} />
       </div>
 
@@ -381,13 +381,13 @@ export default function PmgProjectManager({ isDarkMode }) {
             </div>
 
             <div className="p-6 bg-white text-black font-sans text-xs border rounded-xl">
-              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
-                {pmgLogo && <img src={pmgLogo} alt="Logo PMG" style={{ maxHeight: '50px', marginRight: '20px', display: 'block' }} />}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: '15px', color: '#003366' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
                   <p style={{ margin: '3px 0', fontSize: '10px' }}>EightyEight@Kasablanka Tower A.30B Floor, Jl. Raya Casablanca Kav 88 Jakarta 12870</p>
                   <p style={{ margin: '3px 0', fontSize: '10px' }}>Tlp. +62 21 29820243 | Fax: +62 21 29820244 | Web: www.pmgasia.com</p>
                 </div>
+                {pmgLogo && <img src={pmgLogo} alt="Logo PMG" style={{ maxHeight: '50px', marginLeft: '20px', display: 'block' }} />}
               </div>
 
               <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '15px', margin: '15px 0', textDecoration: 'underline' }}>
