@@ -7,6 +7,7 @@ export default function PmgProjectManager({ isDarkMode }) {
   const [destinations, setDestinations] = useState([]);
   const [printData, setPrintData] = useState(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]); // State untuk hapus massal
+  const [pmgLogo, setPmgLogo] = useState(''); // State untuk logo PMG di surat jalan
   
   const [form, setForm] = useState({
     dr_number: '',
@@ -37,6 +38,15 @@ export default function PmgProjectManager({ isDarkMode }) {
     if (data) {
       const cleanData = data.filter(d => d.client_name && !d.client_name.includes('Kolom'));
       setDestinations(cleanData);
+    }
+  };
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPmgLogo(reader.result);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -137,7 +147,6 @@ export default function PmgProjectManager({ isDarkMode }) {
   const handleDeleteSingle = async (id, name) => {
     if (!window.confirm(`Hapus surat jalan "${name}"?`)) return;
     
-    // Hapus relasi item terlebih dahulu
     await supabase.from('pmg_project_items').delete().eq('project_id', id);
     const { error } = await supabase.from('pmg_projects').delete().eq('id', id);
 
@@ -185,6 +194,12 @@ export default function PmgProjectManager({ isDarkMode }) {
           📋 Input & Alokasi Surat Jalan PMG
         </h3>
         <p className="text-xs opacity-60">Buat surat jalan dengan kop resmi PMG dan alokasikan barang ke berbagai klien tujuan.</p>
+      </div>
+
+      {/* UPLOAD LOGO PMG DI HEADER SURAT JALAN */}
+      <div className="p-4 border rounded-2xl dark:border-neutral-700 text-xs">
+        <label className="block font-bold mb-1 opacity-75">Upload Logo PMG (Header Kiri Surat Jalan):</label>
+        <input type="file" accept="image/*" onChange={handleLogoUpload} />
       </div>
 
       <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
@@ -366,10 +381,13 @@ export default function PmgProjectManager({ isDarkMode }) {
             </div>
 
             <div className="p-6 bg-white text-black font-sans text-xs border rounded-xl">
-              <div style={{ borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
-                <h2 style={{ margin: 0, fontSize: '15px', color: '#003366' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
-                <p style={{ margin: '3px 0', fontSize: '10px' }}>EightyEight@Kasablanka Tower A.30B Floor, Jl. Raya Casablanca Kav 88 Jakarta 12870</p>
-                <p style={{ margin: '3px 0', fontSize: '10px' }}>Tlp. +62 21 29820243 | Fax: +62 21 29820244 | Web: www.pmgasia.com</p>
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
+                {pmgLogo && <img src={pmgLogo} alt="Logo PMG" style={{ maxHeight: '50px', marginRight: '20px', display: 'block' }} />}
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '15px', color: '#003366' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
+                  <p style={{ margin: '3px 0', fontSize: '10px' }}>EightyEight@Kasablanka Tower A.30B Floor, Jl. Raya Casablanca Kav 88 Jakarta 12870</p>
+                  <p style={{ margin: '3px 0', fontSize: '10px' }}>Tlp. +62 21 29820243 | Fax: +62 21 29820244 | Web: www.pmgasia.com</p>
+                </div>
               </div>
 
               <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '15px', margin: '15px 0', textDecoration: 'underline' }}>
