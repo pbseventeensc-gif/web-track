@@ -7,9 +7,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const [selectedDest, setSelectedDest] = useState('');
   const [templateType, setTemplateType] = useState('product_identity');
   
-  // URL Logo Default PMG (Ganti string di bawah dengan base64 atau link logo asli Anda jika ada)
-  const defaultPmgLogo = "https://via.placeholder.com/150x50?text=PMG+GROUP";
-
   const [form, setForm] = useState({
     po_project: '2300001762 SHOPBLIND FRISKIES',
     periode: '16-Agu-26',
@@ -30,8 +27,10 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     qty_powerade: '20',
     qty_sprite: '20',
 
-    imageUrl1: '',
-    imageUrl2: ''
+    imageUrl: '',
+    imageUrl2: '',
+    logoLeftUrl: '', 
+    logoRightUrl: '' 
   });
 
   const [printDataModal, setPrintDataModal] = useState(false);
@@ -72,7 +71,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
         <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label PMG</h2>
-        <p className="text-xs opacity-60">Atur koli, upload gambar produk, dan cetak label bersih.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
@@ -81,27 +79,24 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
         </select>
         <select className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900' : 'bg-stone-50'}`} value={templateType} onChange={e => setTemplateType(e.target.value)}>
-          <option value="product_identity">Product Identity (Desain Detail)</option>
-          <option value="hanging_poster">Hanging Poster (Coca-Cola)</option>
+          <option value="product_identity">Product Identity (Gaya Nestlé)</option>
+          <option value="hanging_poster">Hanging Poster (Gaya Coca-Cola)</option>
         </select>
       </div>
 
-      {/* INPUT UPLOAD 2 FOTO PRODUK */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2">
-        <div>
-          <label className="block font-bold mb-1 opacity-70">Foto Produk 1 (Kiri)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl1')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
-        </div>
-        <div>
-          <label className="block font-bold mb-1 opacity-70">Foto Produk 2 (Kanan)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl2')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        {['logoLeftUrl', 'logoRightUrl', 'imageUrl', 'imageUrl2'].map((field) => (
+          <div key={field}>
+            <label className="block font-bold mb-1 opacity-70">Upload {field}</label>
+            <input type="file" accept="image/*" onChange={e => handleImageUpload(e, field)} className={`w-full p-2 border rounded-xl ${isDarkMode ? 'bg-neutral-900' : 'bg-stone-50'}`} />
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
         <input type="text" inputMode="numeric" value={form.qty_total} onChange={e => setForm({...form, qty_total: e.target.value.replace(/\D/g, '')})} className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-center ${isDarkMode ? 'bg-neutral-900' : 'bg-stone-50'}`} placeholder="Total Qty" />
         <input type="text" inputMode="numeric" value={form.pcs_per_koli} onChange={e => setForm({...form, pcs_per_koli: e.target.value.replace(/\D/g, '')})} className={`w-full p-3 border rounded-xl font-bold text-center ${isDarkMode ? 'bg-neutral-900' : 'bg-stone-50'}`} placeholder="Isi per Koli" />
-        <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-center font-bold text-indigo-600">📦 Total: {totalKoli} Label (Koli 1 of {totalKoli})</div>
+        <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-center font-bold text-indigo-600">📦 Total: {totalKoli} Label</div>
       </div>
 
       <button onClick={() => setPrintDataModal(true)} className="w-full py-3.5 bg-blue-600 text-white font-bold rounded-xl shadow-md">👁️ Pratinjau & Cetak Semua Label</button>
@@ -115,36 +110,26 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                 const koliText = `Koli ${currentKoliNumber} of ${totalKoli} (${form.pcs_per_koli} Pcs)`;
                 return (
                   <div key={koliIdx} className="p-6 border-2 border-dashed border-stone-400 rounded-xl relative page-break">
-                    <div className="absolute top-2 right-3 font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md text-[11px]">{koliText}</div>
                     {templateType === 'product_identity' ? (
                       <div style={{ border: '2px solid #000', padding: '18px', fontSize: '12px' }}>
                         <table style={{ width: '100%', borderBottom: '2px solid #000', marginBottom: '10px' }}>
                           <tr>
-                            <td><img src={defaultPmgLogo} style={{maxHeight:'40px'}} alt="PMG Logo" /></td>
-                            <td style={{textAlign:'center', fontWeight:'bold', fontSize:'14px'}}>PRODUCT IDENTITY</td>
-                            <td style={{textAlign:'right', fontWeight:'bold'}}>{form.brand_name}</td>
+                            <td>{form.logoLeftUrl ? <img src={form.logoLeftUrl} style={{maxHeight:'40px'}}/> : 'PMG GROUP'}</td>
+                            <td style={{textAlign:'center', fontWeight:'bold'}}>PRODUCT IDENTITY</td>
+                            <td style={{textAlign:'right'}}>{form.logoRightUrl ? <img src={form.logoRightUrl} style={{maxHeight:'40px'}}/> : form.brand_name}</td>
                           </tr>
                         </table>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '30%' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.po_project}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PERIODE</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.periode}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.channel}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#f0f0f0' }}>KOLI</td><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>: {koliText}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name || '...'}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>ALAMAT</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.kota_region || '...'}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>KOLI</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {koliText}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name}</td></tr>
                         </table>
-                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px' }}>
-                          <tr>
-                            <td style={{ textAlign: 'center', padding: '10px', width: '50%', borderRight: '1px solid #000' }}>
-                              {form.imageUrl1 ? <img src={form.imageUrl1} style={{maxHeight:'100px', margin:'auto'}} alt="Produk 1"/> : '[Foto 1]'}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '10px', width: '50%' }}>
-                              {form.imageUrl2 ? <img src={form.imageUrl2} style={{maxHeight:'100px', margin:'auto'}} alt="Produk 2"/> : '[Foto 2]'}
-                            </td>
-                          </tr>
-                        </table>
-                        <div style={{ textAlign: 'center', marginTop: '10px', padding: '8px', border: '1px solid #000', background: '#f9f9f9', fontWeight: 'bold' }}>{form.item_title}</div>
+                        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                           <div style={{display:'flex', gap:'5px', justifyContent:'center'}}>
+                              {form.imageUrl && <img src={form.imageUrl} style={{maxHeight:'100px'}}/>}
+                              {form.imageUrl2 && <img src={form.imageUrl2} style={{maxHeight:'100px'}}/>}
+                           </div>
+                           <p style={{fontWeight:'bold', marginTop:'10px'}}>{form.item_title}</p>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ border: '2px solid #000', padding: '18px', fontSize: '12px' }}>
