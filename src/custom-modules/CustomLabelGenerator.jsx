@@ -7,12 +7,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const [selectedDest, setSelectedDest] = useState('');
   const [templateType, setTemplateType] = useState('product_identity');
   
+  // URL Logo Default PMG
+  const defaultPmgLogo = "https://i.imgur.com/your-pmg-logo-link.png";
+
   const [form, setForm] = useState({
     po_project: '2300001762 SHOPBLIND FRISKIES',
     periode: '16-Agu-26',
     channel: 'GT/MT/LSM/LMM/SPM/HPM/OT',
-    qty_total: '20',     // Total seluruh barang (Cth: 20 pcs)
-    pcs_per_koli: '5',   // Isi per koli (Cth: 5 pcs/koli)
+    qty_total: '100',     
+    pcs_per_koli: '20',   
     unit: 'PCS',
     pic_name: '',
     phone: '0852 3636 3673',
@@ -21,7 +24,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     brand_name: 'NESTLÉ / PURINA',
     item_title: 'SHOPBLIND FRISKIES FELIX - PURINA ( UK 200 X 100 CM )',
     
-    // Field Hanging Poster
     ops: '-',
     brand_cc: 'COCA - COLA',
     item_cc: 'AC 260 2MUKA LAM 2MUKA GLOSSY ( UK A4 )',
@@ -29,8 +31,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     qty_sprite: '20',
 
     imageUrl: '',
-    imageUrl2: '', // Foto produk kedua berdampingan
-    logoLeftUrl: '', 
+    imageUrl2: '', 
     logoRightUrl: '' 
   });
 
@@ -72,7 +73,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     }
   };
 
-  // Kalkulasi jumlah koli otomatis
   const totalQty = parseInt(form.qty_total) || 1;
   const koliCapacity = parseInt(form.pcs_per_koli) || 1;
   const totalKoli = Math.ceil(totalQty / koliCapacity);
@@ -112,7 +112,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* PENGATURAN QTY & KALKULASI KOLI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
         <div className="sm:col-span-1">
           <label className="block font-bold mb-1 text-indigo-500">Total Qty Keseluruhan</label>
@@ -122,7 +121,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             value={form.qty_total}
             onChange={e => setForm({ ...form, qty_total: e.target.value.replace(/\D/g, '') })}
             className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-center text-base ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
-            placeholder="20"
+            placeholder="100"
           />
         </div>
         <div className="sm:col-span-1">
@@ -133,7 +132,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             value={form.pcs_per_koli}
             onChange={e => setForm({ ...form, pcs_per_koli: e.target.value.replace(/\D/g, '') })}
             className={`w-full p-3 border rounded-xl font-bold text-center text-base ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
-            placeholder="5"
+            placeholder="20"
           />
         </div>
         <div className="sm:col-span-1 flex items-end">
@@ -153,12 +152,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* UPLOAD GAMBAR & LOGO GANDA */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
-        <div>
-          <label className="block font-bold mb-1 opacity-70">Logo Kiri (PMG)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoLeftUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-2">
         <div>
           <label className="block font-bold mb-1 opacity-70">Logo Kanan (Brand)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoRightUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
@@ -180,7 +174,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>
 
-      {/* MODAL PRATINJAU CETAK SELURUH KOLI */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -192,7 +185,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               </div>
             </div>
 
-            {/* LOOPING CETAK SEJUMLAH KOLI OTOMATIS */}
             <div className="space-y-8">
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
                 const currentKoliNumber = koliIdx + 1;
@@ -207,7 +199,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '45px', display: 'block' }} /> : <h2 style={{ margin: 0, color: '#003366', fontSize: '13px' }}>PMG GROUP</h2>}
+                              <img src={defaultPmgLogo} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} />
                             </td>
                             <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '18px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1></td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
@@ -223,7 +215,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
                             <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'black', fontSize: '14px', background: '#eef2f7' }}>
-                              : {form.qty_total} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
+                              : {form.pcs_per_koli} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
                             </td>
                           </tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.pic_name || 'Belum dipilih'}</td></tr>
@@ -231,7 +223,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
                         </table>
 
-                        {/* DUA GAMBAR PRODUK BERDAMPINGAN */}
                         <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px', background: '#fafafa' }}>
                           <tr>
                             <td style={{ textAlign: 'center', padding: '8px', width: '50%', borderRight: '1px solid #000' }}>
@@ -252,7 +243,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '45px', display: 'block' }} /> : <h2 style={{ margin: 0, color: '#003366', fontSize: '13px' }}>PMG GROUP</h2>}
+                              <img src={defaultPmgLogo} alt="PMG Logo" style={{ maxHeight: '45px', display: 'block' }} />
                             </td>
                             <td style={{ textAlign: 'center', width: '50%' }}>
                               <h2 style={{ margin: 0, color: '#cc0000', fontSize: '18px', fontStyle: 'italic' }}>Coca-Cola</h2>
@@ -287,7 +278,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <div style={{ background: '#000', color: '#fff', padding: '4px 8px', fontWeight: 'bold', fontSize: '11px' }}>TOTAL QTY (Koli {currentKoliNumber} of {totalKoli})</div>
                           <table style={{ width: '100%', fontWeight: 'bold', fontSize: '12px', padding: '6px' }}>
                             <tr><td style={{ padding: '4px' }}>POWERADE</td><td style={{ textAlign: 'center' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_powerade} PCS</td></tr>
-                            <tr><td style={{ padding: '4px', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
+                            <tr><td style={{ padding: '4px', borderTop: '1px dashed #ccc' }}>SPRITE NIPIS MINT</td><td style={{ textAlign: 'center', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
                           </table>
                         </div>
                       </div>
