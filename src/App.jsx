@@ -283,7 +283,7 @@ export default function App() {
   );
 
   // 🛡️ GLOBAL AUTH CHECK: Jika belum ada admin maupun cabang yang login, tampilkan halaman gerbang login utama
-  const isAuthenticated = currentAdmin || currentBranch;
+  const isAuthenticated = currentAdmin || (isBranchMode ? currentBranch : false);
 
   if (!isAuthenticated) {
     return (
