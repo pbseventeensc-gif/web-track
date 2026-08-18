@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import PmgExcelImporter from './PmgExcelImporter';
 
 export default function PmgDestinationManager({ isDarkMode }) {
   const [destinations, setDestinations] = useState([]);
@@ -38,13 +39,18 @@ export default function PmgDestinationManager({ isDarkMode }) {
   };
 
   return (
-    <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-      <h3 className="font-extrabold text-sm uppercase text-indigo-600 dark:text-indigo-400 mb-2">
-        📍 Master Alamat Klien / Tujuan PMG
-      </h3>
-      <p className="text-xs opacity-60 mb-4">Kelola data tujuan pengiriman (seperti HO Nestlé, Unilever, CCOD, dll.) sesuai format PMG.</p>
+    <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+      <div>
+        <h3 className="font-extrabold text-sm uppercase text-indigo-600 dark:text-indigo-400 mb-1">
+          📍 Master Alamat Klien / Tujuan PMG
+        </h3>
+        <p className="text-xs opacity-60">Kelola data tujuan pengiriman secara manual atau import massal melalui Excel.</p>
+      </div>
 
-      <form onSubmit={handleAddDestination} className="space-y-3 mb-6 text-xs">
+      {/* Tombol & Logika Import Excel */}
+      <PmgExcelImporter isDarkMode={isDarkMode} onImportSuccess={fetchDestinations} />
+
+      <form onSubmit={handleAddDestination} className="space-y-3 text-xs pt-2">
         <input 
           type="text"
           placeholder="Nama Klien / Perusahaan (Cth: HO Nestle)"
