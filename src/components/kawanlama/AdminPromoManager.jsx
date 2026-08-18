@@ -3,6 +3,8 @@ import { supabase } from '../../supabaseClient';
 
 export default function AdminPromoManager({ isDarkMode }) {
   const [promos, setPromos] = useState([]);
+  const [masterItems, setMasterItems] = useState([]); // Daftar semua master barang
+  const [selectedItemIds, setSelectedItemIds] = useState([]); // ID item yang dipilih admin untuk promo ini
   const [successMessage, setSuccessMessage] = useState('');
   
   const [budgets, setBudgets] = useState([
@@ -21,7 +23,10 @@ export default function AdminPromoManager({ isDarkMode }) {
 
   const [isEditingBudgetNames, setIsEditingBudgetNames] = useState(false);
 
-  useEffect(() => { fetchPromos(); }, []);
+  useEffect(() => { 
+    fetchPromos(); 
+    fetchMasterItems();
+  }, []);
 
   const fetchPromos = async () => {
     const { data } = await supabase
@@ -29,6 +34,14 @@ export default function AdminPromoManager({ isDarkMode }) {
       .select('*')
       .order('created_at', { ascending: false });
     if (data) setPromos(data);
+  };
+
+  const fetchMasterItems = async () => {
+    const { data } = await supabase
+      .from('kl_master_items')
+      .select('*')
+      .order('item_name', { ascending: true });
+    if (data) setMasterItems(data);
   };
 
   const handleSelectBudget = (b) => {
@@ -53,27 +66,56 @@ export default function AdminPromoManager({ isDarkMode }) {
     }
   };
 
+  const handleCheckboxChange = (itemId) => {
+    setSelectedItemIds(prev => 
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAllItems = () => {
+    if (selectedItemIds.length === masterItems.length) {
+      setSelectedItemIds([]);
+    } else {
+      setSelectedItemIds(masterItems.map(i => i.id));
+    }
+  };
+
   const handleCreatePromo = async (e) => {
     e.preventDefault();
     if (!form.title) return alert('Judul promo wajib diisi!');
     
-    const { error } = await supabase.from('kl_promos').insert([{
+    // 1. Simpan promo baru ke kl_promos
+    const { data: newPromo, error: promoError } = await supabase.from('kl_promos').insert([{
       title: form.title,
       description: form.description,
       budget_type: form.budget_type,
       custom_budget: Number(form.budget_nominal) || 0,
       is_active: true
-    }]);
+    }]).select().single();
 
-    if (!error) {
-      setSuccessMessage(`🚀 Berhasil! Promo "${form.title}" (${form.budget_type} - ${formatRupiah(form.budget_nominal)}) telah sukses dibroadcast ke seluruh kantor cabang.`);
-      setTimeout(() => setSuccessMessage(''), 5000);
-
-      setForm({ title: '', description: '', budget_type: budgets[0]?.name || 'Budget A', budget_nominal: budgets[0]?.nominal || 0, is_active: true });
-      fetchPromos();
-    } else {
-      alert('Gagal broadcast promo: ' + error.message);
+    if (promoError) {
+      return alert('Gagal broadcast promo: ' + promoError.message);
     }
+
+    // 2. Simpan relasi item terpilih ke kl_promo_items (jika ada yang dicentang)
+    if (selectedItemIds.length > 0) {
+      const promoItemsPayload = selectedItemIds.map(itemId => ({
+        promo_id: newPromo.id,
+        item_id: itemId
+      }));
+
+      const { error: itemsError } = await supabase.from('kl_promo_items').insert(promoItemsPayload);
+      if (itemsError) {
+        console.error('Gagal menyimpan item khusus promo:', itemsError.message);
+      }
+    }
+
+    setSuccessMessage(`🚀 Berhasil! Promo "${form.title}" (${selectedItemIds.length > 0 ? `${selectedItemIds.length} item khusus` : 'semua item'}) telah sukses dibroadcast.`);
+    setTimeout(() => setSuccessMessage(''), 5000);
+
+    setForm({ title: '', description: '', budget_type: budgets[0]?.name || 'Budget A', budget_nominal: budgets[0]?.nominal || 0, is_active: true });
+    setSelectedItemIds([]);
+    fetchPromos();
   };
 
   // Fungsi Hapus Promo
@@ -219,6 +261,46 @@ export default function AdminPromoManager({ isDarkMode }) {
               }}
               className={`w-full p-3 border rounded-xl font-mono font-bold focus:outline-none ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-emerald-400' : 'bg-stone-50 border-stone-300 text-emerald-600'}`} 
             />
+          </div>
+
+          {/* FITUR PILIH ITEM KHUSUS UNTUK CABANG */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="block font-bold opacity-80">
+                Pilih Item Barang Khusus untuk Promo Ini <span className="text-indigo-600 font-normal">({selectedItemIds.length} dipilih dari {masterItems.length} item)</span>
+              </label>
+              <button
+                type="button"
+                onClick={handleSelectAllItems}
+                className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                {selectedItemIds.length === masterItems.length ? 'Batalkan Semua' : 'Pilih Semua Item'}
+              </button>
+            </div>
+            <p className="text-[11px] opacity-60">Jika tidak ada item yang dicentang, cabang akan melihat seluruh katalog master barang secara otomatis.</p>
+            
+            <div className={`max-h-48 overflow-y-auto border p-3 rounded-xl space-y-2 ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
+              {masterItems.length === 0 ? (
+                <p className="text-xs opacity-60 text-center py-2">Belum ada master barang.</p>
+              ) : (
+                masterItems.map(item => (
+                  <label key={item.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${selectedItemIds.includes(item.id) ? (isDarkMode ? 'bg-indigo-950/50 border border-indigo-800' : 'bg-indigo-50 border border-indigo-200') : (isDarkMode ? 'hover:bg-neutral-800' : 'hover:bg-white')}`}>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItemIds.includes(item.id)}
+                        onChange={() => handleCheckboxChange(item.id)}
+                        className="rounded accent-indigo-600 w-4 h-4"
+                      />
+                      <span className="font-bold">{item.item_name}</span>
+                    </div>
+                    <div className="text-[10px] opacity-70 font-mono">
+                      {item.material} • {item.size} • {formatRupiah(item.price)}
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
 
           <div>
