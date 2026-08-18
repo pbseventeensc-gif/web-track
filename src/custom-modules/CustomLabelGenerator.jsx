@@ -7,7 +7,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const [selectedDest, setSelectedDest] = useState('');
   const [templateType, setTemplateType] = useState('product_identity');
   
-  // State form label diperbesar dan ditambahkan gambar/qty
   const [form, setForm] = useState({
     po_project: '2300001762 SHOPBLIND FRISKIES',
     periode: '16-Agu-26',
@@ -20,7 +19,9 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     transporter_dr: 'WAHANA - N-17779-2608-12',
     brand_name: 'NESTLÉ / PURINA',
     item_title: 'SHOPBLIND FRISKIES FELIX - PURINA ( UK 200 X 100 CM )',
-    imageUrl: ''
+    imageUrl: '',
+    logoLeftUrl: '', // Logo Kiri (PMG)
+    logoRightUrl: '' // Logo Kanan (Brand Klien/Nestlé)
   });
 
   const [printDataModal, setPrintDataModal] = useState(false);
@@ -50,19 +51,17 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     }
   };
 
-  // Fitur Upload Gambar Preview
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e, field) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm(prev => ({ ...prev, imageUrl: reader.result }));
+        setForm(prev => ({ ...prev, [field]: reader.result }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Fitur Import Label via Excel
   const handleExcelImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -75,7 +74,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
 
         if (rawData.length > 1) {
-          const row = rawData[1]; // Ambil baris pertama data setelah header
+          const row = rawData[1];
           setForm(prev => ({
             ...prev,
             po_project: row[0] ? String(row[0]) : prev.po_project,
@@ -99,7 +98,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Pilih klien, atur Qty besar, upload gambar visual, dan cetak label tanpa blank.</p>
+          <p className="text-xs opacity-60">Pilih klien, atur Qty, upload logo header (kiri/kanan), dan cetak label.</p>
         </div>
         <label className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
           📂 Import Atribut Label via Excel
@@ -133,7 +132,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* FORM INPUT DENGAN QTY DIPERBESAR DAN UPLOAD GAMBAR */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
         <div className="sm:col-span-2">
           <label className="block font-bold mb-1 opacity-70">Nama Project / PO No</label>
@@ -145,16 +143,16 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           />
         </div>
 
-        {/* QTY DIPERBESAR */}
         <div>
           <label className="block font-bold mb-1 text-indigo-500">JUMLAH QTY (PCS)</label>
           <div className="flex gap-2">
             <input 
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={form.qty_pcs}
-              onChange={e => setForm({ ...form, qty_pcs: e.target.value })}
+              onChange={e => setForm({ ...form, qty_pcs: e.target.value.replace(/\D/g, '') })}
               className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-base text-center ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
-              min="1"
+              placeholder="16"
             />
             <input 
               type="text"
@@ -165,12 +163,31 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           </div>
         </div>
 
-        <div className="sm:col-span-3">
-          <label className="block font-bold mb-1 opacity-70">Upload Gambar / Foto Visual Banner (Opsional)</label>
+        {/* UPLOAD LOGO HEADER KIRI & KANAN */}
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Upload Logo Kiri (PMG)</label>
           <input 
             type="file" 
             accept="image/*" 
-            onChange={handleImageUpload}
+            onChange={e => handleImageUpload(e, 'logoLeftUrl')}
+            className={`w-full p-2.5 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          />
+        </div>
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Upload Logo Kanan (Brand/Nestlé)</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={e => handleImageUpload(e, 'logoRightUrl')}
+            className={`w-full p-2.5 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          />
+        </div>
+        <div>
+          <label className="block font-bold mb-1 opacity-70">Upload Foto Banner / Produk</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={e => handleImageUpload(e, 'imageUrl')}
             className={`w-full p-2.5 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
           />
         </div>
@@ -183,7 +200,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Label PMG (Anti-Blank Lokal)
       </button>
 
-      {/* MODAL PREVIEW CETAK LABEL (MENGATASI LAYAR BLANK DI LOCALHOST) */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -205,15 +221,29 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               </div>
             </div>
 
-            {/* AREA LABEL YANG DICETAK */}
             <div className="p-6 bg-white text-black font-sans text-xs border rounded-xl space-y-4">
               {templateType === 'product_identity' ? (
                 <div style={{ border: '2px solid #000', padding: '20px' }}>
+                  {/* HEADER DENGAN DUA LOGO KIRI & KANAN */}
                   <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '12px' }}>
                     <tr>
-                      <td><h2 style={{ margin: 0, color: '#003366', fontSize: '13px' }}>PMG GROUP</h2></td>
-                      <td style={{ textAlign: 'center' }}><h1 style={{ margin: 0, fontSize: '18px' }}>PRODUCT IDENTITY</h1></td>
-                      <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</td>
+                      <td style={{ width: '25%' }}>
+                        {form.logoLeftUrl ? (
+                          <img src={form.logoLeftUrl} alt="Logo PMG" style={{ maxHeight: '45px', display: 'block' }} />
+                        ) : (
+                          <h2 style={{ margin: 0, color: '#003366', fontSize: '13px' }}>PMG GROUP</h2>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center', width: '50%' }}>
+                        <h1 style={{ margin: 0, fontSize: '18px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1>
+                      </td>
+                      <td style={{ textAlign: 'right', width: '25%' }}>
+                        {form.logoRightUrl ? (
+                          <img src={form.logoRightUrl} alt="Logo Brand" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} />
+                        ) : (
+                          <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>
+                        )}
+                      </td>
                     </tr>
                   </table>
 
@@ -227,12 +257,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                     <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
                   </table>
 
-                  {/* PREVIEW GAMBAR UPLOAD */}
                   <div style={{ textAlign: 'center', border: '1px solid #000', marginTop: '12px', padding: '10px', background: '#fafafa' }}>
                     {form.imageUrl ? (
                       <img src={form.imageUrl} alt="Visual Banner" style={{ maxHeight: '150px', margin: 'auto', display: 'block' }} />
                     ) : (
-                      <p style={{ fontStyle: 'italic', color: '#666', margin: '20px 0' }}>[ Belum ada gambar di-upload ]</p>
+                      <p style={{ fontStyle: 'italic', color: '#666', margin: '20px 0' }}>[ Belum ada gambar banner di-upload ]</p>
                     )}
                   </div>
 
@@ -243,7 +272,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               ) : (
                 <div style={{ border: '2px solid #000', padding: '20px' }}>
                   <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '12px' }}>
-                    <h2 style={{ margin: 0, color: '#cc0000', fontSize: '20px', fontStyle: 'italic' }}>Coca-Cola</h2>
+                    {form.logoRightUrl ? (
+                      <img src={form.logoRightUrl} alt="Logo Brand" style={{ maxHeight: '40px', margin: 'auto', display: 'block', marginBottom: '5px' }} />
+                    ) : (
+                      <h2 style={{ margin: 0, color: '#cc0000', fontSize: '20px', fontStyle: 'italic' }}>Coca-Cola</h2>
+                    )}
                     <h1 style={{ margin: '5px 0 0 0', fontSize: '16px', background: '#000', color: '#fff', padding: '4px' }}>HANGING POSTER</h1>
                   </div>
 
@@ -255,12 +288,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                     <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Item</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.item_title}</td></tr>
                   </table>
 
-                  {/* PREVIEW GAMBAR UPLOAD */}
                   <div style={{ textAlign: 'center', border: '1px solid #000', marginTop: '12px', padding: '10px', background: '#fafafa' }}>
                     {form.imageUrl ? (
                       <img src={form.imageUrl} alt="Visual Banner" style={{ maxHeight: '150px', margin: 'auto', display: 'block' }} />
                     ) : (
-                      <p style={{ fontStyle: 'italic', color: '#666', margin: '20px 0' }}>[ Belum ada gambar di-upload ]</p>
+                      <p style={{ fontStyle: 'italic', color: '#666', margin: '20px 0' }}>[ Belum ada gambar banner di-upload ]</p>
                     )}
                   </div>
 
