@@ -129,7 +129,66 @@ export default function AdminMasterData({ isDarkMode }) {
     reader.readAsBinaryString(file);
   };
 
-  // 3. Mulai Edit Baris
+  // 3. Import Budget Cabang (2 Kolom: branch_name & budget)
+  const handleBudgetImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLoadingImport(true);
+    const reader = new FileReader();
+    
+    reader.onload = async (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wsname]);
+
+        if (data.length === 0) {
+          alert('File Excel kosong!');
+          setLoadingImport(false);
+          return;
+        }
+
+        let successCount = 0;
+
+        for (const row of data) {
+          const branchName = String(row.branch_name || row['Branch Name'] || row['Nama Cabang'] || '').trim();
+          const budgetVal = Number(row.budget || row['Budget'] || row['Alokasi Budget'] || 0);
+
+          if (branchName) {
+            const { data: branch } = await supabase
+              .from('kl_branches')
+              .select('id')
+              .ilike('branch_name', branchName)
+              .maybeSingle();
+
+            if (branch) {
+              await supabase
+                .from('kl_branches')
+                .update({
+                  custom_budget: budgetVal,
+                  budget_type: 'CUSTOM BUDGET'
+                })
+                .eq('id', branch.id);
+
+              successCount++;
+            }
+          }
+        }
+
+        showNotification(`✅ Berhasil memperbarui budget untuk ${successCount} cabang!`);
+        fetchBranches();
+      } catch (err) {
+        alert("Terjadi kesalahan saat import budget: " + err.message);
+      } finally {
+        setLoadingImport(false);
+        e.target.value = null;
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // 4. Mulai Edit Baris
   const handleStartEdit = (item) => {
     setEditingId(item.id);
     setEditForm({
@@ -140,13 +199,13 @@ export default function AdminMasterData({ isDarkMode }) {
     });
   };
 
-  // 4. Batal Edit
+  // 5. Batal Edit
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditForm({ item_name: '', material: '', size: '', price: 0 });
   };
 
-  // 5. Simpan Hasil Edit ke Supabase
+  // 6. Simpan Hasil Edit ke Supabase
   const handleSaveEdit = async (id) => {
     if (!editForm.item_name.trim()) return alert('Nama barang tidak boleh kosong!');
 
@@ -169,7 +228,7 @@ export default function AdminMasterData({ isDarkMode }) {
     }
   };
 
-  // 6. Hapus Barang Master
+  // 7. Hapus Barang Master
   const handleDeleteItem = async (id, itemName) => {
     if (window.confirm(`⚠️ Yakin ingin menghapus barang "${itemName}" dari Master Data?`)) {
       const { error } = await supabase
@@ -186,7 +245,7 @@ export default function AdminMasterData({ isDarkMode }) {
     }
   };
 
-  // 7. Handler Tambah Cabang Baru
+  // 8. Handler Tambah Cabang Baru
   const handleAddBranchSubmit = async (e) => {
     e.preventDefault();
     if (!newBranchForm.branch_name.trim() || !newBranchForm.access_code.trim()) {
@@ -209,7 +268,7 @@ export default function AdminMasterData({ isDarkMode }) {
     }
   };
 
-  // 8. Handler Reset PIN Cabang Darurat oleh Admin
+  // 9. Handler Reset PIN Cabang Darurat oleh Admin
   const handleOpenResetPinModal = (branch) => {
     setSelectedBranchForPin(branch);
     setIsPinModalOpen(true);
@@ -285,7 +344,7 @@ export default function AdminMasterData({ isDarkMode }) {
       {/* Panel Atas: Import Excel & Form Tambah Manual */}
       <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         
-        {/* Bagian Import Excel */}
+        {/* Bagian Import Excel Master Barang */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-stone-200 dark:border-neutral-700">
           <div>
             <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">📊 Import Master Barang via Excel</h3>
@@ -304,8 +363,27 @@ export default function AdminMasterData({ isDarkMode }) {
           </label>
         </div>
 
+        {/* Bagian Import Budget Cabang (2 Kolom) */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-amber-600 dark:text-amber-400">⚡ Import Budget Cabang (2 Kolom)</h3>
+            <p className="text-xs opacity-70 mt-0.5">Format Excel wajib memiliki kolom: <code className="font-mono text-amber-500">branch_name</code> dan <code className="font-mono text-amber-500">budget</code></p>
+          </div>
+
+          <label className={`cursor-pointer px-5 py-3 rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-2 ${loadingImport ? 'bg-stone-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-white'}`}>
+            <span>{loadingImport ? '⏳ Memproses...' : '📂 Pilih File Excel Budget'}</span>
+            <input 
+              type="file" 
+              accept=".xlsx, .xls" 
+              onChange={handleBudgetImport} 
+              disabled={loadingImport} 
+              className="hidden" 
+            />
+          </label>
+        </div>
+
         {/* Form Tambah Master Manual */}
-        <div>
+        <div className="pt-2 border-t border-stone-200 dark:border-neutral-700">
           <h3 className="font-extrabold text-sm mb-3 tracking-wide uppercase text-indigo-600 dark:text-indigo-400">➕ Tambah Master Barang Baru (Manual)</h3>
           <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
             <input 
