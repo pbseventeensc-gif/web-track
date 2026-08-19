@@ -5,12 +5,10 @@ export default function KawanLamaMultiLabelGenerator() {
   const [labels, setLabels] = useState({});
   const [selectedPt, setSelectedPt] = useState('PT HOME CENTER INDONESIA RETAIL');
   
-  // Menggunakan localStorage untuk menyimpan logo secara permanen di browser
   const [wellenPrintLogo, setWellenPrintLogo] = useState(() => {
     return localStorage.getItem('wellen_print_logo_kawanlama') || null;
   });
 
-  // Menyimpan logo ke localStorage setiap kali ada perubahan
   useEffect(() => {
     if (wellenPrintLogo) {
       localStorage.setItem('wellen_print_logo_kawanlama', wellenPrintLogo);
@@ -53,7 +51,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Logo terkunci otomatis. Layout 2-in-1 (Pilih Landscape saat cetak).</p>
+          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong (Pilih Landscape saat cetak).</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -77,7 +75,7 @@ export default function KawanLamaMultiLabelGenerator() {
           <div className="text-center py-12 border-2 border-dashed rounded-xl text-stone-400 text-xs">Silakan upload file Excel untuk mulai mencetak.</div>
         ) : (
           Object.keys(labels).map((storeName, index) => (
-            <div key={index} className="label-card">
+            <div key={index} className="label-card relative">
               <div className="flex items-center border-b-2 border-black pb-2 mb-3 relative">
                 <div className="h-14 w-44 flex items-center justify-start absolute left-0">
                   {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
@@ -102,18 +100,22 @@ export default function KawanLamaMultiLabelGenerator() {
                   ))}
                 </tbody>
               </table>
+              {/* Garis Potong */}
+              <div className="cut-line">✂️ CUT HERE ✂️</div>
             </div>
           ))
         )}
       </div>
 
       <style>{`
+        .cut-line { display: none; text-align: center; font-size: 8px; color: #999; margin-top: 10px; }
         @media print {
           @page { size: A4 landscape; margin: 10mm; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
           .print-container { position: absolute; left: 0; top: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
-          .label-card { width: 100%; border: 1px solid #000; padding: 10px; page-break-inside: avoid; }
+          .label-card { width: 100%; border: 1px solid #000; padding: 10px; page-break-inside: avoid; position: relative; }
+          .cut-line { display: block; border-top: 1px dashed #000; padding-top: 5px; }
         }
       `}</style>
     </div>
