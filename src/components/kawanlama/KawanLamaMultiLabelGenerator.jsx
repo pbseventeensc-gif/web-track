@@ -58,7 +58,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Ukuran 14x21 cm (2 per HVS) lengkap dengan nomor "1 of N" & garis potong.</p>
+          <p className="text-xs text-stone-500">Layout Landscape aman (tidak terpotong) dengan garis potong vertikal.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -89,29 +89,28 @@ export default function KawanLamaMultiLabelGenerator() {
                 const absoluteIndex = pageIdx * 2 + cardIdx + 1;
                 return (
                   <div key={cardIdx} className="label-card relative">
-                    {/* Penanda "1 of N" di pojok kanan atas */}
                     <div className="absolute top-2 right-2 bg-stone-100 border border-stone-300 px-2 py-0.5 rounded text-[10px] font-bold">
                       {absoluteIndex} OF {totalRegions}
                     </div>
 
-                    <div className="flex items-center border-b-2 border-black pb-2 mb-3 pr-16">
-                      <div className="h-16 w-44 flex items-center justify-start">
+                    <div className="flex items-center border-b-2 border-black pb-2 mb-2.5 pr-16">
+                      <div className="h-14 w-40 flex items-center justify-start">
                         {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
                       </div>
                       <div className="flex-grow text-center">
-                        <h1 className="font-bold text-base uppercase">{selectedPt}</h1>
-                        <p className="font-bold text-[10px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                        <h1 className="font-bold text-sm uppercase">{selectedPt}</h1>
+                        <p className="font-bold text-[9px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
                       </div>
                     </div>
-                    <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
-                    <table className="w-full border-collapse border border-black text-[11px]">
+                    <div className="mb-2 font-bold text-xs">STORE / REGION : {storeName}</div>
+                    <table className="w-full border-collapse border border-black text-[10px]">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="border border-black p-1 w-8">NO</th>
+                          <th className="border border-black p-1 w-7">NO</th>
                           <th className="border border-black p-1 text-left">ITEM</th>
                           <th className="border border-black p-1 w-32">BAHAN</th>
                           <th className="border border-black p-1 w-24">UKURAN</th>
-                          <th className="border border-black p-1 w-20">QTY</th>
+                          <th className="border border-black p-1 w-16">QTY</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -137,9 +136,8 @@ export default function KawanLamaMultiLabelGenerator() {
       <style>{`
         .a4-landscape-page {
           display: grid;
-          grid-template-columns: 14cm 14cm;
-          gap: 1.7cm;
-          justify-content: center;
+          grid-template-columns: 1fr 1fr;
+          gap: 15mm;
           background: white;
           padding: 10mm;
           margin-bottom: 20px;
@@ -148,13 +146,11 @@ export default function KawanLamaMultiLabelGenerator() {
         }
         .vertical-cut-line { display: none; }
         .label-card {
-          width: 14cm;
-          height: 19cm;
           border: 1px solid #000;
           padding: 10px;
           background: #fff;
           box-sizing: border-box;
-          overflow: hidden;
+          width: 100%;
         }
         @media print {
           @page { size: A4 landscape; margin: 0; }
@@ -164,7 +160,7 @@ export default function KawanLamaMultiLabelGenerator() {
           .a4-landscape-page {
             width: 297mm;
             height: 210mm;
-            padding: 10mm;
+            padding: 8mm;
             box-sizing: border-box;
             page-break-after: always;
             break-after: page;
@@ -172,10 +168,11 @@ export default function KawanLamaMultiLabelGenerator() {
             box-shadow: none;
             position: relative;
             display: grid;
-            grid-template-columns: 14cm 14cm;
-            gap: 1.7cm;
+            grid-template-columns: 13.8cm 13.8cm;
+            gap: 1cm;
             justify-content: center;
-            align-content: center;
+            align-content: start;
+            overflow: hidden;
           }
           .vertical-cut-line {
             display: block;
@@ -183,16 +180,19 @@ export default function KawanLamaMultiLabelGenerator() {
             left: 50%;
             top: 5mm;
             bottom: 5mm;
-            border-left: 2px dashed #666;
+            border-left: 2px dashed #444;
             transform: translateX(-50%);
             z-index: 10;
           }
           .label-card {
-            width: 14cm;
-            height: 19cm;
+            width: 13.8cm;
+            max-height: 194mm;
             border: 1px solid #000;
-            padding: 10px;
+            padding: 8px;
             box-sizing: border-box;
+            background: #fff;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
         }
       `}</style>
