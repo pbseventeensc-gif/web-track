@@ -58,7 +58,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout Landscape aman (tidak terpotong) dengan garis potong vertikal.</p>
+          <p className="text-xs text-stone-500">Layout Landscape Simetris & Tabel Maksimal.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -89,38 +89,38 @@ export default function KawanLamaMultiLabelGenerator() {
                 const absoluteIndex = pageIdx * 2 + cardIdx + 1;
                 return (
                   <div key={cardIdx} className="label-card relative">
-                    <div className="absolute top-2 right-2 bg-stone-100 border border-stone-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                    <div className="absolute top-2.5 right-2.5 bg-stone-100 border border-stone-300 px-2.5 py-0.5 rounded text-[11px] font-bold">
                       {absoluteIndex} OF {totalRegions}
                     </div>
 
-                    <div className="flex items-center border-b-2 border-black pb-2 mb-2.5 pr-16">
-                      <div className="h-14 w-40 flex items-center justify-start">
+                    <div className="flex items-center border-b-2 border-black pb-2.5 mb-3 pr-16">
+                      <div className="h-16 w-44 flex items-center justify-start">
                         {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
                       </div>
                       <div className="flex-grow text-center">
-                        <h1 className="font-bold text-sm uppercase">{selectedPt}</h1>
-                        <p className="font-bold text-[9px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                        <h1 className="font-bold text-base uppercase">{selectedPt}</h1>
+                        <p className="font-bold text-[10px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
                       </div>
                     </div>
-                    <div className="mb-2 font-bold text-xs">STORE / REGION : {storeName}</div>
-                    <table className="w-full border-collapse border border-black text-[10px]">
+                    <div className="mb-2.5 font-bold text-sm">STORE / REGION : {storeName}</div>
+                    <table className="w-full border-collapse border border-black text-xs">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="border border-black p-1 w-7">NO</th>
-                          <th className="border border-black p-1 text-left">ITEM</th>
-                          <th className="border border-black p-1 w-32">BAHAN</th>
-                          <th className="border border-black p-1 w-24">UKURAN</th>
-                          <th className="border border-black p-1 w-16">QTY</th>
+                          <th className="border border-black p-1.5 w-10 text-center">NO</th>
+                          <th className="border border-black p-1.5 text-left">ITEM</th>
+                          <th className="border border-black p-1.5 w-36 text-center">BAHAN</th>
+                          <th className="border border-black p-1.5 w-28 text-center">UKURAN</th>
+                          <th className="border border-black p-1.5 w-20 text-center">QTY</th>
                         </tr>
                       </thead>
                       <tbody>
                         {labels[storeName].map((item, i) => (
                           <tr key={i}>
-                            <td className="border border-black p-1 text-center">{i + 1}</td>
-                            <td className="border border-black p-1">{item.Item}</td>
-                            <td className="border border-black p-1 text-center">{item.Bahan}</td>
-                            <td className="border border-black p-1 text-center">{item.Ukuran}</td>
-                            <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
+                            <td className="border border-black p-1.5 text-center font-medium">{i + 1}</td>
+                            <td className="border border-black p-1.5 font-medium">{item.Item}</td>
+                            <td className="border border-black p-1.5 text-center">{item.Bahan}</td>
+                            <td className="border border-black p-1.5 text-center">{item.Ukuran}</td>
+                            <td className="border border-black p-1.5 text-center font-bold">{item.Qty} PCS</td>
                           </tr>
                         ))}
                       </tbody>
@@ -147,7 +147,7 @@ export default function KawanLamaMultiLabelGenerator() {
         .vertical-cut-line { display: none; }
         .label-card {
           border: 1px solid #000;
-          padding: 10px;
+          padding: 12px;
           background: #fff;
           box-sizing: border-box;
           width: 100%;
@@ -160,7 +160,7 @@ export default function KawanLamaMultiLabelGenerator() {
           .a4-landscape-page {
             width: 297mm;
             height: 210mm;
-            padding: 8mm;
+            padding: 8mm 10mm;
             box-sizing: border-box;
             page-break-after: always;
             break-after: page;
@@ -168,11 +168,10 @@ export default function KawanLamaMultiLabelGenerator() {
             box-shadow: none;
             position: relative;
             display: grid;
-            grid-template-columns: 13.8cm 13.8cm;
-            gap: 1cm;
+            grid-template-columns: 136mm 136mm;
+            gap: 5mm;
             justify-content: center;
-            align-content: start;
-            overflow: hidden;
+            align-content: center;
           }
           .vertical-cut-line {
             display: block;
@@ -185,14 +184,16 @@ export default function KawanLamaMultiLabelGenerator() {
             z-index: 10;
           }
           .label-card {
-            width: 13.8cm;
-            max-height: 194mm;
+            width: 136mm;
+            height: 194mm;
             border: 1px solid #000;
-            padding: 8px;
+            padding: 10mm;
             box-sizing: border-box;
             background: #fff;
             page-break-inside: avoid;
             break-inside: avoid;
+            display: flex;
+            flex-direction: column;
           }
         }
       `}</style>
