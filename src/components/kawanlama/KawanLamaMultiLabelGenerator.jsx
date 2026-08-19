@@ -46,12 +46,19 @@ export default function KawanLamaMultiLabelGenerator() {
     }
   };
 
+  // Mengubah data objek store menjadi array untuk dikelompokkan per 2 label per halaman
+  const storeKeys = Object.keys(labels);
+  const pagePairs = [];
+  for (let i = 0; i < storeKeys.length; i += 2) {
+    pagePairs.push(storeKeys.slice(i, i + 2));
+  }
+
   return (
     <div className="p-4 bg-white rounded-xl shadow-sm space-y-6">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong & satuan PCS (Pilih Landscape saat cetak).</p>
+          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong jelas di tengah halaman.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -71,50 +78,109 @@ export default function KawanLamaMultiLabelGenerator() {
       </div>
 
       <div className="print-container">
-        {Object.keys(labels).length === 0 ? (
+        {storeKeys.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed rounded-xl text-stone-400 text-xs">Silakan upload file Excel untuk mulai mencetak.</div>
         ) : (
-          Object.keys(labels).map((storeName, index) => (
-            <div key={index} className="label-card relative">
-              <div className="flex items-center border-b-2 border-black pb-2 mb-3">
-                <div className="h-16 w-48 flex items-center justify-start">
-                  {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
+          pagePairs.map((pair, pageIdx) => (
+            <div key={pageIdx} className="a4-landscape-page relative">
+              {/* Garis Potong Vertikal di Tengah Halaman */}
+              <div className="vertical-cut-line"></div>
+
+              {pair.map((storeName, cardIdx) => (
+                <div key={cardIdx} className="label-card">
+                  <div className="flex items-center border-b-2 border-black pb-2 mb-3">
+                    <div className="h-16 w-48 flex items-center justify-start">
+                      {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
+                    </div>
+                    <div className="flex-grow text-center pr-12">
+                      <h1 className="font-bold text-lg uppercase">{selectedPt}</h1>
+                      <p className="font-bold text-xs mt-1">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                    </div>
+                  </div>
+                  <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
+                  <table className="w-full border-collapse border border-black text-[11px]">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-black p-1">NO</th>
+                        <th className="border border-black p-1 text-left">ITEM</th>
+                        <th className="border border-black p-1">BAHAN</th>
+                        <th className="border border-black p-1">UKURAN</th>
+                        <th className="border border-black p-1">QTY</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {labels[storeName].map((item, i) => (
+                        <tr key={i}>
+                          <td className="border border-black p-1 text-center">{i + 1}</td>
+                          <td className="border border-black p-1">{item.Item}</td>
+                          <td className="border border-black p-1 text-center">{item.Bahan}</td>
+                          <td className="border border-black p-1 text-center">{item.Ukuran}</td>
+                          <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="flex-grow text-center pr-12">
-                  <h1 className="font-bold text-lg uppercase">{selectedPt}</h1>
-                  <p className="font-bold text-xs mt-1">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
-                </div>
-              </div>
-              <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
-              <table className="w-full border-collapse border border-black text-[11px]">
-                <thead><tr className="bg-gray-100"><th className="border border-black p-1">NO</th><th className="border border-black p-1 text-left">ITEM</th><th className="border border-black p-1">BAHAN</th><th className="border border-black p-1">UKURAN</th><th className="border border-black p-1">QTY</th></tr></thead>
-                <tbody>
-                  {labels[storeName].map((item, i) => (
-                    <tr key={i}>
-                      <td className="border border-black p-1 text-center">{i + 1}</td>
-                      <td className="border border-black p-1">{item.Item}</td>
-                      <td className="border border-black p-1 text-center">{item.Bahan}</td>
-                      <td className="border border-black p-1 text-center">{item.Ukuran}</td>
-                      <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="cut-line">✂️ CUT HERE ✂️</div>
+              ))}
             </div>
           ))
         )}
       </div>
 
       <style>{`
-        .cut-line { display: none; text-align: center; font-size: 8px; color: #999; margin-top: 10px; }
+        .a4-landscape-page {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15mm;
+          background: white;
+          padding: 10mm;
+          margin-bottom: 20px;
+          border: 1px solid #ddd;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .vertical-cut-line { display: none; }
+        .label-card {
+          border: 1px solid #000;
+          padding: 12px;
+          background: #fff;
+          height: fit-content;
+        }
         @media print {
-          @page { size: A4 landscape; margin: 10mm; }
+          @page { size: A4 landscape; margin: 0; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
-          .print-container { position: absolute; left: 0; top: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
-          .label-card { width: 100%; border: 1px solid #000; padding: 10px; page-break-inside: avoid; position: relative; }
-          .cut-line { display: block; border-top: 1px dashed #000; padding-top: 5px; }
+          .print-container { position: absolute; left: 0; top: 0; width: 100%; }
+          .a4-landscape-page {
+            width: 297mm;
+            height: 210mm;
+            padding: 10mm;
+            box-sizing: border-box;
+            page-break-after: always;
+            break-after: page;
+            border: none;
+            box-shadow: none;
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10mm;
+          }
+          /* Garis putus-putus vertikal persis di tengah halaman HVS */
+          .vertical-cut-line {
+            display: block;
+            position: absolute;
+            left: 50%;
+            top: 5mm;
+            bottom: 5mm;
+            border-left: 2px dashed #666;
+            transform: translateX(-50%);
+            z-index: 10;
+          }
+          .label-card {
+            border: 1px solid #000;
+            padding: 10px;
+            height: 100%;
+            box-sizing: border-box;
+          }
         }
       `}</style>
     </div>
