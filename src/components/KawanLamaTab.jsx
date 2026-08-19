@@ -5,7 +5,7 @@ import AdminApprovalPanel from './kawanlama/AdminApprovalPanel';
 import AdminMasterData from './kawanlama/AdminMasterData';
 import AdminPromoManager from './kawanlama/AdminPromoManager';
 import AdminBranchMonitoring from './kawanlama/AdminBranchMonitoring';
-import KawanLamaMultiLabelGenerator from './KawanLamaMultiLabelGenerator'; // <-- Diimport di sini
+import KawanLamaMultiLabelGenerator from './kawanlama/KawanLamaMultiLabelGenerator'; // <-- Diimport di sini
 import { supabase } from '../supabaseClient';
 
 export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
