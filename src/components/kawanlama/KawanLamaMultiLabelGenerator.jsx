@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
 export default function KawanLamaMultiLabelGenerator() {
   const [labels, setLabels] = useState({});
   const [selectedPt, setSelectedPt] = useState('PT HOME CENTER INDONESIA RETAIL');
-  const [wellenPrintLogo, setWellenPrintLogo] = useState(null);
+  
+  // Menggunakan localStorage untuk menyimpan logo secara permanen di browser
+  const [wellenPrintLogo, setWellenPrintLogo] = useState(() => {
+    return localStorage.getItem('wellen_print_logo_kawanlama') || null;
+  });
+
+  // Menyimpan logo ke localStorage setiap kali ada perubahan
+  useEffect(() => {
+    if (wellenPrintLogo) {
+      localStorage.setItem('wellen_print_logo_kawanlama', wellenPrintLogo);
+    }
+  }, [wellenPrintLogo]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -28,7 +39,13 @@ export default function KawanLamaMultiLabelGenerator() {
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
-    if (file) setWellenPrintLogo(URL.createObjectURL(file));
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        setWellenPrintLogo(evt.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   return (
@@ -36,7 +53,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout 2-in-1 per HVS (Pilih Landscape saat cetak).</p>
+          <p className="text-xs text-stone-500">Logo terkunci otomatis. Layout 2-in-1 (Pilih Landscape saat cetak).</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -47,7 +64,10 @@ export default function KawanLamaMultiLabelGenerator() {
             <option value="PT GINDACO INDONESIA">GINDACO</option>
           </select>
           <input type="file" accept=".xlsx" onChange={handleFileUpload} className="text-xs border p-1 rounded-lg" />
-          <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs border p-1 rounded-lg" title="Upload Logo Wellen" />
+          <div className="flex flex-col text-[9px]">
+            <span className="mb-1">Logo Wellen (Terkunci):</span>
+            <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs border p-1 rounded-lg" />
+          </div>
           <button onClick={() => window.print()} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-md">🖨️ Cetak Semua</button>
         </div>
       </div>
@@ -58,13 +78,13 @@ export default function KawanLamaMultiLabelGenerator() {
         ) : (
           Object.keys(labels).map((storeName, index) => (
             <div key={index} className="label-card">
-              <div className="flex justify-between items-center border-b-2 border-black pb-2 mb-3">
-                <div className="h-10 w-24 flex items-center justify-start">
-                  {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[8px] border p-1 italic">[Logo]</div>}
+              <div className="flex items-center border-b-2 border-black pb-2 mb-3 relative">
+                <div className="h-14 w-44 flex items-center justify-start absolute left-0">
+                  {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
                 </div>
-                <div className="text-right">
-                  <h1 className="font-bold text-md uppercase">{selectedPt}</h1>
-                  <p className="font-bold text-[10px]">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                <div className="w-full text-center">
+                  <h1 className="font-bold text-lg uppercase">{selectedPt}</h1>
+                  <p className="font-bold text-xs mt-1">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
                 </div>
               </div>
               <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
