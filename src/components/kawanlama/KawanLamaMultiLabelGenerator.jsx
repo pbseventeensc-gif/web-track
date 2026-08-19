@@ -46,10 +46,10 @@ export default function KawanLamaMultiLabelGenerator() {
     }
   };
 
-  // Mengubah data objek store menjadi array untuk dikelompokkan per 2 label per halaman
   const storeKeys = Object.keys(labels);
+  const totalRegions = storeKeys.length;
   const pagePairs = [];
-  for (let i = 0; i < storeKeys.length; i += 2) {
+  for (let i = 0; i < totalRegions; i += 2) {
     pagePairs.push(storeKeys.slice(i, i + 2));
   }
 
@@ -58,7 +58,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong jelas di tengah halaman.</p>
+          <p className="text-xs text-stone-500">Ukuran 14x21 cm (2 per HVS) lengkap dengan nomor "1 of N" & garis potong.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -78,50 +78,57 @@ export default function KawanLamaMultiLabelGenerator() {
       </div>
 
       <div className="print-container">
-        {storeKeys.length === 0 ? (
+        {totalRegions === 0 ? (
           <div className="text-center py-12 border-2 border-dashed rounded-xl text-stone-400 text-xs">Silakan upload file Excel untuk mulai mencetak.</div>
         ) : (
           pagePairs.map((pair, pageIdx) => (
             <div key={pageIdx} className="a4-landscape-page relative">
-              {/* Garis Potong Vertikal di Tengah Halaman */}
               <div className="vertical-cut-line"></div>
 
-              {pair.map((storeName, cardIdx) => (
-                <div key={cardIdx} className="label-card">
-                  <div className="flex items-center border-b-2 border-black pb-2 mb-3">
-                    <div className="h-16 w-48 flex items-center justify-start">
-                      {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
+              {pair.map((storeName, cardIdx) => {
+                const absoluteIndex = pageIdx * 2 + cardIdx + 1;
+                return (
+                  <div key={cardIdx} className="label-card relative">
+                    {/* Penanda "1 of N" di pojok kanan atas */}
+                    <div className="absolute top-2 right-2 bg-stone-100 border border-stone-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                      {absoluteIndex} OF {totalRegions}
                     </div>
-                    <div className="flex-grow text-center pr-12">
-                      <h1 className="font-bold text-lg uppercase">{selectedPt}</h1>
-                      <p className="font-bold text-xs mt-1">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+
+                    <div className="flex items-center border-b-2 border-black pb-2 mb-3 pr-16">
+                      <div className="h-16 w-44 flex items-center justify-start">
+                        {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
+                      </div>
+                      <div className="flex-grow text-center">
+                        <h1 className="font-bold text-base uppercase">{selectedPt}</h1>
+                        <p className="font-bold text-[10px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
-                  <table className="w-full border-collapse border border-black text-[11px]">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border border-black p-1">NO</th>
-                        <th className="border border-black p-1 text-left">ITEM</th>
-                        <th className="border border-black p-1">BAHAN</th>
-                        <th className="border border-black p-1">UKURAN</th>
-                        <th className="border border-black p-1">QTY</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {labels[storeName].map((item, i) => (
-                        <tr key={i}>
-                          <td className="border border-black p-1 text-center">{i + 1}</td>
-                          <td className="border border-black p-1">{item.Item}</td>
-                          <td className="border border-black p-1 text-center">{item.Bahan}</td>
-                          <td className="border border-black p-1 text-center">{item.Ukuran}</td>
-                          <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
+                    <div className="mb-2 font-bold text-sm">STORE / REGION : {storeName}</div>
+                    <table className="w-full border-collapse border border-black text-[11px]">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="border border-black p-1 w-8">NO</th>
+                          <th className="border border-black p-1 text-left">ITEM</th>
+                          <th className="border border-black p-1 w-32">BAHAN</th>
+                          <th className="border border-black p-1 w-24">UKURAN</th>
+                          <th className="border border-black p-1 w-20">QTY</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
+                      </thead>
+                      <tbody>
+                        {labels[storeName].map((item, i) => (
+                          <tr key={i}>
+                            <td className="border border-black p-1 text-center">{i + 1}</td>
+                            <td className="border border-black p-1">{item.Item}</td>
+                            <td className="border border-black p-1 text-center">{item.Bahan}</td>
+                            <td className="border border-black p-1 text-center">{item.Ukuran}</td>
+                            <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
             </div>
           ))
         )}
@@ -130,8 +137,9 @@ export default function KawanLamaMultiLabelGenerator() {
       <style>{`
         .a4-landscape-page {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 15mm;
+          grid-template-columns: 14cm 14cm;
+          gap: 1.7cm;
+          justify-content: center;
           background: white;
           padding: 10mm;
           margin-bottom: 20px;
@@ -140,10 +148,13 @@ export default function KawanLamaMultiLabelGenerator() {
         }
         .vertical-cut-line { display: none; }
         .label-card {
+          width: 14cm;
+          height: 19cm;
           border: 1px solid #000;
-          padding: 12px;
+          padding: 10px;
           background: #fff;
-          height: fit-content;
+          box-sizing: border-box;
+          overflow: hidden;
         }
         @media print {
           @page { size: A4 landscape; margin: 0; }
@@ -161,10 +172,11 @@ export default function KawanLamaMultiLabelGenerator() {
             box-shadow: none;
             position: relative;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10mm;
+            grid-template-columns: 14cm 14cm;
+            gap: 1.7cm;
+            justify-content: center;
+            align-content: center;
           }
-          /* Garis putus-putus vertikal persis di tengah halaman HVS */
           .vertical-cut-line {
             display: block;
             position: absolute;
@@ -176,9 +188,10 @@ export default function KawanLamaMultiLabelGenerator() {
             z-index: 10;
           }
           .label-card {
+            width: 14cm;
+            height: 19cm;
             border: 1px solid #000;
             padding: 10px;
-            height: 100%;
             box-sizing: border-box;
           }
         }
