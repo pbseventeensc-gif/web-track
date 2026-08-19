@@ -51,7 +51,7 @@ export default function KawanLamaMultiLabelGenerator() {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
         <div>
           <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong (Pilih Landscape saat cetak).</p>
+          <p className="text-xs text-stone-500">Layout 2-in-1 dengan garis potong & satuan PCS (Pilih Landscape saat cetak).</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
@@ -76,11 +76,11 @@ export default function KawanLamaMultiLabelGenerator() {
         ) : (
           Object.keys(labels).map((storeName, index) => (
             <div key={index} className="label-card relative">
-              <div className="flex items-center border-b-2 border-black pb-2 mb-3 relative">
-                <div className="h-14 w-44 flex items-center justify-start absolute left-0">
+              <div className="flex items-center border-b-2 border-black pb-2 mb-3">
+                <div className="h-16 w-48 flex items-center justify-start">
                   {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
                 </div>
-                <div className="w-full text-center">
+                <div className="flex-grow text-center pr-12">
                   <h1 className="font-bold text-lg uppercase">{selectedPt}</h1>
                   <p className="font-bold text-xs mt-1">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
                 </div>
@@ -95,12 +95,11 @@ export default function KawanLamaMultiLabelGenerator() {
                       <td className="border border-black p-1">{item.Item}</td>
                       <td className="border border-black p-1 text-center">{item.Bahan}</td>
                       <td className="border border-black p-1 text-center">{item.Ukuran}</td>
-                      <td className="border border-black p-1 text-center font-bold">{item.Qty}</td>
+                      <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {/* Garis Potong */}
               <div className="cut-line">✂️ CUT HERE ✂️</div>
             </div>
           ))
