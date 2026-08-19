@@ -5,6 +5,7 @@ import AdminApprovalPanel from './kawanlama/AdminApprovalPanel';
 import AdminMasterData from './kawanlama/AdminMasterData';
 import AdminPromoManager from './kawanlama/AdminPromoManager';
 import AdminBranchMonitoring from './kawanlama/AdminBranchMonitoring';
+import KawanLamaMultiLabelGenerator from './KawanLamaMultiLabelGenerator'; // <-- Diimport di sini
 import { supabase } from '../supabaseClient';
 
 export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
@@ -40,7 +41,6 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
     <div className="relative">
       
       {/* === STICKY HEADER & TABS WRAPPER === */}
-      {/* Bagian ini akan terus menempel di atas layar saat halaman di-scroll */}
       <div className={`sticky top-0 z-50 pt-2 pb-4 mb-6 border-b backdrop-blur-xl transition-colors ${
         isDarkMode ? 'bg-neutral-900/95 border-neutral-800' : 'bg-stone-50/95 border-stone-200'
       }`}>
@@ -71,7 +71,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
                   {currentUser?.role === 'admin_wilayah' ? `Admin Koordinator (${currentUser?.region?.toUpperCase()})` : 'Admin Pusat Kawan Lama'}
                 </span>
                 <h3 className="text-xs font-bold mt-1 text-stone-700 dark:text-neutral-200">
-                  Pengelolaan Data Promo, Approval Order, & Monitoring Cabang
+                  Pengelolaan Data Promo, Approval Order, Monitoring Cabang, & Multi-Label Generator
                 </h3>
               </div>
               <span className="text-xs font-mono opacity-60">User: {currentUser?.username || 'Admin'}</span>
@@ -125,6 +125,18 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
                 >
                   📊 Status Cabang (Submit / Belum)
                 </button>
+
+                {/* Tombol Baru: Multi-Label Generator */}
+                <button 
+                  onClick={() => setActiveSubTab('labels')}
+                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                    activeSubTab === 'labels' 
+                      ? 'bg-amber-600 text-white shadow-md' 
+                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                  }`}
+                >
+                  🏷️ Multi-Label Generator
+                </button>
               </>
             )}
             
@@ -170,6 +182,9 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
         )}
         {isAdmin && activeSubTab === 'monitoring' && (
           <AdminBranchMonitoring isDarkMode={isDarkMode} currentUser={currentUser} />
+        )}
+        {isAdmin && activeSubTab === 'labels' && (
+          <KawanLamaMultiLabelGenerator />
         )}
 
         {isBranchMode && activeSubTab === 'order_baru' && (
