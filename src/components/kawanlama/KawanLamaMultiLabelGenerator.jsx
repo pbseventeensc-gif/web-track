@@ -88,7 +88,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               🏷️ Kawan Lama Group - Multi Label & Surat Jalan Generator
             </h2>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              No. DO otomatis tampil di pojok kanan atas Surat Jalan sesuai baris Excel.
+              Nomor DO hanya digenerate jika kolom No DO bernilai "unik", jika kosong akan dikosongkan.
             </p>
           </div>
 
@@ -271,14 +271,19 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
               const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
               
-              // Ambil nilai "No DO" dari baris pertama store tersebut (jika ada)
-              const storeNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'])?.[ 'No DO' ] || 
-                                storeItems.find(item => item['No DO'] || item.NoDO || item['no do'])?.NoDO || 
-                                spkNumber;
+              // Cek apakah ada item di store ini yang kolom "No DO" nya bernilai "unik"
+              const hasUniqueTag = storeItems.some(item => {
+                const val = String(item['No DO'] || item.NoDO || item['no do'] || '').trim().toLowerCase();
+                return val === 'unik';
+              });
+
+              // Jika ada "unik", generate nomor DO unik sistem (misal: SPK + U + Nomor Urut Toko), jika tidak kosongkan ("")
+              const generatedUniqueDo = `${spkNumber}-U${storeIdx + 1}`;
+              const finalDoNumber = hasUniqueTag ? generatedUniqueDo : '';
 
               return (
                 <div key={storeIdx} className="surat-jalan-page relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto">
-                  {/* Header Surat Jalan dengan No DO di Pojok Kanan Atas */}
+                  {/* Header Surat Jalan */}
                   <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
                     <div className="space-y-1">
                       <div className="h-16 w-48 flex items-center justify-start">
@@ -292,8 +297,10 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
                     <div className="text-right">
                       <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
-                      {/* No DO tampil paling atas sebelah kanan */}
-                      <p className="font-extrabold text-base text-black mt-0.5">{storeNoDo}</p>
+                      {/* Tampilkan nomor DO unik jika ada, jika kosong maka tidak ditampilkan */}
+                      {finalDoNumber ? (
+                        <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
+                      ) : null}
                       <div className="mt-2 text-left text-xs">
                         <span className="font-bold">Kepada Yth, :</span><br />
                         <span className="font-extrabold uppercase">{selectedPt}</span><br />
