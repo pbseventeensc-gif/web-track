@@ -80,16 +80,51 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
         <div className="space-y-4">
           {/* Header Info Khusus Cabang */}
           {isBranchMode && (
-            <div className={`p-6 rounded-3xl border shadow-sm ${
+            <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${
               isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-stone-200/80 text-stone-800'
             }`}>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                Portal Resmi Kantor Cabang
-              </span>
-              <h2 className="text-lg font-black tracking-wide uppercase mt-2 text-indigo-600 dark:text-indigo-400">
-                FORM CABANG: {branchName || currentUser?.branch_name || 'KANTOR CABANG'}
-              </h2>
-              <p className="text-xs opacity-70 mt-0.5">Sistem Terpadu Portal Logistik & Pengadaan Kawan Lama</p>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                  Portal Resmi Kantor Cabang
+                </span>
+                <h2 className="text-lg font-black tracking-wide uppercase mt-2 text-indigo-600 dark:text-indigo-400">
+                  FORM CABANG: {branchName || currentUser?.branch_name || 'KANTOR CABANG'}
+                </h2>
+                <p className="text-xs opacity-70 mt-0.5">Sistem Terpadu Portal Logistik & Pengadaan Kawan Lama</p>
+              </div>
+
+              {/* Tombol Order Baru, Tracking Order, & Ganti PIN Berderet dalam Satu Baris di Header Cabang */}
+              <div className="flex items-center justify-between gap-2.5 pt-2 border-t border-stone-200 dark:border-neutral-700">
+                <div className="flex gap-2.5 items-center">
+                  <button 
+                    onClick={() => setActiveSubTab('order_baru')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'order_baru' 
+                        ? 'bg-indigo-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-900 text-neutral-300 border border-neutral-700 hover:bg-neutral-800' : 'bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200'
+                    }`}
+                  >
+                    ➕ Order Baru
+                  </button>
+                  <button 
+                    onClick={() => setActiveSubTab('riwayat')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'riwayat' 
+                        ? 'bg-emerald-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-900 text-neutral-300 border border-neutral-700 hover:bg-neutral-800' : 'bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200'
+                    }`}
+                  >
+                    🚚 Tracking Order
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setIsPinModalOpen(true)}
+                  className="px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-md bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1.5 shrink-0"
+                >
+                  🔒 Ganti PIN Mandiri
+                </button>
+              </div>
             </div>
           )}
 
@@ -110,104 +145,65 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
             </div>
           )}
 
-          {/* Tab Navigasi Sub-Menu & Tombol Aksi Cabang */}
-          <div className="flex justify-between items-center gap-2.5 overflow-x-auto custom-scrollbar pb-1">
-            <div className="flex gap-2.5 items-center">
-              {isAdmin && (
-                <>
-                  <button 
-                    onClick={() => setActiveSubTab('master')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'master' 
-                        ? 'bg-blue-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    📦 Master Data
-                  </button>
-                  
-                  <button 
-                    onClick={() => setActiveSubTab('promo')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'promo' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    📢 Kelola & Hapus Promo
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveSubTab('approval')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'approval' 
-                        ? 'bg-emerald-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    🔒 Approval & Grouping Order
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveSubTab('monitoring')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'monitoring' 
-                        ? 'bg-purple-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    📊 Status Cabang (Submit / Belum)
-                  </button>
-
-                  <button 
-                    onClick={() => setActiveSubTab('labels')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'labels' 
-                        ? 'bg-amber-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    🏷️ Multi-Label Generator
-                  </button>
-                </>
-              )}
-              
-              {isBranchMode && (
-                <>
-                  <button 
-                    onClick={() => setActiveSubTab('order_baru')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'order_baru' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    ➕ Order Baru
-                  </button>
-                  <button 
-                    onClick={() => setActiveSubTab('riwayat')}
-                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                      activeSubTab === 'riwayat' 
-                        ? 'bg-emerald-600 text-white shadow-md' 
-                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    🚚 Tracking Order
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Tombol Ganti PIN Mandiri Sejajar di Kanan Atas */}
-            {isBranchMode && (
+          {/* Tab Navigasi Sub-Menu khusus Admin */}
+          {isAdmin && (
+            <div className="flex gap-2.5 overflow-x-auto custom-scrollbar pb-1">
               <button 
-                onClick={() => setIsPinModalOpen(true)}
-                className="px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-md bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1.5 shrink-0"
+                onClick={() => setActiveSubTab('master')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'master' 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
               >
-                🔒 Ganti PIN Mandiri
+                📦 Master Data
               </button>
-            )}
-          </div>
+              
+              <button 
+                onClick={() => setActiveSubTab('promo')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'promo' 
+                    ? 'bg-indigo-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                📢 Kelola & Hapus Promo
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab('approval')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'approval' 
+                    ? 'bg-emerald-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                🔒 Approval & Grouping Order
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab('monitoring')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'monitoring' 
+                    ? 'bg-purple-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                📊 Status Cabang (Submit / Belum)
+              </button>
+
+              <button 
+                onClick={() => setActiveSubTab('labels')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'labels' 
+                    ? 'bg-amber-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                🏷️ Multi-Label Generator
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {/* === END OF STICKY WRAPPER === */}
