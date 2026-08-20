@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 
-export default function KawanLamaMultiLabelGenerator() {
+export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const [labels, setLabels] = useState({});
   const [selectedPt, setSelectedPt] = useState('PT HOME CENTER INDONESIA RETAIL');
   
@@ -54,32 +54,94 @@ export default function KawanLamaMultiLabelGenerator() {
   }
 
   return (
-    <div className="p-4 bg-white rounded-xl shadow-sm space-y-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden border-b pb-4">
+    <div className={`p-6 rounded-3xl shadow-sm space-y-6 border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+      
+      {/* Kontrol Atas / Panel Kontrol */}
+      <div className={`flex flex-col border-b pb-5 gap-4 print:hidden ${isDarkMode ? 'border-neutral-700' : 'border-stone-200'}`}>
         <div>
-          <h2 className="font-bold text-lg text-stone-800">🏷️ Kawan Lama Group - Multi Label Generator</h2>
-          <p className="text-xs text-stone-500">Layout Landscape Simetris & Tabel Maksimal.</p>
+          <h2 className={`font-extrabold text-base tracking-wide ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
+            🏷️ Kawan Lama Group - Multi Label Generator
+          </h2>
+          <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
+            Layout Landscape Simetris & Tabel Maksimal.
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <select value={selectedPt} onChange={(e) => setSelectedPt(e.target.value)} className="text-xs border p-2 rounded-lg font-bold bg-stone-50">
-            <option value="PT HOME CENTER INDONESIA RETAIL">AZKO (Home Center)</option>
-            <option value="PT KRISBOW INDONESIA">KRISBOW</option>
-            <option value="PT INFORMA RETAIL">INFORMA</option>
-            <option value="PT LIVING PLAZA">LIVING PLAZA</option>
-            <option value="PT GINDACO INDONESIA">GINDACO</option>
-          </select>
-          <input type="file" accept=".xlsx" onChange={handleFileUpload} className="text-xs border p-1 rounded-lg" />
-          <div className="flex flex-col text-[9px]">
-            <span className="mb-1">Logo Wellen (Terkunci):</span>
-            <input type="file" accept="image/*" onChange={handleLogoUpload} className="text-xs border p-1 rounded-lg" />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          {/* Pilihan PT */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+              Pilih PT / Perusahaan:
+            </label>
+            <select 
+              value={selectedPt} 
+              onChange={(e) => setSelectedPt(e.target.value)} 
+              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isDarkMode 
+                  ? 'bg-neutral-900 border-neutral-700 text-white' 
+                  : 'bg-stone-50 border-stone-300 text-stone-800'
+              }`}
+            >
+              <option value="PT HOME CENTER INDONESIA RETAIL">AZKO (Home Center)</option>
+              <option value="PT KRISBOW INDONESIA">KRISBOW</option>
+              <option value="PT INFORMA RETAIL">INFORMA</option>
+              <option value="PT LIVING PLAZA">LIVING PLAZA</option>
+              <option value="PT GINDACO INDONESIA">GINDACO</option>
+            </select>
           </div>
-          <button onClick={() => window.print()} className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-md">🖨️ Cetak Semua</button>
+
+          {/* Upload File Excel */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+              Upload File Excel Alokasi:
+            </label>
+            <input 
+              type="file" 
+              accept=".xlsx" 
+              onChange={handleFileUpload} 
+              className={`text-xs border p-2 rounded-xl cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-bold ${
+                isDarkMode 
+                  ? 'bg-neutral-900 border-neutral-700 text-neutral-300 file:bg-neutral-800 file:text-indigo-300 hover:file:bg-neutral-700' 
+                  : 'bg-stone-50 border-stone-300 text-stone-600 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100'
+              }`} 
+            />
+          </div>
+
+          {/* Upload Logo Wellen */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+              Logo Wellen (Terkunci):
+            </label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleLogoUpload} 
+              className={`text-xs border p-2 rounded-xl cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-bold ${
+                isDarkMode 
+                  ? 'bg-neutral-900 border-neutral-700 text-neutral-300 file:bg-neutral-800 file:text-stone-300 hover:file:bg-neutral-700' 
+                  : 'bg-stone-50 border-stone-300 text-stone-600 file:bg-stone-200 file:text-stone-700 hover:file:bg-stone-300'
+              }`} 
+            />
+          </div>
+
+          {/* Tombol Cetak */}
+          <div>
+            <button 
+              onClick={() => window.print()} 
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              🖨️ Cetak Semua Label
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Area Konten / Cetak */}
       <div className="print-container">
         {totalRegions === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed rounded-xl text-stone-400 text-xs">Silakan upload file Excel untuk mulai mencetak.</div>
+          <div className={`text-center py-16 border-2 border-dashed rounded-3xl text-xs ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-300 text-stone-400'}`}>
+            Silakan pilih PT dan upload file Excel alokasi untuk mulai mencetak label.
+          </div>
         ) : (
           pagePairs.map((pair, pageIdx) => (
             <div key={pageIdx} className="a4-landscape-page relative">
@@ -88,34 +150,34 @@ export default function KawanLamaMultiLabelGenerator() {
               {pair.map((storeName, cardIdx) => {
                 const absoluteIndex = pageIdx * 2 + cardIdx + 1;
                 return (
-                  <div key={cardIdx} className="label-card relative">
-                    <div className="absolute top-2.5 right-2.5 bg-stone-100 border border-stone-300 px-2.5 py-0.5 rounded text-[11px] font-bold">
+                  <div key={cardIdx} className="label-card relative text-stone-900">
+                    <div className="absolute top-2.5 right-2.5 bg-stone-100 border border-stone-300 px-2.5 py-0.5 rounded text-[11px] font-bold text-stone-800">
                       {absoluteIndex} OF {totalRegions}
                     </div>
 
                     <div className="flex items-center border-b-2 border-black pb-2.5 mb-3 pr-16">
                       <div className="h-16 w-44 flex items-center justify-start">
-                        {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" /> : <div className="text-[10px] border p-2 italic">[Upload Logo]</div>}
+                        {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" alt="Logo" /> : <div className="text-[10px] border p-2 italic text-stone-800">[Upload Logo]</div>}
                       </div>
                       <div className="flex-grow text-center">
-                        <h1 className="font-bold text-base uppercase">{selectedPt}</h1>
-                        <p className="font-bold text-[10px] mt-0.5">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                        <h1 className="font-bold text-base uppercase text-stone-900">{selectedPt}</h1>
+                        <p className="font-bold text-[10px] mt-0.5 text-stone-900">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
                       </div>
                     </div>
-                    <div className="mb-2.5 font-bold text-sm">STORE / REGION : {storeName}</div>
-                    <table className="w-full border-collapse border border-black text-xs">
+                    <div className="mb-2.5 font-bold text-sm text-stone-900">STORE / REGION : {storeName}</div>
+                    <table className="w-full border-collapse border border-black text-xs text-stone-900">
                       <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border border-black p-1.5 w-10 text-center">NO</th>
-                          <th className="border border-black p-1.5 text-left">ITEM</th>
-                          <th className="border border-black p-1.5 w-36 text-center">BAHAN</th>
-                          <th className="border border-black p-1.5 w-28 text-center">UKURAN</th>
-                          <th className="border border-black p-1.5 w-20 text-center">QTY</th>
+                        <tr className="bg-gray-100 text-stone-900">
+                          <th className="border border-black p-1.5 w-10 text-center font-bold">NO</th>
+                          <th className="border border-black p-1.5 text-left font-bold">ITEM</th>
+                          <th className="border border-black p-1.5 w-36 text-center font-bold">BAHAN</th>
+                          <th className="border border-black p-1.5 w-28 text-center font-bold">UKURAN</th>
+                          <th className="border border-black p-1.5 w-20 text-center font-bold">QTY</th>
                         </tr>
                       </thead>
                       <tbody>
                         {labels[storeName].map((item, i) => (
-                          <tr key={i}>
+                          <tr key={i} className="text-stone-900">
                             <td className="border border-black p-1.5 text-center font-medium">{i + 1}</td>
                             <td className="border border-black p-1.5 font-medium">{item.Item}</td>
                             <td className="border border-black p-1.5 text-center">{item.Bahan}</td>
@@ -140,7 +202,7 @@ export default function KawanLamaMultiLabelGenerator() {
           gap: 15mm;
           background: white;
           padding: 10mm;
-          margin-bottom: 20px;
+          margin-bottom: 20mm;
           border: 1px solid #ddd;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
