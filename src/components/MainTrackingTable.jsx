@@ -20,8 +20,8 @@ export default function MainTrackingTable({
   STAFF_QC_LIST,
   searchTerm,
   setSearchTerm,
-  handleExcelUpload,        // <-- Ditambahkan untuk Upload Excel
-  handleGoogleSheetImport   // <-- Ditambahkan untuk Import Google Sheets
+  handleExcelUpload,        // <-- Tombol Upload Excel
+  handleGoogleSheetImport   // <-- Tombol Import Google Sheets
 }) {
   return (
     <div className="space-y-4">
