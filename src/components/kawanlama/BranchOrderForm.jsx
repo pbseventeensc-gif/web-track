@@ -346,7 +346,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
               {/* Informasi Perhitungan Budget Cabang secara Realtime */}
               <div className="flex justify-between items-center text-xs font-bold">
                 <span>Penggunaan Budget: Rp {currentTotalOrder.toLocaleString('id-ID')}</span>
-                <span>Limit Alokasi: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
+                <span>Limit Budget: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
               </div>
 
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
