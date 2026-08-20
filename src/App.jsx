@@ -273,13 +273,12 @@ export default function App() {
     reader.readAsBinaryString(file); e.target.value = '';
   };
 
-  // Fungsi untuk Import langsung via Link Google Sheets (Format CSV Publik)
+  // Fungsi untuk Import langsung via Link Google Sheets dengan dukungan CORS Proxy
   const handleGoogleSheetImport = async () => {
     const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan sheet disetel 'Anyone with the link can view' / Publik):");
     if (!sheetUrl) return;
 
     try {
-      // Ubah URL Google Sheets biasa menjadi format export CSV
       let csvUrl = sheetUrl.trim();
       if (csvUrl.includes('/edit?usp=sharing') || csvUrl.includes('/edit')) {
         csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
@@ -287,7 +286,9 @@ export default function App() {
         csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
       }
 
-      const response = await fetch(csvUrl);
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
+      const response = await fetch(proxyUrl);
+      
       if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets. Pastikan akses link bersifat publik.");
       
       const csvText = await response.text();
