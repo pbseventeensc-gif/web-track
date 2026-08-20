@@ -7,6 +7,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const [selectedPt, setSelectedPt] = useState('PT HOME CENTER INDONESIA RETAIL');
   const [activePromoTitle, setActivePromoTitle] = useState('PROMO AKTIF');
   const [spkNumber, setSpkNumber] = useState('SJ-0826-01920');
+  const [senderName, setSenderName] = useState('Arini Lidya'); // State untuk Nama Pengirim/Pembuat DO
   const [printMode, setPrintMode] = useState('labels'); // 'labels' atau 'do'
   
   const [wellenPrintLogo, setWellenPrintLogo] = useState(() => {
@@ -88,7 +89,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               🏷️ Kawan Lama Group - Multi Label & Surat Jalan Generator
             </h2>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              Nomor DO hanya digenerate jika kolom No DO bernilai "unik", jika kosong akan dikosongkan.
+              Atur PT, No. SPK, Nama Pengirim, dan upload Excel alokasi untuk cetak label atau Surat Jalan.
             </p>
           </div>
 
@@ -117,7 +118,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
           {/* Pilihan PT */}
           <div className="flex flex-col gap-1.5">
             <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
@@ -149,6 +150,24 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               type="text" 
               value={spkNumber} 
               onChange={(e) => setSpkNumber(e.target.value)} 
+              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isDarkMode 
+                  ? 'bg-neutral-900 border-neutral-700 text-white' 
+                  : 'bg-stone-50 border-stone-300 text-stone-800'
+              }`}
+            />
+          </div>
+
+          {/* Input Nama Pembuat / Pengirim DO */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+              Nama Pembuat (DO):
+            </label>
+            <input 
+              type="text" 
+              value={senderName} 
+              onChange={(e) => setSenderName(e.target.value)} 
+              placeholder="Contoh: Arini Lidya"
               className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 isDarkMode 
                   ? 'bg-neutral-900 border-neutral-700 text-white' 
@@ -199,7 +218,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                 printMode === 'labels' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'
               }`}
             >
-              🖨️ {printMode === 'labels' ? 'Cetak Semua Label' : 'Cetak Surat Jalan'}
+              🖨️ {printMode === 'labels' ? 'Cetak Label' : 'Cetak DO'}
             </button>
           </div>
         </div>
@@ -277,7 +296,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                 return val === 'unik';
               });
 
-              // Jika ada "unik", generate nomor DO unik sistem (misal: SPK + U + Nomor Urut Toko), jika tidak kosongkan ("")
               const generatedUniqueDo = `${spkNumber}-U${storeIdx + 1}`;
               const finalDoNumber = hasUniqueTag ? generatedUniqueDo : '';
 
@@ -297,7 +315,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
                     <div className="text-right">
                       <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
-                      {/* Tampilkan nomor DO unik jika ada, jika kosong maka tidak ditampilkan */}
                       {finalDoNumber ? (
                         <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
                       ) : null}
@@ -330,7 +347,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                           <td className="p-2 text-center font-bold font-mono">{item.Qty}</td>
                         </tr>
                       ))}
-                      {/* Baris kosong penyeimbang tampilan agar rapi */}
                       {[...Array(Math.max(0, 6 - storeItems.length))].map((_, idx) => (
                         <tr key={`empty-${idx}`} className="border-b border-black h-8">
                           <td className="border-r border-black p-2"></td>
@@ -348,7 +364,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     </tfoot>
                   </table>
 
-                  {/* Footer / Tanda Tangan Surat Jalan */}
+                  {/* Footer / Tanda Tangan Surat Jalan dengan Nama Pengirim Dinamis */}
                   <div className="border border-t-0 border-black grid grid-cols-4 text-[11px]">
                     <div className="p-2 border-r border-black space-y-1">
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
@@ -361,7 +377,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     <div className="p-2 border-r border-black flex flex-col justify-between text-center">
                       <span className="font-bold">DIBUAT OLEH</span>
                       <div className="pt-12 pb-2">
-                        <span className="border-b border-black pb-0.5 px-4 font-semibold">Arini Lidya</span>
+                        <span className="border-b border-black pb-0.5 px-4 font-semibold">{senderName || '-'}</span>
                       </div>
                     </div>
                     <div className="p-2 border-r border-black flex flex-col justify-between text-center">
