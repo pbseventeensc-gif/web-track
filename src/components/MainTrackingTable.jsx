@@ -19,24 +19,46 @@ export default function MainTrackingTable({
   getStatusBadge,
   STAFF_QC_LIST,
   searchTerm,
-  setSearchTerm
+  setSearchTerm,
+  handleOpenUploadModal, // Handler untuk membuka modal Upload SPK Excel (jika ada)
+  handleOpenScanQcModal  // Handler untuk membuka modal Scan QC Station (jika ada)
 }) {
   return (
     <div className="space-y-4">
-      {/* Top Action Bar */}
+      {/* Top Action Bar dengan Tombol Upload SPK Excel & Scan QC Station */}
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
         isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200/80'
       }`}>
-        <div className="flex items-center gap-2 w-full sm:w-80">
-          <span>🔍</span>
-          <input
-            type="text"
-            placeholder="Cari No SPK / Project / Store..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs bg-transparent focus:outline-none"
-          />
+        <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+          {/* Tombol Upload SPK Excel */}
+          <button
+            onClick={handleOpenUploadModal}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
+          >
+            📂 Upload SPK Excel
+          </button>
+
+          {/* Tombol Scan QC Station */}
+          <button
+            onClick={handleOpenScanQcModal}
+            className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
+          >
+            📷 Scan QC Station
+          </button>
+
+          {/* Kotak Pencarian */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-64 bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700">
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="Cari No SPK / Project / Store..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full text-xs bg-transparent focus:outline-none"
+            />
+          </div>
         </div>
+
         <div className="flex items-center gap-2 flex-wrap">
           {selectedSpkIds.length > 0 && (
             <>
