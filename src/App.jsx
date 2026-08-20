@@ -273,6 +273,32 @@ export default function App() {
     reader.readAsBinaryString(file); e.target.value = '';
   };
 
+  // Fungsi Import via Link Google Sheets (Pastikan akses Google Sheet diatur "Anyone with the link can view")
+  const handleGoogleSheetImport = async () => {
+    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan sheet disetel 'Anyone with the link can view' / Publik):");
+    if (!sheetUrl) return;
+
+    try {
+      let csvUrl = sheetUrl.trim();
+      if (csvUrl.includes('/edit?usp=sharing') || csvUrl.includes('/edit')) {
+        csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
+      } else if (!csvUrl.includes('format=csv')) {
+        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
+      }
+
+      const response = await fetch(csvUrl);
+      if (!response.ok) throw new Error("Gagal mengambil data. Pastikan link Google Sheets sudah disetel Publik (Anyone with the link).");
+      
+      const csvText = await response.text();
+      const workbook = XLSX.read(csvText, { type: 'string' });
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+      
+      await processImportData(rawData);
+    } catch (err) {
+      alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
+    }
+  };
+
   const getPercent = (qty, total) => (!total || total <= 0) ? 0 : Math.min(100, Math.round((qty / total) * 100));
   const getStatusBadge = (p) => p >= 100 ? { text: 'text-green-800 bg-green-100', icon: '🟢' } : p > 0 ? { text: 'text-yellow-800 bg-yellow-100', icon: '🟡' } : { text: 'text-red-800 bg-red-100', icon: '🔴' };
 
@@ -358,7 +384,7 @@ export default function App() {
             {currentAdmin && <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button>}
             {currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
             
-            {/* Tombol Scan QC Station & Upload SPK Excel */}
+            {/* Tombol Scan QC Station, Upload SPK Excel, & Import Google Sheet */}
             {!isBranchMode && (
               <>
                 <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
@@ -368,6 +394,9 @@ export default function App() {
                   📁 Upload SPK Excel
                   <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
                 </label>
+                <button onClick={handleGoogleSheetImport} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
+                  🌐 Import Google Sheet
+                </button>
               </>
             )}
           </div>
@@ -465,7 +494,6 @@ export default function App() {
             STAFF_QC_LIST={STAFF_QC_LIST}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            handleExcelUpload={handleExcelUpload}
           />
         )}
       </div>
