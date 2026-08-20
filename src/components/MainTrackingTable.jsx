@@ -19,9 +19,7 @@ export default function MainTrackingTable({
   getStatusBadge,
   STAFF_QC_LIST,
   searchTerm,
-  setSearchTerm,
-  handleExcelUpload,        // <-- Tombol Upload Excel
-  handleGoogleSheetImport   // <-- Tombol Import Google Sheets
+  setSearchTerm
 }) {
   return (
     <div className="space-y-4">
@@ -29,37 +27,16 @@ export default function MainTrackingTable({
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
         isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200/80'
       }`}>
-        <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
-          {/* Tombol Upload SPK Excel */}
-          {handleExcelUpload && (
-            <label className="px-3.5 py-2 rounded-xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white whitespace-nowrap">
-              📁 Upload SPK Excel
-              <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
-            </label>
-          )}
-
-          {/* Tombol Import Google Sheet */}
-          {handleGoogleSheetImport && (
-            <button
-              onClick={handleGoogleSheetImport}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap"
-            >
-              🌐 Import Google Sheet
-            </button>
-          )}
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-64 bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700">
-            <span>🔍</span>
-            <input
-              type="text"
-              placeholder="Cari No SPK / Project / Store..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs bg-transparent focus:outline-none"
-            />
-          </div>
+        <div className="flex items-center gap-2 w-full sm:w-80">
+          <span>🔍</span>
+          <input
+            type="text"
+            placeholder="Cari No SPK / Project / Store..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full text-xs bg-transparent focus:outline-none"
+          />
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
           {selectedSpkIds.length > 0 && (
             <>
