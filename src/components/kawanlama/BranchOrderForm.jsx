@@ -266,11 +266,12 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
   const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
 
+  // Logika Warna Progress Bar: 0-75% Hijau, 75-99% Oranye, 100% Merah
   let progressColor = 'bg-emerald-500'; 
-  if (percentage > 50 && percentage <= 90) {
-    progressColor = 'bg-amber-500'; 
-  } else if (percentage > 90) {
+  if (percentage >= 75 && percentage < 100) {
     progressColor = 'bg-orange-500'; 
+  } else if (percentage >= 100) {
+    progressColor = 'bg-rose-600'; 
   }
 
   const isDeadlineLocked = isLockedByDeadline(activePromo?.deadline_date);
@@ -341,7 +342,13 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
           
           {activePromo && (
-            <div className="pt-2 space-y-1.5 max-w-xl">
+            <div className="pt-2 space-y-2 max-w-xl">
+              {/* Informasi Perhitungan Budget Cabang secara Realtime */}
+              <div className="flex justify-between items-center text-xs font-bold">
+                <span>Penggunaan Budget: Rp {currentTotalOrder.toLocaleString('id-ID')}</span>
+                <span>Limit Alokasi: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
+              </div>
+
               <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
