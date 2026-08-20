@@ -297,7 +297,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </div>
       )}
 
-      {/* Kotak Promo & Budget Aktif dibuat Sticky di bawah header utama (top-[105px]) */}
+      {/* Seluruh Kartu Promo & Budget Aktif dibuat Sticky FULL di bawah header utama */}
       <div className={`sticky top-[105px] z-40 p-6 rounded-3xl border shadow-xl backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors ${isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'}`}>
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
