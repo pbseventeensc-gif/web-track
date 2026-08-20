@@ -3,7 +3,7 @@ import { supabase } from '../../supabaseClient';
 import PinModal from './PinModal';
 import { updateBranchPin } from './PinManager';
 
-export default function BranchOrderForm({ isDarkMode, currentUser }) {
+export default function BranchOrderForm({ isDarkMode, currentUser, isPinModalOpen, setIsPinModalOpen }) {
   const [items, setItems] = useState([]);
   const [activePromo, setActivePromo] = useState(null);
   const [existingOrder, setExistingOrder] = useState(null);
@@ -14,20 +14,14 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // State untuk Modal Ganti PIN Mandiri di Sisi Cabang
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-
-  // Ambil ID cabang yang sedang aktif secara aman
   const currentBranchId = currentUser?.branch_id || currentUser?.id;
 
   useEffect(() => {
     fetchActivePromo();
   }, [currentUser]);
 
-  // Fungsi untuk memfilter item berdasarkan promo aktif atau mengambil semua jika tidak ada item khusus
   const fetchMasterItems = async (activePromoId) => {
     if (activePromoId) {
-      // 1. Cek apakah promo ini punya daftar item khusus di kl_promo_items
       const { data: promoItemsData } = await supabase
         .from('kl_promo_items')
         .select('item_id')
@@ -35,8 +29,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
       if (promoItemsData && promoItemsData.length > 0) {
         const specificItemIds = promoItemsData.map(pi => pi.item_id);
-        
-        // Ambil HANYA item yang dipilih admin untuk promo ini
         const { data: filteredItems } = await supabase
           .from('kl_master_items')
           .select('*')
@@ -50,7 +42,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       }
     }
 
-    // 2. Fallback: Jika admin tidak memilih item khusus, tampilkan semua master item
     const { data } = await supabase
       .from('kl_master_items')
       .select('*')
@@ -104,19 +95,14 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     }
   };
 
-  // Logika Pengecekan H-3 Deadline
   const isLockedByDeadline = (deadlineDateStr) => {
     if (!deadlineDateStr) return false;
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     const deadline = new Date(deadlineDateStr);
     deadline.setHours(0, 0, 0, 0);
-    
     const diffTime = deadline - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
     return diffDays <= 3;
   };
 
@@ -172,7 +158,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     }
 
     setLoading(true);
-    
     let targetOrderId = existingOrder?.id;
 
     if (targetOrderId) {
@@ -221,7 +206,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     fetchActivePromo();
   };
 
-  // Handler Ganti PIN Mandiri oleh Cabang
   const handleBranchChangePinSubmit = async ({ oldPin, newPin }) => {
     if (!currentBranchId) {
       alert("ID Cabang tidak valid.");
@@ -242,7 +226,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     const res = await updateBranchPin(currentBranchId, newPin);
     if (res.success) {
       alert("✅ PIN Berhasil diubah! Silakan gunakan PIN baru untuk sesi login berikutnya.");
-      setIsPinModalOpen(false);
+      if (typeof setIsPinModalOpen === 'function') setIsPinModalOpen(false);
     } else {
       alert("❌ Gagal memperbarui PIN: " + res.error);
     }
@@ -266,7 +250,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
   const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
 
-  // Logika Warna Progress Bar: 0-75% Hijau, 75-99% Oranye, 100% Merah
   let progressColor = 'bg-emerald-500'; 
   if (percentage >= 75 && percentage < 100) {
     progressColor = 'bg-orange-500'; 
@@ -278,17 +261,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
   return (
     <div className="space-y-6 relative">
-      
-      {/* Tombol Ganti PIN Mandiri di Sudut Kanan Atas Form Cabang */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setIsPinModalOpen(true)}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5"
-        >
-          🔒 Ganti PIN Mandiri
-        </button>
-      </div>
-
       {showNotification && !hasOrdered && activePromo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
@@ -343,7 +315,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
           
           {activePromo && (
             <div className="pt-2 space-y-2 max-w-xl">
-              {/* Informasi Perhitungan Budget Cabang secara Realtime */}
               <div className="flex justify-between items-center text-xs font-bold">
                 <span>Penggunaan Budget: Rp {currentTotalOrder.toLocaleString('id-ID')}</span>
                 <span>Limit Budget: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
@@ -472,7 +443,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
 
       <PinModal 
         isOpen={isPinModalOpen}
-        onClose={() => setIsPinModalOpen(false)}
+        onClose={() => typeof setIsPinModalOpen === 'function' && setIsPinModalOpen(false)}
         onSubmit={handleBranchChangePinSubmit}
         title="Ganti PIN Mandiri"
         subtitle="Masukkan PIN lama Anda untuk verifikasi, lalu masukkan 6 digit PIN baru."
