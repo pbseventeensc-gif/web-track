@@ -52,7 +52,7 @@ export default function App() {
   const [lastScanMessage, setLastScanMessage] = useState('');
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
-  const [isImporting, setIsImporting] = useState(false); // State untuk loading import
+  const [isImporting, setIsImporting] = useState(false);
 
   const [currentAdmin, setCurrentAdmin] = useState(() => { 
     const s = localStorage.getItem('kl_admin_session'); 
@@ -256,10 +256,15 @@ export default function App() {
       store_code: String(row['NO. STORE'] || '-'), 
       delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
     }));
+
     if (formattedData.length > 0) {
-      await supabase.from('spk_data').insert(formattedData);
-      alert(`✅ Sukses Import ${formattedData.length} SPK`); 
-      fetchSpkData();
+      const { error } = await supabase.from('spk_data').insert(formattedData);
+      if (error) {
+        alert("❌ Error saat menyimpan ke database: " + error.message);
+      } else {
+        alert(`✅ Sukses! ${formattedData.length} data telah diimpor.`);
+        await fetchSpkData(); // Memuat ulang data secara instan agar tampil di tabel
+      }
     }
   };
 
@@ -274,7 +279,6 @@ export default function App() {
     reader.readAsBinaryString(file); e.target.value = '';
   };
 
-  // Fungsi Import via Link Google Sheets dengan indikator sukses/gagal
   const handleGoogleSheetImport = async () => {
     const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
     if (!sheetUrl) return;
@@ -286,7 +290,7 @@ export default function App() {
         csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
       }
       if (!csvUrl.includes('format=csv')) {
-        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
+        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'format=csv';
       }
 
       const response = await fetch(csvUrl);
@@ -299,7 +303,6 @@ export default function App() {
       const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
       
       await processImportData(rawData);
-      alert(`✅ Sukses! ${rawData.length} data dari Google Sheets berhasil diimpor.`);
     } catch (err) {
       alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
     } finally {
