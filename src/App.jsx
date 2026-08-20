@@ -496,6 +496,8 @@ export default function App() {
             STAFF_QC_LIST={STAFF_QC_LIST}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            handleExcelUpload={handleExcelUpload}
+            handleGoogleSheetImport={handleGoogleSheetImport}
           />
         )}
       </div>
