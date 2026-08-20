@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import * as XLSX from 'xlsx';
 
 export default function BranchOrderHistory({ isDarkMode, currentUser }) {
   const [orders, setOrders] = useState([]);
@@ -44,6 +45,32 @@ export default function BranchOrderHistory({ isDarkMode, currentUser }) {
     setLoadingOrderId(null);
   };
 
+  // Fungsi untuk Export Report ke Excel per Order
+  const handleExportExcel = (order) => {
+    const promoTitle = order.kl_promos?.title || order.project_name || 'Order_Cabang';
+    const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+
+    // Format data item untuk excel
+    const excelData = order.kl_order_items?.map((item, idx) => {
+      const master = item.kl_master_items || {};
+      return {
+        'No': idx + 1,
+        'Nama Barang': master.item_name || 'Barang Logistik',
+        'Material / Bahan': master.material || '-',
+        'Ukuran (Size)': master.size || '-',
+        'Qty Order': `${item.qty} Pcs`
+      };
+    }) || [];
+
+    // Buat worksheet dan workbook
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report Order');
+
+    // Download file excel
+    XLSX.writeFile(wb, `Report_Order_${promoTitle}_${orderDate}.xlsx`);
+  };
+
   return (
     <div className="space-y-6">
       <div className={`p-5 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
@@ -78,6 +105,14 @@ export default function BranchOrderHistory({ isDarkMode, currentUser }) {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* Tombol Export Excel */}
+                  <button
+                    onClick={() => handleExportExcel(order)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow transition-all active:scale-95 flex items-center gap-1.5"
+                  >
+                    📊 Export Excel
+                  </button>
+
                   {/* Badge Status */}
                   <span className={`px-3 py-1 rounded-xl text-xs font-black ${
                     order.status === 'SUBMITTED' 
