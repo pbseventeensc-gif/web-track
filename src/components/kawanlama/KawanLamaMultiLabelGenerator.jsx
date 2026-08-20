@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { supabase } from '../../supabaseClient';
 
 export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const [labels, setLabels] = useState({});
   const [selectedPt, setSelectedPt] = useState('PT HOME CENTER INDONESIA RETAIL');
+  const [activePromoTitle, setActivePromoTitle] = useState('PROMO AKTIF');
+  const [spkNumber, setSpkNumber] = useState('SPK-0726-02320');
   
   const [wellenPrintLogo, setWellenPrintLogo] = useState(() => {
     return localStorage.getItem('wellen_print_logo_kawanlama') || null;
@@ -13,7 +16,23 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
     if (wellenPrintLogo) {
       localStorage.setItem('wellen_print_logo_kawanlama', wellenPrintLogo);
     }
-  }, [wellenPrintLogo]);
+    fetchActivePromoTitle();
+  }, []);
+
+  // Ambil Nama Promo Aktif dari Supabase
+  const fetchActivePromoTitle = async () => {
+    const { data } = await supabase
+      .from('kl_promos')
+      .select('title')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (data && data.title) {
+      setActivePromoTitle(data.title);
+    }
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -63,11 +82,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             🏷️ Kawan Lama Group - Multi Label Generator
           </h2>
           <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-            Layout Landscape Simetris & Tabel Maksimal.
+            Layout Landscape Simetris & Nama Promo Otomatis dari Database.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           {/* Pilihan PT */}
           <div className="flex flex-col gap-1.5">
             <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
@@ -90,10 +109,27 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             </select>
           </div>
 
+          {/* Input No SPK Manual */}
+          <div className="flex flex-col gap-1.5">
+            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+              Nomor SPK:
+            </label>
+            <input 
+              type="text" 
+              value={spkNumber} 
+              onChange={(e) => setSpkNumber(e.target.value)} 
+              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isDarkMode 
+                  ? 'bg-neutral-900 border-neutral-700 text-white' 
+                  : 'bg-stone-50 border-stone-300 text-stone-800'
+              }`}
+            />
+          </div>
+
           {/* Upload File Excel */}
           <div className="flex flex-col gap-1.5">
             <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              Upload File Excel Alokasi:
+              Upload Excel Alokasi:
             </label>
             <input 
               type="file" 
@@ -161,7 +197,10 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                       </div>
                       <div className="flex-grow text-center">
                         <h1 className="font-bold text-base uppercase text-stone-900">{selectedPt}</h1>
-                        <p className="font-bold text-[10px] mt-0.5 text-stone-900">DENSITY SIGNAGE ( SPK-0726-02320 )</p>
+                        {/* Menggunakan Nama Promo dari Database & No SPK Inputan */}
+                        <p className="font-bold text-[10px] mt-0.5 uppercase text-stone-900">
+                          {activePromoTitle} ( {spkNumber} )
+                        </p>
                       </div>
                     </div>
                     <div className="mb-2.5 font-bold text-sm text-stone-900">STORE / REGION : {storeName}</div>
