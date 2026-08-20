@@ -279,13 +279,24 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   return (
     <div className="space-y-6 relative">
       
-      {/* Tombol Akses Cepat Ganti PIN di Sudut Kanan Atas Portal Cabang */}
-      <div className="flex justify-end">
+      {/* Tombol Aksi Cepat Berderet di Atas (Order Baru, Tracking Order, dan Ganti PIN Mandiri) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <button 
+          onClick={() => window.scrollTo({ top: 400, behavior: 'smooth' })}
+          className="px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-2"
+        >
+          <span>➕</span> Order Baru
+        </button>
+        
+        <div className={`px-5 py-3 rounded-2xl font-bold text-xs border shadow-sm flex items-center gap-2 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-neutral-200' : 'bg-white border-stone-200 text-stone-700'}`}>
+          <span>🚚</span> Tracking Order
+        </div>
+
         <button
           onClick={() => setIsPinModalOpen(true)}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+          className="px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-2"
         >
-          🔒 Ganti PIN Mandiri
+          <span>🔒</span> Ganti PIN Mandiri
         </button>
       </div>
 
