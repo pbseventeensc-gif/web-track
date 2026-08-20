@@ -5,12 +5,17 @@ import AdminApprovalPanel from './kawanlama/AdminApprovalPanel';
 import AdminMasterData from './kawanlama/AdminMasterData';
 import AdminPromoManager from './kawanlama/AdminPromoManager';
 import AdminBranchMonitoring from './kawanlama/AdminBranchMonitoring';
-import KawanLamaMultiLabelGenerator from './kawanlama/KawanLamaMultiLabelGenerator'; // <-- Diimport di sini
+import KawanLamaMultiLabelGenerator from './kawanlama/KawanLamaMultiLabelGenerator';
+import PinModal from './kawanlama/PinModal';
+import { updateBranchPin } from './kawanlama/PinManager';
 import { supabase } from '../supabaseClient';
 
 export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) {
   const [activeSubTab, setActiveSubTab] = useState(isBranchMode ? 'order_baru' : 'master');
   const [branchName, setBranchName] = useState('');
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+
+  const currentBranchId = currentUser?.branch_id || currentUser?.id;
 
   // Deteksi role admin (admin pusat, admin wilayah pasming/cikokol)
   const isAdmin = !isBranchMode && (
@@ -34,6 +39,33 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
       .maybeSingle();
     if (data) {
       setBranchName(data.branch_name);
+    }
+  };
+
+  // Handler Ganti PIN Mandiri oleh Cabang
+  const handleBranchChangePinSubmit = async ({ oldPin, newPin }) => {
+    if (!currentBranchId) {
+      alert("ID Cabang tidak valid.");
+      return;
+    }
+
+    const { data: branchData, error: fetchErr } = await supabase
+      .from('kl_branches')
+      .select('pin_code')
+      .eq('id', currentBranchId)
+      .single();
+
+    if (fetchErr || !branchData || String(branchData.pin_code) !== String(oldPin)) {
+      alert("❌ PIN Lama yang Anda masukkan salah!");
+      return;
+    }
+
+    const res = await updateBranchPin(currentBranchId, newPin);
+    if (res.success) {
+      alert("✅ PIN Berhasil diubah! Silakan gunakan PIN baru untuk sesi login berikutnya.");
+      setIsPinModalOpen(false);
+    } else {
+      alert("❌ Gagal memperbarui PIN: " + res.error);
     }
   };
 
@@ -78,91 +110,102 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
             </div>
           )}
 
-          {/* Tab Navigasi Sub-Menu */}
-          <div className="flex gap-2.5 overflow-x-auto custom-scrollbar pb-1">
-            {isAdmin && (
-              <>
-                <button 
-                  onClick={() => setActiveSubTab('master')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'master' 
-                      ? 'bg-blue-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  📦 Master Data
-                </button>
-                
-                <button 
-                  onClick={() => setActiveSubTab('promo')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'promo' 
-                      ? 'bg-indigo-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  📢 Kelola & Hapus Promo
-                </button>
+          {/* Tab Navigasi Sub-Menu & Tombol Aksi Cabang */}
+          <div className="flex justify-between items-center gap-2.5 overflow-x-auto custom-scrollbar pb-1">
+            <div className="flex gap-2.5 items-center">
+              {isAdmin && (
+                <>
+                  <button 
+                    onClick={() => setActiveSubTab('master')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'master' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    📦 Master Data
+                  </button>
+                  
+                  <button 
+                    onClick={() => setActiveSubTab('promo')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'promo' 
+                        ? 'bg-indigo-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    📢 Kelola & Hapus Promo
+                  </button>
 
-                <button 
-                  onClick={() => setActiveSubTab('approval')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'approval' 
-                      ? 'bg-emerald-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  🔒 Approval & Grouping Order
-                </button>
+                  <button 
+                    onClick={() => setActiveSubTab('approval')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'approval' 
+                        ? 'bg-emerald-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    🔒 Approval & Grouping Order
+                  </button>
 
-                <button 
-                  onClick={() => setActiveSubTab('monitoring')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'monitoring' 
-                      ? 'bg-purple-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  📊 Status Cabang (Submit / Belum)
-                </button>
+                  <button 
+                    onClick={() => setActiveSubTab('monitoring')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'monitoring' 
+                        ? 'bg-purple-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    📊 Status Cabang (Submit / Belum)
+                  </button>
 
-                {/* Tombol Baru: Multi-Label Generator */}
-                <button 
-                  onClick={() => setActiveSubTab('labels')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'labels' 
-                      ? 'bg-amber-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  🏷️ Multi-Label Generator
-                </button>
-              </>
-            )}
-            
+                  <button 
+                    onClick={() => setActiveSubTab('labels')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'labels' 
+                        ? 'bg-amber-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    🏷️ Multi-Label Generator
+                  </button>
+                </>
+              )}
+              
+              {isBranchMode && (
+                <>
+                  <button 
+                    onClick={() => setActiveSubTab('order_baru')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'order_baru' 
+                        ? 'bg-indigo-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    ➕ Order Baru
+                  </button>
+                  <button 
+                    onClick={() => setActiveSubTab('riwayat')}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                      activeSubTab === 'riwayat' 
+                        ? 'bg-emerald-600 text-white shadow-md' 
+                        : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                    }`}
+                  >
+                    🚚 Tracking Order
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Tombol Ganti PIN Mandiri Sejajar di Kanan Atas */}
             {isBranchMode && (
-              <>
-                <button 
-                  onClick={() => setActiveSubTab('order_baru')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'order_baru' 
-                      ? 'bg-indigo-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  ➕ Order Baru
-                </button>
-                <button 
-                  onClick={() => setActiveSubTab('riwayat')}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeSubTab === 'riwayat' 
-                      ? 'bg-emerald-600 text-white shadow-md' 
-                      : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  🚚 Tracking Order
-                </button>
-              </>
+              <button 
+                onClick={() => setIsPinModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-md bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-1.5 shrink-0"
+              >
+                🔒 Ganti PIN Mandiri
+              </button>
             )}
           </div>
         </div>
@@ -184,7 +227,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
           <AdminBranchMonitoring isDarkMode={isDarkMode} currentUser={currentUser} />
         )}
         {isAdmin && activeSubTab === 'labels' && (
-          <KawanLamaMultiLabelGenerator />
+          <KawanLamaMultiLabelGenerator isDarkMode={isDarkMode} />
         )}
 
         {isBranchMode && activeSubTab === 'order_baru' && (
@@ -194,6 +237,17 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
           <BranchOrderHistory isDarkMode={isDarkMode} currentUser={currentUser} />
         )}
       </div>
+
+      {/* Modal Ganti PIN Mandiri */}
+      <PinModal 
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onSubmit={handleBranchChangePinSubmit}
+        title="Ganti PIN Mandiri"
+        subtitle="Masukkan PIN lama Anda untuk verifikasi, lalu masukkan 6 digit PIN baru."
+        isDarkMode={isDarkMode}
+        requireOldPin={true}
+      />
     </div>
   );
 }
