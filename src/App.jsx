@@ -52,6 +52,7 @@ export default function App() {
   const [lastScanMessage, setLastScanMessage] = useState('');
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
+  const [isImporting, setIsImporting] = useState(false); // State untuk loading import
 
   const [currentAdmin, setCurrentAdmin] = useState(() => { 
     const s = localStorage.getItem('kl_admin_session'); 
@@ -273,29 +274,36 @@ export default function App() {
     reader.readAsBinaryString(file); e.target.value = '';
   };
 
-  // Fungsi Import via Link Google Sheets (Pastikan akses Google Sheet diatur "Anyone with the link can view")
+  // Fungsi Import via Link Google Sheets dengan indikator sukses/gagal
   const handleGoogleSheetImport = async () => {
-    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan sheet disetel 'Anyone with the link can view' / Publik):");
+    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
     if (!sheetUrl) return;
 
+    setIsImporting(true);
     try {
       let csvUrl = sheetUrl.trim();
-      if (csvUrl.includes('/edit?usp=sharing') || csvUrl.includes('/edit')) {
+      if (csvUrl.includes('/edit')) {
         csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
-      } else if (!csvUrl.includes('format=csv')) {
+      }
+      if (!csvUrl.includes('format=csv')) {
         csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'output=csv';
       }
 
       const response = await fetch(csvUrl);
-      if (!response.ok) throw new Error("Gagal mengambil data. Pastikan link Google Sheets sudah disetel Publik (Anyone with the link).");
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data (Status: ${response.status}). Pastikan link Google Sheets sudah publik.`);
+      }
       
       const csvText = await response.text();
       const workbook = XLSX.read(csvText, { type: 'string' });
       const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
       
       await processImportData(rawData);
+      alert(`✅ Sukses! ${rawData.length} data dari Google Sheets berhasil diimpor.`);
     } catch (err) {
       alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -394,8 +402,14 @@ export default function App() {
                   📁 Upload SPK Excel
                   <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
                 </label>
-                <button onClick={handleGoogleSheetImport} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
-                  🌐 Import Google Sheet
+                <button 
+                  onClick={handleGoogleSheetImport} 
+                  disabled={isImporting}
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
+                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
+                  } text-white`}
+                >
+                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
                 </button>
               </>
             )}
