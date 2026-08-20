@@ -88,11 +88,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               🏷️ Kawan Lama Group - Multi Label & Surat Jalan Generator
             </h2>
             <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              Pilih mode cetak label box atau Surat Jalan (DO) secara otomatis dari satu file Excel.
+              No. DO otomatis tampil di pojok kanan atas Surat Jalan sesuai baris Excel.
             </p>
           </div>
 
-          {/* Tombol Switch Mode Cetak (Diperbaiki agar kontras dan jelas saat tidak aktif) */}
+          {/* Tombol Switch Mode Cetak */}
           <div className="flex items-center gap-2 bg-stone-200 dark:bg-neutral-900 p-1.5 rounded-2xl border border-stone-300 dark:border-neutral-700">
             <button
               onClick={() => setPrintMode('labels')}
@@ -270,10 +270,15 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             storeKeys.map((storeName, storeIdx) => {
               const storeItems = labels[storeName] || [];
               const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
+              
+              // Ambil nilai "No DO" dari baris pertama store tersebut (jika ada)
+              const storeNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'])?.[ 'No DO' ] || 
+                                storeItems.find(item => item['No DO'] || item.NoDO || item['no do'])?.NoDO || 
+                                spkNumber;
 
               return (
                 <div key={storeIdx} className="surat-jalan-page relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto">
-                  {/* Header Surat Jalan */}
+                  {/* Header Surat Jalan dengan No DO di Pojok Kanan Atas */}
                   <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
                     <div className="space-y-1">
                       <div className="h-16 w-48 flex items-center justify-start">
@@ -287,7 +292,8 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
                     <div className="text-right">
                       <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
-                      <p className="font-bold text-sm">{spkNumber}</p>
+                      {/* No DO tampil paling atas sebelah kanan */}
+                      <p className="font-extrabold text-base text-black mt-0.5">{storeNoDo}</p>
                       <div className="mt-2 text-left text-xs">
                         <span className="font-bold">Kepada Yth, :</span><br />
                         <span className="font-extrabold uppercase">{selectedPt}</span><br />
@@ -335,7 +341,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     </tfoot>
                   </table>
 
-                    {/* Footer / Tanda Tangan Surat Jalan */}
+                  {/* Footer / Tanda Tangan Surat Jalan */}
                   <div className="border border-t-0 border-black grid grid-cols-4 text-[11px]">
                     <div className="p-2 border-r border-black space-y-1">
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
