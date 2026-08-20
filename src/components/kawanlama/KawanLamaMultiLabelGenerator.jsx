@@ -92,14 +92,14 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             </p>
           </div>
 
-          {/* Tombol Switch Mode Cetak */}
-          <div className="flex items-center gap-2 bg-stone-100 dark:bg-neutral-900 p-1.5 rounded-2xl border dark:border-neutral-700">
+          {/* Tombol Switch Mode Cetak (Diperbaiki agar kontras dan jelas saat tidak aktif) */}
+          <div className="flex items-center gap-2 bg-stone-200 dark:bg-neutral-900 p-1.5 rounded-2xl border border-stone-300 dark:border-neutral-700">
             <button
               onClick={() => setPrintMode('labels')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 printMode === 'labels' 
                   ? 'bg-blue-600 text-white shadow-md' 
-                  : 'opacity-70 hover:opacity-100'
+                  : 'text-stone-700 dark:text-neutral-300 hover:bg-stone-300 dark:hover:bg-neutral-800'
               }`}
             >
               🏷️ Cetak Label 2-in-1
@@ -109,7 +109,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 printMode === 'do' 
                   ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'opacity-70 hover:opacity-100'
+                  : 'text-stone-700 dark:text-neutral-300 hover:bg-stone-300 dark:hover:bg-neutral-800'
               }`}
             >
               📄 Cetak Surat Jalan (DO)
