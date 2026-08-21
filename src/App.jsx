@@ -68,7 +68,6 @@ export default function App() {
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // 🛡️ SECURITY GUARD: Paksa login jika mode cabang tapi session belum ada
   useEffect(() => { 
     if (isBranchMode && !currentBranch) {
       setShowBranchLoginModal(true); 
@@ -245,11 +244,11 @@ export default function App() {
   };
 
   const processImportData = async (rawData) => {
-    const formattedData = rawData.filter(row => row['Store Name'] || row['Nama Project'] || row['COMPANY']).map(row => ({
-      no_spk: String(row['SPK/WPP'] || row['No SPK'] || '-').split('/')[0].trim(),
+    const formattedData = rawData.filter(row => row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['no_spk']).map(row => ({
+      no_spk: String(row['no_spk'] || row['SPK/WPP'] || row['No SPK'] || '-').split('/')[0].trim(),
       client: String(row['COMPANY'] || row['Nama Klient'] || '-'),
       project: String(row['Store Name'] || row['Nama Project'] || '-'),
-      bahan: String(row['Nama Bahan'] || 'Art Paper'),
+      bahan: String(row['bahan'] || row['Nama Bahan'] || 'Art Paper'),
       ukuran: String(row['Ukuran'] || 'A5'),
       qty_order: Number(row['TOTAL QTY ORDER'] || 40),
       qty_print: 0, qty_finish: 0, qty_pack: 0, qty_ship: 0,
@@ -263,7 +262,7 @@ export default function App() {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
         alert(`✅ Sukses! ${formattedData.length} data telah diimpor.`);
-        await fetchSpkData(); // Memuat ulang data secara instan agar tampil di tabel
+        await fetchSpkData();
       }
     }
   };
@@ -320,7 +319,6 @@ export default function App() {
     (item.client || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 🛡️ GLOBAL AUTH CHECK: Jika belum ada admin maupun cabang yang login, tampilkan halaman gerbang login utama
   const isAuthenticated = currentAdmin || (isBranchMode ? currentBranch : false);
 
   if (!isAuthenticated) {
@@ -349,7 +347,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Modal Login Admin Pusat */}
         <AdminLoginModal 
           isOpen={showAdminLoginModal} 
           onClose={() => setShowAdminLoginModal(false)} 
@@ -360,7 +357,6 @@ export default function App() {
           }} 
         />
 
-        {/* Modal Login Cabang */}
         <BranchLoginModal 
           isOpen={showBranchLoginModal} 
           onClose={() => setShowBranchLoginModal(false)}
@@ -378,7 +374,6 @@ export default function App() {
     <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* HEADER UTAMA */}
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
           <div>
             <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
@@ -395,7 +390,6 @@ export default function App() {
             {currentAdmin && <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button>}
             {currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
             
-            {/* Tombol Scan QC Station, Upload SPK Excel, & Import Google Sheet */}
             {!isBranchMode && (
               <>
                 <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
@@ -419,7 +413,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* TABS MENU */}
         {!isBranchMode && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
             {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
@@ -454,7 +447,6 @@ export default function App() {
           </div>
         )}
 
-        {/* DASHBOARD WIDGET */}
         {!isBranchMode && activeTab === 'dashboard' && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
@@ -464,32 +456,26 @@ export default function App() {
           </div>
         )}
 
-        {/* PANEL KONTROL DESAIN & PRA-CETAK */}
         {!isBranchMode && activeTab === 'design' && (
           <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
-        {/* PANEL KONTROL FINISHING */}
         {!isBranchMode && activeTab === 'finishing' && (
           <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
         )}
 
-        {/* TAB KAWAN LAMA */}
         {(isBranchMode || activeTab === 'kawan_lama') && (
           <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
         )}
         
-        {/* TAB CETAK LABEL & SURAT JALAN */}
         {!isBranchMode && activeTab === 'label' && (
           <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
         )}
 
-        {/* TAB CUSTOM MODULES (DI LUAR KAWAN LAMA) */}
         {!isBranchMode && activeTab === 'custom_modules' && (
           <CustomModulesIndex isDarkMode={isDarkMode} />
         )}
 
-        {/* TRACKING TABLE FULL */}
         {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && (
           <MainTrackingTable 
             isDarkMode={isDarkMode}
