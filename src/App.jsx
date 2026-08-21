@@ -244,9 +244,12 @@ export default function App() {
   };
 
   const processImportData = async (rawData) => {
+    console.log("Data mentah dari Sheet/Excel:", rawData);
+
     const formattedData = rawData.map(row => {
-      const noSpk = row['no_spk'] || row['No SPK'] || row['SPK'] || row['SPK/WPP'] || '-';
-      const project = row['project'] || row['Store Name'] || row['Nama Project'] || row['Project'] || '-';
+      const keys = Object.keys(row);
+      const noSpk = row['no_spk'] || row['No SPK'] || row['SPK'] || row['SPK/WPP'] || row[keys[0]] || '-';
+      const project = row['project'] || row['Store Name'] || row['Nama Project'] || row['Project'] || row[keys[1]] || '-';
       const client = row['client'] || row['COMPANY'] || row['Nama Klient'] || row['Klien'] || '-';
       const bahan = row['bahan'] || row['Nama Bahan'] || row['Bahan'] || 'Art Paper';
       const ukuran = row['ukuran'] || row['Ukuran'] || 'A5';
@@ -259,7 +262,7 @@ export default function App() {
         project: String(project),
         bahan: String(bahan),
         ukuran: String(ukuran),
-        qty_order: Number(qtyOrder),
+        qty_order: Number(qtyOrder) || 40,
         qty_print: 0, 
         qty_finish: 0, 
         qty_pack: 0, 
@@ -267,7 +270,9 @@ export default function App() {
         store_code: String(storeCode), 
         delivery_route: String(row['DELIVERY'] || row['delivery_route'] || 'DALAM KOTA')
       };
-    }).filter(item => item.no_spk !== '-' && item.no_spk !== '');
+    }).filter(item => item.no_spk && item.no_spk !== '-' && item.no_spk !== 'undefined');
+
+    console.log("Data setelah diformat:", formattedData);
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
@@ -278,7 +283,7 @@ export default function App() {
         await fetchSpkData();
       }
     } else {
-      alert("⚠️ Tidak ada data valid yang ditemukan untuk diimpor.");
+      alert("⚠️ Format kolom tidak dikenali. Cek tab Console (F12) untuk melihat struktur kolom Google Sheet Anda.");
     }
   };
 
