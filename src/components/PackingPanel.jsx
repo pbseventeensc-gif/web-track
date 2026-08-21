@@ -4,7 +4,6 @@ import { supabase } from '../supabaseClient';
 export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, onOpenImageModal }) {
   const [uploadingId, setUploadingId] = useState(null);
 
-  // Daftar tahapan paking dengan penanggung jawab/staff terkait
   const stages = [
     { id: 'qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
     { id: 'qc_paking', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
@@ -14,7 +13,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
 
   const totalSpk = spkList.length;
 
-  // Handler untuk upload bukti foto per SPK
   const handleImageUpload = async (e, spkId, noSpk) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -22,7 +20,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
     setUploadingId(spkId);
     const fileName = `packing_${noSpk}_${Date.now()}`;
     
-    // Upload ke bucket 'surat-jalan' (atau sesuaikan dengan nama bucket Anda)
     const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
     
     if (!error) {
@@ -38,9 +35,7 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
   return (
     <div className="space-y-8">
       
-      {/* ==========================================
-          BAGIAN ATAS: GRID KONTROL STATUS & STAFF
-          ========================================== */}
+      {/* BAGIAN ATAS: GRID KONTROL STATUS & STAFF */}
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-lg font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
@@ -60,7 +55,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
             return (
               <div key={stage.id} className={`p-5 rounded-3xl border flex flex-col justify-between ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
                 <div>
-                  {/* Header Tahapan, Persentase & Staff */}
                   <div className="flex items-center justify-between mb-2">
                     <h3 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
                       <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`}></div> {stage.label}
@@ -71,7 +65,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
                   </div>
                   <p className="text-[10px] font-bold text-stone-400 mb-4">{stage.staff}</p>
                   
-                  {/* List Item SPK yang belum selesai */}
                   <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
                     {pendingItems.length === 0 ? (
                       <div className="text-center py-6 text-xs text-stone-400 italic">
@@ -82,7 +75,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
                         <div key={spk.id} className={`p-3 rounded-2xl border flex justify-between items-center text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700/80' : 'bg-stone-50 border-stone-100'}`}>
                           <div className="truncate pr-2">
                             <span className="font-bold block truncate">{spk.project || spk.no_spk}</span>
-                            <span className="text-[10px] font-mono opacity-65">{spk.no_spk}</span>
                           </div>
                           <button 
                             onClick={() => handleUpdateField(spk.id, { [stage.id]: 'DONE' })}
@@ -96,7 +88,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
                   </div>
                 </div>
 
-                {/* Footer Ringkasan Kolom */}
                 <div className={`mt-4 pt-3 border-t text-[11px] font-bold flex justify-between ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-100 text-stone-500'}`}>
                   <span>Selesai: {completedCount}/{totalSpk}</span>
                   <span className={percent === 100 ? 'text-emerald-500' : ''}>{percent === 100 ? '🟢 100% Done' : '🟡 In Progress'}</span>
@@ -107,9 +98,7 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
         </div>
       </div>
 
-      {/* ==========================================
-          BAGIAN BAWAH: TABEL UPLOAD FOTO BUKTI
-          ========================================== */}
+      {/* BAGIAN BAWAH: TABEL UPLOAD FOTO BUKTI */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-4">
           📷 Penampungan & Upload Bukti Foto Toko (Hasil Scan)
