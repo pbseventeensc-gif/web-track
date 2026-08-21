@@ -247,14 +247,16 @@ export default function App() {
     console.log("Data mentah dari Sheet/Excel:", rawData);
 
     const formattedData = rawData.map((row, index) => {
-      const client = row['COMPANY NAME'] || row['company name'] || row['COMPANY'] || '-';
-      const project = row['STORE NAME'] || row['store name'] || row['Store Name'] || '-';
-      const qrAddress = row['QR ADDRESS'] || row['qr address'] || row['Qr Address'] || '-';
+      const keys = Object.keys(row);
+      // Coba ambil berdasarkan nama kolom, jika tidak ada, ambil berdasarkan urutan kolom (index 0, 1, 2)
+      const client = row['COMPANY NAME'] || row['company name'] || row['COMPANY'] || row[keys[0]] || '-';
+      const project = row['STORE NAME'] || row['store name'] || row['Store Name'] || row[keys[1]] || '-';
+      const qrAddress = row['QR ADDRESS'] || row['qr address'] || row['Qr Address'] || row[keys[2]] || '-';
 
       return {
         no_spk: String(qrAddress).split('_')[0] || `SPK-${index + 1}`,
-        client: String(client),
-        project: String(project),
+        client: String(client).trim(),
+        project: String(project).trim(),
         bahan: String(row['bahan'] || row['Nama Bahan'] || 'Art Paper'),
         ukuran: String(row['ukuran'] || row['Ukuran'] || 'A5'),
         qty_order: Number(row['qty_order'] || row['TOTAL QTY ORDER'] || 40),
@@ -262,7 +264,7 @@ export default function App() {
         qty_finish: 0, 
         qty_pack: 0, 
         qty_ship: 0,
-        store_code: String(qrAddress),
+        store_code: String(qrAddress).trim(),
         delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
       };
     }).filter(item => item.project !== '-' && item.client !== '-');
@@ -274,11 +276,11 @@ export default function App() {
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data dari Google Sheet berhasil diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
         await fetchSpkData();
       }
     } else {
-      alert("⚠️ Data tidak terbaca. Pastikan baris pertama Google Sheet Anda tepat bernama 'COMPANY NAME', 'STORE NAME', dan 'QR ADDRESS'.");
+      alert("⚠️ Data tidak terbaca. Pastikan format file Anda mengandung data yang valid.");
     }
   };
 
