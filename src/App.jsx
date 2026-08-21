@@ -244,26 +244,41 @@ export default function App() {
   };
 
   const processImportData = async (rawData) => {
-    const formattedData = rawData.filter(row => row['Store Name'] || row['Nama Project'] || row['COMPANY'] || row['no_spk']).map(row => ({
-      no_spk: String(row['no_spk'] || row['SPK/WPP'] || row['No SPK'] || '-').split('/')[0].trim(),
-      client: String(row['COMPANY'] || row['Nama Klient'] || '-'),
-      project: String(row['Store Name'] || row['Nama Project'] || '-'),
-      bahan: String(row['bahan'] || row['Nama Bahan'] || 'Art Paper'),
-      ukuran: String(row['Ukuran'] || 'A5'),
-      qty_order: Number(row['TOTAL QTY ORDER'] || 40),
-      qty_print: 0, qty_finish: 0, qty_pack: 0, qty_ship: 0,
-      store_code: String(row['NO. STORE'] || '-'), 
-      delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
-    }));
+    const formattedData = rawData.map(row => {
+      const noSpk = row['no_spk'] || row['No SPK'] || row['SPK'] || row['SPK/WPP'] || '-';
+      const project = row['project'] || row['Store Name'] || row['Nama Project'] || row['Project'] || '-';
+      const client = row['client'] || row['COMPANY'] || row['Nama Klient'] || row['Klien'] || '-';
+      const bahan = row['bahan'] || row['Nama Bahan'] || row['Bahan'] || 'Art Paper';
+      const ukuran = row['ukuran'] || row['Ukuran'] || 'A5';
+      const qtyOrder = row['qty_order'] || row['TOTAL QTY ORDER'] || row['Qty Order'] || row['Qty'] || 40;
+      const storeCode = row['store_code'] || row['NO. STORE'] || row['Store Code'] || '-';
+
+      return {
+        no_spk: String(noSpk).split('/')[0].trim(),
+        client: String(client),
+        project: String(project),
+        bahan: String(bahan),
+        ukuran: String(ukuran),
+        qty_order: Number(qtyOrder),
+        qty_print: 0, 
+        qty_finish: 0, 
+        qty_pack: 0, 
+        qty_ship: 0,
+        store_code: String(storeCode), 
+        delivery_route: String(row['DELIVERY'] || row['delivery_route'] || 'DALAM KOTA')
+      };
+    }).filter(item => item.no_spk !== '-' && item.no_spk !== '');
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data telah diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
         await fetchSpkData();
       }
+    } else {
+      alert("⚠️ Tidak ada data valid yang ditemukan untuk diimpor.");
     }
   };
 
