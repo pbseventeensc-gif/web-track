@@ -244,50 +244,47 @@ export default function App() {
   };
 
   const processImportData = async (rawRows) => {
-    console.log("Data mentah dari Sheet/Excel:", rawRows);
+    console.log("Data mentah dari Kolom F, G, H (Baris 5+):", rawRows);
 
-    // Mengabaikan baris header teratas jika terbaca sebagai baris data biasa
-    const dataRows = rawRows.slice(1);
+    const formattedData = rawRows
+      .filter(row => row && row.length > 7) // Pastikan baris memiliki data sampai kolom H (index 7)
+      .map((row, index) => {
+        // Kolom F = index 5, Kolom G = index 6, Kolom H = index 7
+        const colF = row[5] ? String(row[5]).trim() : ''; 
+        const colG = row[6] ? String(row[6]).trim() : ''; 
+        const colH = row[7] ? String(row[7]).trim() : ''; 
 
-    const formattedData = dataRows.map((row, index) => {
-      const keys = Object.keys(row);
-      const client = row['COMPANY NAME'] || row['company name'] || row['COMPANY'] || row[keys[0]] || '-';
-      const project = row['STORE NAME'] || row['store name'] || row['Store Name'] || row[keys[1]] || '-';
-      const qrAddress = row['QR ADDRESS'] || row['qr address'] || row['Qr Address'] || row[keys[2]] || '-';
+        if (!colF && !colG && !colH) return null;
 
-      // Lewati jika baris tersebut adalah header kolom atau kosong
-      if (String(client).toLowerCase().includes('company') || String(project).toLowerCase().includes('store')) {
-        return null;
-      }
+        return {
+          no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
+          client: colF || '-',
+          project: colG || '-',
+          bahan: 'Art Paper',
+          ukuran: 'A5',
+          qty_order: 40,
+          qty_print: 0, 
+          qty_finish: 0, 
+          qty_pack: 0, 
+          qty_ship: 0,
+          store_code: colH || '-',
+          delivery_route: 'DALAM KOTA'
+        };
+      })
+      .filter(item => item !== null);
 
-      return {
-        no_spk: String(qrAddress).split('_')[0] || `SPK-${index + 1}`,
-        client: String(client).trim(),
-        project: String(project).trim(),
-        bahan: String(row['bahan'] || row['Nama Bahan'] || 'Art Paper'),
-        ukuran: String(row['ukuran'] || row['Ukuran'] || 'A5'),
-        qty_order: Number(row['qty_order'] || row['TOTAL QTY ORDER'] || 40),
-        qty_print: 0, 
-        qty_finish: 0, 
-        qty_pack: 0, 
-        qty_ship: 0,
-        store_code: String(qrAddress).trim(),
-        delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
-      };
-    }).filter(item => item !== null && item.project !== '-' && item.client !== '-');
-
-    console.log("Data setelah diformat bersih:", formattedData);
+    console.log("Data spesifik setelah diformat:", formattedData);
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data bersih berhasil diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data dari Kolom F, G, H berhasil diimpor.`);
         await fetchSpkData();
       }
     } else {
-      alert("⚠️ Data tidak valid atau header terbaca sebagai isi data.");
+      alert("⚠️ Tidak ada data ditemukan pada Kolom F, G, H mulai baris ke-5.");
     }
   };
 
@@ -296,7 +293,8 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const wb = XLSX.read(evt.target.result, { type: 'binary' });
-      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 2 });
+      // range: 4 = mulai baris ke-5, header: 1 = bentuk array of arrays
+      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
       await processImportData(rawData);
     };
     reader.readAsBinaryString(file); e.target.value = '';
@@ -323,7 +321,7 @@ export default function App() {
       
       const csvText = await response.text();
       const workbook = XLSX.read(csvText, { type: 'string' });
-      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { range: 4, header: 1 });
       
       await processImportData(rawData);
     } catch (err) {
