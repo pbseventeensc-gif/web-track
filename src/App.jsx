@@ -161,7 +161,7 @@ export default function App() {
 
   const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
     const val = Number(value) || 0;
-    if (val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
+    if (maxAllowed && val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
     handleUpdateField(id, { [field]: val });
   };
 
@@ -247,9 +247,8 @@ export default function App() {
     console.log("Data mentah dari Kolom F, G, H (Baris 5+):", rawRows);
 
     const formattedData = rawRows
-      .filter(row => row && row.length > 7) // Pastikan baris memiliki data sampai kolom H (index 7)
+      .filter(row => row && row.length > 7) 
       .map((row, index) => {
-        // Kolom F = index 5, Kolom G = index 6, Kolom H = index 7
         const colF = row[5] ? String(row[5]).trim() : ''; 
         const colG = row[6] ? String(row[6]).trim() : ''; 
         const colH = row[7] ? String(row[7]).trim() : ''; 
@@ -260,27 +259,27 @@ export default function App() {
           no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
           client: colF || '-',
           project: colG || '-',
-          bahan: 'Art Paper',
-          ukuran: 'A5',
-          qty_order: 40,
+          bahan: null,       
+          ukuran: null,      
+          qty_order: null,   
           qty_print: 0, 
           qty_finish: 0, 
           qty_pack: 0, 
           qty_ship: 0,
           store_code: colH || '-',
-          delivery_route: 'DALAM KOTA'
+          delivery_route: '-'
         };
       })
       .filter(item => item !== null);
 
-    console.log("Data spesifik setelah diformat:", formattedData);
+    console.log("Data setelah dibersihkan:", formattedData);
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data dari Kolom F, G, H berhasil diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
         await fetchSpkData();
       }
     } else {
@@ -293,7 +292,6 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = async (evt) => {
       const wb = XLSX.read(evt.target.result, { type: 'binary' });
-      // range: 4 = mulai baris ke-5, header: 1 = bentuk array of arrays
       const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
       await processImportData(rawData);
     };
