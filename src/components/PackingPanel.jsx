@@ -84,10 +84,10 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
         </div>
       </div>
 
-      {/* BAGIAN BAWAH: TABEL UPLOAD FOTO BUKTI */}
+      {/* BAGIAN BAWAH: TABEL DENGAN KOLOM PACKING, CHECKER & THUMBNAIL FOTO POP-UP */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-4">
-          📷 Penampungan & Upload Bukti Foto Toko (Hasil Scan)
+          📦 Detail Toko, Status Packing, Checker & Bukti Foto
         </h3>
 
         <div className="overflow-x-auto">
@@ -97,46 +97,74 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
                 <th className="py-3 px-4">No. SPK</th>
                 <th className="py-3 px-4">Nama Store / Project</th>
                 <th className="py-3 px-4">QR / ID Store</th>
-                <th className="py-3 px-4 text-center">Bukti Foto / Preview</th>
+                <th className="py-3 px-4 text-center">Status Packing</th>
+                <th className="py-3 px-4 text-center">Status Checker</th>
+                <th className="py-3 px-4 text-center">Bukti Foto (Thumbnail)</th>
                 <th className="py-3 px-4 text-center">Aksi Upload</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-700/50">
-              {spkList.map(item => (
-                <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
-                  <td className="py-3 px-4 font-bold">{item.no_spk}</td>
-                  <td className="py-3 px-4 font-semibold">{item.project || '-'}</td>
-                  <td className="py-3 px-4 font-mono text-[11px] opacity-70">{item.store_code || '-'}</td>
-                  <td className="py-3 px-4 text-center">
-                    {item.surat_jalan_url ? (
-                      <button 
-                        onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti - ${item.project}`)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold hover:bg-emerald-500/20 transition-all"
-                      >
-                        👁️ Lihat Foto
-                      </button>
-                    ) : (
-                      <span className="text-stone-400 italic">Belum ada foto</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm ${
-                      uploadingId === item.id 
-                        ? 'bg-stone-400 text-white cursor-wait' 
-                        : 'bg-blue-600 hover:bg-blue-500 text-white active:scale-95'
-                    }`}>
-                      {uploadingId === item.id ? '⏳ Mengunggah...' : '📁 Upload Foto'}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={(e) => handleImageUpload(e, item.id, item.no_spk)}
-                        disabled={uploadingId === item.id}
-                      />
-                    </label>
-                  </td>
-                </tr>
-              ))}
+              {spkList.map(item => {
+                const isPackingDone = item.qc_paking === 'DONE' || (item.qc_paking && item.qc_paking.includes('DONE'));
+                const isCheckerDone = item.qc_checker === 'DONE' || (item.qc_checker && item.qc_checker.includes('DONE'));
+
+                return (
+                  <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
+                    <td className="py-3 px-4 font-bold">{item.no_spk}</td>
+                    <td className="py-3 px-4 font-semibold">{item.project || '-'}</td>
+                    <td className="py-3 px-4 font-mono text-[11px] opacity-70">{item.store_code || '-'}</td>
+                    
+                    {/* Kolom Status Packing */}
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isPackingDone ? 'bg-emerald-500/10 text-emerald-500' : 'bg-stone-500/10 text-stone-400'}`}>
+                        {isPackingDone ? '✓ DONE' : 'PENDING'}
+                      </span>
+                    </td>
+
+                    {/* Kolom Status Checker */}
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isCheckerDone ? 'bg-amber-500/10 text-amber-500' : 'bg-stone-500/10 text-stone-400'}`}>
+                        {isCheckerDone ? '✓ DONE' : 'PENDING'}
+                      </span>
+                    </td>
+
+                    {/* Kolom Thumbnail Foto (Bisa di-klik pop-up) */}
+                    <td className="py-3 px-4 text-center">
+                      {item.surat_jalan_url ? (
+                        <div className="flex justify-center">
+                          <img 
+                            src={item.surat_jalan_url} 
+                            alt="Bukti" 
+                            onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.project}`)}
+                            className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                            title="Klik untuk memperbesar foto"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-stone-400 italic text-[10px]">Belum ada foto</span>
+                      )}
+                    </td>
+
+                    {/* Kolom Aksi Upload */}
+                    <td className="py-3 px-4 text-center">
+                      <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm ${
+                        uploadingId === item.id 
+                          ? 'bg-stone-400 text-white cursor-wait' 
+                          : 'bg-blue-600 hover:bg-blue-500 text-white active:scale-95'
+                      }`}>
+                        {uploadingId === item.id ? '⏳...' : '📁 Upload'}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={(e) => handleImageUpload(e, item.id, item.no_spk)}
+                          disabled={uploadingId === item.id}
+                        />
+                      </label>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
