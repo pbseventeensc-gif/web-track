@@ -246,31 +246,26 @@ export default function App() {
   const processImportData = async (rawData) => {
     console.log("Data mentah dari Sheet/Excel:", rawData);
 
-    const formattedData = rawData.map(row => {
-      const keys = Object.keys(row);
-      const noSpk = row['no_spk'] || row['No SPK'] || row['SPK'] || row['SPK/WPP'] || row[keys[0]] || '-';
-      const project = row['project'] || row['Store Name'] || row['Nama Project'] || row['Project'] || row[keys[1]] || '-';
-      const client = row['client'] || row['COMPANY'] || row['Nama Klient'] || row['Klien'] || '-';
-      const bahan = row['bahan'] || row['Nama Bahan'] || row['Bahan'] || 'Art Paper';
-      const ukuran = row['ukuran'] || row['Ukuran'] || 'A5';
-      const qtyOrder = row['qty_order'] || row['TOTAL QTY ORDER'] || row['Qty Order'] || row['Qty'] || 40;
-      const storeCode = row['store_code'] || row['NO. STORE'] || row['Store Code'] || '-';
+    const formattedData = rawData.map((row, index) => {
+      const client = row['COMPANY NAME'] || row['company name'] || row['COMPANY'] || '-';
+      const project = row['STORE NAME'] || row['store name'] || row['Store Name'] || '-';
+      const qrAddress = row['QR ADDRESS'] || row['qr address'] || row['Qr Address'] || '-';
 
       return {
-        no_spk: String(noSpk).split('/')[0].trim(),
+        no_spk: String(qrAddress).split('_')[0] || `SPK-${index + 1}`,
         client: String(client),
         project: String(project),
-        bahan: String(bahan),
-        ukuran: String(ukuran),
-        qty_order: Number(qtyOrder) || 40,
+        bahan: String(row['bahan'] || row['Nama Bahan'] || 'Art Paper'),
+        ukuran: String(row['ukuran'] || row['Ukuran'] || 'A5'),
+        qty_order: Number(row['qty_order'] || row['TOTAL QTY ORDER'] || 40),
         qty_print: 0, 
         qty_finish: 0, 
         qty_pack: 0, 
         qty_ship: 0,
-        store_code: String(storeCode), 
-        delivery_route: String(row['DELIVERY'] || row['delivery_route'] || 'DALAM KOTA')
+        store_code: String(qrAddress),
+        delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
       };
-    }).filter(item => item.no_spk && item.no_spk !== '-' && item.no_spk !== 'undefined');
+    }).filter(item => item.project !== '-' && item.client !== '-');
 
     console.log("Data setelah diformat:", formattedData);
 
@@ -279,11 +274,11 @@ export default function App() {
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data dari Google Sheet berhasil diimpor.`);
         await fetchSpkData();
       }
     } else {
-      alert("⚠️ Format kolom tidak dikenali. Cek tab Console (F12) untuk melihat struktur kolom Google Sheet Anda.");
+      alert("⚠️ Data tidak terbaca. Pastikan baris pertama Google Sheet Anda tepat bernama 'COMPANY NAME', 'STORE NAME', dan 'QR ADDRESS'.");
     }
   };
 
