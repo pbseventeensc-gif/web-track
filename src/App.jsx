@@ -243,15 +243,22 @@ export default function App() {
     }
   };
 
-  const processImportData = async (rawData) => {
-    console.log("Data mentah dari Sheet/Excel:", rawData);
+  const processImportData = async (rawRows) => {
+    console.log("Data mentah dari Sheet/Excel:", rawRows);
 
-    const formattedData = rawData.map((row, index) => {
+    // Mengabaikan baris header teratas jika terbaca sebagai baris data biasa
+    const dataRows = rawRows.slice(1);
+
+    const formattedData = dataRows.map((row, index) => {
       const keys = Object.keys(row);
-      // Coba ambil berdasarkan nama kolom, jika tidak ada, ambil berdasarkan urutan kolom (index 0, 1, 2)
       const client = row['COMPANY NAME'] || row['company name'] || row['COMPANY'] || row[keys[0]] || '-';
       const project = row['STORE NAME'] || row['store name'] || row['Store Name'] || row[keys[1]] || '-';
       const qrAddress = row['QR ADDRESS'] || row['qr address'] || row['Qr Address'] || row[keys[2]] || '-';
+
+      // Lewati jika baris tersebut adalah header kolom atau kosong
+      if (String(client).toLowerCase().includes('company') || String(project).toLowerCase().includes('store')) {
+        return null;
+      }
 
       return {
         no_spk: String(qrAddress).split('_')[0] || `SPK-${index + 1}`,
@@ -267,20 +274,20 @@ export default function App() {
         store_code: String(qrAddress).trim(),
         delivery_route: String(row['DELIVERY'] || 'DALAM KOTA')
       };
-    }).filter(item => item.project !== '-' && item.client !== '-');
+    }).filter(item => item !== null && item.project !== '-' && item.client !== '-');
 
-    console.log("Data setelah diformat:", formattedData);
+    console.log("Data setelah diformat bersih:", formattedData);
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
       if (error) {
         alert("❌ Error saat menyimpan ke database: " + error.message);
       } else {
-        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
+        alert(`✅ Sukses! ${formattedData.length} data bersih berhasil diimpor.`);
         await fetchSpkData();
       }
     } else {
-      alert("⚠️ Data tidak terbaca. Pastikan format file Anda mengandung data yang valid.");
+      alert("⚠️ Data tidak valid atau header terbaca sebagai isi data.");
     }
   };
 
