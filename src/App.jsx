@@ -6,6 +6,7 @@ import LabelGeneratorTab from './components/LabelGeneratorTab';
 import MainTrackingTable from './components/MainTrackingTable';
 import FinishingPanel from './components/FinishingPanel';
 import DesignPanel from './components/DesignPanel';
+import PackingPanel from './components/PackingPanel';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
 
@@ -484,6 +485,10 @@ export default function App() {
           <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
         )}
 
+        {!isBranchMode && activeTab === 'paking' && (
+          <PackingPanel isDarkMode={isDarkMode} spkList={spkList} handleUpdateField={handleUpdateField} />
+        )}
+
         {(isBranchMode || activeTab === 'kawan_lama') && (
           <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
         )}
@@ -496,7 +501,7 @@ export default function App() {
           <CustomModulesIndex isDarkMode={isDarkMode} />
         )}
 
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && (
+        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && (
           <MainTrackingTable 
             isDarkMode={isDarkMode}
             activeTab={activeTab}
