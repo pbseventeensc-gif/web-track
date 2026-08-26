@@ -22,6 +22,7 @@ export default function PmgProjectManager({ isDarkMode }) {
   const [items, setItems] = useState([
     { destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }
   ]);
+  const [selectedItemIndexes, setSelectedItemIndexes] = useState([]);
 
   useEffect(() => {
     fetchProjects();
@@ -62,6 +63,29 @@ export default function PmgProjectManager({ isDarkMode }) {
 
   const handleRemoveItemRow = (index) => {
     setItems(items.filter((_, i) => i !== index));
+    setSelectedItemIndexes(selectedItemIndexes.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+  };
+
+  // 🔥 FITUR HAPUS MASSAL & HAPUS TERPILIH ITEM
+  const handleRemoveSelectedItems = () => {
+    if (selectedItemIndexes.length === 0) return alert('Pilih minimal satu baris item yang ingin dihapus!');
+    if (!window.confirm(`Hapus ${selectedItemIndexes.length} item yang dipilih?`)) return;
+    
+    const remainingItems = items.filter((_, idx) => !selectedItemIndexes.includes(idx));
+    setItems(remainingItems.length > 0 ? remainingItems : [{ destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }]);
+    setSelectedItemIndexes([]);
+  };
+
+  const handleClearAllItems = () => {
+    if (!window.confirm('🚨 Yakin ingin menghapus SEMUA daftar item?')) return;
+    setItems([{ destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }]);
+    setSelectedItemIndexes([]);
+  };
+
+  const handleToggleSelectItem = (index) => {
+    setSelectedItemIndexes(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
   };
 
   const handleImportItemsExcel = (e) => {
@@ -97,6 +121,7 @@ export default function PmgProjectManager({ isDarkMode }) {
 
         if (importedItems.length > 0) {
           setItems(importedItems);
+          setSelectedItemIndexes([]);
           alert(`✅ Berhasil mengimpor ${importedItems.length} item dari Excel!`);
         } else {
           alert('⚠️ Format baris Excel tidak dikenali.');
@@ -149,6 +174,7 @@ export default function PmgProjectManager({ isDarkMode }) {
       alert('✅ Surat Jalan & Alokasi PMG Berhasil Disimpan!');
       setForm({ dr_number: '', transaction_code: '', project_name: '', delivery_date: new Date().toISOString().split('T')[0], vehicle_no: '', phone_no: '', sender_name: 'NINING' });
       setItems([{ destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }]);
+      setSelectedItemIndexes([]);
       fetchProjects();
     }
   };
@@ -171,7 +197,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     fetchProjects();
   };
 
-  // Fungsi untuk menghasilkan baris kosong pelengkap tabel agar persis seperti lembar kerja
   const renderEmptyRows = (currentCount) => {
     const targetRows = Math.max(0, 10 - currentCount);
     const rows = [];
@@ -238,60 +263,83 @@ export default function PmgProjectManager({ isDarkMode }) {
         </div>
 
         <div className="border rounded-2xl p-4 space-y-3 dark:border-neutral-700">
-          <div className="flex justify-between items-center">
-            <h4 className="font-bold text-xs uppercase text-indigo-500">Daftar Item & Alokasi Tujuan Klien</h4>
-            <div className="flex gap-2">
-              <label className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-lg text-[11px] cursor-pointer">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div>
+              <h4 className="font-bold text-xs uppercase text-indigo-500">Daftar Item & Alokasi Tujuan Klien ({items.length} Item)</h4>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedItemIndexes.length > 0 && (
+                <button type="button" onClick={handleRemoveSelectedItems} className="px-3 py-1.5 bg-rose-600 text-white font-bold rounded-lg text-[11px] shadow-sm">
+                  🗑️ Hapus Terpilih ({selectedItemIndexes.length})
+                </button>
+              )}
+              {items.length > 1 && (
+                <button type="button" onClick={handleClearAllItems} className="px-3 py-1.5 bg-rose-700 text-white font-bold rounded-lg text-[11px] shadow-sm">
+                  🔥 Hapus Semua Item
+                </button>
+              )}
+              <label className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-lg text-[11px] cursor-pointer shadow-sm">
                 📂 Import Excel
                 <input type="file" accept=".xlsx, .xls" onChange={handleImportItemsExcel} className="hidden" />
               </label>
-              <button type="button" onClick={handleAddItemRow} className="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-[11px]">➕ Tambah Item</button>
+              <button type="button" onClick={handleAddItemRow} className="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-[11px] shadow-sm">➕ Tambah Item</button>
             </div>
           </div>
 
-          {items.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center pt-2 border-t dark:border-neutral-700">
-              <div className="sm:col-span-3">
-                <select 
-                  value={item.destination_id}
-                  onChange={e => handleItemChange(idx, 'destination_id', e.target.value)}
-                  className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
-                  required
-                >
-                  <option value="">-- Pilih Klien Tujuan --</option>
-                  {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
-                </select>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {items.map((item, idx) => (
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2 rounded-xl border dark:border-neutral-700 bg-stone-50/50 dark:bg-neutral-900/40">
+                <div className="sm:col-span-1 flex items-center justify-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedItemIndexes.includes(idx)} 
+                    onChange={() => handleToggleSelectItem(idx)}
+                    className="w-4 h-4 accent-indigo-600 cursor-pointer" 
+                  />
+                  <span className="text-[10px] opacity-60 font-mono">#{idx + 1}</span>
+                </div>
+                <div className="sm:col-span-3">
+                  <select 
+                    value={item.destination_id}
+                    onChange={e => handleItemChange(idx, 'destination_id', e.target.value)}
+                    className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
+                    required
+                  >
+                    <option value="">-- Pilih Klien Tujuan --</option>
+                    {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-4">
+                  <input 
+                    type="text" placeholder="Nama Barang"
+                    value={item.item_name} onChange={e => handleItemChange(idx, 'item_name', e.target.value)}
+                    className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <input 
+                    type="text" placeholder="Ukuran / Keterangan"
+                    value={item.dimensions} onChange={e => handleItemChange(idx, 'dimensions', e.target.value)}
+                    className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <input 
+                    type="text" inputMode="numeric" value={item.qty}
+                    onChange={e => handleItemChange(idx, 'qty', e.target.value.replace(/\D/g, ''))}
+                    className={`w-full p-2.5 border-2 border-indigo-500 rounded-xl font-black text-center text-xs ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-white'}`}
+                  />
+                </div>
+                <div className="sm:col-span-1 text-center">
+                  {items.length > 1 && <button type="button" onClick={() => handleRemoveItemRow(idx)} className="text-rose-500 font-bold hover:scale-110 transition-transform">❌</button>}
+                </div>
               </div>
-              <div className="sm:col-span-4">
-                <input 
-                  type="text" placeholder="Nama Barang"
-                  value={item.item_name} onChange={e => handleItemChange(idx, 'item_name', e.target.value)}
-                  className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
-                  required
-                />
-              </div>
-              <div className="sm:col-span-3">
-                <input 
-                  type="text" placeholder="Ukuran / Keterangan"
-                  value={item.dimensions} onChange={e => handleItemChange(idx, 'dimensions', e.target.value)}
-                  className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
-                />
-              </div>
-              <div className="sm:col-span-1">
-                <input 
-                  type="text" inputMode="numeric" value={item.qty}
-                  onChange={e => handleItemChange(idx, 'qty', e.target.value.replace(/\D/g, ''))}
-                  className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-center ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50'}`}
-                />
-              </div>
-              <div className="sm:col-span-1 text-center">
-                {items.length > 1 && <button type="button" onClick={() => handleRemoveItemRow(idx)} className="text-rose-500 font-bold">❌</button>}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl shadow-md">
+        <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md transition-all">
           💾 Simpan & Terbitkan Dokumen PMG
         </button>
       </form>
@@ -324,7 +372,7 @@ export default function PmgProjectManager({ isDarkMode }) {
         </div>
       </div>
 
-      {/* MODAL PRATINJAU CETAK (POD & SURAT JALAN PERSIS SEPERTI GAMBAR REFERENSI) */}
+      {/* MODAL PRATINJAU CETAK */}
       {printData && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
@@ -388,7 +436,6 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </tr>
               </table>
 
-              {/* TABEL ITEM POD */}
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '10px' }}>
                 <thead>
                   <tr style={{ background: '#d3d3d3' }}>
@@ -420,7 +467,6 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </tbody>
               </table>
 
-              {/* TANDA TANGAN POD */}
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '10px' }}>
                 <thead>
                   <tr style={{ background: '#d3d3d3' }}>
@@ -456,7 +502,6 @@ export default function PmgProjectManager({ isDarkMode }) {
               </table>
             </div>
 
-            {/* GARIS PEMBATAS HALAMAN CETAK */}
             <div style={{ pageBreakBefore: 'always', margin: '30px 0' }} className="print:block" />
 
             {/* HALAMAN 2: DELIVERY ORDER / SURAT JALAN */}
@@ -512,7 +557,6 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </tr>
               </table>
 
-              {/* TABEL ITEM SURAT JALAN */}
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '10px' }}>
                 <thead>
                   <tr style={{ background: '#d3d3d3' }}>
@@ -544,7 +588,6 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </tbody>
               </table>
 
-              {/* TANDA TANGAN SURAT JALAN */}
               <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '10px' }}>
                 <thead>
                   <tr style={{ background: '#d3d3d3' }}>

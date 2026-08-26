@@ -6,6 +6,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
+  const [sjFormatType, setSjFormatType] = useState('modern');
 
   const handleUploadHeaderLogo = (e) => {
     const file = e.target.files[0];
@@ -28,17 +29,30 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleDownloadTemplate = () => {
-    const templateSampleData = [{
-      NO_SPK: "SPK-0826-00101", PO_NUMBER: "4500122101", NO_SJ: "WL-26-88-01", CLIENT: "PT TRI SAKTI PURWOSARI MAKMUR",
-      BRAND: "Production Sunscreen Juara Intens", RECIPIENT_NAME: "Pak Pajri Hidayah", RECIPIENT_PHONE: "0838-3041-0548",
-      DELIVERY_ADDRESS: "Management Support (DC Marunda) JL. Kebantenan IV No. 15, Semper Timur, Cilincing, JAKARTA UTARA 14130",
-      ITEM_DESCRIPTION: "SUNSCREEN BANNER", MEDIA: "FLEXY CINA 280 GR", UKURAN: "2 X 0.75 M", QTY_TOTAL: 300, QTY_PER_KOLI: 20,
-      DATE_PRODUCTION: "12-Aug-26", SENDER: "WELLEN PRINT", WELLEN_PIC: "BPK. JHONNY", SENDER_TELP: "021-5506999", SENDER_EMAIL: "info@wellenprint.com"
-    }];
+    const templateSampleData = [
+      {
+        NO_SPK: "SPK-0826-03388", PO_NUMBER: "4500122101", NO_SJ: "SJ-0826-01920", CLIENT: "PT ASPIRASI HIDUP INDONESIA TBK",
+        PROJECT: "ATARU GRAND WISATA", NO_WPP: "WPP 0826-301349", BRAND: "ATARU", RECIPIENT_NAME: "ADAM RIAN", RECIPIENT_PHONE: "0812.4161.2709",
+        DELIVERY_ADDRESS: "STORE ATARU GRAND WISATA",
+        ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 150,
+        DATE_PRODUCTION: "11 Aug 2026", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
+      }
+    ];
     const ws = XLSX.utils.json_to_sheet(templateSampleData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Template_WellenPrint");
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
+  };
+
+  // Fungsi helper konversi tanggal Excel & teks tanggal normal
+  const parseExcelDate = (val) => {
+    if (!val) return '12-Aug-2026';
+    if (!isNaN(val) && typeof val === 'number' || (!isNaN(val) && String(val).match(/^\d{5}$/))) {
+      const excelEpoch = new Date(1899, 11, 30);
+      const jsDate = new Date(excelEpoch.getTime() + Number(val) * 86400000);
+      return jsDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+    }
+    return String(val).trim();
   };
 
   const handleExcelImport = (e) => {
@@ -58,14 +72,18 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
         const cleanedData = rawData.map((row) => {
           const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
-          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 20;
+          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 100;
+          const rawDate = row.DATE_PRODUCTION || row['Date Production'] || row['Tgl Produksi'] || row.date_production;
           const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
+          
           return {
             NO_SPK: String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim(),
             PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || '').trim(),
-            NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}-${Math.floor(10 + Math.random() * 90)}`).trim(),
+            NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}`).trim(),
             CLIENT: String(row.CLIENT || row.Client || row.COMPANY || '').trim(),
-            BRAND: String(row.BRAND || row.Brand || row.ITEM_DESCRIPTION || '').trim(),
+            PROJECT: String(row.PROJECT || row['Project Name'] || row.project || '').trim(),
+            NO_WPP: String(row.NO_WPP || row['No WPP'] || row.no_wpp || '').trim(),
+            BRAND: String(row.BRAND || row.Brand || row['FILE NAME'] || '').trim(),
             RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row['Nama Penerima'] || '').trim(),
             RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || '').trim(),
             DELIVERY_ADDRESS: deliveryAddress,
@@ -73,18 +91,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             MEDIA: String(row.MEDIA || row.Media || '').trim(),
             UKURAN: String(row.UKURAN || row.Ukuran || '').trim(),
             QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
-            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 20,
-            DATE_PRODUCTION: String(row.DATE_PRODUCTION || row['Date Production'] || '12-Aug-26').trim(),
+            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 100,
+            DATE_PRODUCTION: parseExcelDate(rawDate),
             SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
-            WELLEN_PIC: String(row.WELLEN_PIC || 'BPK. JHONNY').trim(),
             SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
-            SENDER_EMAIL: String(row.SENDER_EMAIL || 'info@wellenprint.com').trim(),
-            VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim()
+            VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim(),
+            VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim()
           };
         }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
 
         setLabelData(cleanedData); 
-        setSelectedRows([]); 
+        setSelectedRows(cleanedData.map((_, i) => i));
         alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
       } catch (err) { 
         alert('Gagal membaca file Excel: ' + err.message); 
@@ -94,164 +111,446 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     e.target.value = '';
   };
 
-  const handleImageUploadRow = (e, index) => {
+  const handleBatchUploadGlobal = async (e, field) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    if (labelData.length === 0) {
+      return alert('⚠️ Harap import data Excel terlebih dahulu sebelum melakukan upload gambar massal!');
+    }
+
+    const newLabelData = [...labelData];
+    let successCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      if (i >= newLabelData.length) break;
+      const file = files[i];
+      
+      const readFileAsDataURL = (fileObj) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target.result);
+          reader.readAsDataURL(fileObj);
+        });
+      };
+
+      const base64Url = await readFileAsDataURL(file);
+      const fileNameFull = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const cleanFileName = fileNameFull.toLowerCase().trim();
+
+      let targetIndex = newLabelData.findIndex(item => {
+        const spk = (item.NO_SPK || '').toLowerCase().trim();
+        const brand = (item.BRAND || '').toLowerCase().trim();
+        return (spk && (cleanFileName.includes(spk) || spk.includes(cleanFileName))) || (brand && (cleanFileName.includes(brand) || brand.includes(cleanFileName)));
+      });
+
+      if (targetIndex === -1) {
+        targetIndex = i;
+      }
+
+      if (targetIndex < newLabelData.length) {
+        newLabelData[targetIndex][field] = base64Url;
+        successCount++;
+      }
+    }
+
+    setLabelData(newLabelData);
+    alert(`✅ Sukses! ${successCount} gambar berhasil diunggah dan dipetakan ke tabel.`);
+    e.target.value = '';
+  };
+
+  const handleImageUploadRow = (e, index, field = 'VISUAL_IMAGE') => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       const base64Url = evt.target.result;
-      setLabelData(prev => prev.map((item, i) => (i === index ? { ...item, VISUAL_IMAGE: base64Url } : item)));
+      setLabelData(prev => prev.map((item, i) => (i === index ? { ...item, [field]: base64Url } : item)));
     };
     reader.readAsDataURL(file);
   };
 
-  const renderHeaderLogoHtml = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:65px; max-width:200px; object-fit:contain; display:block;">`;
-    return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000;">WELLEN<br><span style="font-size:13px; letter-spacing:6px;">PRINT</span></div>`;
+  const renderHeaderLogoHtmlLabel = () => {
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:95px; max-width:160px; object-fit:contain; display:block; margin:auto;">`;
+    return `<div style="font-weight:900; font-size:20px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:11px; letter-spacing:4px;">PRINT</span></div>`;
+  };
+
+  const renderHeaderLogoHtmlSJ = () => {
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:110px; max-width:340px; object-fit:contain; display:block;">`;
+    return `<div style="font-weight:900; font-size:38px; line-height:1; color:#000;">WELLEN<br><span style="font-size:20px; letter-spacing:6px;">PRINT</span></div>`;
+  };
+
+  const openPrintWindow = (htmlContent) => {
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const printWin = window.open(url, '_blank');
+    if (!printWin) {
+      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
+    }
+  };
+
+  const groupSelectedRows = () => {
+    const itemsToProcess = selectedRows.length > 0 
+      ? labelData.filter((_, idx) => selectedRows.includes(idx))
+      : labelData;
+
+    const groupedMap = {};
+
+    itemsToProcess.forEach(item => {
+      const groupKey = `${item.NO_SPK || 'SPK'}_${item.DELIVERY_ADDRESS || 'ADDRESS'}`;
+      if (!groupedMap[groupKey]) {
+        groupedMap[groupKey] = {
+          ...item,
+          itemsList: [],
+          totalCombinedQty: 0
+        };
+      }
+      groupedMap[groupKey].itemsList.push(item);
+      groupedMap[groupKey].totalCombinedQty += Number(item.QTY_TOTAL || 0);
+
+      if (!groupedMap[groupKey].VISUAL_IMAGE && item.VISUAL_IMAGE) {
+        groupedMap[groupKey].VISUAL_IMAGE = item.VISUAL_IMAGE;
+      }
+      if (!groupedMap[groupKey].VISUAL_IMAGE_2 && item.VISUAL_IMAGE_2) {
+        groupedMap[groupKey].VISUAL_IMAGE_2 = item.VISUAL_IMAGE_2;
+      }
+    });
+
+    const firstAvailableImage = labelData.find(d => d.VISUAL_IMAGE)?.VISUAL_IMAGE || '';
+    const firstAvailableImage2 = labelData.find(d => d.VISUAL_IMAGE_2)?.VISUAL_IMAGE_2 || '';
+
+    Object.values(groupedMap).forEach(group => {
+      if (!group.VISUAL_IMAGE) group.VISUAL_IMAGE = firstAvailableImage;
+      if (!group.VISUAL_IMAGE_2) group.VISUAL_IMAGE_2 = firstAvailableImage2;
+    });
+
+    return Object.values(groupedMap);
   };
 
   const handlePrintLabels = async () => {
-    if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak!');
-    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
+    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    const groupedItems = groupSelectedRows();
     
-    let allKoliItems = [];
-    for (const item of itemsToPrint) {
-      const totalQty = Number(item.QTY_TOTAL || 0); 
-      const qtyPerKoli = Number(item.QTY_PER_KOLI || 20);
-      const totalKoli = Math.ceil(totalQty / qtyPerKoli) || 1;
-      
-      for (let k = 1; k <= totalKoli; k++) {
-        const currentQty = (k === totalKoli && totalQty % qtyPerKoli !== 0) ? (totalQty % qtyPerKoli) : qtyPerKoli;
-        const qrAddress = item.NO_SPK ? `SPK:${item.NO_SPK}|KOLI:${k}/${totalKoli}` : 'WELLEN-PRINT';
-        let qrDataUrl = ''; 
-        try { 
-          qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 120, margin: 1 }); 
-        } catch (e) { 
-          console.error(e); 
-        }
-
-        allKoliItems.push({
-          ...item,
-          currentKoli: k,
-          totalKoli: totalKoli,
-          currentQty: currentQty,
-          qrDataUrl: qrDataUrl
-        });
+    let allLabelBoxes = [];
+    for (const group of groupedItems) {
+      const qrAddress = group.NO_SPK ? `SPK:${group.NO_SPK}|KOLI:1/1` : 'WELLEN-PRINT';
+      let qrDataUrl = ''; 
+      try { 
+        qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 80, margin: 1 }); 
+      } catch (e) { 
+        console.error(e); 
       }
+
+      allLabelBoxes.push({
+        ...group,
+        currentKoli: 1,
+        totalKoli: 1,
+        currentQty: group.totalCombinedQty,
+        qrDataUrl: qrDataUrl
+      });
     }
 
     const pagePairs = [];
-    for (let i = 0; i < allKoliItems.length; i += 2) {
-      pagePairs.push(allKoliItems.slice(i, i + 2));
+    for (let i = 0; i < allLabelBoxes.length; i += 2) {
+      pagePairs.push(allLabelBoxes.slice(i, i + 2));
     }
 
     const pagesHtml = await Promise.all(pagePairs.map(async (pair) => {
       const labelsHtml = await Promise.all(pair.map(async (item) => {
+        const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
+        const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
+        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
+
+        const itemsHtml = item.itemsList.map(it => 
+          `• ${it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
+        ).join('<br>');
+
         return `
           <div class="label-box">
             <table class="header-table"><tr>
-              <td style="width: 25%; vertical-align: middle;">${renderHeaderLogoHtml()}</td>
-              <td style="width: 55%; text-align:center; font-size:9px; line-height: 1.2; vertical-align: middle;">
-                <strong style="font-size:12px;">PT. WELLEN PRINT</strong><br>
-                Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres,<br>
-                RT.11/RW.6, Kalideres, Kec. Kalideres, Kota Jakarta Barat, 11840
+              <td style="width: 25%; vertical-align: middle; padding: 6px 8px;">${renderHeaderLogoHtmlLabel()}</td>
+              <td style="width: 60%; text-align:center; font-size:7.5px; line-height: 1.3; vertical-align: middle; padding: 6px 8px;">
+                <strong style="font-size:11px;">WELLEN PRINT</strong><br>
+                Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
-              <td style="width: 20%; text-align:right; vertical-align: middle;">${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:55px; height:55px; display:inline-block;">` : ''}</td>
+              <td style="width: 15%; text-align:right; vertical-align: middle; padding: 6px 8px;">${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:40px; height:40px; display:inline-block;">` : ''}</td>
             </tr></table>
+            
             <div class="content-grid">
-              <div class="grid-box"><strong>SENDER:</strong> ${item.SENDER || 'WELLEN PRINT'}<br><strong>WELLEN PIC:</strong> ${item.WELLEN_PIC || 'BPK. JHONNY'}<br><strong>NO. TELP:</strong> ${item.SENDER_TELP || '021-5506999'}<br><strong>EMAIL:</strong> ${item.SENDER_EMAIL || 'info@wellenprint.com'}</div>
-              <div class="grid-box"><strong>CLIENT:</strong> ${item.CLIENT || '-'}<br><strong>Delivery Address:</strong> ${item.DELIVERY_ADDRESS || '-'}<br><strong>Recipient Name:</strong> ${item.RECIPIENT_NAME || '-'}<br><strong>Recipient Phone:</strong> ${item.RECIPIENT_PHONE || '-'}</div>
-              <div class="grid-box"><strong>PO NUMBER:</strong> ${item.PO_NUMBER || '-'}<br><strong>NO. SPK:</strong> ${item.NO_SPK || '-'}<br><strong>ITEM DESCRIPTION:</strong> ${item.ITEM_DESCRIPTION || '-'}<br><strong>MEDIA:</strong> ${item.MEDIA || '-'}<br><strong>UKURAN:</strong> ${item.UKURAN || '-'}<br><strong>QUANTITY:</strong> ${item.currentQty} PCS<br><strong>DATE PRODUCTION:</strong> ${item.DATE_PRODUCTION || '-'}</div>
-              <div class="grid-box visual-box"><div><strong>VISUAL IMAGE :</strong></div><div class="koli-title">${item.currentKoli} OF ${item.totalKoli}</div>${item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>`}</div>
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">SENDER</td><td class="sep-col">:</td><td class="val-col"><strong>${item.SENDER || 'WELLEN PRINT'}</strong></td></tr>
+                  <tr><td class="label-col">NO. TELP</td><td class="sep-col">:</td><td class="val-col">${item.SENDER_TELP || '021-5506999'}</td></tr>
+                </table>
+              </div>
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">CLIENT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.CLIENT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Delivery Address</td><td class="sep-col">:</td><td class="val-col">${item.DELIVERY_ADDRESS || '-'}</td></tr>
+                  <tr><td class="label-col">Recipient Name</td><td class="sep-col">:</td><td class="val-col"><strong>${item.RECIPIENT_NAME || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Recipient Phone</td><td class="sep-col">:</td><td class="val-col">${item.RECIPIENT_PHONE || '-'}</td></tr>
+                </table>
+              </div>
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">PROJECT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.PROJECT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">PO NUMBER</td><td class="sep-col">:</td><td class="val-col">${item.PO_NUMBER || '-'}</td></tr>
+                  <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col">${item.NO_WPP || '-'}</td></tr>
+                  <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col">${item.NO_SPK || '-'}</td></tr>
+                  <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col">${itemsHtml}</td></tr>
+                  <tr><td class="label-col">TOTAL QTY</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11.5px;">${item.totalCombinedQty} PCS</strong></td></tr>
+                  <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col">${item.DATE_PRODUCTION || '-'}</td></tr>
+                </table>
+              </div>
+              
+              <div class="grid-box visual-box">
+                <div class="visual-title">VISUAL IMAGE :</div>
+                <div class="koli-title">${item.currentKoli} OF ${item.totalKoli}</div>
+                <div class="visual-img-container">
+                  ${img1}
+                  ${img2}
+                  ${noImg}
+                </div>
+              </div>
             </div>
           </div>
         `;
       }));
 
-      return `
-        <div class="label-page">
-          ${labelsHtml.join('')}
-        </div>
-      `;
+      return labelsHtml.join('<div class="cut-guide"></div>');
     }));
 
-    const printWin = window.open('', '_blank', 'width=900,height=800');
-    if (!printWin) {
-      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Label Wellen Print (2 in 1 A4)</title><style>
-      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; } 
-      .label-page { width: 297mm; height: 210mm; padding: 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; } 
-      .label-box { border: 2px solid #000; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; } 
+    const fullHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Label - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
+      .control-group { display: flex; align-items: center; gap: 8px; }
+      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+      .action-bar button:hover { background: #4338CA; }
+      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+      .label-page { width: 210mm; height: 297mm; padding: 4mm 6mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; } 
+      .label-box { border: 2px solid #000; width: 100%; height: 133mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .cut-guide { width: 100%; border-top: 1.5px dashed #000; margin: 1.5mm 0; }
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
-      .header-table td { border: none; padding: 5px; vertical-align: middle; } 
+      .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
-      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 5px; font-size: 10.5px; line-height: 1.3; box-sizing: border-box; } 
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 8px; font-size: 10px; line-height: 1.3; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; } 
       .grid-box:nth-child(2n) { border-right: none; } 
       .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
-      .visual-box { text-align: center; display: flex; flex-direction: column; justify-content: space-between; align-items: center; } 
-      .koli-title { font-size: 18px; font-weight: bold; margin: 2px 0; } 
-      .preview-img { max-width: 95%; max-height: 75px; object-fit: contain; } 
+      .align-table { width: 100%; border-collapse: collapse; }
+      .align-table td { border: none; padding: 1.5px 0; vertical-align: middle; font-size: 9.5px; }
+      .label-col { width: 38%; font-weight: bold; }
+      .sep-col { width: 4%; text-align: center; }
+      .val-col { width: 58%; }
+      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 5px !important; } 
+      .visual-title { font-size: 10.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
+      .koli-title { font-size: 14px; font-weight: bold; margin: 1px 0; letter-spacing: 0.5px; } 
+      .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
+      .preview-img { max-width: 48%; max-height: 75px; object-fit: contain; display: block; } 
       @media print { 
-        body { padding: 0; } 
-        @page { size: A4 landscape; margin: 0; }
-        .label-page { page-break-after: always; break-after: page; width: 297mm; height: 210mm; } 
+        body { background: #fff; }
+        .action-bar { display: none; }
+        .page-wrapper { margin-top: 0; gap: 0; }
+        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; } 
+        @page { size: A4 portrait; margin: 0; }
       }
-    </style></head><body>${pagesHtml.join('')}</body></html>`);
-    printWin.document.close(); 
-    
-    // Berikan jeda agar gambar dan QR code termuat sempurna sebelum dialog print muncul
-    setTimeout(() => {
-      printWin.focus();
-      printWin.print();
-    }, 800);
+    </style></head><body>
+      <div class="action-bar">
+        <span><b>🖨️ Pengaturan Printer Office & Cetak Label</b></span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="control-group">
+            <label>Kertas:</label>
+            <select id="paperSize">
+              <option value="A4">A4 (210 x 297 mm)</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </div>
+          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
+          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
+        </div>
+      </div>
+      <div class="page-wrapper">${pagesHtml}</div>
+    </body></html>`;
+
+    openPrintWindow(fullHtml);
   };
 
   const handlePrintSuratJalan = () => {
-    if (selectedRows.length === 0) return alert('⚠️ Silakan centang minimal 1 baris data untuk dicetak Surat Jalan!');
-    const itemsToPrint = labelData.filter((_, idx) => selectedRows.includes(idx));
-    const pagesHtml = itemsToPrint.map((item) => `
-      <div class="sj-page">
-        <div class="sj-top-header"><div class="logo-sec">${renderHeaderLogoHtml()}</div><div class="sj-title">Tanda Terima</div></div>
-        <div class="info-row">
-          <div class="info-box left-box"><div class="info-line">Kepada Yth :</div><div class="info-line font-bold">${item.CLIENT || '-'}</div><div class="info-line">${item.DELIVERY_ADDRESS || '-'}</div><div class="info-line">UP : ${item.RECIPIENT_NAME || '-'} ${item.RECIPIENT_PHONE || ''}</div></div>
-          <div class="right-box-container">
-            <table class="meta-table"><tr><td class="font-bold">NO PO</td><td>: ${item.PO_NUMBER || '-'}</td></tr><tr><td class="font-bold">BRAND</td><td>: ${item.BRAND || item.ITEM_DESCRIPTION || '-'}</td></tr><tr><td class="font-bold">NO SJ</td><td>: ${item.NO_SJ || '-'}</td></tr></table>
-            <div class="date-box"><div class="date-header">TANGGAL</div><div class="date-value">${item.DATE_PRODUCTION || '12-Aug-26'}</div></div>
+    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    const groupedItems = groupSelectedRows();
+
+    const pagesHtml = groupedItems.map((group) => {
+      let grandTotal = 0;
+      const rowsHtml = group.itemsList.map((it, idx) => {
+        const qty = Number(it.QTY_TOTAL || 0);
+        grandTotal += qty;
+        return sjFormatType === 'modern' ? `
+          <tr>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td>${it.ITEM_DESCRIPTION || '-'}</td>
+            <td>${it.MEDIA || '-'}<br><span style="font-size:11px;">Ukuran: ${it.UKURAN || '-'}</span></td>
+            <td style="text-align: right; padding-right: 15px;">${qty.toLocaleString()}</td>
+          </tr>
+        ` : `
+          <tr>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td>${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
+            <td style="text-align: center;">${it.UKURAN || '-'}</td>
+            <td style="text-align: right; padding-right: 15px;">${qty.toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+
+      if (sjFormatType === 'modern') {
+        return `
+          <div class="sj-page">
+            <div class="sj-top-header">
+              <div class="logo-sec">${renderHeaderLogoHtmlSJ()}</div>
+              <div class="sj-title">TANDA TERIMA</div>
+            </div>
+            <div class="info-row">
+              <div class="info-box left-box"><div class="info-line">Kepada Yth :</div><div class="info-line font-bold">${group.CLIENT || '-'}</div><div class="info-line">${group.DELIVERY_ADDRESS || '-'}</div><div class="info-line">UP : ${group.RECIPIENT_NAME || '-'} ${group.RECIPIENT_PHONE || ''}</div></div>
+              <div class="right-box-container">
+                <table class="meta-table"><tr><td class="font-bold">NO PO</td><td>: ${group.PO_NUMBER || '-'}</td></tr><tr><td class="font-bold">BRAND</td><td>: ${group.BRAND || '-'}</td></tr><tr><td class="font-bold">NO SJ</td><td>: ${group.NO_SJ || '-'}</td></tr></table>
+                <div class="date-box"><div class="date-header">TANGGAL</div><div class="date-value">${group.DATE_PRODUCTION || '12-Aug-2026'}</div></div>
+              </div>
+            </div>
+            <table class="item-grid-table">
+              <thead>
+                <tr><th style="width: 8%;">NO</th><th style="width: 35%;">NAMA ITEM / PRODUK</th><th style="width: 35%;">MEDIA & UKURAN</th><th style="width: 22%;">QTY</th></tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr><td colspan="3" class="text-center font-bold">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
+              </tfoot>
+            </table>
+            <div class="signature-row"><div class="sig-box">PENGIRIM</div><div class="sig-box">PENERIMA</div></div>
           </div>
+        `;
+      } else {
+        return `
+          <div class="sj-page classic-page">
+            <div class="sj-top-classic">
+              <div class="logo-sec-cl">${renderHeaderLogoHtmlSJ()}
+                <div style="font-size:11px; margin-top:5px; line-height:1.2;">
+                  Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br>
+                  Telp. 021 -5506999 &nbsp;&nbsp;&nbsp; Fax -
+                </div>
+              </div>
+              <div class="sj-title-cl">
+                <div style="font-size:24px; font-weight:bold;">SURAT JALAN</div>
+                <div style="font-size:15px; font-weight:bold; margin-top:2px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
+                <div style="font-size:13px; margin-top:5px; text-align:left;">
+                  Kepada Yth, :<br>
+                  <strong>${group.CLIENT || '-'}</strong><br>
+                  ${group.DELIVERY_ADDRESS || '-'} - UP: ${group.RECIPIENT_NAME || '-'} (${group.RECIPIENT_PHONE || ''})
+                </div>
+              </div>
+            </div>
+            
+            <table class="item-grid-table classic-table">
+              <thead>
+                <tr><th style="width: 8%;">No.</th><th>Nama Barang</th><th style="width: 20%;">Ukuran</th><th style="width: 15%;">Qty</th></tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+                <tr style="height: 120px;"><td colspan="4"></td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td colspan="3" style="text-align:right; font-weight:bold; padding-right:10px;">TOTAL</td><td style="text-align: right; padding-right: 15px; font-weight:bold;">${grandTotal.toLocaleString()}</td></tr>
+              </tfoot>
+            </table>
+
+            <div class="classic-footer">
+              <div class="footer-left">
+                <div>Tgl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.DATE_PRODUCTION || '-'}</div>
+                <div>Nama File &nbsp;&nbsp;: ${group.BRAND || '-'}</div>
+                <div style="margin-top:15px;">Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
+                <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
+              </div>
+              <div class="footer-right">
+                <div class="sig-col">DIBUAT OLEH</div>
+                <div class="sig-col">DIKIRIM OLEH</div>
+                <div class="sig-col">DITERIMA OLEH</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }).join('');
+
+    const fullSjHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Surat Jalan - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; color: #000; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
+      .control-group { display: flex; align-items: center; gap: 8px; }
+      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+      .action-bar button:hover { background: #4338CA; }
+      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+      .sj-page { width: 210mm; height: 148mm; padding: 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 12px; } 
+      .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
+      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } 
+      .sj-title { font-size: 28px; font-weight: bold; text-align: right; } 
+      .info-row { display: flex; gap: 15px; margin-bottom: 8px; } 
+      .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 12px; line-height: 1.4; } 
+      .left-box { flex: 1; height: 75px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 5px; } 
+      .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 12px; } 
+      .meta-table td { padding: 3px 6px; border: none; } 
+      .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 11px; } 
+      .date-header { border-bottom: 1.5px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } 
+      .date-value { padding-top: 3px; font-weight: bold; font-size: 12px; } 
+      .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 12px; margin-bottom: 10px; } 
+      .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 6px; } 
+      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 12px; } 
+      .item-grid-table tfoot td { background: #f8f8f8; font-size: 12.5px; } 
+      .signature-row { display: flex; justify-space-around; text-align: center; font-size: 12px; font-weight: bold; margin-top: 10px; } 
+      .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 35px; } 
+      
+      .classic-page { padding: 8mm !important; }
+      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+      .logo-sec-cl { width: 45%; }
+      .sj-title-cl { width: 52%; border: 1.5px solid #000; padding: 6px; font-size: 12px; }
+      .classic-table th, .classic-table td { border: 1px solid #000; padding: 6px; font-size: 12px; }
+      .classic-footer { display: flex; border: 1px solid #000; border-top: none; font-size: 11px; }
+      .footer-left { width: 45%; padding: 6px; border-right: 1px solid #000; line-height: 1.4; }
+      .footer-right { width: 55%; display: flex; }
+      .sig-col { flex: 1; border-right: 1px solid #000; text-align: center; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; height: 60px; font-size: 11px; font-weight: bold; }
+      .sig-col:last-child { border-right: none; }
+
+      @media print { 
+        body { background: #fff; }
+        .action-bar { display: none; }
+        .page-wrapper { margin-top: 0; gap: 0; }
+        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 148mm; } 
+        @page { size: A5 landscape; margin: 0; }
+      }
+    </style></head><body>
+      <div class="action-bar">
+        <span><b>🖨️ Pengaturan Printer Office & Surat Jalan</b></span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div class="control-group">
+            <label>Kertas:</label>
+            <select id="paperSize">
+              <option value="A5">A5 Landscape (148 x 210 mm)</option>
+              <option value="A4">A4 Landscape</option>
+            </select>
+          </div>
+          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
+          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
         </div>
-        <table class="item-grid-table">
-          <thead><tr><th style="width: 8%;">NO</th><th style="width: 25%;">AMO/DEPO</th><th style="width: 27%;">AMO</th><th><div>${item.ITEM_DESCRIPTION || 'SUNSCREEN'}</div><div class="font-normal" style="font-size: 11px;">${item.BRAND || 'JUARA INTENS'}</div></th></tr></thead>
-          <tbody><tr><td style="text-align: center;">1</td><td>AMO/DEPO</td><td></td><td style="text-align: right; padding-right: 15px;">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tbody>
-          <tfoot><tr><td colspan="3" class="text-center font-bold">TOTAL</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${Number(item.QTY_TOTAL || 0).toLocaleString()}</td></tr></tfoot>
-        </table>
-        <div class="signature-row"><div class="sig-box">PENGIRIM</div><div class="sig-box">PENERIMA</div></div>
       </div>
-    `).join('');
+      <div class="page-wrapper">${pagesHtml}</div>
+    </body></html>`;
 
-    const printWin = window.open('', '_blank', 'width=900,height=800');
-    if (!printWin) {
-      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
-      return;
-    }
-
-    printWin.document.open();
-    printWin.document.write(`<!DOCTYPE html><html><head><title>Print Surat Jalan - Wellen Print</title><style>body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; color: #000; } .sj-page { width: 210mm; height: 148mm; padding: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; } .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .sj-title { font-size: 26px; font-weight: bold; text-align: right; } .info-row { display: flex; gap: 15px; margin-bottom: 10px; } .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; line-height: 1.4; } .left-box { flex: 1; height: 75px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 6px; } .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } .meta-table td { padding: 2px 6px; border: none; } .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 10px; } .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } .date-value { padding-top: 3px; font-weight: bold; font-size: 11px; } .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 15px; } .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px; } .item-grid-table th { text-align: center; background: #f8f8f8; } .item-grid-table tfoot td { background: #f8f8f8; } .signature-row { display: flex; justify-space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 15px; } .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 40px; } @media print { body { padding: 0; } .sj-page { page-break-after: always; break-after: page; } }</style></head><body>${pagesHtml}</body></html>`);
-    printWin.document.close(); 
-    
-    setTimeout(() => {
-      printWin.focus();
-      printWin.print();
-    }, 800);
+    openPrintWindow(fullSjHtml);
   };
 
   return (
     <div className="space-y-4">
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
         <div className="flex items-center gap-3">
-          <div className="w-16 h-12 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
+          <div className="w-20 h-14 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
             {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold opacity-50 text-center">No Logo</span>}
           </div>
           <div>
@@ -267,21 +566,37 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+      <div className={`p-4 rounded-2xl border flex flex-col lg:flex-row justify-between items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
         <div className="flex items-center gap-2 flex-wrap">
           <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'}`}>
             📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
           <button onClick={handleDownloadTemplate} className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all">📥 Download Template Excel</button>
-          {labelData.length > 0 && <button onClick={() => { if(confirm('Bersihkan data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">🧹 Bersihkan Import</button>}
-          <span className="text-xs opacity-70 ml-2">Terisi: <strong>{labelData.length}</strong> Baris Valid</span>
+          
+          <div className="flex items-center gap-1.5 ml-1 bg-stone-100 dark:bg-neutral-900 p-1.5 rounded-xl border border-stone-300 dark:border-neutral-700">
+            <span className="text-[10px] font-bold px-1 opacity-70">Format SJ:</span>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Klasik</button>
+          </div>
         </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-teal-600 hover:bg-teal-500 transition-all flex items-center gap-1.5">
+            🖼️ Upload Massal Gbr 1 (Kiri) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
+          </label>
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-cyan-600 hover:bg-cyan-500 transition-all flex items-center gap-1.5">
+            🖼️ Upload Massal Gbr 2 (Kanan) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
+          </label>
+          {labelData.length > 0 && <button onClick={() => { if(confirm('Bersihkan data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">🧹 Bersihkan</button>}
+        </div>
+
         <div className="flex items-center gap-2">
-          <button onClick={handlePrintSuratJalan} disabled={selectedRows.length === 0} className={`px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${selectedRows.length > 0 ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95' : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 cursor-not-allowed'}`}>
-            📄 Cetak Surat Jalan ({selectedRows.length})
+          {/* TOMBOL DIPISAH JELAS */}
+          <button onClick={handlePrintSuratJalan} className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95">
+            📄 Cetak Surat Jalan
           </button>
-          <button onClick={handlePrintLabels} disabled={selectedRows.length === 0} className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-2 transition-all ${selectedRows.length > 0 ? 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95' : 'bg-stone-300 dark:bg-neutral-700 text-stone-500 cursor-not-allowed'}`}>
-            🏷️ Cetak Label ({selectedRows.length})
+          <button onClick={handlePrintLabels} className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95">
+            🏷️ Cetak Label Koli
           </button>
         </div>
       </div>
@@ -297,7 +612,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <th className="p-3">Deskripsi / Media / Ukuran</th>
               <th className="p-3">Total Qty</th>
               <th className="p-3">Isi/Koli</th>
-              <th className="p-3">Visual Image</th>
+              <th className="p-3">Visual Image (1 & 2)</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
@@ -316,13 +631,21 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                     <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
                     <td className="p-3">{koli} Pcs</td>
                     <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        {row.VISUAL_IMAGE ? (
-                          <img src={row.VISUAL_IMAGE} alt="Preview" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual Item SPK: ${row.NO_SPK}`)} className="w-12 h-8 object-contain border rounded bg-white cursor-pointer hover:scale-105 transition-transform" />
-                        ) : (<span className="text-[10px] opacity-50">Belum ada</span>)}
-                        <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold">
-                          Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx)} className="hidden" />
-                        </label>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold opacity-70">Gbr 1:</span>
+                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
+                          </label>
+                        </div>
                       </div>
                     </td>
                   </tr>

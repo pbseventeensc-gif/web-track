@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CustomerManager from './CustomerManager';
 import CustomLabelGenerator from './CustomLabelGenerator';
 import PmgDestinationManager from './PmgDestinationManager';
 import PmgProjectManager from './PmgProjectManager';
+import PmgExcelImporter from './PmgExcelImporter';
 
 export default function CustomModulesIndex({ isDarkMode }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleImportSuccess = () => {
+    // Memicu refresh komponen turunan jika data berhasil diimpor
+    setRefreshKey(prev => prev + 1);
+  };
+
   return (
     <div className="space-y-8 p-4 md:p-6 max-w-7xl mx-auto">
       <header className="mb-6">
@@ -16,8 +24,13 @@ export default function CustomModulesIndex({ isDarkMode }) {
         </p>
       </header>
 
+      {/* 🚀 Widget Import Excel Alokasi CCOD ke Supabase */}
+      <div className="w-full">
+        <PmgExcelImporter isDarkMode={isDarkMode} onImportSuccess={handleImportSuccess} />
+      </div>
+
       {/* Bagian Khusus PMG */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" key={refreshKey}>
         <div className="lg:col-span-1">
           <PmgDestinationManager isDarkMode={isDarkMode} />
         </div>
