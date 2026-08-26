@@ -522,14 +522,15 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         @media print {
-          @page { size: A4 landscape; margin: 10mm; }
+          @page { size: A4 landscape; margin: 0; }
+          body { background: #fff !important; margin: 0 !important; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
           .print-container { position: absolute; left: 0; top: 0; width: 100%; }
           .a4-landscape-page {
             width: 297mm;
             height: 210mm;
-            padding: 10mm;
+            padding: 8mm 10mm;
             box-sizing: border-box;
             page-break-after: always;
             break-after: page;
@@ -537,24 +538,25 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             box-shadow: none;
             position: relative;
             display: grid;
-            grid-template-columns: 132mm 132mm;
-            gap: 13mm;
+            grid-template-columns: 134mm 134mm;
+            gap: 9mm;
             justify-content: center;
             align-content: center;
+            margin: 0;
           }
           .vertical-cut-line {
             display: block;
             position: absolute;
             left: 50%;
-            top: 10mm;
-            bottom: 10mm;
+            top: 8mm;
+            bottom: 8mm;
             border-left: 2px dashed #333;
             transform: translateX(-50%);
             z-index: 10;
           }
           .label-card {
-            width: 132mm;
-            height: 190mm;
+            width: 134mm;
+            height: 194mm;
             border: 1px solid #000;
             padding: 8mm;
             box-sizing: border-box;
@@ -565,11 +567,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             flex-direction: column;
           }
           .surat-jalan-page {
-            width: 100%;
-            height: auto;
+            width: 210mm;
+            height: 148mm;
             border: none;
             box-shadow: none;
-            padding: 0;
+            padding: 8mm;
             margin: 0;
             page-break-after: always;
             break-after: page;
