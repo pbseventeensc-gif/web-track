@@ -45,12 +45,32 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  const handleImageUpload = async (e, rowId, trackingId) => {
+  // Fungsi untuk mengubah status ceklis (PENDING <-> DONE) secara instan
+  const handleToggleStatus = async (id, fieldName, currentValue) => {
+    const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
+    
+    // Update lokal langsung agar responsif
+    setPackingList(prev => prev.map(item => item.id === id ? { ...item, [fieldName]: nextValue } : item));
+
+    // Update ke database Supabase
+    const { error } = await supabase
+      .from('packing_tracking')
+      .update({ [fieldName]: nextValue, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      alert('❌ Gagal memperbarui status: ' + error.message);
+      fetchPackingData(); // Rollback jika gagal
+    }
+  };
+
+  // Fungsi Upload Foto langsung dari Kamera HP
+  const handleCameraCapture = async (e, rowId, trackingId) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploadingId(rowId);
-    const fileName = `packing_${trackingId}_${Date.now()}`;
+    const fileName = `packing_${trackingId}_${Date.now()}.jpg`;
     
     const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
     
@@ -58,16 +78,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
       const publicUrl = data.publicUrl;
 
-      // Update kolom surat_jalan_url atau bukti foto di tabel packing_tracking
+      // Update URL foto dan otomatis ubah status QC Packing menjadi DONE agar makin cepat
       await supabase
         .from('packing_tracking')
-        .update({ surat_jalan_url: publicUrl, updated_at: new Date().toISOString() })
+        .update({ 
+          surat_jalan_url: publicUrl, 
+          status_qc_packing: 'DONE',
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', rowId);
 
-      alert('✅ Bukti foto berhasil diunggah!');
+      alert('✅ Foto bukti berhasil diunggah dari kamera!');
       fetchPackingData();
     } else {
-      alert('❌ Gagal upload: ' + error.message);
+      alert('❌ Gagal upload foto: ' + error.message);
     }
     setUploadingId(null);
   };
@@ -179,7 +203,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
-            📦 Detail Toko, Status Packing, Checker & Bukti Foto
+            📦 Detail Toko, Ceklis Cepat & Kamera Bukti Foto
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
             <button 
@@ -204,10 +228,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 <th className="py-3 px-4">No. SPK</th>
                 <th className="py-3 px-4">Nama Store / Project</th>
                 <th className="py-3 px-4">Tracking ID</th>
-                <th className="py-3 px-4 text-center">Status Packing</th>
-                <th className="py-3 px-4 text-center">Status Checker</th>
+                <th className="py-3 px-4 text-center">Status Packing (Klik Ceklis)</th>
+                <th className="py-3 px-4 text-center">Status Checker (Klik Ceklis)</th>
                 <th className="py-3 px-4 text-center">Bukti Foto</th>
-                <th className="py-3 px-4 text-center">Aksi Upload</th>
+                <th className="py-3 px-4 text-center">Kamera / Foto</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-700/50">
@@ -224,16 +248,32 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                       <td className="py-3 px-4 font-semibold">{item.store_name || '-'}</td>
                       <td className="py-3 px-4 font-mono text-[11px] text-emerald-500 font-bold">{item.tracking_id || '-'}</td>
                       
+                      {/* Tombol Ceklis Cepat Status Packing */}
                       <td className="py-3 px-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isPackingDone ? 'bg-emerald-500/10 text-emerald-500' : 'bg-stone-500/10 text-stone-400'}`}>
-                          {isPackingDone ? '✓ DONE' : 'PENDING'}
-                        </span>
+                        <button 
+                          onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm active:scale-95 ${
+                            isPackingDone 
+                              ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
+                              : 'bg-stone-200 dark:bg-neutral-700 text-stone-600 dark:text-stone-300 hover:bg-stone-300'
+                          }`}
+                        >
+                          {isPackingDone ? '✓ DONE (Selesai)' : '▢ PENDING (Klik Ceklis)'}
+                        </button>
                       </td>
 
+                      {/* Tombol Ceklis Cepat Status Checker */}
                       <td className="py-3 px-4 text-center">
-                        <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isCheckerDone ? 'bg-amber-500/10 text-amber-500' : 'bg-stone-500/10 text-stone-400'}`}>
-                          {isCheckerDone ? '✓ DONE' : 'PENDING'}
-                        </span>
+                        <button 
+                          onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm active:scale-95 ${
+                            isCheckerDone 
+                              ? 'bg-amber-500 text-white shadow-amber-500/20' 
+                              : 'bg-stone-200 dark:bg-neutral-700 text-stone-600 dark:text-stone-300 hover:bg-stone-300'
+                          }`}
+                        >
+                          {isCheckerDone ? '✓ CHECKED (Selesai)' : '▢ PENDING (Klik Ceklis)'}
+                        </button>
                       </td>
 
                       <td className="py-3 px-4 text-center">
@@ -241,7 +281,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                           <div className="flex justify-center">
                             <img 
                               src={item.surat_jalan_url} 
-                              alt="Bukti" 
+                              alt="Bukti Foto" 
                               onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.tracking_id}`)}
                               className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-sm"
                               title="Klik untuk memperbesar foto"
@@ -252,18 +292,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                         )}
                       </td>
 
+                      {/* Tombol Kamera Langsung (capture="environment") */}
                       <td className="py-3 px-4 text-center">
-                        <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm ${
+                        <label className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold cursor-pointer transition-all shadow-md ${
                           uploadingId === item.id 
                             ? 'bg-stone-400 text-white cursor-wait' 
-                            : 'bg-blue-600 hover:bg-blue-500 text-white active:scale-95'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
                         }`}>
-                          {uploadingId === item.id ? '⏳...' : '📁 Upload'}
+                          {uploadingId === item.id ? '⏳ Memproses...' : '📸 Ambil Foto'}
                           <input 
                             type="file" 
                             accept="image/*" 
+                            capture="environment" 
                             className="hidden" 
-                            onChange={(e) => handleImageUpload(e, item.id, item.tracking_id)}
+                            onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id)}
                             disabled={uploadingId === item.id}
                           />
                         </label>
