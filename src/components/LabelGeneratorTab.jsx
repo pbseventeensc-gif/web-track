@@ -412,9 +412,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
-      .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 4mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
-      .label-box { border: 2px solid #000; width: 100%; height: 133mm; max-height: 133mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
-      .cut-guide { width: 100%; border-top: 1.5px dashed #444; margin: 1mm 0; }
+      
+      /* Dikunci pas 297mm dengan padding atas/bawah 2mm agar aman tanpa halaman kosong */
+      .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
+      
+      /* Tinggi label disesuaikan persis 131mm agar 2 label + garis pemisah pas 293mm */
+      .label-box { border: 2px solid #000; width: 100%; height: 131mm; max-height: 131mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .cut-guide { width: 100%; border-top: 1px dashed #444; margin: 0.5mm 0; }
+      
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
@@ -430,12 +435,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
       .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
-      .preview-img { max-width: 95%; max-height: 110px; object-fit: contain; display: block; } 
+      .preview-img { max-width: 95%; max-height: 105px; object-fit: contain; display: block; } 
+      
       @media print { 
         body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
-        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; max-height: 297mm; padding: 4mm 8mm; page-break-after: always; break-after: page; page-break-inside: avoid; overflow: hidden; } 
+        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; page-break-after: always; break-after: page; page-break-inside: avoid; overflow: hidden; } 
         @page { size: A4 portrait; margin: 0mm; }
       }
     </style></head><body>
@@ -638,7 +644,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Nining Signature & Left Logo)</b></span>
+        <span><b>🖨️ Surat Jalan (Clean Layout & No Blank Page)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
           <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
