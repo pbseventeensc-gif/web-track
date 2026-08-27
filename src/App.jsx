@@ -15,6 +15,14 @@ const STAFF_QC_LIST = [
   "Dewi (QC Checker)", "Eko (QC Deliver)", "Rian (QC Deliver)"
 ];
 
+// Daftar 4 User Staf Paking Resmi
+const PACKING_USERS = [
+  { id: 'paking_1', name: 'Staf Paking 1 (Budi)', pin: '1111' },
+  { id: 'paking_2', name: 'Staf Paking 2 (Siti)', pin: '2222' },
+  { id: 'paking_3', name: 'Staf Paking 3 (Joko)', pin: '3333' },
+  { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
+];
+
 function CircularGaugeCard({ title, percent, color, detailText }) {
   const strokeDasharray = 2 * Math.PI * 36;
   const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
@@ -43,7 +51,6 @@ export default function App() {
 
   const [spkList, setSpkList] = useState([]);
   
-  // Sesi Admin Kawan Lama Khusus
   const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
     const s = localStorage.getItem('kl_special_admin_session');
     return s ? JSON.parse(s) : null;
@@ -80,11 +87,9 @@ export default function App() {
     const s = localStorage.getItem('packing_staff_session');
     return s ? JSON.parse(s) : null;
   });
-  const [showPackingLoginModal, setShowPackingLoginModal] = useState(false);
-  const [packingUsername, setPackingUsername] = useState('');
-  const [packingPassword, setPackingPassword] = useState('');
+  const [selectedPackingUser, setSelectedPackingUser] = useState(PACKING_USERS[0].id);
+  const [packingPin, setPackingPin] = useState('');
 
-  // Modal Login Khusus Admin Kawan Lama (Pusat Kawan Lama)
   const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
   const [klAdminUser, setKlAdminUser] = useState('');
   const [klAdminPass, setKlAdminPass] = useState('');
@@ -105,12 +110,6 @@ export default function App() {
       setShowBranchLoginModal(true); 
     }
   }, [isBranchMode, currentBranch]);
-
-  useEffect(() => {
-    if (scanParam && !packingStaffSession && !currentAdmin && !currentKawanLamaAdmin) {
-      setShowPackingLoginModal(true);
-    }
-  }, [scanParam, packingStaffSession, currentAdmin, currentKawanLamaAdmin]);
 
   useEffect(() => { 
     fetchSpkData(); 
@@ -158,16 +157,221 @@ export default function App() {
     });
   };
 
+  const handleSelectSpk = (spkId) => {
+    setSelectedSpkId(spkId); 
+    const item = spkList.find(s => String(s.id) === String(spkId));
+    if (item) {
+      setFinishingForm({ 
+        finishing_type: item.finishing_type || 'inhouse', 
+        sub_vendor_name: item.sub_vendor_name || '', 
+        qty_finish_sub_out: item.qty_finish_sub_out || 0, 
+        qty_finish: item.qty_finish || 0 
+      });
+    }
+  };
+
+  const handleToggleCheck = (id) => {
+    setSelectedSpkIds(prev => { 
+      const exist = prev.includes(id); 
+      if (!exist) handleSelectSpk(id); 
+      return exist ? prev.filter(item => item !== id) : [...prev, id]; 
+    });
+  };
+
+  const handleToggleSelectAll = (filteredItems) => {
+    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedSpkIds([]);
+    } else { 
+      setSelectedSpkIds(filteredItems.map(item => item.id)); 
+      if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); 
+    }
+  };
+
+  const handleUpdateField = async (id, payload) => {
+    const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
+    if (!error) {
+      setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+    } else {
+      alert('Gagal memperbarui data: ' + error.message);
+    }
+  };
+
+  const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
+    const val = Number(value) || 0;
+    if (maxAllowed && val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
+    handleUpdateField(id, { [field]: val });
+  };
+
+  const handleDeleteSpk = async (id, noSpk) => {
+    if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
+      const { error } = await supabase.from('spk_data').delete().eq('id', id);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => item.id !== id));
+        setSelectedSpkIds(prev => prev.filter(selectedId => selectedId !== id));
+        alert(`✅ SPK "${noSpk}" berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus SPK: ' + error.message);
+      }
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
+    if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
+      const { error } = await supabase.from('spk_data').delete().in('id', selectedSpkIds);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => !selectedSpkIds.includes(item.id)));
+        setSelectedSpkIds([]);
+        alert('✅ Semua SPK terpilih berhasil dibersihkan.');
+      } else {
+        alert('Gagal hapus massal: ' + error.message);
+      }
+    }
+  };
+
+  const handleProcessScan = async (codeValue) => {
+    if (!codeValue) return;
+    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim().toLowerCase();
+    const targetItem = spkList.find(item => 
+      (item.qr_address || '').toLowerCase().includes(cleanCode) || 
+      (item.store_code || '').toLowerCase() === cleanCode || 
+      (item.no_spk || '').toLowerCase().includes(cleanCode) || 
+      (item.project || '').toLowerCase().includes(cleanCode)
+    );
+    if (!targetItem) { 
+      setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); 
+      setScannedInput(''); 
+      return; 
+    }
+    
+    const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
+    let updatePayload = { tes_scan: updaterValue };
+    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
+    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
+    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
+    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
+
+    await handleUpdateField(targetItem.id, updatePayload);
+    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); 
+    setScannedInput('');
+  };
+
+  const handleSubmitInput = (e) => { e.preventDefault(); handleProcessScan(scannedInput); };
+
+  const handleBatchPrint = async () => {
+    const items = spkList.filter(item => selectedSpkIds.includes(item.id));
+    if (items.length === 0) return alert('⚠️ Centang minimal 1 SPK!');
+    const html = items.map(item => `<div style="page-break-after:always; padding:20px; font-family:Arial; border:2px solid #000;"><h2>STORE: ${item.project}</h2><p>SPK: ${item.no_spk}</p></div>`).join('');
+    const pw = window.open('', '_blank', 'width=800,height=800'); 
+    pw.document.write(`<html><body>${html}</body></html>`); 
+    pw.document.close(); 
+    setTimeout(() => pw.print(), 500);
+  };
+
+  const handleUploadSuratJalan = async (e, item) => {
+    const file = e.target.files[0]; 
+    if (!file) return;
+    const fileName = `sj_${item.no_spk}_${Date.now()}`;
+    const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
+    if (!error) {
+      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
+      handleUpdateField(item.id, { surat_jalan_url: data.publicUrl });
+      alert('Surat Jalan Diunggah!');
+    }
+  };
+
+  const processImportData = async (rawRows) => {
+    const formattedData = rawRows
+      .filter(row => row && row.length > 7) 
+      .map((row, index) => {
+        const colF = row[5] ? String(row[5]).trim() : ''; 
+        const colG = row[6] ? String(row[6]).trim() : ''; 
+        const colH = row[7] ? String(row[7]).trim() : ''; 
+
+        if (!colF && !colG && !colH) return null;
+
+        return {
+          no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
+          client: colF || '-',
+          project: colG || '-',
+          bahan: null,       
+          ukuran: null,      
+          qty_order: null,   
+          qty_print: 0, 
+          qty_finish: 0, 
+          qty_pack: 0, 
+          qty_ship: 0,
+          store_code: colH || '-',
+          delivery_route: '-'
+        };
+      })
+      .filter(item => item !== null);
+
+    if (formattedData.length > 0) {
+      const { error } = await supabase.from('spk_data').insert(formattedData);
+      if (error) {
+        alert("❌ Error saat menyimpan ke database: " + error.message);
+      } else {
+        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
+        await fetchSpkData();
+      }
+    } else {
+      alert("⚠️ Tidak ada data ditemukan pada Kolom F, G, H mulai baris ke-5.");
+    }
+  };
+
+  const handleExcelUpload = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const wb = XLSX.read(evt.target.result, { type: 'binary' });
+      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
+      await processImportData(rawData);
+    };
+    reader.readAsBinaryString(file); e.target.value = '';
+  };
+
+  const handleGoogleSheetImport = async () => {
+    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
+    if (!sheetUrl) return;
+
+    setIsImporting(true);
+    try {
+      let csvUrl = sheetUrl.trim();
+      if (csvUrl.includes('/edit')) {
+        csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
+      }
+      if (!csvUrl.includes('format=csv')) {
+        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'format=csv';
+      }
+
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data (Status: ${response.status}). Pastikan link Google Sheets sudah publik.`);
+      }
+      
+      const csvText = await response.text();
+      const workbook = XLSX.read(csvText, { type: 'string' });
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { range: 4, header: 1 });
+      
+      await processImportData(rawData);
+    } catch (err) {
+      alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handlePackingLoginSubmit = (e) => {
     e.preventDefault();
-    if (packingUsername.trim() && packingPassword.trim()) {
-      const sessionData = { username: packingUsername.trim(), loginTime: new Date().toISOString() };
+    const foundUser = PACKING_USERS.find(u => u.id === selectedPackingUser);
+    if (foundUser && foundUser.pin === packingPin.trim()) {
+      const sessionData = { username: foundUser.name, loginTime: new Date().toISOString() };
       localStorage.setItem('packing_staff_session', JSON.stringify(sessionData));
       setPackingStaffSession(sessionData);
-      setShowPackingLoginModal(false);
-      alert('✅ Berhasil Login Staf Paking!');
+      alert(`✅ Selamat datang, ${foundUser.name}!`);
     } else {
-      alert('⚠️ Masukkan nama staf dan password dengan benar!');
+      alert('❌ PIN Staf Paking salah! (Gunakan PIN sesuai akun masing-masing: 1111, 2222, 3333, atau 4444)');
     }
   };
 
@@ -181,7 +385,7 @@ export default function App() {
       setActiveTab('label');
       alert('✅ Berhasil Login sebagai Admin Kawan Lama!');
     } else {
-      alert('❌ Username atau Password Admin Kawan Lama salah! (Gunakan: admin_kl / kawanlama2026)');
+      alert('❌ Username atau Password Admin Kawan Lama salah!');
     }
   };
 
@@ -196,7 +400,6 @@ export default function App() {
     (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // LOGIKA AUTENTIKASI AMAN & TERPISAH
   const isAuthenticated = scanParam 
     ? (packingStaffSession || currentAdmin || currentKawanLamaAdmin) 
     : isBranchMode 
@@ -210,17 +413,33 @@ export default function App() {
           <div className="text-5xl">📦</div>
           <div>
             <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Login Staf Paking</h1>
-            <p className="text-xs opacity-60 mt-1">Scan QR Code Terdeteksi. Harap login untuk verifikasi paking.</p>
+            <p className="text-xs opacity-60 mt-1">Pilih nama Anda dan masukkan PIN untuk verifikasi paking.</p>
           </div>
           
           <form onSubmit={handlePackingLoginSubmit} className="space-y-4 text-left">
             <div>
-              <label className="text-xs font-bold block mb-1">Nama Staf / ID:</label>
-              <input type="text" value={packingUsername} onChange={(e) => setPackingUsername(e.target.value)} placeholder="Contoh: Budi Paking" required className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+              <label className="text-xs font-bold block mb-1">Pilih Staf Paking:</label>
+              <select 
+                value={selectedPackingUser} 
+                onChange={(e) => setSelectedPackingUser(e.target.value)} 
+                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 cursor-pointer font-bold"
+              >
+                {PACKING_USERS.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="text-xs font-bold block mb-1">PIN / Password:</label>
-              <input type="password" value={packingPassword} onChange={(e) => setPackingPassword(e.target.value)} placeholder="Masukkan PIN" required className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+              <label className="text-xs font-bold block mb-1">PIN Keamanan:</label>
+              <input 
+                type="password" 
+                value={packingPin} 
+                onChange={(e) => setPackingPin(e.target.value)} 
+                placeholder="Masukkan 4 digit PIN" 
+                maxLength={4}
+                required 
+                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 tracking-widest text-center font-bold text-lg" 
+              />
             </div>
             <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
               🚀 MASUK KE PANEL PAKING
@@ -243,24 +462,15 @@ export default function App() {
           
           <div className="space-y-3 pt-2">
             {isBranchMode ? (
-              <button 
-                onClick={() => setShowBranchLoginModal(true)}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
-              >
+              <button onClick={() => setShowBranchLoginModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
                 🏢 LOGIN CABANG KAWAN LAMA
               </button>
             ) : (
               <>
-                <button 
-                  onClick={() => setShowAdminLoginModal(true)}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
-                >
+                <button onClick={() => setShowAdminLoginModal(true)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
                   🔑 LOGIN ADMIN PUSAT
                 </button>
-                <button 
-                  onClick={() => setShowKawanLamaAdminModal(true)}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
-                >
+                <button onClick={() => setShowKawanLamaAdminModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
                   🏢 LOGIN ADMIN KAWAN LAMA (3 Tab)
                 </button>
               </>
@@ -268,7 +478,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Modal Login Admin Kawan Lama */}
         {showKawanLamaAdminModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
             <div className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
@@ -293,25 +502,8 @@ export default function App() {
           </div>
         )}
 
-        <AdminLoginModal 
-          isOpen={showAdminLoginModal} 
-          onClose={() => setShowAdminLoginModal(false)} 
-          onLoginSuccess={(admin) => { 
-            localStorage.setItem('kl_admin_session', JSON.stringify(admin));
-            setCurrentAdmin(admin); 
-            setShowAdminLoginModal(false); 
-          }} 
-        />
-
-        <BranchLoginModal 
-          isOpen={showBranchLoginModal} 
-          onClose={() => setShowBranchLoginModal(false)}
-          onLoginSuccess={(branch) => { 
-            setCurrentBranch(branch); 
-            localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
-            setShowBranchLoginModal(false); 
-          }} 
-        />
+        <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
+        <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
       </div>
     );
   }
@@ -326,7 +518,7 @@ export default function App() {
               {scanParam ? '📦 PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? '🏢 PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {scanParam ? `Staf Login: ${packingStaffSession?.username || 'Staf Paking'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
+              {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -334,8 +526,8 @@ export default function App() {
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
             {scanParam && (
-              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
-                🔒 Logout Paking
+              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Staf Paking
               </button>
             )}
             {isBranchMode && (
@@ -348,6 +540,32 @@ export default function App() {
                 🔒 Logout Admin Kawan Lama
               </button>
             )}
+            {currentAdmin && (
+              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Admin
+              </button>
+            )}
+            
+            {!isBranchMode && !scanParam && !currentKawanLamaAdmin && (
+              <>
+                <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                  📷 Scan QC Station
+                </button>
+                <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">
+                  📁 Upload SPK Excel
+                  <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
+                </label>
+                <button 
+                  onClick={handleGoogleSheetImport} 
+                  disabled={isImporting}
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
+                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
+                  } text-white cursor-pointer`}
+                >
+                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -356,11 +574,9 @@ export default function App() {
           <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
         ) : (
           <>
-            {/* JIKA MODE CABANG */}
             {isBranchMode ? (
               <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
             ) : (
-              /* JIKA LOGIN SEBAGAI ADMIN KAWAN LAMA (Eksklusif 3 Tab) */
               currentKawanLamaAdmin ? (
                 <div className="space-y-4">
                   <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
@@ -388,7 +604,6 @@ export default function App() {
                   {activeTab === 'custom_modules' && <CustomModulesIndex isDarkMode={isDarkMode} />}
                 </div>
               ) : (
-                /* TAMPILAN NORMAL UNTUK ADMIN PUSAT */
                 <>
                   <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
                     {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
@@ -486,43 +701,10 @@ export default function App() {
 
       </div>
 
-      <ScanQCModal 
-        isOpen={showScanModal} 
-        onClose={() => setShowScanModal(false)} 
-        isDarkMode={isDarkMode} 
-        scanTargetColumn={scanTargetColumn} 
-        setScanTargetColumn={setScanTargetColumn} 
-        scannedInput={scannedInput} 
-        setScannedInput={setScannedInput} 
-        handleSubmitInput={handleSubmitInput} 
-        lastScanMessage={lastScanMessage} 
-      />
-
-      <ImagePreviewModal 
-        isOpen={modalImageInfo.isOpen} 
-        onClose={closeImageModal} 
-        modalImageInfo={modalImageInfo} 
-      />
-
-      <AdminLoginModal 
-        isOpen={showAdminLoginModal} 
-        onClose={() => setShowAdminLoginModal(false)} 
-        onLoginSuccess={(admin) => { 
-          localStorage.setItem('kl_admin_session', JSON.stringify(admin));
-          setCurrentAdmin(admin); 
-          setShowAdminLoginModal(false); 
-        }} 
-      />
-
-      <BranchLoginModal 
-        isOpen={showBranchLoginModal} 
-        onClose={() => setShowBranchLoginModal(false)}
-        onLoginSuccess={(branch) => { 
-          setCurrentBranch(branch); 
-          localStorage.setItem('kl_branch_session', JSON.stringify(branch)); 
-          setShowBranchLoginModal(false); 
-        }} 
-      />
+      <ScanQCModal isOpen={showScanModal} onClose={() => setShowScanModal(false)} isDarkMode={isDarkMode} scanTargetColumn={scanTargetColumn} setScanTargetColumn={setScanTargetColumn} scannedInput={scannedInput} setScannedInput={setScannedInput} handleSubmitInput={handleSubmitInput} lastScanMessage={lastScanMessage} />
+      <ImagePreviewModal isOpen={modalImageInfo.isOpen} onClose={closeImageModal} modalImageInfo={modalImageInfo} />
+      <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
+      <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
     </div>
   );
 }
