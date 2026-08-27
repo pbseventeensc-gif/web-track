@@ -205,20 +205,20 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return `<div style="font-weight:900; font-size:26px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:14px; letter-spacing:5px;">PRINT</span></div>`;
   };
 
-  // Logo KOP Surat Jalan ditarik ke atas alamat, ukuran besar
+  // Logo KOP Surat Jalan digeser ke kiri sejajar dan diperbesar 5x lipat di atas alamat
   const renderHeaderLogoHtmlSJ = () => {
     if (headerLogoUrl) {
-      return `<div style="display:flex; flex-direction:column; gap:6px;">
-        <img src="${headerLogoUrl}" style="height:75px; max-width:210px; object-fit:contain; display:block;">
-        <div style="font-size:10.5px; font-weight:bold; color:#111; line-height:1.25;">
+      return `<div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+        <img src="${headerLogoUrl}" style="height:140px; max-width:380px; object-fit:contain; display:block;">
+        <div style="font-size:10px; font-weight:bold; color:#111; line-height:1.25; margin-top:2px;">
           Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
           Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
         </div>
       </div>`;
     }
-    return `<div style="display:flex; flex-direction:column; gap:4px;">
-      <div style="font-weight:900; font-size:24px; line-height:1; color:#000;">WELLEN<br><span style="font-size:12px; letter-spacing:3px;">PRINT</span></div>
-      <div style="font-size:10px; font-weight:bold; color:#222; line-height:1.25;">
+    return `<div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+      <div style="font-weight:900; font-size:38px; line-height:1; color:#000;">WELLEN<br><span style="font-size:16px; letter-spacing:4px;">PRINT</span></div>
+      <div style="font-size:10px; font-weight:bold; color:#222; line-height:1.25; margin-top:2px;">
         Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
         Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
       </div>
@@ -639,7 +639,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Clean Header & Top Line)</b></span>
+        <span><b>🖨️ Surat Jalan (Left Aligned & 5x Enriched Logo)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
           <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
