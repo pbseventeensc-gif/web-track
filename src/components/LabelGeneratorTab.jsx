@@ -551,7 +551,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
       
-      /* Ukuran Surat Jalan disesuaikan persis 21cm x 13.5cm (Half Letter custom) */
+      /* Surat Jalan diatur LANDSCAPE persis ukuran 21.0cm x 13.5cm */
       .sj-page { width: 210mm; height: 135mm; padding: 6mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
@@ -588,17 +588,16 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
         .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 135mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
-        @page { size: 210mm 135mm; margin: 0mm; }
+        @page { size: 210mm 135mm landscape; margin: 0mm; }
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Pengaturan Printer Office & Surat Jalan</b></span>
+        <span><b>🖨️ Pengaturan Printer Office & Surat Jalan (Landscape)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <div class="control-group">
             <label>Kertas:</label>
             <select id="paperSize">
-              <option value="HalfLetter">21,0 x 13,5 cm (Half Letter Custom)</option>
-              <option value="A5">A5 Landscape</option>
+              <option value="Custom">21,0 x 13,5 cm Landscape</option>
             </select>
           </div>
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
