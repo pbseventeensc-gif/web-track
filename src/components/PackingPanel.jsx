@@ -1,67 +1,96 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../supabaseClient';
 
-export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, onOpenImageModal }) {
+export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
+  const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
 
   const stages = [
-    { id: 'qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
-    { id: 'qc_paking', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
-    { id: 'qc_checker', label: 'QC CHECKER', staff: 'Bagian: Staff Checker', color: 'bg-amber-500' },
-    { id: 'deliver', label: 'DELIVER', staff: 'Bagian: Staff Deliver', color: 'bg-purple-500' }
+    { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
+    { id: 'status_qc_packing', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
+    { id: 'status_qc_checker', label: 'QC CHECKER', staff: 'Bagian: Staff Checker', color: 'bg-amber-500' },
+    { id: 'status_deliver', label: 'DELIVER', staff: 'Bagian: Staff Deliver', color: 'bg-purple-500' }
   ];
 
-  const totalSpk = spkList.length;
+  useEffect(() => {
+    fetchPackingData();
 
-  const handleImageUpload = async (e, spkId, noSpk) => {
+    const channel = supabase
+      .channel('packing_tracking_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'packing_tracking' },
+        () => {
+          fetchPackingData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchPackingData = async () => {
+    const { data, error } = await supabase
+      .from('packing_tracking')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (!error && data) {
+      setPackingList(data);
+    }
+  };
+
+  const totalSpk = packingList.length;
+
+  const handleImageUpload = async (e, rowId, trackingId) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploadingId(spkId);
-    const fileName = `packing_${noSpk}_${Date.now()}`;
+    setUploadingId(rowId);
+    const fileName = `packing_${trackingId}_${Date.now()}`;
     
     const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
     
     if (!error) {
       const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      await handleUpdateField(spkId, { surat_jalan_url: data.publicUrl });
+      const publicUrl = data.publicUrl;
+
+      // Update kolom surat_jalan_url atau bukti foto di tabel packing_tracking
+      await supabase
+        .from('packing_tracking')
+        .update({ surat_jalan_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('id', rowId);
+
       alert('✅ Bukti foto berhasil diunggah!');
+      fetchPackingData();
     } else {
       alert('❌ Gagal upload: ' + error.message);
     }
     setUploadingId(null);
   };
 
-  // Fungsi untuk Download Report Excel dari database packing_tracking / spkList
   const handleDownloadPackingReport = async () => {
     try {
-      const { data, error } = await supabase
-        .from('packing_tracking')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      
-      const dataSource = (data && data.length > 0) ? data : spkList;
-
-      if (!dataSource || dataSource.length === 0) {
+      if (packingList.length === 0) {
         return alert('⚠️ Belum ada data paking yang tercatat untuk di-export.');
       }
 
-      const formattedData = dataSource.map((item, index) => ({
+      const formattedData = packingList.map((item, index) => ({
         'No': index + 1,
-        'Tracking ID': item.tracking_id || item.store_code || '-',
+        'Tracking ID': item.tracking_id || '-',
         'No. SPK': item.no_spk || '-',
         'Client / PT': item.client_pt || '-',
-        'Promo / Project': item.promo_title || item.project || '-',
+        'Promo / Project': item.promo_title || '-',
         'Nama Toko / Alamat': item.store_name || '-',
         'Penerima': item.recipient_name || '-',
         'Total Qty': item.total_qty || '-',
-        'Status QC Label': item.status_qc_label || item.qc_label || 'PENDING',
-        'Status QC Packing': item.status_qc_packing || item.qc_paking || 'PENDING',
-        'Status QC Checker': item.status_qc_checker || item.qc_checker || 'PENDING',
-        'Status Deliver': item.status_deliver || item.deliver || 'PENDING',
+        'Status QC Label': item.status_qc_label || 'PENDING',
+        'Status QC Packing': item.status_qc_packing || 'PENDING',
+        'Status QC Checker': item.status_qc_checker || 'PENDING',
+        'Status Deliver': item.status_deliver || 'PENDING',
         'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
       }));
 
@@ -78,19 +107,18 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
     }
   };
 
-  // Fungsi untuk Hapus Semua Data Paking di Database Supabase
   const handleClearAllPackingData = async () => {
-    if (confirm('⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH data paking di database? Tindakan ini tidak dapat dibatalkan!')) {
+    if (confirm('⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH data paking di database?')) {
       try {
         const { error } = await supabase
           .from('packing_tracking')
           .delete()
-          .not('tracking_id', 'is', null); // Menghapus seluruh baris data di tabel
+          .not('tracking_id', 'is', null);
 
         if (error) throw error;
 
         alert('✅ Seluruh data paking berhasil dikosongkan!');
-        window.location.reload(); // Refresh halaman agar data bersih
+        setPackingList([]);
       } catch (err) {
         alert('❌ Gagal menghapus data paking: ' + err.message);
       }
@@ -100,7 +128,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
   return (
     <div className="space-y-8">
       
-      {/* BAGIAN ATAS: GRID KONTROL PERSENTASE & STAFF */}
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-lg font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
@@ -113,7 +140,7 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stages.map((stage) => {
-            const completedCount = spkList.filter(s => s[stage.id] === 'DONE' || (s[stage.id] && s[stage.id].includes('DONE'))).length;
+            const completedCount = packingList.filter(s => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
 
             return (
@@ -149,7 +176,6 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
         </div>
       </div>
 
-      {/* BAGIAN BAWAH: TABEL DENGAN TOMBOL EXCEL, HAPUS DATA & THUMBNAIL FOTO */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
@@ -177,75 +203,75 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
               <tr>
                 <th className="py-3 px-4">No. SPK</th>
                 <th className="py-3 px-4">Nama Store / Project</th>
-                <th className="py-3 px-4">QR / ID Store</th>
+                <th className="py-3 px-4">Tracking ID</th>
                 <th className="py-3 px-4 text-center">Status Packing</th>
                 <th className="py-3 px-4 text-center">Status Checker</th>
-                <th className="py-3 px-4 text-center">Bukti Foto (Thumbnail)</th>
+                <th className="py-3 px-4 text-center">Bukti Foto</th>
                 <th className="py-3 px-4 text-center">Aksi Upload</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100 dark:divide-neutral-700/50">
-              {spkList.map(item => {
-                const isPackingDone = item.qc_paking === 'DONE' || (item.qc_paking && item.qc_paking.includes('DONE'));
-                const isCheckerDone = item.qc_checker === 'DONE' || (item.qc_checker && item.qc_checker.includes('DONE'));
+              {packingList.length === 0 ? (
+                <tr><td colSpan="7" className="p-6 text-center opacity-60">Belum ada data paking. Silakan cetak label terlebih dahulu.</td></tr>
+              ) : (
+                packingList.map(item => {
+                  const isPackingDone = item.status_qc_packing === 'DONE';
+                  const isCheckerDone = item.status_qc_checker === 'DONE';
 
-                return (
-                  <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
-                    <td className="py-3 px-4 font-bold">{item.no_spk}</td>
-                    <td className="py-3 px-4 font-semibold">{item.project || '-'}</td>
-                    <td className="py-3 px-4 font-mono text-[11px] opacity-70">{item.store_code || '-'}</td>
-                    
-                    {/* Kolom Status Packing */}
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isPackingDone ? 'bg-emerald-500/10 text-emerald-500' : 'bg-stone-500/10 text-stone-400'}`}>
-                        {isPackingDone ? '✓ DONE' : 'PENDING'}
-                      </span>
-                    </td>
+                  return (
+                    <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
+                      <td className="py-3 px-4 font-bold">{item.no_spk || '-'}</td>
+                      <td className="py-3 px-4 font-semibold">{item.store_name || '-'}</td>
+                      <td className="py-3 px-4 font-mono text-[11px] text-emerald-500 font-bold">{item.tracking_id || '-'}</td>
+                      
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isPackingDone ? 'bg-emerald-500/10 text-emerald-500' : 'bg-stone-500/10 text-stone-400'}`}>
+                          {isPackingDone ? '✓ DONE' : 'PENDING'}
+                        </span>
+                      </td>
 
-                    {/* Kolom Status Checker */}
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isCheckerDone ? 'bg-amber-500/10 text-amber-500' : 'bg-stone-500/10 text-stone-400'}`}>
-                        {isCheckerDone ? '✓ DONE' : 'PENDING'}
-                      </span>
-                    </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2.5 py-1 rounded-xl font-bold text-[10px] ${isCheckerDone ? 'bg-amber-500/10 text-amber-500' : 'bg-stone-500/10 text-stone-400'}`}>
+                          {isCheckerDone ? '✓ DONE' : 'PENDING'}
+                        </span>
+                      </td>
 
-                    {/* Kolom Thumbnail Foto (Bisa di-klik pop-up) */}
-                    <td className="py-3 px-4 text-center">
-                      {item.surat_jalan_url ? (
-                        <div className="flex justify-center">
-                          <img 
-                            src={item.surat_jalan_url} 
-                            alt="Bukti" 
-                            onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.project}`)}
-                            className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                            title="Klik untuk memperbesar foto"
+                      <td className="py-3 px-4 text-center">
+                        {item.surat_jalan_url ? (
+                          <div className="flex justify-center">
+                            <img 
+                              src={item.surat_jalan_url} 
+                              alt="Bukti" 
+                              onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.tracking_id}`)}
+                              className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-sm"
+                              title="Klik untuk memperbesar foto"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-stone-400 italic text-[10px]">Belum ada foto</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-4 text-center">
+                        <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm ${
+                          uploadingId === item.id 
+                            ? 'bg-stone-400 text-white cursor-wait' 
+                            : 'bg-blue-600 hover:bg-blue-500 text-white active:scale-95'
+                        }`}>
+                          {uploadingId === item.id ? '⏳...' : '📁 Upload'}
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => handleImageUpload(e, item.id, item.tracking_id)}
+                            disabled={uploadingId === item.id}
                           />
-                        </div>
-                      ) : (
-                        <span className="text-stone-400 italic text-[10px]">Belum ada foto</span>
-                      )}
-                    </td>
-
-                    {/* Kolom Aksi Upload */}
-                    <td className="py-3 px-4 text-center">
-                      <label className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-sm ${
-                        uploadingId === item.id 
-                          ? 'bg-stone-400 text-white cursor-wait' 
-                          : 'bg-blue-600 hover:bg-blue-500 text-white active:scale-95'
-                      }`}>
-                        {uploadingId === item.id ? '⏳...' : '📁 Upload'}
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          className="hidden" 
-                          onChange={(e) => handleImageUpload(e, item.id, item.no_spk)}
-                          disabled={uploadingId === item.id}
-                        />
-                      </label>
-                    </td>
-                  </tr>
-                );
-              })}
+                        </label>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
