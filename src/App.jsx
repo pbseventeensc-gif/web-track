@@ -39,12 +39,12 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
-  const scanParam = searchParams.get('scan'); // Tangkap kode unik dari QR Code scan
+  const scanParam = searchParams.get('scan'); // Tangkap parameter scan dari QR Code
 
   const [spkList, setSpkList] = useState([]);
-  // Jika ada parameter scan, langsung arahkan ke tab paking secara otomatis
+  // Jika ada parameter scan, langsung buka tab paking. Jika tidak, ikuti normal (dashboard)
   const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : (scanParam ? 'paking' : 'dashboard'));
-  const [searchTerm, setSearchTerm] = useState(scanParam || ''); // Otomatis jadikan scanParam sebagai keyword pencarian di tabel
+  const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
   
@@ -74,7 +74,7 @@ export default function App() {
   useEffect(() => {
     if (scanParam) {
       setActiveTab('paking');
-      setSearchTerm(scanParam); // Filter otomatis baris SPK yang sesuai dengan hasil scan
+      setSearchTerm(scanParam); 
     }
   }, [scanParam]);
 
@@ -346,7 +346,6 @@ export default function App() {
     (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // LOGIKA UTAMA: Jika ada parameter ?scan= di URL, izinkan akses publik tanpa login admin/cabang
   const isAuthenticated = scanParam ? true : (currentAdmin || (isBranchMode ? currentBranch : false));
 
   if (!isAuthenticated) {
@@ -446,7 +445,8 @@ export default function App() {
           </div>
         </div>
 
-        {!isBranchMode && !scanParam && (
+        {/* Tab Navigasi Normal */}
+        {!isBranchMode && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
             {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
               const isLocked = t === 'kawan_lama' && !currentAdmin;
@@ -480,8 +480,63 @@ export default function App() {
           </div>
         )}
 
-        {/* Jika mode scan aktif, langsung tampilkan PackingPanel dengan terfokus pada data hasil scan */}
-        <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+        {/* Render Tab yang Aktif dengan Benar */}
+        {!isBranchMode && activeTab === 'dashboard' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
+            <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
+            <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
+            <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
+          </div>
+        )}
+
+        {!isBranchMode && activeTab === 'design' && (
+          <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+        )}
+
+        {!isBranchMode && activeTab === 'finishing' && (
+          <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
+        )}
+
+        {!isBranchMode && activeTab === 'paking' && (
+          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+        )}
+
+        {(isBranchMode || activeTab === 'kawan_lama') && (
+          <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
+        )}
+        
+        {!isBranchMode && activeTab === 'label' && (
+          <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+        )}
+
+        {!isBranchMode && activeTab === 'custom_modules' && (
+          <CustomModulesIndex isDarkMode={isDarkMode} />
+        )}
+
+        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
+          <MainTrackingTable 
+            isDarkMode={isDarkMode}
+            activeTab={activeTab}
+            spkList={spkList}
+            displayedList={displayedList}
+            selectedSpkIds={selectedSpkIds}
+            handleToggleCheck={handleToggleCheck}
+            handleToggleSelectAll={handleToggleSelectAll}
+            handleUpdateQty={handleUpdateQty}
+            handleUpdateField={handleUpdateField}
+            handleDeleteSpk={handleDeleteSpk}
+            handleBatchDelete={handleBatchDelete}
+            handleBatchPrint={handleBatchPrint}
+            openImageModal={openImageModal}
+            handleUploadSuratJalan={handleUploadSuratJalan}
+            getPercent={getPercent}
+            getStatusBadge={getStatusBadge}
+            STAFF_QC_LIST={STAFF_QC_LIST}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+          />
+        )}
 
       </div>
 
