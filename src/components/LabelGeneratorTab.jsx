@@ -9,14 +9,22 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
 
-  // Fungsi Generator Nomor Unik Angka Murni: YYMMDD-XXXX (Anti-Double)
-  const generateNumericTrackingId = () => {
+  // Fungsi Generator Nomor Unik Stabil (Anti-Duplikat untuk SPK & Alamat yang sama)
+  const generateNumericTrackingId = (spk, address) => {
+    const rawKey = `${spk}_${address}`;
+    let hash = 0;
+    for (let i = 0; i < rawKey.length; i++) {
+      hash = (hash << 5) - hash + rawKey.charCodeAt(i);
+      hash |= 0;
+    }
+    const positiveHash = Math.abs(hash);
+    const randomSuffix = String(positiveHash % 9000 + 1000); // 4 digit angka unik stabil
+    
     const now = new Date();
     const yy = String(now.getFullYear()).slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const dd = String(now.getDate()).padStart(2, '0');
-    const randomNumbers = Math.floor(1000 + Math.random() * 9000);
-    return `${yy}${mm}${dd}-${randomNumbers}`;
+    return `${yy}${mm}${dd}-${randomSuffix}`;
   };
 
   const handleUploadHeaderLogo = (e) => {
@@ -85,9 +93,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 100;
           const rawDate = row.DATE_PRODUCTION || row['Date Production'] || row['Tgl Produksi'] || row.date_production;
           const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
+          const spkVal = String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim();
           
           return {
-            NO_SPK: String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim(),
+            NO_SPK: spkVal,
             PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || '').trim(),
             NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}`).trim(),
             CLIENT: String(row.CLIENT || row.Client || row.COMPANY || '').trim(),
@@ -107,7 +116,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
             VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim(),
             VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim(),
-            TRACKING_ID: generateNumericTrackingId()
+            TRACKING_ID: generateNumericTrackingId(spkVal, deliveryAddress)
           };
         }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
 
@@ -211,7 +220,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       if (!groupedMap[groupKey]) {
         groupedMap[groupKey] = {
           ...item,
-          TRACKING_ID: item.TRACKING_ID || generateNumericTrackingId(),
+          TRACKING_ID: item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS),
           itemsList: [],
           totalCombinedQty: 0
         };
@@ -238,6 +247,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return Object.values(groupedMap);
   };
 
+  // Sinkronisasi anti-duplikat menggunakan upsert berbasis tracking_id
   const syncToPackingDatabase = async (groupedItems) => {
     for (const item of groupedItems) {
       const payload = {
@@ -265,9 +275,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     
     let allLabelBoxes = [];
     for (const group of groupedItems) {
-      const trackingCode = group.TRACKING_ID || generateNumericTrackingId();
-      
-      // QR Code diset langsung mengarah ke URL Vercel produksi Anda
+      const trackingCode = group.TRACKING_ID;
       const qrText = `https://web-track-phi-gilt.vercel.app/?scan=${trackingCode}`;
 
       let qrDataUrl = ''; 
@@ -686,7 +694,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`/* Fixed bug */)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
                           <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
