@@ -52,7 +52,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         NO_SPK: "SPK-0826-03388", PO_NUMBER: "4500122101", NO_SJ: "SJ-0826-01920", CLIENT: "PT ASPIRASI HIDUP INDONESIA TBK",
         PROJECT: "ATARU GRAND WISATA", NO_WPP: "WPP 0826-301349", BRAND: "ATARU", RECIPIENT_NAME: "ADAM RIAN", RECIPIENT_PHONE: "0812.4161.2709",
         DELIVERY_ADDRESS: "STORE ATARU GRAND WISATA",
-        ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 150,
+        ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 50,
         DATE_PRODUCTION: "27-Aug-2026", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
       }
     ];
@@ -96,7 +96,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
         const cleanedData = rawData.map((row) => {
           const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
-          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 100;
+          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 50;
           const rawDate = row.DATE_PRODUCTION || row['Date Production'] || row['Tgl Produksi'] || row.date_production;
           const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
           const spkVal = String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim();
@@ -116,7 +116,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             MEDIA: String(row.MEDIA || row.Media || '').trim(),
             UKURAN: String(row.UKURAN || row.Ukuran || '').trim(),
             QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
-            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 100,
+            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 50,
             DATE_PRODUCTION: parseExcelDate(rawDate),
             SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
             SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
@@ -135,6 +135,11 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     };
     reader.readAsArrayBuffer(file); 
     e.target.value = '';
+  };
+
+  const handleUpdateKoliRow = (index, newKoliVal) => {
+    const val = Math.max(1, Number(newKoliVal) || 1);
+    setLabelData(prev => prev.map((item, idx) => idx === index ? { ...item, QTY_PER_KOLI: val } : item));
   };
 
   const handleBatchUploadGlobal = async (e, field) => {
@@ -290,14 +295,27 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         console.error(e); 
       }
 
-      allLabelBoxes.push({
-        ...group,
-        currentKoli: 1,
-        totalKoli: 1,
-        currentQty: group.totalCombinedQty,
-        qrDataUrl: qrDataUrl,
-        displayTrackingId: trackingCode
-      });
+      // Perhitungan Koli Otomatis Berdasarkan QTY_TOTAL dan QTY_PER_KOLI
+      const totalQty = Number(group.totalCombinedQty || 0);
+      const qtyPerKoli = Number(group.QTY_PER_KOLI || 50) > 0 ? Number(group.QTY_PER_KOLI || 50) : 50;
+      const totalKoliCalculated = Math.max(1, Math.ceil(totalQty / qtyPerKoli));
+
+      for (let koliNum = 1; koliNum <= totalKoliCalculated; koliNum++) {
+        let currentKoliQty = qtyPerKoli;
+        if (koliNum === totalKoliCalculated) {
+          const remainder = totalQty % qtyPerKoli;
+          if (remainder > 0) currentKoliQty = remainder;
+        }
+
+        allLabelBoxes.push({
+          ...group,
+          currentKoli: koliNum,
+          totalKoli: totalKoliCalculated,
+          currentQty: currentKoliQty,
+          qrDataUrl: qrDataUrl,
+          displayTrackingId: trackingCode
+        });
+      }
     }
 
     const pagePairs = [];
@@ -351,7 +369,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                   <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col">${item.NO_WPP || '-'}</td></tr>
                   <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col">${item.NO_SPK || '-'}</td></tr>
                   <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col">${itemsHtml}</td></tr>
-                  <tr><td class="label-col">TOTAL QTY</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11px;">${item.totalCombinedQty} PCS</strong></td></tr>
+                  <tr><td class="label-col">QTY KOLI INI</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11px; color:#2563EB;">${item.currentQty} PCS (Koli ${item.currentKoli}/${item.totalKoli})</strong></td></tr>
                   <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col">${item.DATE_PRODUCTION || '-'}</td></tr>
                 </table>
               </div>
@@ -541,13 +559,12 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
       
-      /* Tinggi Surat Jalan diperkecil pas sebatas garis hitam (approx 95mm) */
       .sj-page { width: 210mm; height: 95mm; padding: 3mm 5mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 9px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
       .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; } 
       .sj-title { font-size: 16px; font-weight: bold; text-align: right; } 
-      .info-row { display: flex; gap: 8px; margin-bottom: 2px; } 
+      .info-row { display: flex; gap: 8mm; margin-bottom: 2px; } 
       .info-box { border: 1px solid #000; padding: 3px 5px; font-size: 9px; line-height: 1.15; } 
       .left-box { flex: 1; height: 46px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 2px; } 
       .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 9px; } 
@@ -658,7 +675,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <th className="p-3">Penerima & Alamat</th>
               <th className="p-3">Deskripsi / Media / Ukuran</th>
               <th className="p-3">Total Qty</th>
-              <th className="p-3">Isi/Koli</th>
+              <th className="p-3">Isi/Koli (Edit)</th>
               <th className="p-3">Visual Image (1 & 2)</th>
             </tr>
           </thead>
@@ -667,7 +684,11 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <tr><td colSpan="8" className="p-6 text-center opacity-60">Tabel kosong. Silakan klik tombol <strong>"Download Template Excel"</strong> di atas.</td></tr>
             ) : (
               labelData.map((row, idx) => {
-                const total = Number(row.QTY_TOTAL || 0); const koli = Number(row.QTY_PER_KOLI || 20); const isChecked = selectedRows.includes(idx);
+                const total = Number(row.QTY_TOTAL || 0); 
+                const koli = Number(row.QTY_PER_KOLI || 50); 
+                const totalKoliCalc = Math.max(1, Math.ceil(total / koli));
+                const isChecked = selectedRows.includes(idx);
+
                 return (
                   <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
                     <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
@@ -676,7 +697,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                     <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
                     <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'} )</span></td>
                     <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
-                    <td className="p-3">{koli} Pcs</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1.5">
+                        <input 
+                          type="number" 
+                          value={row.QTY_PER_KOLI || 50} 
+                          onChange={(e) => handleUpdateKoliRow(idx, e.target.value)} 
+                          className="w-16 px-2 py-1 rounded border text-xs font-bold text-center bg-white dark:bg-neutral-900 dark:border-neutral-700" 
+                        />
+                        <span className="text-[10px] opacity-70">Pcs (<strong>{totalKoliCalc} Koli</strong>)</span>
+                      </div>
+                    </td>
                     <td className="p-3">
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
