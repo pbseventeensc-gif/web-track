@@ -53,7 +53,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         PROJECT: "ATARU GRAND WISATA", NO_WPP: "WPP 0826-301349", BRAND: "ATARU", RECIPIENT_NAME: "ADAM RIAN", RECIPIENT_PHONE: "0812.4161.2709",
         DELIVERY_ADDRESS: "STORE ATARU GRAND WISATA",
         ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 150,
-        DATE_PRODUCTION: "11 Aug 2026", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
+        DATE_PRODUCTION: "2026-08-27", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
       }
     ];
     const ws = XLSX.utils.json_to_sheet(templateSampleData);
@@ -62,38 +62,43 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
-  // Fungsi Parser Tanggal Presisi Anti-Geser Waktu
+  // Parser Tanggal Anti-Selisih (Memakai metode UTC murni & Serial Excel yang dikoreksi)
   const parseExcelDate = (val) => {
     if (!val) return '12-Aug-2026';
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    if (val instanceof Date) {
-      const day = String(val.getDate()).padStart(2, '0');
-      const month = monthNames[val.getMonth()];
-      const year = val.getFullYear();
-      return `${day}-${month}-${year}`;
-    }
-    
+    // Jika berupa angka serial Excel (contoh: 46261)
     if (!isNaN(val) && typeof val === 'number' || (!isNaN(val) && String(val).match(/^\d{5}$/))) {
-      const excelEpoch = new Date(1899, 11, 30);
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
       const jsDate = new Date(excelEpoch.getTime() + Number(val) * 86400000);
-      const day = String(jsDate.getDate()).padStart(2, '0');
-      const month = monthNames[jsDate.getMonth()];
-      const year = jsDate.getFullYear();
+      const day = String(jsDate.getUTCDate()).padStart(2, '0');
+      const month = monthNames[jsDate.getUTCMonth()];
+      const year = jsDate.getUTCFullYear();
       return `${day}-${month}-${year}`;
     }
 
     const strVal = String(val).trim();
-    const dateMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})/) || strVal.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
     
-    if (dateMatch) {
-      let y, m, d;
-      if (dateMatch[1].length === 4) {
-        y = dateMatch[1]; m = parseInt(dateMatch[2]) - 1; d = dateMatch[3];
-      } else {
-        d = dateMatch[1]; m = parseInt(dateMatch[2]) - 1; y = dateMatch[3];
+    // Jika format string YYYY-MM-DD (misal: "2026-08-27" atau "2026-08-27T00:00:00.000Z")
+    const isoMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      const y = isoMatch[1];
+      const m = parseInt(isoMatch[2], 10) - 1;
+      const d = isoMatch[3];
+      if (m >= 0 && m < 12) {
+        return `${d}-${monthNames[m]}-${y}`;
       }
-      return `${d}-${monthNames[m]}-${y}`;
+    }
+
+    // Jika format DD/MM/YYYY atau DD-MM-YYYY
+    const dateMatch = strVal.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    if (dateMatch) {
+      const d = dateMatch[1];
+      const m = parseInt(dateMatch[2], 10) - 1;
+      const y = dateMatch[3];
+      if (m >= 0 && m < 12) {
+        return `${d}-${monthNames[m]}-${y}`;
+      }
     }
 
     return strVal;
@@ -107,7 +112,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     reader.onload = (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
-        const wb = XLSX.read(data, { type: 'array' });
+        const wb = XLSX.read(data, { type: 'array', cellDates: true }); // cellDates: true agar membaca format tanggal asli Excel
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         
         if (!rawData || rawData.length === 0) {
