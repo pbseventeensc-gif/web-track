@@ -39,11 +39,12 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
-  const scanParam = searchParams.get('scan'); // Tangkap parameter scan dari QR Code
+  const scanParam = searchParams.get('scan'); // Tangkap kode unik dari QR Code scan
 
   const [spkList, setSpkList] = useState([]);
+  // Jika ada parameter scan, langsung arahkan ke tab paking secara otomatis
   const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : (scanParam ? 'paking' : 'dashboard'));
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(scanParam || ''); // Otomatis jadikan scanParam sebagai keyword pencarian di tabel
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
   
@@ -70,10 +71,10 @@ export default function App() {
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  // Jika ada parameter scan di URL, otomatis arahkan ke tab paking
   useEffect(() => {
     if (scanParam) {
       setActiveTab('paking');
+      setSearchTerm(scanParam); // Filter otomatis baris SPK yang sesuai dengan hasil scan
     }
   }, [scanParam]);
 
@@ -341,10 +342,12 @@ export default function App() {
   const displayedList = spkList.filter(item => 
     (item.no_spk || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
     (item.project || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.client || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (item.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isAuthenticated = currentAdmin || (isBranchMode ? currentBranch : false);
+  // LOGIKA UTAMA: Jika ada parameter ?scan= di URL, izinkan akses publik tanpa login admin/cabang
+  const isAuthenticated = scanParam ? true : (currentAdmin || (isBranchMode ? currentBranch : false));
 
   if (!isAuthenticated) {
     return (
@@ -402,20 +405,25 @@ export default function App() {
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
           <div>
             <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
-              {isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING'}
+              {scanParam ? '🔍 MODE SCAN TRACKING VERIFIKASI' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING')}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : `Admin Login: ${currentAdmin?.username || 'Aktif'}`}
+              {scanParam ? `Menampilkan hasil pelacakan untuk Tracking ID: ${scanParam}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : `Admin Login: ${currentAdmin?.username || 'Aktif'}`)}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
+            {scanParam && (
+              <a href="https://web-track-phi-gilt.vercel.app/" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
+                🏠 Kembali ke Beranda
+              </a>
+            )}
             {currentAdmin && <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button>}
             {currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
             
-            {!isBranchMode && (
+            {!isBranchMode && !scanParam && (
               <>
                 <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
                   📷 Scan QC Station
@@ -438,7 +446,7 @@ export default function App() {
           </div>
         </div>
 
-        {!isBranchMode && (
+        {!isBranchMode && !scanParam && (
           <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
             {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
               const isLocked = t === 'kawan_lama' && !currentAdmin;
@@ -472,62 +480,9 @@ export default function App() {
           </div>
         )}
 
-        {!isBranchMode && activeTab === 'dashboard' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
-            <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
-            <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
-            <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
-          </div>
-        )}
+        {/* Jika mode scan aktif, langsung tampilkan PackingPanel dengan terfokus pada data hasil scan */}
+        <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
 
-        {!isBranchMode && activeTab === 'design' && (
-          <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-        )}
-
-        {!isBranchMode && activeTab === 'finishing' && (
-          <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
-        )}
-
-        {!isBranchMode && activeTab === 'paking' && (
-          <PackingPanel isDarkMode={isDarkMode} spkList={spkList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
-        )}
-
-        {(isBranchMode || activeTab === 'kawan_lama') && (
-          <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
-        )}
-        
-        {!isBranchMode && activeTab === 'label' && (
-          <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-        )}
-
-        {!isBranchMode && activeTab === 'custom_modules' && (
-          <CustomModulesIndex isDarkMode={isDarkMode} />
-        )}
-
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && (
-          <MainTrackingTable 
-            isDarkMode={isDarkMode}
-            activeTab={activeTab}
-            spkList={spkList}
-            displayedList={displayedList}
-            selectedSpkIds={selectedSpkIds}
-            handleToggleCheck={handleToggleCheck}
-            handleToggleSelectAll={handleToggleSelectAll}
-            handleUpdateQty={handleUpdateQty}
-            handleUpdateField={handleUpdateField}
-            handleDeleteSpk={handleDeleteSpk}
-            handleBatchDelete={handleBatchDelete}
-            handleBatchPrint={handleBatchPrint}
-            openImageModal={openImageModal}
-            handleUploadSuratJalan={handleUploadSuratJalan}
-            getPercent={getPercent}
-            getStatusBadge={getStatusBadge}
-            STAFF_QC_LIST={STAFF_QC_LIST}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-          />
-        )}
       </div>
 
       <ScanQCModal 
