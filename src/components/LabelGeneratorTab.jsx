@@ -9,8 +9,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
 
-  const defaultWellenLogoBase64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="; // Placeholder aman, atau menggunakan URL logo baru
-
   const generateNumericTrackingId = (spk, address) => {
     const rawKey = `${spk}_${address}`;
     let hash = 0;
@@ -207,13 +205,20 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return `<div style="font-weight:900; font-size:26px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:14px; letter-spacing:5px;">PRINT</span></div>`;
   };
 
-  // Logo KOP Surat Jalan diperbesar 2x lipat dan alamat diperjelas
+  // Logo KOP Surat Jalan ditarik ke atas alamat, ukuran besar
   const renderHeaderLogoHtmlSJ = () => {
-    const activeLogo = headerLogoUrl || "https://i.ibb.co.com/84120938/logo-wellen.jpg"; // atau menggunakan logo base64 baru
+    if (headerLogoUrl) {
+      return `<div style="display:flex; flex-direction:column; gap:6px;">
+        <img src="${headerLogoUrl}" style="height:75px; max-width:210px; object-fit:contain; display:block;">
+        <div style="font-size:10.5px; font-weight:bold; color:#111; line-height:1.25;">
+          Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
+          Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
+        </div>
+      </div>`;
+    }
     return `<div style="display:flex; flex-direction:column; gap:4px;">
-      <img src="${headerLogoUrl || ''}" style="height:85px; max-width:240px; object-fit:contain; display:block;" onerror="this.style.display='none'">
-      <div style="font-weight:900; font-size:26px; line-height:1; color:#000;">WELLEN<br><span style="font-size:13px; letter-spacing:4px;">PRINT</span></div>
-      <div style="font-size:10px; font-weight:bold; color:#222; margin-top:2px; line-height:1.2;">
+      <div style="font-weight:900; font-size:24px; line-height:1; color:#000;">WELLEN<br><span style="font-size:12px; letter-spacing:3px;">PRINT</span></div>
+      <div style="font-size:10px; font-weight:bold; color:#222; line-height:1.25;">
         Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
         Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
       </div>
@@ -515,7 +520,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 <tr><td colspan="3" class="text-center font-bold" style="font-size: 12px;">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 10px; font-size: 13px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
               </tfoot>
             </table>
-            <!-- Bagian Bawah Surat Jalan diberi garis penutup di atas -->
             <div class="signature-section">
               <div class="signature-top-line"></div>
               <div class="signature-content-row">
@@ -562,7 +566,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               </tfoot>
             </table>
 
-            <!-- Garis penutup bagian atas untuk bagian bawah surat jalan -->
             <div class="signature-section">
               <div class="signature-top-line"></div>
               <div class="signature-content-row">
@@ -609,7 +612,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 11px; font-weight: bold; } 
       .item-grid-table tfoot td { background: #f8f8f8; font-size: 12px; } 
       
-      /* Bagian bawah surat jalan dengan garis penutup atas */
       .signature-section { border: 1.5px solid #000; border-top: none; margin-top: auto; }
       .signature-top-line { width: 100%; border-top: 2px solid #000; }
       .signature-content-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; padding: 6px; } 
@@ -625,7 +627,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       
       .footer-left { padding: 2px 6px; border-right: 1.5px solid #000; line-height: 1.3; font-size: 10.5px; text-align: left; }
       .footer-right { display: flex; flex: 2; }
-      .sig-col { flex: 1; border-right: 1.5px solid #000; text-align: center; padding: 2px; display: flex; flex-direction: column; justify-content: space-between; height: 44px; font-size: 10.5px; font-weight: bold; }
+      .sig-col { flex: 1; border-right: 1.5px solid #000; text-align: center; padding: 3px; display: flex; flex-direction: column; justify-content: space-between; height: 44px; font-size: 10.5px; font-weight: bold; }
       .sig-col:last-child { border-right: none; }
 
       @media print { 
@@ -637,7 +639,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Enlarged Size with Top Line)</b></span>
+        <span><b>🖨️ Surat Jalan (Clean Header & Top Line)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
           <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
