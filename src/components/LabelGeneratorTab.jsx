@@ -53,7 +53,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         PROJECT: "ATARU GRAND WISATA", NO_WPP: "WPP 0826-301349", BRAND: "ATARU", RECIPIENT_NAME: "ADAM RIAN", RECIPIENT_PHONE: "0812.4161.2709",
         DELIVERY_ADDRESS: "STORE ATARU GRAND WISATA",
         ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 150,
-        DATE_PRODUCTION: "27/08/26", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
+        DATE_PRODUCTION: "27-Aug-2026", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
       }
     ];
     const ws = XLSX.utils.json_to_sheet(templateSampleData);
@@ -62,9 +62,24 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
-  // Tampilkan tanggal mentah apa adanya sesuai Excel tanpa logika/konversi
+  // Konversi Nomor Serial Excel (seperti 46261) menjadi Format Tanggal Terbaca
   const parseExcelDate = (val) => {
     if (!val) return '-';
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Jika nilai berupa angka serial Excel (misal: 46261)
+    if (!isNaN(val) && (typeof val === 'number' || String(val).match(/^\d{5}$/))) {
+      const serial = Number(val);
+      // Excel menghitung tanggal mulai 30 Desember 1899 (karena bug tahun kabisat 1900 di Excel)
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const jsDate = new Date(excelEpoch.getTime() + serial * 86400000);
+      
+      const day = String(jsDate.getUTCDate()).padStart(2, '0');
+      const month = monthNames[jsDate.getUTCMonth()];
+      const year = jsDate.getUTCFullYear();
+      return `${day}-${month}-${year}`;
+    }
+
     return String(val).trim();
   };
 
