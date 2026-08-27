@@ -672,7 +672,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
       <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${isDarkMode ? 'bg-[#6B8E85] hover:bg-[#57756D]' : 'bg-[#6B8E85] hover:bg-[#57756D]'}`}>
+          <label className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-[#6B8E85] hover:bg-[#57756D] transition-all">
             📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
           <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#D97706] hover:bg-amber-600 text-white shadow-sm transition-all">📥 Download Template Excel</button>
@@ -758,7 +758,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISual_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
                           <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
