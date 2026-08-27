@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../supabaseClient';
 
 export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, onOpenImageModal }) {
@@ -30,6 +31,70 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
       alert('❌ Gagal upload: ' + error.message);
     }
     setUploadingId(null);
+  };
+
+  // Fungsi untuk Download Report Excel dari database packing_tracking / spkList
+  const handleDownloadPackingReport = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('packing_tracking')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const dataSource = (data && data.length > 0) ? data : spkList;
+
+      if (!dataSource || dataSource.length === 0) {
+        return alert('⚠️ Belum ada data paking yang tercatat untuk di-export.');
+      }
+
+      const formattedData = dataSource.map((item, index) => ({
+        'No': index + 1,
+        'Tracking ID': item.tracking_id || item.store_code || '-',
+        'No. SPK': item.no_spk || '-',
+        'Client / PT': item.client_pt || '-',
+        'Promo / Project': item.promo_title || item.project || '-',
+        'Nama Toko / Alamat': item.store_name || '-',
+        'Penerima': item.recipient_name || '-',
+        'Total Qty': item.total_qty || '-',
+        'Status QC Label': item.status_qc_label || item.qc_label || 'PENDING',
+        'Status QC Packing': item.status_qc_packing || item.qc_paking || 'PENDING',
+        'Status QC Checker': item.status_qc_checker || item.qc_checker || 'PENDING',
+        'Status Deliver': item.status_deliver || item.deliver || 'PENDING',
+        'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Report_Paking");
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `Report_Paking_Wellen_${todayStr}.xlsx`);
+      
+      alert('✅ Report Excel Paking berhasil di-download!');
+    } catch (err) {
+      alert('Gagal mendownload report: ' + err.message);
+    }
+  };
+
+  // Fungsi untuk Hapus Semua Data Paking di Database Supabase
+  const handleClearAllPackingData = async () => {
+    if (confirm('⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH data paking di database? Tindakan ini tidak dapat dibatalkan!')) {
+      try {
+        const { error } = await supabase
+          .from('packing_tracking')
+          .delete()
+          .not('tracking_id', 'is', null); // Menghapus seluruh baris data di tabel
+
+        if (error) throw error;
+
+        alert('✅ Seluruh data paking berhasil dikosongkan!');
+        window.location.reload(); // Refresh halaman agar data bersih
+      } catch (err) {
+        alert('❌ Gagal menghapus data paking: ' + err.message);
+      }
+    }
   };
 
   return (
@@ -84,11 +149,27 @@ export default function PackingPanel({ isDarkMode, spkList, handleUpdateField, o
         </div>
       </div>
 
-      {/* BAGIAN BAWAH: TABEL DENGAN KOLOM PACKING, CHECKER & THUMBNAIL FOTO POP-UP */}
+      {/* BAGIAN BAWAH: TABEL DENGAN TOMBOL EXCEL, HAPUS DATA & THUMBNAIL FOTO */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-        <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-4">
-          📦 Detail Toko, Status Packing, Checker & Bukti Foto
-        </h3>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
+            📦 Detail Toko, Status Packing, Checker & Bukti Foto
+          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={handleDownloadPackingReport}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              📥 Download Report Excel
+            </button>
+            <button 
+              onClick={handleClearAllPackingData}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              🗑️ Hapus Semua Data Paking
+            </button>
+          </div>
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">

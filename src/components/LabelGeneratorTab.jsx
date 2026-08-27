@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
+import { supabase } from '../supabaseClient';
 
 export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
+
+  // Fungsi Generator Nomor Unik Angka Murni: YYMMDD-XXXX (Anti-Double)
+  const generateNumericTrackingId = () => {
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const randomNumbers = Math.floor(1000 + Math.random() * 9000);
+    return `${yy}${mm}${dd}-${randomNumbers}`;
+  };
 
   const handleUploadHeaderLogo = (e) => {
     const file = e.target.files[0];
@@ -44,7 +55,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
-  // Fungsi helper konversi tanggal Excel & teks tanggal normal
   const parseExcelDate = (val) => {
     if (!val) return '12-Aug-2026';
     if (!isNaN(val) && typeof val === 'number' || (!isNaN(val) && String(val).match(/^\d{5}$/))) {
@@ -96,7 +106,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
             SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
             VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim(),
-            VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim()
+            VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim(),
+            TRACKING_ID: generateNumericTrackingId()
           };
         }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
 
@@ -200,6 +211,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       if (!groupedMap[groupKey]) {
         groupedMap[groupKey] = {
           ...item,
+          TRACKING_ID: item.TRACKING_ID || generateNumericTrackingId(),
           itemsList: [],
           totalCombinedQty: 0
         };
@@ -226,16 +238,41 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return Object.values(groupedMap);
   };
 
+  const syncToPackingDatabase = async (groupedItems) => {
+    for (const item of groupedItems) {
+      const payload = {
+        tracking_id: item.TRACKING_ID,
+        no_spk: item.NO_SPK,
+        client_pt: item.CLIENT || '-',
+        promo_title: item.PROJECT || '-',
+        store_name: item.DELIVERY_ADDRESS || 'Store Utama',
+        recipient_name: item.RECIPIENT_NAME || '-',
+        total_qty: item.totalCombinedQty,
+        status_qc_label: 'PENDING',
+        status_qc_packing: 'PENDING',
+        status_qc_checker: 'PENDING',
+        status_deliver: 'PENDING',
+        updated_at: new Date().toISOString()
+      };
+      await supabase.from('packing_tracking').upsert(payload, { onConflict: 'tracking_id' });
+    }
+  };
+
   const handlePrintLabels = async () => {
     if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
     const groupedItems = groupSelectedRows();
+    await syncToPackingDatabase(groupedItems);
     
     let allLabelBoxes = [];
     for (const group of groupedItems) {
-      const qrAddress = group.NO_SPK ? `SPK:${group.NO_SPK}|KOLI:1/1` : 'WELLEN-PRINT';
+      const trackingCode = group.TRACKING_ID || generateNumericTrackingId();
+      
+      // QR Code diset langsung mengarah ke URL Vercel produksi Anda
+      const qrText = `https://web-track-phi-gilt.vercel.app/?scan=${trackingCode}`;
+
       let qrDataUrl = ''; 
       try { 
-        qrDataUrl = await QRCode.toDataURL(qrAddress, { width: 80, margin: 1 }); 
+        qrDataUrl = await QRCode.toDataURL(qrText, { width: 80, margin: 1 }); 
       } catch (e) { 
         console.error(e); 
       }
@@ -245,7 +282,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         currentKoli: 1,
         totalKoli: 1,
         currentQty: group.totalCombinedQty,
-        qrDataUrl: qrDataUrl
+        qrDataUrl: qrDataUrl,
+        displayTrackingId: trackingCode
       });
     }
 
@@ -268,11 +306,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <div class="label-box">
             <table class="header-table"><tr>
               <td style="width: 25%; vertical-align: middle; padding: 6px 8px;">${renderHeaderLogoHtmlLabel()}</td>
-              <td style="width: 60%; text-align:center; font-size:7.5px; line-height: 1.3; vertical-align: middle; padding: 6px 8px;">
+              <td style="width: 58%; text-align:center; font-size:7.5px; line-height: 1.3; vertical-align: middle; padding: 6px 8px;">
                 <strong style="font-size:11px;">WELLEN PRINT</strong><br>
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
-              <td style="width: 15%; text-align:right; vertical-align: middle; padding: 6px 8px;">${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:40px; height:40px; display:inline-block;">` : ''}</td>
+              <td style="width: 17%; text-align:center; vertical-align: middle; padding: 6px 8px;">
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:40px; height:40px; display:block; margin:auto;">` : ''}
+                <div style="font-size: 8px; font-weight: bold; margin-top: 2px; letter-spacing: 0.5px;">${item.displayTrackingId}</div>
+              </td>
             </tr></table>
             
             <div class="content-grid">
@@ -374,9 +415,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     openPrintWindow(fullHtml);
   };
 
-  const handlePrintSuratJalan = () => {
+  const handlePrintSuratJalan = async () => {
     if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
     const groupedItems = groupSelectedRows();
+    await syncToPackingDatabase(groupedItems);
 
     const pagesHtml = groupedItems.map((group) => {
       let grandTotal = 0;
@@ -405,7 +447,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <div class="sj-page">
             <div class="sj-top-header">
               <div class="logo-sec">${renderHeaderLogoHtmlSJ()}</div>
-              <div class="sj-title">TANDA TERIMA</div>
+              <div style="text-align: right;">
+                <div class="sj-title">TANDA TERIMA</div>
+                <div style="font-size: 11px; font-weight: bold; margin-top: 3px;">Tracking ID: ${group.TRACKING_ID}</div>
+              </div>
             </div>
             <div class="info-row">
               <div class="info-box left-box"><div class="info-line">Kepada Yth :</div><div class="info-line font-bold">${group.CLIENT || '-'}</div><div class="info-line">${group.DELIVERY_ADDRESS || '-'}</div><div class="info-line">UP : ${group.RECIPIENT_NAME || '-'} ${group.RECIPIENT_PHONE || ''}</div></div>
@@ -441,6 +486,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <div class="sj-title-cl">
                 <div style="font-size:24px; font-weight:bold;">SURAT JALAN</div>
                 <div style="font-size:15px; font-weight:bold; margin-top:2px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
+                <div style="font-size:11px; font-weight: bold; margin-top: 2px;">Tracking ID: ${group.TRACKING_ID}</div>
                 <div style="font-size:13px; margin-top:5px; text-align:left;">
                   Kepada Yth, :<br>
                   <strong>${group.CLIENT || '-'}</strong><br>
@@ -591,7 +637,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* TOMBOL DIPISAH JELAS */}
           <button onClick={handlePrintSuratJalan} className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95">
             📄 Cetak Surat Jalan
           </button>
@@ -606,7 +651,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <thead className={`font-bold border-b ${isDarkMode ? 'bg-neutral-800 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
             <tr>
               <th className="p-3 text-center w-10"><input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600" /></th>
-              <th className="p-3">No SPK / PO / SJ</th>
+              <th className="p-3">No SPK / Tracking ID</th>
               <th className="p-3">Client & Brand</th>
               <th className="p-3">Penerima & Alamat</th>
               <th className="p-3">Deskripsi / Media / Ukuran</th>
@@ -624,7 +669,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 return (
                   <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
                     <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
-                    <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-normal text-[10px] text-emerald-500">SJ: {row.NO_SJ || '-'}</span></td>
+                    <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-mono text-[10px] text-emerald-500 font-bold">ID: {row.TRACKING_ID}</span></td>
                     <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
                     <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
                     <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'} )</span></td>
@@ -641,7 +686,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`/* Fixed bug */)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
                           <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>

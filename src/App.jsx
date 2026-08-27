@@ -39,9 +39,10 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
+  const scanParam = searchParams.get('scan'); // Tangkap parameter scan dari QR Code
 
   const [spkList, setSpkList] = useState([]);
-  const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : 'dashboard');
+  const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : (scanParam ? 'paking' : 'dashboard'));
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
@@ -68,6 +69,13 @@ export default function App() {
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  // Jika ada parameter scan di URL, otomatis arahkan ke tab paking
+  useEffect(() => {
+    if (scanParam) {
+      setActiveTab('paking');
+    }
+  }, [scanParam]);
 
   useEffect(() => { 
     if (isBranchMode && !currentBranch) {
@@ -245,8 +253,6 @@ export default function App() {
   };
 
   const processImportData = async (rawRows) => {
-    console.log("Data mentah dari Kolom F, G, H (Baris 5+):", rawRows);
-
     const formattedData = rawRows
       .filter(row => row && row.length > 7) 
       .map((row, index) => {
@@ -272,8 +278,6 @@ export default function App() {
         };
       })
       .filter(item => item !== null);
-
-    console.log("Data setelah dibersihkan:", formattedData);
 
     if (formattedData.length > 0) {
       const { error } = await supabase.from('spk_data').insert(formattedData);
@@ -486,7 +490,7 @@ export default function App() {
         )}
 
         {!isBranchMode && activeTab === 'paking' && (
-          <PackingPanel isDarkMode={isDarkMode} spkList={spkList} handleUpdateField={handleUpdateField} />
+          <PackingPanel isDarkMode={isDarkMode} spkList={spkList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
         )}
 
         {(isBranchMode || activeTab === 'kawan_lama') && (
