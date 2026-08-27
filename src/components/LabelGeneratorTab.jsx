@@ -206,8 +206,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const renderHeaderLogoHtmlSJ = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:42px; max-width:140px; object-fit:contain; display:block;">`;
-    return `<div style="font-weight:900; font-size:18px; line-height:1; color:#000;">WELLEN<br><span style="font-size:9px; letter-spacing:2px;">PRINT</span></div>`;
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:65px; max-width:190px; object-fit:contain; display:block;">`;
+    return `<div style="font-weight:900; font-size:24px; line-height:1; color:#000;">WELLEN<br><span style="font-size:12px; letter-spacing:3px;">PRINT</span></div>`;
   };
 
   const openPrintWindow = (htmlContent) => {
@@ -295,7 +295,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         console.error(e); 
       }
 
-      // Perhitungan Koli Otomatis Berdasarkan QTY_TOTAL dan QTY_PER_KOLI
       const totalQty = Number(group.totalCombinedQty || 0);
       const qtyPerKoli = Number(group.QTY_PER_KOLI || 50) > 0 ? Number(group.QTY_PER_KOLI || 50) : 50;
       const totalKoliCalculated = Math.max(1, Math.ceil(totalQty / qtyPerKoli));
@@ -451,17 +450,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         grandTotal += qty;
         return sjFormatType === 'modern' ? `
           <tr>
-            <td style="text-align: center; width: 8%;">${idx + 1}</td>
-            <td style="width: 37%;">${it.ITEM_DESCRIPTION || '-'}</td>
-            <td style="width: 35%;">${it.MEDIA || '-'}<br><span style="font-size:8px;">Ukuran: ${it.UKURAN || '-'}</span></td>
-            <td style="text-align: right; padding-right: 6px; width: 20%;">${qty.toLocaleString()}</td>
+            <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
+            <td style="width: 38%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'}</td>
+            <td style="width: 34%; font-size: 11.5px; font-weight: bold;">${it.MEDIA || '-'}<br><span style="font-size: 11px;">Ukuran: ${it.UKURAN || '-'}</span></td>
+            <td style="text-align: right; padding-right: 10px; width: 20%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
           </tr>
         ` : `
           <tr>
-            <td style="text-align: center; width: 8%;">${idx + 1}</td>
-            <td style="width: 57%;">${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
-            <td style="text-align: center; width: 20%;">${it.UKURAN || '-'}</td>
-            <td style="text-align: right; padding-right: 6px; width: 15%;">${qty.toLocaleString()}</td>
+            <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
+            <td style="width: 55%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
+            <td style="text-align: center; width: 22%; font-size: 11.5px; font-weight: bold;">${it.UKURAN || '-'}</td>
+            <td style="text-align: right; padding-right: 10px; width: 15%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
           </tr>
         `;
       }).join('');
@@ -473,14 +472,26 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <div class="logo-sec">${renderHeaderLogoHtmlSJ()}</div>
               <div style="text-align: right;">
                 <div class="sj-title">SURAT JALAN</div>
-                <div style="font-size: 8.5px; font-weight: bold; margin-top: 0px;">Tracking ID: ${group.TRACKING_ID}</div>
+                <div style="font-size: 11px; font-weight: bold; margin-top: 1px;">Tracking ID: ${group.TRACKING_ID}</div>
               </div>
             </div>
             <div class="info-row">
-              <div class="info-box left-box"><div class="info-line font-bold">Kepada Yth :</div><div class="info-line font-bold">${group.CLIENT || '-'}</div><div class="info-line" style="font-size:8.5px; line-height:1.1;">${group.DELIVERY_ADDRESS || '-'}</div><div class="info-line">UP : ${group.RECIPIENT_NAME || '-'} ${group.RECIPIENT_PHONE || ''}</div></div>
+              <div class="info-box left-box">
+                <div class="info-line font-bold" style="font-size: 11px;">Kepada Yth :</div>
+                <div class="info-line font-bold" style="font-size: 12px;">${group.CLIENT || '-'}</div>
+                <div class="info-line" style="font-size: 11px; line-height: 1.25; font-weight: bold;">${group.DELIVERY_ADDRESS || '-'}</div>
+                <div class="info-line" style="font-size: 11px; font-weight: bold;">UP : ${group.RECIPIENT_NAME || '-'} ${group.RECIPIENT_PHONE || ''}</div>
+              </div>
               <div class="right-box-container">
-                <table class="meta-table"><tr><td class="font-bold">NO PO</td><td>: ${group.PO_NUMBER || '-'}</td></tr><tr><td class="font-bold">BRAND</td><td>: ${group.BRAND || '-'}</td></tr><tr><td class="font-bold">NO SJ</td><td>: ${group.NO_SJ || '-'}</td></tr></table>
-                <div class="date-box"><div class="date-header">TANGGAL</div><div class="date-value">${group.DATE_PRODUCTION || '-'}</div></div>
+                <table class="meta-table">
+                  <tr><td class="font-bold">NO PO</td><td class="font-bold">: ${group.PO_NUMBER || '-'}</td></tr>
+                  <tr><td class="font-bold">BRAND</td><td class="font-bold">: ${group.BRAND || '-'}</td></tr>
+                  <tr><td class="font-bold">NO SJ</td><td class="font-bold">: ${group.NO_SJ || '-'}</td></tr>
+                </table>
+                <div class="date-box">
+                  <div class="date-header">TANGGAL</div>
+                  <div class="date-value">${group.DATE_PRODUCTION || '-'}</div>
+                </div>
               </div>
             </div>
             <table class="item-grid-table">
@@ -491,10 +502,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 ${rowsHtml}
               </tbody>
               <tfoot>
-                <tr><td colspan="3" class="text-center font-bold">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 6px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
+                <tr><td colspan="3" class="text-center font-bold" style="font-size: 12px;">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 10px; font-size: 13px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
               </tfoot>
             </table>
-            <div class="signature-row"><div class="sig-box">PENGIRIM</div><div class="sig-box">PENERIMA</div></div>
+            <div class="signature-row">
+              <div class="sig-box font-bold">PENGIRIM</div>
+              <div class="sig-box font-bold">PENERIMA</div>
+            </div>
           </div>
         `;
       } else {
@@ -502,16 +516,16 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <div class="sj-page classic-page">
             <div class="sj-top-classic">
               <div class="logo-sec-cl">${renderHeaderLogoHtmlSJ()}
-                <div style="font-size:7.5px; margin-top:1px; line-height:1.1;">
+                <div style="font-size: 9.5px; margin-top: 2px; line-height: 1.2; font-weight: bold;">
                   Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br>
                   Telp. 021 -5506999 &nbsp;&nbsp;&nbsp; Fax -
                 </div>
               </div>
               <div class="sj-title-cl">
-                <div style="font-size:15px; font-weight:bold;">SURAT JALAN</div>
-                <div style="font-size:10.5px; font-weight:bold; margin-top:0px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
-                <div style="font-size:8.5px; font-weight: bold; margin-top: 0px;">Tracking ID: ${group.TRACKING_ID}</div>
-                <div style="font-size:9px; margin-top:2px; text-align:left; line-height:1.15;">
+                <div style="font-size: 20px; font-weight: bold;">SURAT JALAN</div>
+                <div style="font-size: 13px; font-weight: bold; margin-top: 1px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
+                <div style="font-size: 10.5px; font-weight: bold; margin-top: 1px;">Tracking ID: ${group.TRACKING_ID}</div>
+                <div style="font-size: 11px; margin-top: 3px; text-align: left; line-height: 1.25; font-weight: bold;">
                   Kepada Yth, :<br>
                   <strong>${group.CLIENT || '-'}</strong><br>
                   ${group.DELIVERY_ADDRESS || '-'} - UP: ${group.RECIPIENT_NAME || '-'} (${group.RECIPIENT_PHONE || ''})
@@ -521,28 +535,28 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             
             <table class="item-grid-table classic-table">
               <thead>
-                <tr><th style="width: 8%;">No.</th><th>Nama Barang</th><th style="width: 20%;">Ukuran</th><th style="width: 15%;">Qty</th></tr>
+                <tr><th style="width: 8%;">No.</th><th>Nama Barang</th><th style="width: 22%;">Ukuran</th><th style="width: 15%;">Qty</th></tr>
               </thead>
               <tbody>
                 ${rowsHtml}
-                <tr style="height: 35px;"><td colspan="4"></td></tr>
+                <tr style="height: 40px;"><td colspan="4"></td></tr>
               </tbody>
               <tfoot>
-                <tr><td colspan="3" style="text-align:right; font-weight:bold; padding-right:6px;">TOTAL</td><td style="text-align: right; padding-right: 6px; font-weight:bold;">${grandTotal.toLocaleString()}</td></tr>
+                <tr><td colspan="3" style="text-align: right; font-weight: bold; padding-right: 10px; font-size: 12px;">TOTAL</td><td style="text-align: right; padding-right: 10px; font-weight: bold; font-size: 13px;">${grandTotal.toLocaleString()}</td></tr>
               </tfoot>
             </table>
 
             <div class="classic-footer">
-              <div class="footer-left">
+              <div class="footer-left font-bold" style="font-size: 10.5px;">
                 <div>Tgl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.DATE_PRODUCTION || '-'}</div>
                 <div>Nama File &nbsp;&nbsp;: ${group.BRAND || '-'}</div>
-                <div style="margin-top:3px;">Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
+                <div style="margin-top: 4px;">Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
                 <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
               </div>
               <div class="footer-right">
-                <div class="sig-col">DIBUAT OLEH</div>
-                <div class="sig-col">DIKIRIM OLEH</div>
-                <div class="sig-col">DITERIMA OLEH</div>
+                <div class="sig-col font-bold">DIBUAT OLEH</div>
+                <div class="sig-col font-bold">DIKIRIM OLEH</div>
+                <div class="sig-col font-bold">DITERIMA OLEH</div>
               </div>
             </div>
           </div>
@@ -559,47 +573,48 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
       
-      .sj-page { width: 210mm; height: 95mm; padding: 3mm 5mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 9px; } 
+      /* Ukuran Surat Jalan diperbesar pas sebatas batas garis hitam (14cm x 21cm landscape -> 210mm x 140mm) */
+      .sj-page { width: 210mm; height: 140mm; padding: 5mm 7mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
-      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; } 
-      .sj-title { font-size: 16px; font-weight: bold; text-align: right; } 
-      .info-row { display: flex; gap: 8mm; margin-bottom: 2px; } 
-      .info-box { border: 1px solid #000; padding: 3px 5px; font-size: 9px; line-height: 1.15; } 
-      .left-box { flex: 1; height: 46px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 2px; } 
-      .meta-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 9px; } 
-      .meta-table td { padding: 1px 3px; border: none; } 
-      .date-box { border: 1px solid #000; height: 21px; display: flex; flex-direction: column; text-align: center; font-size: 9px; } 
-      .date-header { border-bottom: 1px solid #000; font-weight: bold; padding: 0px 0; background: #f8f8f8; font-size: 8px; } 
-      .date-value { padding-top: 1px; font-weight: bold; font-size: 9.5px; } 
-      .item-grid-table { width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 9px; margin-bottom: 2px; } 
-      .item-grid-table th, .item-grid-table td { border: 1px solid #000; padding: 2px 4px; } 
-      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 9px; } 
-      .item-grid-table tfoot td { background: #f8f8f8; font-size: 9.5px; } 
-      .signature-row { display: flex; justify-space-around; text-align: center; font-size: 9px; font-weight: bold; margin-top: 2px; } 
-      .sig-box { width: 150px; border-top: 1px solid transparent; padding-top: 16px; } 
+      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; } 
+      .sj-title { font-size: 22px; font-weight: bold; text-align: right; } 
+      .info-row { display: flex; gap: 10px; margin-bottom: 4px; } 
+      .info-box { border: 1.5px solid #000; padding: 5px 8px; font-size: 11px; line-height: 1.3; } 
+      .left-box { flex: 1; height: 68px; } .right-box-container { width: 44%; display: flex; flex-direction: column; gap: 3px; } 
+      .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } 
+      .meta-table td { padding: 2px 5px; border: none; } 
+      .date-box { border: 1.5px solid #000; height: 35px; display: flex; flex-direction: column; text-align: center; font-size: 11px; } 
+      .date-header { border-bottom: 1.5px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; font-size: 10px; } 
+      .date-value { padding-top: 3px; font-weight: bold; font-size: 12px; } 
+      .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 6px; } 
+      .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px 7px; } 
+      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 11px; font-weight: bold; } 
+      .item-grid-table tfoot td { background: #f8f8f8; font-size: 12px; } 
+      .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 4px; } 
+      .sig-box { width: 180px; border-top: 1px solid transparent; padding-top: 26px; font-size: 11px; } 
       
-      .classic-page { padding: 3mm 5mm !important; }
-      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #000; padding-bottom: 3px; margin-bottom: 3px; }
+      .classic-page { padding: 5mm 7mm !important; }
+      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 5px; }
       .logo-sec-cl { width: 45%; }
-      .sj-title-cl { width: 52%; border: 1px solid #000; padding: 3px; font-size: 9px; }
-      .classic-table th, .classic-table td { border: 1px solid #000; padding: 2px 4px; font-size: 9px; }
-      .classic-footer { display: flex; border: 1px solid #000; border-top: none; font-size: 9px; }
-      .footer-left { width: 45%; padding: 3px; border-right: 1px solid #000; line-height: 1.15; font-size: 8.5px; }
+      .sj-title-cl { width: 52%; border: 1.5px solid #000; padding: 5px; font-size: 11px; }
+      .classic-table th, .classic-table td { border: 1px solid #000; padding: 5px 7px; font-size: 11px; }
+      .classic-footer { display: flex; border: 1.5px solid #000; border-top: none; font-size: 11px; }
+      .footer-left { width: 45%; padding: 5px; border-right: 1.5px solid #000; line-height: 1.3; font-size: 10.5px; }
       .footer-right { width: 55%; display: flex; }
-      .sig-col { flex: 1; border-right: 1px solid #000; text-align: center; padding: 2px; display: flex; flex-direction: column; justify-content: space-between; height: 32px; font-size: 9px; font-weight: bold; }
+      .sig-col { flex: 1; border-right: 1.5px solid #000; text-align: center; padding: 3px; display: flex; flex-direction: column; justify-content: space-between; height: 48px; font-size: 10.5px; font-weight: bold; }
       .sig-col:last-child { border-right: none; }
 
       @media print { 
         body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
-        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 95mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
-        @page { size: 210mm 95mm landscape; margin: 0mm; }
+        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 140mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
+        @page { size: 210mm 140mm landscape; margin: 0mm; }
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Compact Form Size)</b></span>
+        <span><b>🖨️ Surat Jalan (Enlarged Size 14x21cm)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
           <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
