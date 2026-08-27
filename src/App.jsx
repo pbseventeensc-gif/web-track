@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
-import { supabase } from '../supabaseClient';
+import { supabase } from './supabaseClient';
 
 export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
