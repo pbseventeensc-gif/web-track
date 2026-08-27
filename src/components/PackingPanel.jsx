@@ -108,7 +108,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     try {
       const compressedBlob = await compressImage(file);
       const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
-      const fileName = `packing_${cleanTrackingId}_${Date.now()}.jpg`;
+      const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('surat-jalan')
@@ -125,10 +125,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       const publicUrl = urlData.publicUrl;
 
+      // Menyimpan ke kolom bukti_paking_url
       const { error: updateError } = await supabase
         .from('packing_tracking')
         .update({ 
-          surat_jalan_url: publicUrl, 
+          bukti_paking_url: publicUrl, 
           status_qc_packing: 'DONE',
           updated_at: new Date().toISOString() 
         })
@@ -136,7 +137,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       if (updateError) throw updateError;
 
-      alert('✅ Foto bukti berhasil diunggah!');
+      alert('✅ Bukti paking berhasil diunggah!');
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto: ' + err.message);
@@ -251,7 +252,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
-            📦 Detail Toko, Ceklis Cepat & Kamera Bukti Foto
+            📦 Detail Toko, Ceklis Cepat & Kamera Bukti Paking
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
             <button 
@@ -278,7 +279,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 <th className="py-3 px-4">Tracking ID</th>
                 <th className="py-3 px-4 text-center">Status Packing (Klik Ceklis)</th>
                 <th className="py-3 px-4 text-center">Status Checker (Klik Ceklis)</th>
-                <th className="py-3 px-4 text-center">Bukti Foto (Pop-up)</th>
+                <th className="py-3 px-4 text-center">Bukti Paking (Pop-up)</th>
                 <th className="py-3 px-4 text-center">Kamera / Foto</th>
               </tr>
             </thead>
@@ -323,12 +324,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                       <td className="py-3 px-4 text-center">
-                        {item.surat_jalan_url ? (
+                        {item.bukti_paking_url ? (
                           <div className="flex justify-center">
                             <img 
-                              src={item.surat_jalan_url} 
-                              alt="Bukti Foto" 
-                              onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.tracking_id}`)}
+                              src={item.bukti_paking_url} 
+                              alt="Bukti Paking" 
+                              onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
                               className="w-12 h-12 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-md"
                               title="Klik untuk membuka pop-up foto"
                             />
