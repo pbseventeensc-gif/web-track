@@ -9,7 +9,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
 
-  // Fungsi Generator Nomor Unik Stabil (Anti-Duplikat untuk SPK & Alamat yang sama)
   const generateNumericTrackingId = (spk, address) => {
     const rawKey = `${spk}_${address}`;
     let hash = 0;
@@ -18,7 +17,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       hash |= 0;
     }
     const positiveHash = Math.abs(hash);
-    const randomSuffix = String(positiveHash % 9000 + 1000); // 4 digit angka unik stabil
+    const randomSuffix = String(positiveHash % 9000 + 1000);
     
     const now = new Date();
     const yy = String(now.getFullYear()).slice(-2);
@@ -63,14 +62,41 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
+  // Fungsi Parser Tanggal Presisi Anti-Geser Waktu
   const parseExcelDate = (val) => {
     if (!val) return '12-Aug-2026';
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    if (val instanceof Date) {
+      const day = String(val.getDate()).padStart(2, '0');
+      const month = monthNames[val.getMonth()];
+      const year = val.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    
     if (!isNaN(val) && typeof val === 'number' || (!isNaN(val) && String(val).match(/^\d{5}$/))) {
       const excelEpoch = new Date(1899, 11, 30);
       const jsDate = new Date(excelEpoch.getTime() + Number(val) * 86400000);
-      return jsDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+      const day = String(jsDate.getDate()).padStart(2, '0');
+      const month = monthNames[jsDate.getMonth()];
+      const year = jsDate.getFullYear();
+      return `${day}-${month}-${year}`;
     }
-    return String(val).trim();
+
+    const strVal = String(val).trim();
+    const dateMatch = strVal.match(/^(\d{4})-(\d{2})-(\d{2})/) || strVal.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    
+    if (dateMatch) {
+      let y, m, d;
+      if (dateMatch[1].length === 4) {
+        y = dateMatch[1]; m = parseInt(dateMatch[2]) - 1; d = dateMatch[3];
+      } else {
+        d = dateMatch[1]; m = parseInt(dateMatch[2]) - 1; y = dateMatch[3];
+      }
+      return `${d}-${monthNames[m]}-${y}`;
+    }
+
+    return strVal;
   };
 
   const handleExcelImport = (e) => {
@@ -247,7 +273,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return Object.values(groupedMap);
   };
 
-  // Sinkronisasi anti-duplikat menggunakan upsert berbasis tracking_id
   const syncToPackingDatabase = async (groupedItems) => {
     for (const item of groupedItems) {
       const payload = {
