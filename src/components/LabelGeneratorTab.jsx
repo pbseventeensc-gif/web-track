@@ -205,7 +205,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return `<div style="font-weight:900; font-size:26px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:14px; letter-spacing:5px;">PRINT</span></div>`;
   };
 
-  // Logo KOP Surat Jalan digeser ke kiri sejajar dan diperbesar 5x lipat di atas alamat
   const renderHeaderLogoHtmlSJ = () => {
     if (headerLogoUrl) {
       return `<div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
@@ -529,7 +528,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                   <div>Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
                   <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
                 </div>
-                <div class="sig-box font-bold">DIBUAT OLEH</div>
+                <div class="sig-box font-bold">DIBUAT OLEH<br><br><span style="font-size:12px; font-weight:bold;">Nining</span></div>
                 <div class="sig-box font-bold">DIKIRIM OLEH</div>
                 <div class="sig-box font-bold">DITERIMA OLEH</div>
               </div>
@@ -575,7 +574,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                   <div>Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
                   <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
                 </div>
-                <div class="sig-col font-bold">DIBUAT OLEH</div>
+                <div class="sig-col font-bold">DIBUAT OLEH<br><br><span style="font-size:12px; font-weight:bold;">Nining</span></div>
                 <div class="sig-col font-bold">DIKIRIM OLEH</div>
                 <div class="sig-col font-bold">DITERIMA OLEH</div>
               </div>
@@ -597,7 +596,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .sj-page { width: 210mm; height: 140mm; padding: 5mm 7mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
-      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; } 
+      .sj-top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; } 
       .sj-title { font-size: 22px; font-weight: bold; text-align: right; } 
       .info-row { display: flex; gap: 10px; margin-bottom: 4px; } 
       .info-box { border: 1.5px solid #000; padding: 5px 8px; font-size: 11px; line-height: 1.3; } 
@@ -615,7 +614,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .signature-section { border: 1.5px solid #000; border-top: none; margin-top: auto; }
       .signature-top-line { width: 100%; border-top: 2px solid #000; }
       .signature-content-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; padding: 6px; } 
-      .sig-box { flex: 1; border-right: 1.5px solid #000; padding-top: 24px; font-size: 11px; } 
+      .sig-box { flex: 1; border-right: 1.5px solid #000; padding-top: 14px; padding-bottom: 6px; font-size: 11px; } 
       .sig-box:last-child { border-right: none; }
       .sig-info-col { flex: 1.2; border-right: 1.5px solid #000; text-align: left; padding: 2px 6px; font-size: 10.5px; line-height: 1.3; }
 
@@ -639,7 +638,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Left Aligned & 5x Enriched Logo)</b></span>
+        <span><b>🖨️ Surat Jalan (Nining Signature & Left Logo)</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
           <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
