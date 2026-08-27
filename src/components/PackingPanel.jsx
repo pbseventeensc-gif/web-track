@@ -45,14 +45,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  // Fungsi untuk mengubah status ceklis (PENDING <-> DONE) secara instan
   const handleToggleStatus = async (id, fieldName, currentValue) => {
     const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
     
-    // Update lokal langsung agar responsif
     setPackingList(prev => prev.map(item => item.id === id ? { ...item, [fieldName]: nextValue } : item));
 
-    // Update ke database Supabase
     const { error } = await supabase
       .from('packing_tracking')
       .update({ [fieldName]: nextValue, updated_at: new Date().toISOString() })
@@ -60,26 +57,75 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     if (error) {
       alert('❌ Gagal memperbarui status: ' + error.message);
-      fetchPackingData(); // Rollback jika gagal
+      fetchPackingData();
     }
   };
 
-  // Fungsi Upload Foto langsung dari Kamera HP
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1000;
+          const MAX_HEIGHT = 1000;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, 'image/jpeg', 0.7);
+        };
+      };
+    });
+  };
+
   const handleCameraCapture = async (e, rowId, trackingId) => {
     const file = e.target.files[0];
     if (!file) return;
 
     setUploadingId(rowId);
-    const fileName = `packing_${trackingId}_${Date.now()}.jpg`;
-    
-    const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
-    
-    if (!error) {
-      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      const publicUrl = data.publicUrl;
+    try {
+      const compressedBlob = await compressImage(file);
+      const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
+      const fileName = `packing_${cleanTrackingId}_${Date.now()}.jpg`;
 
-      // Update URL foto dan otomatis ubah status QC Packing menjadi DONE agar makin cepat
-      await supabase
+      const { error: uploadError } = await supabase.storage
+        .from('surat-jalan')
+        .upload(fileName, compressedBlob, { 
+          contentType: 'image/jpeg',
+          upsert: true 
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('surat-jalan')
+        .getPublicUrl(fileName);
+
+      const publicUrl = urlData.publicUrl;
+
+      const { error: updateError } = await supabase
         .from('packing_tracking')
         .update({ 
           surat_jalan_url: publicUrl, 
@@ -88,10 +134,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         })
         .eq('id', rowId);
 
-      alert('✅ Foto bukti berhasil diunggah dari kamera!');
+      if (updateError) throw updateError;
+
+      alert('✅ Foto bukti berhasil diunggah!');
       fetchPackingData();
-    } else {
-      alert('❌ Gagal upload foto: ' + error.message);
+    } catch (err) {
+      alert('❌ Gagal upload foto: ' + err.message);
     }
     setUploadingId(null);
   };
@@ -230,7 +278,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 <th className="py-3 px-4">Tracking ID</th>
                 <th className="py-3 px-4 text-center">Status Packing (Klik Ceklis)</th>
                 <th className="py-3 px-4 text-center">Status Checker (Klik Ceklis)</th>
-                <th className="py-3 px-4 text-center">Bukti Foto</th>
+                <th className="py-3 px-4 text-center">Bukti Foto (Pop-up)</th>
                 <th className="py-3 px-4 text-center">Kamera / Foto</th>
               </tr>
             </thead>
@@ -248,7 +296,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                       <td className="py-3 px-4 font-semibold">{item.store_name || '-'}</td>
                       <td className="py-3 px-4 font-mono text-[11px] text-emerald-500 font-bold">{item.tracking_id || '-'}</td>
                       
-                      {/* Tombol Ceklis Cepat Status Packing */}
                       <td className="py-3 px-4 text-center">
                         <button 
                           onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
@@ -262,7 +309,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                         </button>
                       </td>
 
-                      {/* Tombol Ceklis Cepat Status Checker */}
                       <td className="py-3 px-4 text-center">
                         <button 
                           onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
@@ -283,8 +329,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                               src={item.surat_jalan_url} 
                               alt="Bukti Foto" 
                               onClick={() => onOpenImageModal(item.surat_jalan_url, `Bukti Foto - ${item.tracking_id}`)}
-                              className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                              title="Klik untuk memperbesar foto"
+                              className="w-12 h-12 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                              title="Klik untuk membuka pop-up foto"
                             />
                           </div>
                         ) : (
@@ -292,14 +338,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                         )}
                       </td>
 
-                      {/* Tombol Kamera Langsung (capture="environment") */}
                       <td className="py-3 px-4 text-center">
                         <label className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold cursor-pointer transition-all shadow-md ${
                           uploadingId === item.id 
                             ? 'bg-stone-400 text-white cursor-wait' 
                             : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
                         }`}>
-                          {uploadingId === item.id ? '⏳ Memproses...' : '📸 Ambil Foto'}
+                          {uploadingId === item.id ? '⏳ Menyimpan...' : '📸 Ambil Foto'}
                           <input 
                             type="file" 
                             accept="image/*" 
