@@ -195,9 +195,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     reader.readAsDataURL(file);
   };
 
+  // Logo KOP dan ukuran teks alamat diperbesar
   const renderHeaderLogoHtmlLabel = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:95px; max-width:180px; object-fit:contain; display:block; margin:auto;">`;
-    return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:12px; letter-spacing:4px;">PRINT</span></div>`;
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:110px; max-width:210px; object-fit:contain; display:block; margin:auto;">`;
+    return `<div style="font-weight:900; font-size:26px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:14px; letter-spacing:5px;">PRINT</span></div>`;
   };
 
   const renderHeaderLogoHtmlSJ = () => {
@@ -285,7 +286,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
       let qrDataUrl = ''; 
       try { 
-        qrDataUrl = await QRCode.toDataURL(qrText, { width: 80, margin: 1 }); 
+        qrDataUrl = await QRCode.toDataURL(qrText, { width: 150, margin: 1 }); // QR Code diperbesar resolusinya
       } catch (e) { 
         console.error(e); 
       }
@@ -318,14 +319,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         return `
           <div class="label-box">
             <table class="header-table"><tr>
-              <td style="width: 25%; vertical-align: middle; padding: 4px 6px;">${renderHeaderLogoHtmlLabel()}</td>
-              <td style="width: 58%; text-align:center; font-size:7px; line-height: 1.2; vertical-align: middle; padding: 4px 6px;">
-                <strong style="font-size:10px;">WELLEN PRINT</strong><br>
+              <td style="width: 26%; vertical-align: middle; padding: 4px 6px;">${renderHeaderLogoHtmlLabel()}</td>
+              <td style="width: 54%; text-align:center; font-size:9px; line-height: 1.3; vertical-align: middle; padding: 4px 6px;">
+                <strong style="font-size:12px;">WELLEN PRINT</strong><br>
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
-              <td style="width: 17%; text-align:center; vertical-align: middle; padding: 4px 6px;">
-                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:38px; height:38px; display:block; margin:auto;">` : ''}
-                <div style="font-size: 7.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
+              <td style="width: 20%; text-align:center; vertical-align: middle; padding: 4px 6px;">
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:65px; height:65px; display:block; margin:auto;">` : ''}
+                <div style="font-size: 8.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
               </td>
             </tr></table>
             
@@ -551,7 +552,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
       
-      /* Surat Jalan diatur LANDSCAPE persis ukuran 21.0cm x 13.5cm */
       .sj-page { width: 210mm; height: 135mm; padding: 6mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
