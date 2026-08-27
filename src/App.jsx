@@ -1,710 +1,777 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
 import * as XLSX from 'xlsx';
-import KawanLamaTab from './components/KawanLamaTab';
-import LabelGeneratorTab from './components/LabelGeneratorTab';
-import MainTrackingTable from './components/MainTrackingTable';
-import FinishingPanel from './components/FinishingPanel';
-import DesignPanel from './components/DesignPanel';
-import PackingPanel from './components/PackingPanel';
-import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
-import CustomModulesIndex from './custom-modules/Index';
+import QRCode from 'qrcode';
+import { supabase } from '../supabaseClient';
 
-const STAFF_QC_LIST = [
-  "Budi (QC Paking)", "Siti (QC Paking)", "Agus (QC Checker)",
-  "Dewi (QC Checker)", "Eko (QC Deliver)", "Rian (QC Deliver)"
-];
+export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
+  const [labelData, setLabelData] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
+  const [sjFormatType, setSjFormatType] = useState('modern');
 
-// Daftar 4 User Staf Paking Resmi
-const PACKING_USERS = [
-  { id: 'paking_1', name: 'Staf Paking 1 (Budi)', pin: '1111' },
-  { id: 'paking_2', name: 'Staf Paking 2 (Siti)', pin: '2222' },
-  { id: 'paking_3', name: 'Staf Paking 3 (Joko)', pin: '3333' },
-  { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
-];
-
-function CircularGaugeCard({ title, percent, color, detailText }) {
-  const strokeDasharray = 2 * Math.PI * 36;
-  const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
-  return (
-    <div className="bg-white p-5 rounded-3xl border border-stone-200/80 flex flex-col items-center shadow-sm hover:shadow-md transition-all hover:scale-[1.02] dark:bg-neutral-800/80 dark:border-neutral-700">
-      <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:opacity-70 mb-3">{title}</h4>
-      <div className="relative w-36 h-36 flex items-center justify-center">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="7" className="text-stone-100 dark:text-neutral-700 fill-none" />
-          <circle cx="40" cy="40" r="36" stroke={color} strokeWidth="7" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="fill-none transition-all duration-700 ease-out" />
-        </svg>
-        <div className="absolute flex flex-col items-center justify-center text-center">
-          <span className="text-2xl font-black text-stone-800 dark:text-neutral-100">{percent}%</span>
-          <span className="text-[9px] font-bold text-stone-400 uppercase">Progress</span>
-        </div>
-      </div>
-      <p className="text-xs font-bold mt-3 text-stone-600 dark:opacity-80">{detailText}</p>
-    </div>
-  );
-}
-
-export default function App() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const isBranchMode = searchParams.get('mode') === 'cabang';
-  const scanParam = searchParams.get('scan'); 
-
-  const [spkList, setSpkList] = useState([]);
-  
-  const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
-    const s = localStorage.getItem('kl_special_admin_session');
-    return s ? JSON.parse(s) : null;
-  });
-
-  const [activeTab, setActiveTab] = useState(
-    scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
-  );
-  
-  const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
-  const [selectedSpkIds, setSelectedSpkIds] = useState([]);
-  const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
-  
-  const [showScanModal, setShowScanModal] = useState(false);
-  const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
-  const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
-  const [scannedInput, setScannedInput] = useState('');
-  const [lastScanMessage, setLastScanMessage] = useState('');
-  const [selectedSpkId, setSelectedSpkId] = useState('');
-  const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
-  const [isImporting, setIsImporting] = useState(false);
-
-  const [currentAdmin, setCurrentAdmin] = useState(() => { 
-    const s = localStorage.getItem('kl_admin_session'); 
-    return s ? JSON.parse(s) : null; 
-  });
-  
-  const [currentBranch, setCurrentBranch] = useState(() => { 
-    const s = localStorage.getItem('kl_branch_session'); 
-    return s ? JSON.parse(s) : null; 
-  });
-
-  const [packingStaffSession, setPackingStaffSession] = useState(() => {
-    const s = localStorage.getItem('packing_staff_session');
-    return s ? JSON.parse(s) : null;
-  });
-  const [selectedPackingUser, setSelectedPackingUser] = useState(PACKING_USERS[0].id);
-  const [packingPin, setPackingPin] = useState('');
-
-  const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
-  const [klAdminUser, setKlAdminUser] = useState('');
-  const [klAdminPass, setKlAdminPass] = useState('');
-
-  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
-  const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-  useEffect(() => {
-    if (scanParam) {
-      setActiveTab('paking');
-      setSearchTerm(scanParam); 
+  const generateNumericTrackingId = (spk, address) => {
+    const rawKey = `${spk}_${address}`;
+    let hash = 0;
+    for (let i = 0; i < rawKey.length; i++) {
+      hash = (hash << 5) - hash + rawKey.charCodeAt(i);
+      hash |= 0;
     }
-  }, [scanParam]);
-
-  useEffect(() => { 
-    if (isBranchMode && !currentBranch) {
-      setShowBranchLoginModal(true); 
-    }
-  }, [isBranchMode, currentBranch]);
-
-  useEffect(() => { 
-    fetchSpkData(); 
-
-    const channel = supabase
-      .channel('spk_data_realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'spk_data' },
-        () => {
-          fetchSpkData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const openImageModal = (url, title) => { if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview' }); };
-  const closeImageModal = () => setModalImageModalInfo({ isOpen: false, url: '', title: '' });
-  const toggleTheme = () => setIsDarkMode(prev => { localStorage.setItem('theme', !prev ? 'dark' : 'light'); return !prev; });
-
-  const fetchSpkData = async () => {
-    const { data } = await supabase
-      .from('spk_data')
-      .select('*')
-      .order('id', { ascending: false });
-
-    if (data) { 
-      setSpkList(data); 
-      if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]); 
-    }
-  };
-
-  const initFinishingForm = (item) => {
-    if (!item) return; 
-    setSelectedSpkId(item.id);
-    setFinishingForm({ 
-      finishing_type: item.finishing_type || 'inhouse', 
-      sub_vendor_name: item.sub_vendor_name || '', 
-      qty_finish_sub_out: item.qty_finish_sub_out || 0, 
-      qty_finish: item.qty_finish || 0 
-    });
-  };
-
-  const handleSelectSpk = (spkId) => {
-    setSelectedSpkId(spkId); 
-    const item = spkList.find(s => String(s.id) === String(spkId));
-    if (item) {
-      setFinishingForm({ 
-        finishing_type: item.finishing_type || 'inhouse', 
-        sub_vendor_name: item.sub_vendor_name || '', 
-        qty_finish_sub_out: item.qty_finish_sub_out || 0, 
-        qty_finish: item.qty_finish || 0 
-      });
-    }
-  };
-
-  const handleToggleCheck = (id) => {
-    setSelectedSpkIds(prev => { 
-      const exist = prev.includes(id); 
-      if (!exist) handleSelectSpk(id); 
-      return exist ? prev.filter(item => item !== id) : [...prev, id]; 
-    });
-  };
-
-  const handleToggleSelectAll = (filteredItems) => {
-    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
-      setSelectedSpkIds([]);
-    } else { 
-      setSelectedSpkIds(filteredItems.map(item => item.id)); 
-      if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); 
-    }
-  };
-
-  const handleUpdateField = async (id, payload) => {
-    const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
-    if (!error) {
-      setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
-    } else {
-      alert('Gagal memperbarui data: ' + error.message);
-    }
-  };
-
-  const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
-    const val = Number(value) || 0;
-    if (maxAllowed && val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
-    handleUpdateField(id, { [field]: val });
-  };
-
-  const handleDeleteSpk = async (id, noSpk) => {
-    if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
-      const { error } = await supabase.from('spk_data').delete().eq('id', id);
-      if (!error) {
-        setSpkList(prev => prev.filter(item => item.id !== id));
-        setSelectedSpkIds(prev => prev.filter(selectedId => selectedId !== id));
-        alert(`✅ SPK "${noSpk}" berhasil dihapus.`);
-      } else {
-        alert('Gagal menghapus SPK: ' + error.message);
-      }
-    }
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
-    if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
-      const { error } = await supabase.from('spk_data').delete().in('id', selectedSpkIds);
-      if (!error) {
-        setSpkList(prev => prev.filter(item => !selectedSpkIds.includes(item.id)));
-        setSelectedSpkIds([]);
-        alert('✅ Semua SPK terpilih berhasil dibersihkan.');
-      } else {
-        alert('Gagal hapus massal: ' + error.message);
-      }
-    }
-  };
-
-  const handleProcessScan = async (codeValue) => {
-    if (!codeValue) return;
-    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim().toLowerCase();
-    const targetItem = spkList.find(item => 
-      (item.qr_address || '').toLowerCase().includes(cleanCode) || 
-      (item.store_code || '').toLowerCase() === cleanCode || 
-      (item.no_spk || '').toLowerCase().includes(cleanCode) || 
-      (item.project || '').toLowerCase().includes(cleanCode)
-    );
-    if (!targetItem) { 
-      setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); 
-      setScannedInput(''); 
-      return; 
-    }
+    const positiveHash = Math.abs(hash);
+    const randomSuffix = String(positiveHash % 9000 + 1000);
     
-    const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
-    let updatePayload = { tes_scan: updaterValue };
-    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
-    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
-    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
-    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
-
-    await handleUpdateField(targetItem.id, updatePayload);
-    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); 
-    setScannedInput('');
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    return `${yy}${mm}${dd}-${randomSuffix}`;
   };
 
-  const handleSubmitInput = (e) => { e.preventDefault(); handleProcessScan(scannedInput); };
-
-  const handleBatchPrint = async () => {
-    const items = spkList.filter(item => selectedSpkIds.includes(item.id));
-    if (items.length === 0) return alert('⚠️ Centang minimal 1 SPK!');
-    const html = items.map(item => `<div style="page-break-after:always; padding:20px; font-family:Arial; border:2px solid #000;"><h2>STORE: ${item.project}</h2><p>SPK: ${item.no_spk}</p></div>`).join('');
-    const pw = window.open('', '_blank', 'width=800,height=800'); 
-    pw.document.write(`<html><body>${html}</body></html>`); 
-    pw.document.close(); 
-    setTimeout(() => pw.print(), 500);
+  const handleUploadHeaderLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const base64Logo = evt.target.result;
+      setHeaderLogoUrl(base64Logo);
+      localStorage.setItem('wellen_header_logo', base64Logo);
+      alert('✅ Logo Header KOP berhasil diunggah!');
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleUploadSuratJalan = async (e, item) => {
+  const handleResetHeaderLogo = () => {
+    if (confirm('Hapus logo header custom?')) {
+      setHeaderLogoUrl('');
+      localStorage.removeItem('wellen_header_logo');
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateSampleData = [
+      {
+        NO_SPK: "SPK-0826-03388", PO_NUMBER: "4500122101", NO_SJ: "SJ-0826-01920", CLIENT: "PT ASPIRASI HIDUP INDONESIA TBK",
+        PROJECT: "ATARU GRAND WISATA", NO_WPP: "WPP 0826-301349", BRAND: "ATARU", RECIPIENT_NAME: "ADAM RIAN", RECIPIENT_PHONE: "0812.4161.2709",
+        DELIVERY_ADDRESS: "STORE ATARU GRAND WISATA",
+        ITEM_DESCRIPTION: "BALON ORANGE ATARU", MEDIA: "BALON", UKURAN: "1.00 x 1.00", QTY_TOTAL: 150, QTY_PER_KOLI: 50,
+        DATE_PRODUCTION: "27-Aug-2026", SENDER: "WELLEN PRINT", SENDER_TELP: "021-5506999"
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateSampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template_WellenPrint");
+    XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
+  };
+
+  const parseExcelDate = (val) => {
+    if (!val) return '-';
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    if (!isNaN(val) && (typeof val === 'number' || String(val).match(/^\d{5}$/))) {
+      const serial = Number(val);
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const jsDate = new Date(excelEpoch.getTime() + serial * 86400000);
+      const day = String(jsDate.getUTCDate()).padStart(2, '0');
+      const month = monthNames[jsDate.getUTCMonth()];
+      const year = jsDate.getUTCFullYear();
+      return `${day}-${month}-${year}`;
+    }
+
+    return String(val).trim();
+  };
+
+  const handleExcelImport = (e) => {
     const file = e.target.files[0]; 
     if (!file) return;
-    const fileName = `sj_${item.no_spk}_${Date.now()}`;
-    const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
-    if (!error) {
-      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      handleUpdateField(item.id, { surat_jalan_url: data.publicUrl });
-      alert('Surat Jalan Diunggah!');
-    }
-  };
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        
+        if (!rawData || rawData.length === 0) {
+          return alert('❌ File Excel kosong atau tidak terbaca!');
+        }
 
-  const processImportData = async (rawRows) => {
-    const formattedData = rawRows
-      .filter(row => row && row.length > 7) 
-      .map((row, index) => {
-        const colF = row[5] ? String(row[5]).trim() : ''; 
-        const colG = row[6] ? String(row[6]).trim() : ''; 
-        const colH = row[7] ? String(row[7]).trim() : ''; 
+        const cleanedData = rawData.map((row) => {
+          const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
+          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 50;
+          const rawDate = row.DATE_PRODUCTION || row['Date Production'] || row['Tgl Produksi'] || row.date_production;
+          const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
+          const spkVal = String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim();
+          
+          return {
+            NO_SPK: spkVal,
+            PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || '').trim(),
+            NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}`).trim(),
+            CLIENT: String(row.CLIENT || row.Client || row.COMPANY || '').trim(),
+            PROJECT: String(row.PROJECT || row['Project Name'] || row.project || '').trim(),
+            NO_WPP: String(row.NO_WPP || row['No WPP'] || row.no_wpp || '').trim(),
+            BRAND: String(row.BRAND || row.Brand || row['FILE NAME'] || '').trim(),
+            RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row['Nama Penerima'] || '').trim(),
+            RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || '').trim(),
+            DELIVERY_ADDRESS: deliveryAddress,
+            ITEM_DESCRIPTION: String(row.ITEM_DESCRIPTION || row['Item Description'] || '').trim(),
+            MEDIA: String(row.MEDIA || row.Media || '').trim(),
+            UKURAN: String(row.UKURAN || row.Ukuran || '').trim(),
+            QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
+            QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 50,
+            DATE_PRODUCTION: parseExcelDate(rawDate),
+            SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
+            SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
+            VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim(),
+            VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim(),
+            TRACKING_ID: generateNumericTrackingId(spkVal, deliveryAddress)
+          };
+        }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
 
-        if (!colF && !colG && !colH) return null;
-
-        return {
-          no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
-          client: colF || '-',
-          project: colG || '-',
-          bahan: null,       
-          ukuran: null,      
-          qty_order: null,   
-          qty_print: 0, 
-          qty_finish: 0, 
-          qty_pack: 0, 
-          qty_ship: 0,
-          store_code: colH || '-',
-          delivery_route: '-'
-        };
-      })
-      .filter(item => item !== null);
-
-    if (formattedData.length > 0) {
-      const { error } = await supabase.from('spk_data').insert(formattedData);
-      if (error) {
-        alert("❌ Error saat menyimpan ke database: " + error.message);
-      } else {
-        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
-        await fetchSpkData();
+        setLabelData(cleanedData); 
+        setSelectedRows(cleanedData.map((_, i) => i));
+        alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
+      } catch (err) { 
+        alert('Gagal membaca file Excel: ' + err.message); 
       }
-    } else {
-      alert("⚠️ Tidak ada data ditemukan pada Kolom F, G, H mulai baris ke-5.");
-    }
+    };
+    reader.readAsArrayBuffer(file); 
+    e.target.value = '';
   };
 
-  const handleExcelUpload = (e) => {
+  const handleUpdateKoliRow = (index, newKoliVal) => {
+    const val = Math.max(1, Number(newKoliVal) || 1);
+    setLabelData(prev => prev.map((item, idx) => idx === index ? { ...item, QTY_PER_KOLI: val } : item));
+  };
+
+  const handleBatchUploadGlobal = async (e, field) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    if (labelData.length === 0) {
+      return alert('⚠️ Harap import data Excel terlebih dahulu sebelum melakukan upload gambar massal!');
+    }
+
+    const newLabelData = [...labelData];
+    let successCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      if (i >= newLabelData.length) break;
+      const file = files[i];
+      
+      const readFileAsDataURL = (fileObj) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (evt) => resolve(evt.target.result);
+          reader.readAsDataURL(fileObj);
+        });
+      };
+
+      const base64Url = await readFileAsDataURL(file);
+      const fileNameFull = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const cleanFileName = fileNameFull.toLowerCase().trim();
+
+      let targetIndex = newLabelData.findIndex(item => {
+        const spk = (item.NO_SPK || '').toLowerCase().trim();
+        const brand = (item.BRAND || '').toLowerCase().trim();
+        return (spk && (cleanFileName.includes(spk) || spk.includes(cleanFileName))) || (brand && (cleanFileName.includes(brand) || brand.includes(cleanFileName)));
+      });
+
+      if (targetIndex === -1) {
+        targetIndex = i;
+      }
+
+      if (targetIndex < newLabelData.length) {
+        newLabelData[targetIndex][field] = base64Url;
+        successCount++;
+      }
+    }
+
+    setLabelData(newLabelData);
+    alert(`✅ Sukses! ${successCount} gambar berhasil diunggah dan dipetakan ke tabel.`);
+    e.target.value = '';
+  };
+
+  const handleImageUploadRow = (e, index, field = 'VISUAL_IMAGE') => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const wb = XLSX.read(evt.target.result, { type: 'binary' });
-      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
-      await processImportData(rawData);
+    reader.onload = (evt) => {
+      const base64Url = evt.target.result;
+      setLabelData(prev => prev.map((item, i) => (i === index ? { ...item, [field]: base64Url } : item)));
     };
-    reader.readAsBinaryString(file); e.target.value = '';
+    reader.readAsDataURL(file);
   };
 
-  const handleGoogleSheetImport = async () => {
-    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
-    if (!sheetUrl) return;
-
-    setIsImporting(true);
-    try {
-      let csvUrl = sheetUrl.trim();
-      if (csvUrl.includes('/edit')) {
-        csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
-      }
-      if (!csvUrl.includes('format=csv')) {
-        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'format=csv';
-      }
-
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        throw new Error(`Gagal mengambil data (Status: ${response.status}). Pastikan link Google Sheets sudah publik.`);
-      }
-      
-      const csvText = await response.text();
-      const workbook = XLSX.read(csvText, { type: 'string' });
-      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { range: 4, header: 1 });
-      
-      await processImportData(rawData);
-    } catch (err) {
-      alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
-    } finally {
-      setIsImporting(false);
-    }
+  const renderHeaderLogoHtmlLabel = () => {
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:110px; max-width:180px; object-fit:contain; display:block; margin:auto;">`;
+    return `<div style="font-weight:900; font-size:26px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:14px; letter-spacing:5px;">PRINT</span></div>`;
   };
 
-  const handlePackingLoginSubmit = (e) => {
-    e.preventDefault();
-    const foundUser = PACKING_USERS.find(u => u.id === selectedPackingUser);
-    if (foundUser && foundUser.pin === packingPin.trim()) {
-      const sessionData = { username: foundUser.name, loginTime: new Date().toISOString() };
-      localStorage.setItem('packing_staff_session', JSON.stringify(sessionData));
-      setPackingStaffSession(sessionData);
-      alert(`✅ Selamat datang, ${foundUser.name}!`);
-    } else {
-      alert('❌ PIN Staf Paking salah! (Gunakan PIN sesuai akun masing-masing: 1111, 2222, 3333, atau 4444)');
-    }
-  };
-
-  const handleKawanLamaAdminLogin = (e) => {
-    e.preventDefault();
-    if (klAdminUser.trim() === 'admin_kl' && klAdminPass.trim() === 'kawanlama2026') {
-      const sessionData = { username: 'Admin Kawan Lama', loginTime: new Date().toISOString() };
-      localStorage.setItem('kl_special_admin_session', JSON.stringify(sessionData));
-      setCurrentKawanLamaAdmin(sessionData);
-      setShowKawanLamaAdminModal(false);
-      setActiveTab('label');
-      alert('✅ Berhasil Login sebagai Admin Kawan Lama!');
-    } else {
-      alert('❌ Username atau Password Admin Kawan Lama salah!');
-    }
-  };
-
-  const getPercent = (qty, total) => (!total || total <= 0) ? 0 : Math.min(100, Math.round((qty / total) * 100));
-  const getStatusBadge = (p) => p >= 100 ? { text: 'text-green-800 bg-green-100', icon: '🟢' } : p > 0 ? { text: 'text-yellow-800 bg-yellow-100', icon: '🟡' } : { text: 'text-red-800 bg-red-100', icon: '🔴' };
-
-  const totalSpk = spkList.length;
-  const displayedList = spkList.filter(item => 
-    (item.no_spk || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-    (item.project || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const isAuthenticated = scanParam 
-    ? (packingStaffSession || currentAdmin || currentKawanLamaAdmin) 
-    : isBranchMode 
-      ? currentBranch 
-      : (currentAdmin || currentKawanLamaAdmin);
-
-  if (!isAuthenticated && scanParam) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
-        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-          <div className="text-5xl">📦</div>
-          <div>
-            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Login Staf Paking</h1>
-            <p className="text-xs opacity-60 mt-1">Pilih nama Anda dan masukkan PIN untuk verifikasi paking.</p>
-          </div>
-          
-          <form onSubmit={handlePackingLoginSubmit} className="space-y-4 text-left">
-            <div>
-              <label className="text-xs font-bold block mb-1">Pilih Staf Paking:</label>
-              <select 
-                value={selectedPackingUser} 
-                onChange={(e) => setSelectedPackingUser(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 cursor-pointer font-bold"
-              >
-                {PACKING_USERS.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold block mb-1">PIN Keamanan:</label>
-              <input 
-                type="password" 
-                value={packingPin} 
-                onChange={(e) => setPackingPin(e.target.value)} 
-                placeholder="Masukkan 4 digit PIN" 
-                maxLength={4}
-                required 
-                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 tracking-widest text-center font-bold text-lg" 
-              />
-            </div>
-            <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-              🚀 MASUK KE PANEL PAKING
-            </button>
-          </form>
+  const renderHeaderLogoHtmlSJ = () => {
+    if (headerLogoUrl) {
+      return `<div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+        <img src="${headerLogoUrl}" style="height:140px; max-width:380px; object-fit:contain; display:block;">
+        <div style="font-size:10px; font-weight:bold; color:#111; line-height:1.25; margin-top:2px;">
+          Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
+          Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
         </div>
+      </div>`;
+    }
+    return `<div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+      <div style="font-weight:900; font-size:38px; line-height:1; color:#000;">WELLEN<br><span style="font-size:16px; letter-spacing:4px;">PRINT</span></div>
+      <div style="font-size:10px; font-weight:bold; color:#222; line-height:1.25; margin-top:2px;">
+        Jl. Raya Pasar Minggu No. 49 RT.002 RW.007 Duren Tiga, Jakarta Selatan<br>
+        Telp: 021-5506999 &nbsp;|&nbsp; Email: order@wellenprint.com
       </div>
-    );
-  }
+    </div>`;
+  };
 
-  if (!isAuthenticated) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
-        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-          <div className="text-5xl">🔐</div>
-          <div>
-            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Web-Track Monitoring</h1>
-            <p className="text-xs opacity-60 mt-1">Sistem Terpadu Manajemen SPK & Kawan Lama</p>
-          </div>
-          
-          <div className="space-y-3 pt-2">
-            {isBranchMode ? (
-              <button onClick={() => setShowBranchLoginModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                🏢 LOGIN CABANG KAWAN LAMA
-              </button>
-            ) : (
-              <>
-                <button onClick={() => setShowAdminLoginModal(true)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                  🔑 LOGIN ADMIN PUSAT
-                </button>
-                <button onClick={() => setShowKawanLamaAdminModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                  🏢 LOGIN ADMIN KAWAN LAMA (3 Tab)
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+  const openPrintWindow = (htmlContent) => {
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const printWin = window.open(url, '_blank');
+    if (!printWin) {
+      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
+    }
+  };
 
-        {showKawanLamaAdminModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-              <h3 className="text-sm font-black uppercase text-emerald-600">Login Admin Kawan Lama</h3>
-              <p className="text-[11px] opacity-70">Akses khusus: Cetak Label & SJ, Project Kawan Lama, dan Customer & Label Custom.</p>
+  const groupSelectedRows = () => {
+    const itemsToProcess = selectedRows.length > 0 
+      ? labelData.filter((_, idx) => selectedRows.includes(idx))
+      : labelData;
+
+    const groupedMap = {};
+
+    itemsToProcess.forEach(item => {
+      const groupKey = `${item.NO_SPK || 'SPK'}_${item.DELIVERY_ADDRESS || 'ADDRESS'}`;
+      if (!groupedMap[groupKey]) {
+        groupedMap[groupKey] = {
+          ...item,
+          TRACKING_ID: item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS),
+          itemsList: [],
+          totalCombinedQty: 0
+        };
+      }
+      groupedMap[groupKey].itemsList.push(item);
+      groupedMap[groupKey].totalCombinedQty += Number(item.QTY_TOTAL || 0);
+
+      if (!groupedMap[groupKey].VISUAL_IMAGE && item.VISUAL_IMAGE) {
+        groupedMap[groupKey].VISUAL_IMAGE = item.VISUAL_IMAGE;
+      }
+      if (!groupedMap[groupKey].VISUAL_IMAGE_2 && item.VISUAL_IMAGE_2) {
+        groupedMap[groupKey].VISUAL_IMAGE_2 = item.VISUAL_IMAGE_2;
+      }
+    });
+
+    const firstAvailableImage = labelData.find(d => d.VISUAL_IMAGE)?.VISUAL_IMAGE || '';
+    const firstAvailableImage2 = labelData.find(d => d.VISUAL_IMAGE_2)?.VISUAL_IMAGE_2 || '';
+
+    Object.values(groupedMap).forEach(group => {
+      if (!group.VISUAL_IMAGE) group.VISUAL_IMAGE = firstAvailableImage;
+      if (!group.VISUAL_IMAGE_2) group.VISUAL_IMAGE_2 = firstAvailableImage2;
+    });
+
+    return Object.values(groupedMap);
+  };
+
+  const syncToPackingDatabase = async (groupedItems) => {
+    for (const item of groupedItems) {
+      const payload = {
+        tracking_id: item.TRACKING_ID,
+        no_spk: item.NO_SPK,
+        client_pt: item.CLIENT || '-',
+        promo_title: item.PROJECT || '-',
+        store_name: item.DELIVERY_ADDRESS || 'Store Utama',
+        recipient_name: item.RECIPIENT_NAME || '-',
+        total_qty: item.totalCombinedQty,
+        status_qc_label: 'PENDING',
+        status_qc_packing: 'PENDING',
+        status_qc_checker: 'PENDING',
+        status_deliver: 'PENDING',
+        updated_at: new Date().toISOString()
+      };
+      await supabase.from('packing_tracking').upsert(payload, { onConflict: 'tracking_id' });
+    }
+  };
+
+  const handlePrintLabels = async () => {
+    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    const groupedItems = groupSelectedRows();
+    await syncToPackingDatabase(groupedItems);
+    
+    let allLabelBoxes = [];
+    for (const group of groupedItems) {
+      const trackingCode = group.TRACKING_ID;
+      const qrText = `https://web-track-phi-gilt.vercel.app/?scan=${trackingCode}`;
+
+      let qrDataUrl = ''; 
+      try { 
+        qrDataUrl = await QRCode.toDataURL(qrText, { width: 150, margin: 1 }); 
+      } catch (e) { 
+        console.error(e); 
+      }
+
+      const totalQty = Number(group.totalCombinedQty || 0);
+      const qtyPerKoli = Number(group.QTY_PER_KOLI || 50) > 0 ? Number(group.QTY_PER_KOLI || 50) : 50;
+      const totalKoliCalculated = Math.max(1, Math.ceil(totalQty / qtyPerKoli));
+
+      for (let koliNum = 1; koliNum <= totalKoliCalculated; koliNum++) {
+        let currentKoliQty = qtyPerKoli;
+        if (koliNum === totalKoliCalculated) {
+          const remainder = totalQty % qtyPerKoli;
+          if (remainder > 0) currentKoliQty = remainder;
+        }
+
+        allLabelBoxes.push({
+          ...group,
+          currentKoli: koliNum,
+          totalKoli: totalKoliCalculated,
+          currentQty: currentKoliQty,
+          qrDataUrl: qrDataUrl,
+          displayTrackingId: trackingCode
+        });
+      }
+    }
+
+    const pagePairs = [];
+    for (let i = 0; i < allLabelBoxes.length; i += 2) {
+      pagePairs.push(allLabelBoxes.slice(i, i + 2));
+    }
+
+    const pagesHtml = await Promise.all(pagePairs.map(async (pair) => {
+      const labelsHtml = await Promise.all(pair.map(async (item) => {
+        const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
+        const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
+        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
+
+        const itemsHtml = item.itemsList.map(it => 
+          `• ${it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
+        ).join('<br>');
+
+        return `
+          <div class="label-box">
+            <table class="header-table"><tr>
+              <td style="width: 26%; vertical-align: middle; padding: 4px 6px;">${renderHeaderLogoHtmlLabel()}</td>
+              <td style="width: 54%; text-align:center; font-size:9px; line-height: 1.3; vertical-align: middle; padding: 4px 6px;">
+                <strong style="font-size:12px;">WELLEN PRINT</strong><br>
+                Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
+              </td>
+              <td style="width: 20%; text-align:center; vertical-align: middle; padding: 4px 6px;">
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:65px; height:65px; display:block; margin:auto;">` : ''}
+                <div style="font-size: 8.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
+              </td>
+            </tr></table>
+            
+            <div class="content-grid">
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">SENDER</td><td class="sep-col">:</td><td class="val-col"><strong>${item.SENDER || 'WELLEN PRINT'}</strong></td></tr>
+                  <tr><td class="label-col">NO. TELP</td><td class="sep-col">:</td><td class="val-col">${item.SENDER_TELP || '021-5506999'}</td></tr>
+                </table>
+              </div>
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">CLIENT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.CLIENT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Delivery Address</td><td class="sep-col">:</td><td class="val-col">${item.DELIVERY_ADDRESS || '-'}</td></tr>
+                  <tr><td class="label-col">Recipient Name</td><td class="sep-col">:</td><td class="val-col"><strong>${item.RECIPIENT_NAME || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Recipient Phone</td><td class="sep-col">:</td><td class="val-col">${item.RECIPIENT_PHONE || '-'}</td></tr>
+                </table>
+              </div>
+              <div class="grid-box">
+                <table class="align-table">
+                  <tr><td class="label-col">PROJECT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.PROJECT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">PO NUMBER</td><td class="sep-col">:</td><td class="val-col">${item.PO_NUMBER || '-'}</td></tr>
+                  <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col">${item.NO_WPP || '-'}</td></tr>
+                  <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col">${item.NO_SPK || '-'}</td></tr>
+                  <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col">${itemsHtml}</td></tr>
+                  <tr><td class="label-col">QTY KOLI INI</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11px; color:#2563EB;">${item.currentQty} PCS (Koli ${item.currentKoli}/${item.totalKoli})</strong></td></tr>
+                  <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col">${item.DATE_PRODUCTION || '-'}</td></tr>
+                </table>
+              </div>
               
-              <form onSubmit={handleKawanLamaAdminLogin} className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold block mb-1">Username:</label>
-                  <input type="text" value={klAdminUser} onChange={(e) => setKlAdminUser(e.target.value)} placeholder="admin_kl" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+              <div class="grid-box visual-box">
+                <div class="visual-title">VISUAL IMAGE :</div>
+                <div class="koli-title">${item.currentKoli} OF ${item.totalKoli}</div>
+                <div class="visual-img-container">
+                  ${img1}
+                  ${img2}
+                  ${noImg}
                 </div>
-                <div>
-                  <label className="text-xs font-bold block mb-1">Password:</label>
-                  <input type="password" value={klAdminPass} onChange={(e) => setKlAdminPass(e.target.value)} placeholder="kawanlama2026" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setShowKawanLamaAdminModal(false)} className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-stone-300 dark:bg-neutral-700">Batal</button>
-                  <button type="submit" className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white">Masuk</button>
-                </div>
-              </form>
+              </div>
             </div>
           </div>
-        )}
+        `;
+      }));
 
-        <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
-        <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
+      return `<div class="label-page">${labelsHtml.join('<div class="cut-guide"></div>')}</div>`;
+    }));
+
+    const fullHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Label - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
+      .control-group { display: flex; align-items: center; gap: 8px; }
+      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+      .action-bar button:hover { background: #4338CA; }
+      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
+      .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
+      .label-box { border: 2px solid #000; width: 100%; height: 131mm; max-height: 131mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .cut-guide { width: 100%; border-top: 1px dashed #444; margin: 0.5mm 0; }
+      .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
+      .header-table td { border: none; vertical-align: middle; } 
+      .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 6px; font-size: 9.5px; line-height: 1.25; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; } 
+      .grid-box:nth-child(2n) { border-right: none; } 
+      .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
+      .align-table { width: 100%; border-collapse: collapse; }
+      .align-table td { border: none; padding: 1px 0; vertical-align: middle; font-size: 9px; }
+      .label-col { width: 38%; font-weight: bold; }
+      .sep-col { width: 4%; text-align: center; }
+      .val-col { width: 58%; }
+      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 4px !important; } 
+      .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
+      .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
+      .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
+      .preview-img { max-width: 95%; max-height: 105px; object-fit: contain; display: block; } 
+      @media print { 
+        body { background: #fff; margin: 0; padding: 0; }
+        .action-bar { display: none; }
+        .page-wrapper { margin-top: 0; gap: 0; }
+        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; page-break-after: always; break-after: page; page-break-inside: avoid; overflow: hidden; } 
+        @page { size: A4 portrait; margin: 0mm; }
+      }
+    </style></head><body>
+      <div class="action-bar">
+        <span><b>🖨️ Pengaturan Printer Office & Cetak Label</b></span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
+          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
+        </div>
       </div>
-    );
-  }
+      <div class="page-wrapper">${pagesHtml}</div>
+    </body></html>`;
+
+    openPrintWindow(fullHtml);
+  };
+
+  const handlePrintSuratJalan = async () => {
+    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    const groupedItems = groupSelectedRows();
+    await syncToPackingDatabase(groupedItems);
+
+    const pagesHtml = groupedItems.map((group) => {
+      let grandTotal = 0;
+      const rowsHtml = group.itemsList.map((it, idx) => {
+        const qty = Number(it.QTY_TOTAL || 0);
+        grandTotal += qty;
+        return sjFormatType === 'modern' ? `
+          <tr>
+            <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
+            <td style="width: 38%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'}</td>
+            <td style="width: 34%; font-size: 11.5px; font-weight: bold;">${it.MEDIA || '-'}<br><span style="font-size: 11px;">Ukuran: ${it.UKURAN || '-'}</span></td>
+            <td style="text-align: right; padding-right: 10px; width: 20%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
+          </tr>
+        ` : `
+          <tr>
+            <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
+            <td style="width: 55%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
+            <td style="text-align: center; width: 22%; font-size: 11.5px; font-weight: bold;">${it.UKURAN || '-'}</td>
+            <td style="text-align: right; padding-right: 10px; width: 15%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+
+      if (sjFormatType === 'modern') {
+        return `
+          <div class="sj-page">
+            <div class="sj-top-header">
+              <div class="logo-sec">${renderHeaderLogoHtmlSJ()}</div>
+              <div style="text-align: right;">
+                <div class="sj-title">SURAT JALAN</div>
+                <div style="font-size: 11px; font-weight: bold; margin-top: 1px;">Tracking ID: ${group.TRACKING_ID}</div>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-box left-box">
+                <div class="info-line font-bold" style="font-size: 11px;">Kepada Yth :</div>
+                <div class="info-line font-bold" style="font-size: 12px;">${group.CLIENT || '-'}</div>
+                <div class="info-line" style="font-size: 11px; line-height: 1.25; font-weight: bold;">${group.DELIVERY_ADDRESS || '-'}</div>
+                <div class="info-line" style="font-size: 11px; font-weight: bold;">UP : ${group.RECIPIENT_NAME || '-'} ${group.RECIPIENT_PHONE || ''}</div>
+              </div>
+              <div class="right-box-container">
+                <table class="meta-table">
+                  <tr><td class="font-bold">NO PO</td><td class="font-bold">: ${group.PO_NUMBER || '-'}</td></tr>
+                  <tr><td class="font-bold">BRAND</td><td class="font-bold">: ${group.BRAND || '-'}</td></tr>
+                  <tr><td class="font-bold">NO SJ</td><td class="font-bold">: ${group.NO_SJ || '-'}</td></tr>
+                </table>
+                <div class="date-box">
+                  <div class="date-header">TANGGAL</div>
+                  <div class="date-value">${group.DATE_PRODUCTION || '-'}</div>
+                </div>
+              </div>
+            </div>
+            <table class="item-grid-table">
+              <thead>
+                <tr><th>NO</th><th>NAMA ITEM / PRODUK</th><th>MEDIA & UKURAN</th><th>QTY</th></tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              <tfoot>
+                <tr><td colspan="3" class="text-center font-bold" style="font-size: 12px;">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 10px; font-size: 13px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
+              </tfoot>
+            </table>
+            <div class="signature-section">
+              <div class="signature-top-line"></div>
+              <div class="signature-content-row">
+                <div class="sig-info-col">
+                  <div>Tgl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.DATE_PRODUCTION || '-'}</div>
+                  <div>Nama File &nbsp;&nbsp;: ${group.BRAND || '-'}</div>
+                  <div>Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
+                  <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
+                </div>
+                <div class="sig-box font-bold">DIBUAT OLEH<br><br><span style="font-size:12px; font-weight:bold;">Nining</span></div>
+                <div class="sig-box font-bold">DIKIRIM OLEH</div>
+                <div class="sig-box font-bold">DITERIMA OLEH</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="sj-page classic-page">
+            <div class="sj-top-classic">
+              <div class="logo-sec-cl">${renderHeaderLogoHtmlSJ()}</div>
+              <div class="sj-title-cl">
+                <div style="font-size: 20px; font-weight: bold;">SURAT JALAN</div>
+                <div style="font-size: 13px; font-weight: bold; margin-top: 1px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
+                <div style="font-size: 10.5px; font-weight: bold; margin-top: 1px;">Tracking ID: ${group.TRACKING_ID}</div>
+                <div style="font-size: 11px; margin-top: 3px; text-align: left; line-height: 1.25; font-weight: bold;">
+                  Kepada Yth, :<br>
+                  <strong>${group.CLIENT || '-'}</strong><br>
+                  ${group.DELIVERY_ADDRESS || '-'} - UP: ${group.RECIPIENT_NAME || '-'} (${group.RECIPIENT_PHONE || ''})
+                </div>
+              </div>
+            </div>
+            
+            <table class="item-grid-table classic-table">
+              <thead>
+                <tr><th style="width: 8%;">No.</th><th>Nama Barang</th><th style="width: 22%;">Ukuran</th><th style="width: 15%;">Qty</th></tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+                <tr style="height: 30px;"><td colspan="4"></td></tr>
+              </tbody>
+              <tfoot>
+                <tr><td colspan="3" style="text-align: right; font-weight: bold; padding-right: 10px; font-size: 12px;">TOTAL</td><td style="text-align: right; padding-right: 10px; font-weight: bold; font-size: 13px;">${grandTotal.toLocaleString()}</td></tr>
+              </tfoot>
+            </table>
+
+            <div class="signature-section">
+              <div class="signature-top-line"></div>
+              <div class="signature-content-row">
+                <div class="footer-left font-bold" style="font-size: 10.5px; width: 35%;">
+                  <div>Tgl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.DATE_PRODUCTION || '-'}</div>
+                  <div>Nama File &nbsp;&nbsp;: ${group.BRAND || '-'}</div>
+                  <div>Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
+                  <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
+                </div>
+                <div class="sig-col font-bold">DIBUAT OLEH<br><br><span style="font-size:12px; font-weight:bold;">Nining</span></div>
+                <div class="sig-col font-bold">DIKIRIM OLEH</div>
+                <div class="sig-col font-bold">DITERIMA OLEH</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }).join('');
+
+    const fullSjHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Surat Jalan - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; color: #000; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
+      .control-group { display: flex; align-items: center; gap: 8px; }
+      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+      .action-bar button:hover { background: #4338CA; }
+      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+      
+      .sj-page { width: 210mm; height: 140mm; padding: 5mm 7mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
+      
+      .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
+      .sj-top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; } 
+      .sj-title { font-size: 22px; font-weight: bold; text-align: right; } 
+      .info-row { display: flex; gap: 10px; margin-bottom: 4px; } 
+      .info-box { border: 1.5px solid #000; padding: 5px 8px; font-size: 11px; line-height: 1.3; } 
+      .left-box { flex: 1; height: 68px; } .right-box-container { width: 44%; display: flex; flex-direction: column; gap: 3px; } 
+      .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } 
+      .meta-table td { padding: 2px 5px; border: none; } 
+      .date-box { border: 1.5px solid #000; height: 35px; display: flex; flex-direction: column; text-align: center; font-size: 11px; } 
+      .date-header { border-bottom: 1.5px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; font-size: 10px; } 
+      .date-value { padding-top: 3px; font-weight: bold; font-size: 12px; } 
+      .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 6px; } 
+      .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 5px 7px; } 
+      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 11px; font-weight: bold; } 
+      .item-grid-table tfoot td { background: #f8f8f8; font-size: 12px; } 
+      
+      .signature-section { border: 1.5px solid #000; border-top: none; margin-top: auto; }
+      .signature-top-line { width: 100%; border-top: 2px solid #000; }
+      .signature-content-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; padding: 6px; } 
+      .sig-box { flex: 1; border-right: 1.5px solid #000; padding-top: 14px; padding-bottom: 6px; font-size: 11px; } 
+      .sig-box:last-child { border-right: none; }
+      .sig-info-col { flex: 1.2; border-right: 1.5px solid #000; text-align: left; padding: 2px 6px; font-size: 10.5px; line-height: 1.3; }
+
+      .classic-page { padding: 5mm 7mm !important; }
+      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 5px; }
+      .logo-sec-cl { width: 45%; }
+      .sj-title-cl { width: 52%; border: 1.5px solid #000; padding: 5px; font-size: 11px; }
+      .classic-table th, .classic-table td { border: 1px solid #000; padding: 5px 7px; font-size: 11px; }
+      
+      .footer-left { padding: 2px 6px; border-right: 1.5px solid #000; line-height: 1.3; font-size: 10.5px; text-align: left; }
+      .footer-right { display: flex; flex: 2; }
+      .sig-col { flex: 1; border-right: 1.5px solid #000; text-align: center; padding: 3px; display: flex; flex-direction: column; justify-content: space-between; height: 44px; font-size: 10.5px; font-weight: bold; }
+      .sig-col:last-child { border-right: none; }
+
+      @media print { 
+        body { background: #fff; margin: 0; padding: 0; }
+        .action-bar { display: none; }
+        .page-wrapper { margin-top: 0; gap: 0; }
+        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 140mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
+        @page { size: 210mm 140mm landscape; margin: 0mm; }
+      }
+    </style></head><body>
+      <div class="action-bar">
+        <span><b>🖨️ Surat Jalan (Clean Layout & No Blank Page)</b></span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
+          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
+        </div>
+      </div>
+      <div class="page-wrapper">${pagesHtml}</div>
+    </body></html>`;
+
+    openPrintWindow(fullSjHtml);
+  };
 
   return (
-    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
-          <div>
-            <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
-              {scanParam ? '📦 PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? '🏢 PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
-            </h1>
-            <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
-            </p>
+    <div className="space-y-4">
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-20 h-14 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
+            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold opacity-50 text-center">No Logo</span>}
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
-              {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
-            </button>
-            {scanParam && (
-              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Staf Paking
-              </button>
-            )}
-            {isBranchMode && (
-              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
-                🔒 Logout Cabang
-              </button>
-            )}
-            {currentKawanLamaAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Admin Kawan Lama
-              </button>
-            )}
-            {currentAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Admin
-              </button>
-            )}
-            
-            {!isBranchMode && !scanParam && !currentKawanLamaAdmin && (
-              <>
-                <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
-                  📷 Scan QC Station
-                </button>
-                <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">
-                  📁 Upload SPK Excel
-                  <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
-                </label>
-                <button 
-                  onClick={handleGoogleSheetImport} 
-                  disabled={isImporting}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
-                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
-                  } text-white cursor-pointer`}
-                >
-                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
-                </button>
-              </>
-            )}
+          <div>
+            <h4 className="font-bold text-xs">🖼️ Logo Header KOP (Label & Surat Jalan)</h4>
+            <p className="text-[11px] opacity-70">{headerLogoUrl ? '✅ Logo KOP aktif (Tersimpan)' : '⚠️ Menggunakan teks default "WELLEN PRINT"'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-purple-600 hover:bg-purple-500 transition-all active:scale-95">
+            🖼️ Upload Logo KOP Wellen <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          </label>
+          {headerLogoUrl && <button onClick={handleResetHeaderLogo} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">Reset</button>}
+        </div>
+      </div>
+
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${isDarkMode ? 'bg-[#6B8E85] hover:bg-[#57756D]' : 'bg-[#6B8E85] hover:bg-[#57756D]'}`}>
+            📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
+          </label>
+          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#D97706] hover:bg-amber-600 text-white shadow-sm transition-all">📥 Download Template Excel</button>
+          
+          <div className="flex items-center gap-1.5 ml-1 bg-neutral-900 p-1.5 rounded-xl border border-neutral-700 text-white">
+            <span className="text-[11px] font-bold px-1 opacity-70">Format SJ:</span>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Klasik</button>
           </div>
         </div>
 
-        {/* JIKA DIAKSES VIA SCAN QR */}
-        {scanParam ? (
-          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
-        ) : (
-          <>
-            {isBranchMode ? (
-              <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
-            ) : (
-              currentKawanLamaAdmin ? (
-                <div className="space-y-4">
-                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    {[
-                      { id: 'label', label: '🏷️ Cetak Label & SJ' },
-                      { id: 'kawan_lama', label: '🏢 Project Kawan Lama' },
-                      { id: 'custom_modules', label: '👥 Customer & Label Custom' }
-                    ].map(t => (
-                      <button 
-                        key={t.id} 
-                        onClick={() => setActiveTab(t.id)} 
-                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm cursor-pointer ${
-                          activeTab === t.id 
-                            ? 'bg-emerald-600 text-white shadow-md' 
-                            : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-teal-600 hover:bg-teal-500 transition-all flex items-center gap-1.5">
+            🖼️ Upload Massal Gbr 1 (Kiri) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
+          </label>
+          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-cyan-600 hover:bg-cyan-500 transition-all flex items-center gap-1.5">
+            🖼️ Upload Massal Gbr 2 (Kanan) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
+          </label>
+          {labelData.length > 0 && <button onClick={() => { if(confirm('Bersihkan data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">🧹 Bersihkan</button>}
+        </div>
 
-                  {activeTab === 'label' && <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />}
-                  {activeTab === 'kawan_lama' && <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentKawanLamaAdmin} isBranchMode={false} />}
-                  {activeTab === 'custom_modules' && <CustomModulesIndex isDarkMode={isDarkMode} />}
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
-                      const isLocked = t === 'kawan_lama' && !currentAdmin;
-
-                      return (
-                        <button 
-                          key={t} 
-                          onClick={() => !isLocked && setActiveTab(t)} 
-                          disabled={isLocked}
-                          title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
-                          className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
-                            ${isLocked 
-                              ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
-                              : activeTab === t 
-                                ? 'bg-indigo-600 text-white shadow-md' 
-                                : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
-                            }`}
-                        >
-                          {t === 'label' 
-                            ? '🏷️ Cetak Label & SJ' 
-                            : t === 'kawan_lama' 
-                              ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
-                              : t === 'design'
-                                ? '🎨 Desain & Pra-Cetak'
-                                : t === 'custom_modules'
-                                  ? '👥 Customer & Label Custom'
-                                  : t}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {activeTab === 'dashboard' && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
-                      <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
-                      <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
-                      <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
-                    </div>
-                  )}
-
-                  {activeTab === 'design' && (
-                    <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-                  )}
-
-                  {activeTab === 'finishing' && (
-                    <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
-                  )}
-
-                  {activeTab === 'paking' && (
-                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
-                  )}
-
-                  {activeTab === 'kawan_lama' && (
-                    <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={false} />
-                  )}
-                  
-                  {activeTab === 'label' && (
-                    <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-                  )}
-
-                  {activeTab === 'custom_modules' && (
-                    <CustomModulesIndex isDarkMode={isDarkMode} />
-                  )}
-
-                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
-                    <MainTrackingTable 
-                      isDarkMode={isDarkMode}
-                      activeTab={activeTab}
-                      spkList={spkList}
-                      displayedList={displayedList}
-                      selectedSpkIds={selectedSpkIds}
-                      handleToggleCheck={handleToggleCheck}
-                      handleToggleSelectAll={handleToggleSelectAll}
-                      handleUpdateQty={handleUpdateQty}
-                      handleUpdateField={handleUpdateField}
-                      handleDeleteSpk={handleDeleteSpk}
-                      handleBatchDelete={handleBatchDelete}
-                      handleBatchPrint={handleBatchPrint}
-                      openImageModal={openImageModal}
-                      handleUploadSuratJalan={handleUploadSuratJalan}
-                      getPercent={getPercent}
-                      getStatusBadge={getStatusBadge}
-                      STAFF_QC_LIST={STAFF_QC_LIST}
-                      searchTerm={searchTerm}
-                      setSearchTerm={setSearchTerm}
-                    />
-                  )}
-                </>
-              )
-            )}
-          </>
-        )}
-
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrintSuratJalan} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#0D9488] hover:bg-teal-600 text-white cursor-pointer active:scale-95">
+            📄 Cetak Surat Jalan
+          </button>
+          <button onClick={handlePrintLabels} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#4F46E5] hover:bg-indigo-500 text-white cursor-pointer active:scale-95">
+            🏷️ Cetak Label Koli
+          </button>
+        </div>
       </div>
 
-      <ScanQCModal isOpen={showScanModal} onClose={() => setShowScanModal(false)} isDarkMode={isDarkMode} scanTargetColumn={scanTargetColumn} setScanTargetColumn={setScanTargetColumn} scannedInput={scannedInput} setScannedInput={setScannedInput} handleSubmitInput={handleSubmitInput} lastScanMessage={lastScanMessage} />
-      <ImagePreviewModal isOpen={modalImageInfo.isOpen} onClose={closeImageModal} modalImageInfo={modalImageInfo} />
-      <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
-      <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
+      <div className={`overflow-x-auto rounded-2xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2]'}`}>
+        <table className="w-full text-left text-xs">
+          <thead className={`font-bold border-b ${isDarkMode ? 'bg-neutral-800 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
+            <tr>
+              <th className="p-3 text-center w-10"><input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600" /></th>
+              <th className="p-3">No SPK / Tracking ID</th>
+              <th className="p-3">Client & Brand</th>
+              <th className="p-3">Penerima & Alamat</th>
+              <th className="p-3">Deskripsi / Media / Ukuran</th>
+              <th className="p-3">Total Qty</th>
+              <th className="p-3">Isi/Koli (Edit)</th>
+              <th className="p-3">Visual Image (1 & 2)</th>
+            </tr>
+          </thead>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+            {labelData.length === 0 ? (
+              <tr><td colSpan="8" className="p-6 text-center opacity-60">Tabel kosong. Silakan klik tombol <strong>"Download Template Excel"</strong> di atas.</td></tr>
+            ) : (
+              labelData.map((row, idx) => {
+                const total = Number(row.QTY_TOTAL || 0); 
+                const koli = Number(row.QTY_PER_KOLI || 50); 
+                const totalKoliCalc = Math.max(1, Math.ceil(total / koli));
+                const isChecked = selectedRows.includes(idx);
+
+                return (
+                  <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
+                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
+                    <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-mono text-[10px] text-emerald-500 font-bold">ID: {row.TRACKING_ID}</span></td>
+                    <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
+                    <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
+                    <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'} )</span></td>
+                    <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-1.5">
+                        <input 
+                          type="number" 
+                          value={row.QTY_PER_KOLI || 50} 
+                          onChange={(e) => handleUpdateKoliRow(idx, e.target.value)} 
+                          className="w-16 px-2 py-1 rounded border text-xs font-bold text-center bg-white dark:bg-neutral-900 dark:border-neutral-700" 
+                        />
+                        <span className="text-[10px] opacity-70">Pcs (<strong>{totalKoliCalc} Koli</strong>)</span>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold opacity-70">Gbr 1:</span>
+                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
+                          </label>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
