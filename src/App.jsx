@@ -39,11 +39,20 @@ function CircularGaugeCard({ title, percent, color, detailText }) {
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
-  const scanParam = searchParams.get('scan'); // Tangkap parameter scan dari QR Code
+  const scanParam = searchParams.get('scan'); 
 
   const [spkList, setSpkList] = useState([]);
-  // Jika ada parameter scan, langsung buka tab paking. Jika tidak, ikuti normal (dashboard)
-  const [activeTab, setActiveTab] = useState(isBranchMode ? 'kawan_lama' : (scanParam ? 'paking' : 'dashboard'));
+  
+  // Sesi Admin Kawan Lama Khusus
+  const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
+    const s = localStorage.getItem('kl_special_admin_session');
+    return s ? JSON.parse(s) : null;
+  });
+
+  const [activeTab, setActiveTab] = useState(
+    scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
+  );
+  
   const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
@@ -67,6 +76,19 @@ export default function App() {
     return s ? JSON.parse(s) : null; 
   });
 
+  const [packingStaffSession, setPackingStaffSession] = useState(() => {
+    const s = localStorage.getItem('packing_staff_session');
+    return s ? JSON.parse(s) : null;
+  });
+  const [showPackingLoginModal, setShowPackingLoginModal] = useState(false);
+  const [packingUsername, setPackingUsername] = useState('');
+  const [packingPassword, setPackingPassword] = useState('');
+
+  // Modal Login Khusus Admin Kawan Lama (Pusat Kawan Lama)
+  const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
+  const [klAdminUser, setKlAdminUser] = useState('');
+  const [klAdminPass, setKlAdminPass] = useState('');
+
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
@@ -83,6 +105,12 @@ export default function App() {
       setShowBranchLoginModal(true); 
     }
   }, [isBranchMode, currentBranch]);
+
+  useEffect(() => {
+    if (scanParam && !packingStaffSession && !currentAdmin && !currentKawanLamaAdmin) {
+      setShowPackingLoginModal(true);
+    }
+  }, [scanParam, packingStaffSession, currentAdmin, currentKawanLamaAdmin]);
 
   useEffect(() => { 
     fetchSpkData(); 
@@ -130,208 +158,30 @@ export default function App() {
     });
   };
 
-  const handleSelectSpk = (spkId) => {
-    setSelectedSpkId(spkId); 
-    const item = spkList.find(s => String(s.id) === String(spkId));
-    if (item) {
-      setFinishingForm({ 
-        finishing_type: item.finishing_type || 'inhouse', 
-        sub_vendor_name: item.sub_vendor_name || '', 
-        qty_finish_sub_out: item.qty_finish_sub_out || 0, 
-        qty_finish: item.qty_finish || 0 
-      });
-    }
-  };
-
-  const handleToggleCheck = (id) => {
-    setSelectedSpkIds(prev => { 
-      const exist = prev.includes(id); 
-      if (!exist) handleSelectSpk(id); 
-      return exist ? prev.filter(item => item !== id) : [...prev, id]; 
-    });
-  };
-
-  const handleToggleSelectAll = (filteredItems) => {
-    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
-      setSelectedSpkIds([]);
-    } else { 
-      setSelectedSpkIds(filteredItems.map(item => item.id)); 
-      if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); 
-    }
-  };
-
-  const handleUpdateField = async (id, payload) => {
-    const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
-    if (!error) {
-      setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+  const handlePackingLoginSubmit = (e) => {
+    e.preventDefault();
+    if (packingUsername.trim() && packingPassword.trim()) {
+      const sessionData = { username: packingUsername.trim(), loginTime: new Date().toISOString() };
+      localStorage.setItem('packing_staff_session', JSON.stringify(sessionData));
+      setPackingStaffSession(sessionData);
+      setShowPackingLoginModal(false);
+      alert('✅ Berhasil Login Staf Paking!');
     } else {
-      alert('Gagal memperbarui data: ' + error.message);
+      alert('⚠️ Masukkan nama staf dan password dengan benar!');
     }
   };
 
-  const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
-    const val = Number(value) || 0;
-    if (maxAllowed && val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
-    handleUpdateField(id, { [field]: val });
-  };
-
-  const handleDeleteSpk = async (id, noSpk) => {
-    if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
-      const { error } = await supabase.from('spk_data').delete().eq('id', id);
-      if (!error) {
-        setSpkList(prev => prev.filter(item => item.id !== id));
-        setSelectedSpkIds(prev => prev.filter(selectedId => selectedId !== id));
-        alert(`✅ SPK "${noSpk}" berhasil dihapus.`);
-      } else {
-        alert('Gagal menghapus SPK: ' + error.message);
-      }
-    }
-  };
-
-  const handleBatchDelete = async () => {
-    if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
-    if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
-      const { error } = await supabase.from('spk_data').delete().in('id', selectedSpkIds);
-      if (!error) {
-        setSpkList(prev => prev.filter(item => !selectedSpkIds.includes(item.id)));
-        setSelectedSpkIds([]);
-        alert('✅ Semua SPK terpilih berhasil dibersihkan.');
-      } else {
-        alert('Gagal hapus massal: ' + error.message);
-      }
-    }
-  };
-
-  const handleProcessScan = async (codeValue) => {
-    if (!codeValue) return;
-    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim().toLowerCase();
-    const targetItem = spkList.find(item => 
-      (item.qr_address || '').toLowerCase().includes(cleanCode) || 
-      (item.store_code || '').toLowerCase() === cleanCode || 
-      (item.no_spk || '').toLowerCase().includes(cleanCode) || 
-      (item.project || '').toLowerCase().includes(cleanCode)
-    );
-    if (!targetItem) { 
-      setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); 
-      setScannedInput(''); 
-      return; 
-    }
-    
-    const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
-    let updatePayload = { tes_scan: updaterValue };
-    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
-    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
-    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
-    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
-
-    await handleUpdateField(targetItem.id, updatePayload);
-    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); 
-    setScannedInput('');
-  };
-
-  const handleSubmitInput = (e) => { e.preventDefault(); handleProcessScan(scannedInput); };
-
-  const handleBatchPrint = async () => {
-    const items = spkList.filter(item => selectedSpkIds.includes(item.id));
-    if (items.length === 0) return alert('⚠️ Centang minimal 1 SPK!');
-    const html = items.map(item => `<div style="page-break-after:always; padding:20px; font-family:Arial; border:2px solid #000;"><h2>STORE: ${item.project}</h2><p>SPK: ${item.no_spk}</p></div>`).join('');
-    const pw = window.open('', '_blank', 'width=800,height=800'); 
-    pw.document.write(`<html><body>${html}</body></html>`); 
-    pw.document.close(); 
-    setTimeout(() => pw.print(), 500);
-  };
-
-  const handleUploadSuratJalan = async (e, item) => {
-    const file = e.target.files[0]; 
-    if (!file) return;
-    const fileName = `sj_${item.no_spk}_${Date.now()}`;
-    const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
-    if (!error) {
-      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      handleUpdateField(item.id, { surat_jalan_url: data.publicUrl });
-      alert('Surat Jalan Diunggah!');
-    }
-  };
-
-  const processImportData = async (rawRows) => {
-    const formattedData = rawRows
-      .filter(row => row && row.length > 7) 
-      .map((row, index) => {
-        const colF = row[5] ? String(row[5]).trim() : ''; 
-        const colG = row[6] ? String(row[6]).trim() : ''; 
-        const colH = row[7] ? String(row[7]).trim() : ''; 
-
-        if (!colF && !colG && !colH) return null;
-
-        return {
-          no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
-          client: colF || '-',
-          project: colG || '-',
-          bahan: null,       
-          ukuran: null,      
-          qty_order: null,   
-          qty_print: 0, 
-          qty_finish: 0, 
-          qty_pack: 0, 
-          qty_ship: 0,
-          store_code: colH || '-',
-          delivery_route: '-'
-        };
-      })
-      .filter(item => item !== null);
-
-    if (formattedData.length > 0) {
-      const { error } = await supabase.from('spk_data').insert(formattedData);
-      if (error) {
-        alert("❌ Error saat menyimpan ke database: " + error.message);
-      } else {
-        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
-        await fetchSpkData();
-      }
+  const handleKawanLamaAdminLogin = (e) => {
+    e.preventDefault();
+    if (klAdminUser.trim() === 'admin_kl' && klAdminPass.trim() === 'kawanlama2026') {
+      const sessionData = { username: 'Admin Kawan Lama', loginTime: new Date().toISOString() };
+      localStorage.setItem('kl_special_admin_session', JSON.stringify(sessionData));
+      setCurrentKawanLamaAdmin(sessionData);
+      setShowKawanLamaAdminModal(false);
+      setActiveTab('label');
+      alert('✅ Berhasil Login sebagai Admin Kawan Lama!');
     } else {
-      alert("⚠️ Tidak ada data ditemukan pada Kolom F, G, H mulai baris ke-5.");
-    }
-  };
-
-  const handleExcelUpload = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const wb = XLSX.read(evt.target.result, { type: 'binary' });
-      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
-      await processImportData(rawData);
-    };
-    reader.readAsBinaryString(file); e.target.value = '';
-  };
-
-  const handleGoogleSheetImport = async () => {
-    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
-    if (!sheetUrl) return;
-
-    setIsImporting(true);
-    try {
-      let csvUrl = sheetUrl.trim();
-      if (csvUrl.includes('/edit')) {
-        csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
-      }
-      if (!csvUrl.includes('format=csv')) {
-        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'format=csv';
-      }
-
-      const response = await fetch(csvUrl);
-      if (!response.ok) {
-        throw new Error(`Gagal mengambil data (Status: ${response.status}). Pastikan link Google Sheets sudah publik.`);
-      }
-      
-      const csvText = await response.text();
-      const workbook = XLSX.read(csvText, { type: 'string' });
-      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { range: 4, header: 1 });
-      
-      await processImportData(rawData);
-    } catch (err) {
-      alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
-    } finally {
-      setIsImporting(false);
+      alert('❌ Username atau Password Admin Kawan Lama salah! (Gunakan: admin_kl / kawanlama2026)');
     }
   };
 
@@ -346,7 +196,40 @@ export default function App() {
     (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isAuthenticated = scanParam ? true : (currentAdmin || (isBranchMode ? currentBranch : false));
+  // LOGIKA AUTENTIKASI AMAN & TERPISAH
+  const isAuthenticated = scanParam 
+    ? (packingStaffSession || currentAdmin || currentKawanLamaAdmin) 
+    : isBranchMode 
+      ? currentBranch 
+      : (currentAdmin || currentKawanLamaAdmin);
+
+  if (!isAuthenticated && scanParam) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
+        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+          <div className="text-5xl">📦</div>
+          <div>
+            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Login Staf Paking</h1>
+            <p className="text-xs opacity-60 mt-1">Scan QR Code Terdeteksi. Harap login untuk verifikasi paking.</p>
+          </div>
+          
+          <form onSubmit={handlePackingLoginSubmit} className="space-y-4 text-left">
+            <div>
+              <label className="text-xs font-bold block mb-1">Nama Staf / ID:</label>
+              <input type="text" value={packingUsername} onChange={(e) => setPackingUsername(e.target.value)} placeholder="Contoh: Budi Paking" required className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+            </div>
+            <div>
+              <label className="text-xs font-bold block mb-1">PIN / Password:</label>
+              <input type="password" value={packingPassword} onChange={(e) => setPackingPassword(e.target.value)} placeholder="Masukkan PIN" required className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+            </div>
+            <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+              🚀 MASUK KE PANEL PAKING
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -359,20 +242,56 @@ export default function App() {
           </div>
           
           <div className="space-y-3 pt-2">
-            <button 
-              onClick={() => setShowAdminLoginModal(true)}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95"
-            >
-              🔑 LOGIN ADMIN PUSAT
-            </button>
-            <button 
-              onClick={() => setShowBranchLoginModal(true)}
-              className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95"
-            >
-              🏢 LOGIN CABANG KAWAN LAMA
-            </button>
+            {isBranchMode ? (
+              <button 
+                onClick={() => setShowBranchLoginModal(true)}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                🏢 LOGIN CABANG KAWAN LAMA
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => setShowAdminLoginModal(true)}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  🔑 LOGIN ADMIN PUSAT
+                </button>
+                <button 
+                  onClick={() => setShowKawanLamaAdminModal(true)}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  🏢 LOGIN ADMIN KAWAN LAMA (3 Tab)
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Modal Login Admin Kawan Lama */}
+        {showKawanLamaAdminModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+              <h3 className="text-sm font-black uppercase text-emerald-600">Login Admin Kawan Lama</h3>
+              <p className="text-[11px] opacity-70">Akses khusus: Cetak Label & SJ, Project Kawan Lama, dan Customer & Label Custom.</p>
+              
+              <form onSubmit={handleKawanLamaAdminLogin} className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold block mb-1">Username:</label>
+                  <input type="text" value={klAdminUser} onChange={(e) => setKlAdminUser(e.target.value)} placeholder="admin_kl" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold block mb-1">Password:</label>
+                  <input type="password" value={klAdminPass} onChange={(e) => setKlAdminPass(e.target.value)} placeholder="kawanlama2026" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setShowKawanLamaAdminModal(false)} className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-stone-300 dark:bg-neutral-700">Batal</button>
+                  <button type="submit" className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white">Masuk</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <AdminLoginModal 
           isOpen={showAdminLoginModal} 
@@ -404,10 +323,10 @@ export default function App() {
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
           <div>
             <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
-              {scanParam ? '🔍 MODE SCAN TRACKING VERIFIKASI' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : 'WEB-TRACK MONITORING')}
+              {scanParam ? '📦 PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? '🏢 PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
             </h1>
             <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {scanParam ? `Menampilkan hasil pelacakan untuk Tracking ID: ${scanParam}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : `Admin Login: ${currentAdmin?.username || 'Aktif'}`)}
+              {scanParam ? `Staf Login: ${packingStaffSession?.username || 'Staf Paking'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -415,127 +334,154 @@ export default function App() {
               {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
             </button>
             {scanParam && (
-              <a href="https://web-track-phi-gilt.vercel.app/" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
-                🏠 Kembali ke Beranda
-              </a>
+              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
+                🔒 Logout Paking
+              </button>
             )}
-            {currentAdmin && <button onClick={() => {localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard');}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Admin</button>}
-            {currentBranch && <button onClick={() => {localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload();}} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">🔒 Logout Cabang</button>}
-            
-            {!isBranchMode && !scanParam && (
-              <>
-                <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95">
-                  📷 Scan QC Station
-                </button>
-                <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">
-                  📁 Upload SPK Excel
-                  <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
-                </label>
-                <button 
-                  onClick={handleGoogleSheetImport} 
-                  disabled={isImporting}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
-                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
-                  } text-white`}
-                >
-                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
-                </button>
-              </>
+            {isBranchMode && (
+              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
+                🔒 Logout Cabang
+              </button>
+            )}
+            {currentKawanLamaAdmin && (
+              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Admin Kawan Lama
+              </button>
             )}
           </div>
         </div>
 
-        {/* Tab Navigasi Normal */}
-        {!isBranchMode && (
-          <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
-              const isLocked = t === 'kawan_lama' && !currentAdmin;
-
-              return (
-                <button 
-                  key={t} 
-                  onClick={() => !isLocked && setActiveTab(t)} 
-                  disabled={isLocked}
-                  title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
-                  className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
-                    ${isLocked 
-                      ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
-                      : activeTab === t 
-                        ? 'bg-indigo-600 text-white shadow-md' 
-                        : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
-                    }`}
-                >
-                  {t === 'label' 
-                    ? '🏷️ Cetak Label & SJ' 
-                    : t === 'kawan_lama' 
-                      ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
-                      : t === 'design'
-                        ? '🎨 Desain & Pra-Cetak'
-                        : t === 'custom_modules'
-                          ? '👥 Customer & Label Custom'
-                          : t}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Render Tab yang Aktif dengan Benar */}
-        {!isBranchMode && activeTab === 'dashboard' && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
-            <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
-            <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
-            <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
-          </div>
-        )}
-
-        {!isBranchMode && activeTab === 'design' && (
-          <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-        )}
-
-        {!isBranchMode && activeTab === 'finishing' && (
-          <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
-        )}
-
-        {!isBranchMode && activeTab === 'paking' && (
+        {/* JIKA DIAKSES VIA SCAN QR */}
+        {scanParam ? (
           <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
-        )}
+        ) : (
+          <>
+            {/* JIKA MODE CABANG */}
+            {isBranchMode ? (
+              <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
+            ) : (
+              /* JIKA LOGIN SEBAGAI ADMIN KAWAN LAMA (Eksklusif 3 Tab) */
+              currentKawanLamaAdmin ? (
+                <div className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    {[
+                      { id: 'label', label: '🏷️ Cetak Label & SJ' },
+                      { id: 'kawan_lama', label: '🏢 Project Kawan Lama' },
+                      { id: 'custom_modules', label: '👥 Customer & Label Custom' }
+                    ].map(t => (
+                      <button 
+                        key={t.id} 
+                        onClick={() => setActiveTab(t.id)} 
+                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm cursor-pointer ${
+                          activeTab === t.id 
+                            ? 'bg-emerald-600 text-white shadow-md' 
+                            : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
 
-        {(isBranchMode || activeTab === 'kawan_lama') && (
-          <KawanLamaTab isDarkMode={isDarkMode} currentUser={isBranchMode ? currentBranch : currentAdmin} isBranchMode={isBranchMode} />
-        )}
-        
-        {!isBranchMode && activeTab === 'label' && (
-          <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-        )}
+                  {activeTab === 'label' && <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />}
+                  {activeTab === 'kawan_lama' && <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentKawanLamaAdmin} isBranchMode={false} />}
+                  {activeTab === 'custom_modules' && <CustomModulesIndex isDarkMode={isDarkMode} />}
+                </div>
+              ) : (
+                /* TAMPILAN NORMAL UNTUK ADMIN PUSAT */
+                <>
+                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
+                      const isLocked = t === 'kawan_lama' && !currentAdmin;
 
-        {!isBranchMode && activeTab === 'custom_modules' && (
-          <CustomModulesIndex isDarkMode={isDarkMode} />
-        )}
+                      return (
+                        <button 
+                          key={t} 
+                          onClick={() => !isLocked && setActiveTab(t)} 
+                          disabled={isLocked}
+                          title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
+                          className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
+                            ${isLocked 
+                              ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
+                              : activeTab === t 
+                                ? 'bg-indigo-600 text-white shadow-md' 
+                                : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
+                            }`}
+                        >
+                          {t === 'label' 
+                            ? '🏷️ Cetak Label & SJ' 
+                            : t === 'kawan_lama' 
+                              ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
+                              : t === 'design'
+                                ? '🎨 Desain & Pra-Cetak'
+                                : t === 'custom_modules'
+                                  ? '👥 Customer & Label Custom'
+                                  : t}
+                        </button>
+                      );
+                    })}
+                  </div>
 
-        {!isBranchMode && activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
-          <MainTrackingTable 
-            isDarkMode={isDarkMode}
-            activeTab={activeTab}
-            spkList={spkList}
-            displayedList={displayedList}
-            selectedSpkIds={selectedSpkIds}
-            handleToggleCheck={handleToggleCheck}
-            handleToggleSelectAll={handleToggleSelectAll}
-            handleUpdateQty={handleUpdateQty}
-            handleUpdateField={handleUpdateField}
-            handleDeleteSpk={handleDeleteSpk}
-            handleBatchDelete={handleBatchDelete}
-            handleBatchPrint={handleBatchPrint}
-            openImageModal={openImageModal}
-            handleUploadSuratJalan={handleUploadSuratJalan}
-            getPercent={getPercent}
-            getStatusBadge={getStatusBadge}
-            STAFF_QC_LIST={STAFF_QC_LIST}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-          />
+                  {activeTab === 'dashboard' && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
+                      <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
+                      <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
+                      <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
+                    </div>
+                  )}
+
+                  {activeTab === 'design' && (
+                    <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'finishing' && (
+                    <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
+                  )}
+
+                  {activeTab === 'paking' && (
+                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'kawan_lama' && (
+                    <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={false} />
+                  )}
+                  
+                  {activeTab === 'label' && (
+                    <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'custom_modules' && (
+                    <CustomModulesIndex isDarkMode={isDarkMode} />
+                  )}
+
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
+                    <MainTrackingTable 
+                      isDarkMode={isDarkMode}
+                      activeTab={activeTab}
+                      spkList={spkList}
+                      displayedList={displayedList}
+                      selectedSpkIds={selectedSpkIds}
+                      handleToggleCheck={handleToggleCheck}
+                      handleToggleSelectAll={handleToggleSelectAll}
+                      handleUpdateQty={handleUpdateQty}
+                      handleUpdateField={handleUpdateField}
+                      handleDeleteSpk={handleDeleteSpk}
+                      handleBatchDelete={handleBatchDelete}
+                      handleBatchPrint={handleBatchPrint}
+                      openImageModal={openImageModal}
+                      handleUploadSuratJalan={handleUploadSuratJalan}
+                      getPercent={getPercent}
+                      getStatusBadge={getStatusBadge}
+                      STAFF_QC_LIST={STAFF_QC_LIST}
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                    />
+                  )}
+                </>
+              )
+            )}
+          </>
         )}
 
       </div>
