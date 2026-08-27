@@ -195,9 +195,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     reader.readAsDataURL(file);
   };
 
+  // Logo KOP diperbesar ukurannya
   const renderHeaderLogoHtmlLabel = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:75px; max-width:140px; object-fit:contain; display:block; margin:auto;">`;
-    return `<div style="font-weight:900; font-size:18px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:10px; letter-spacing:3px;">PRINT</span></div>`;
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:95px; max-width:180px; object-fit:contain; display:block; margin:auto;">`;
+    return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:12px; letter-spacing:4px;">PRINT</span></div>`;
   };
 
   const renderHeaderLogoHtmlSJ = () => {
@@ -300,7 +301,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       });
     }
 
-    // Dibungkus per pasang (2 label per halaman A4)
     const pagePairs = [];
     for (let i = 0; i < allLabelBoxes.length; i += 2) {
       pagePairs.push(allLabelBoxes.slice(i, i + 2));
@@ -308,9 +308,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
     const pagesHtml = await Promise.all(pagePairs.map(async (pair) => {
       const labelsHtml = await Promise.all(pair.map(async (item) => {
+        // Gambar produk dibuat 2x lipat lebih besar
         const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
         const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
-        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>` : '';
+        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
 
         const itemsHtml = item.itemsList.map(it => 
           `• ${it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
@@ -325,7 +326,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
               <td style="width: 17%; text-align:center; vertical-align: middle; padding: 4px 6px;">
-                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:36px; height:36px; display:block; margin:auto;">` : ''}
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:38px; height:38px; display:block; margin:auto;">` : ''}
                 <div style="font-size: 7.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
               </td>
             </tr></table>
@@ -371,7 +372,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         `;
       }));
 
-      // Halaman A4 pas berisi 2 label dengan garis putus-putus di tengah
       return `<div class="label-page">${labelsHtml.join('<div class="cut-guide"></div>')}</div>`;
     }));
 
@@ -382,14 +382,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
       .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
       .action-bar button:hover { background: #4338CA; }
-      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+      .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
       
-      /* Ukuran persis A4 dan di-lock tingginya agar 1 halaman fix isi 2 label */
-      .label-page { width: 210mm; height: 297mm; padding: 8mm 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
+      /* Halaman A4 persis 297mm tanpa margin ekstra */
+      .label-page { width: 210mm; height: 297mm; padding: 0px 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
       
-      /* Tinggi persis 136mm per label agar 2 buah pas 272mm (pas di dalam 297mm A4) */
-      .label-box { border: 2px solid #000; width: 100%; height: 136mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
-      .cut-guide { width: 100%; border-top: 1.5px dashed #666; margin: 2mm 0; }
+      /* Kotak label dikunci tingginya tepat 135mm agar 2 buah pas 270mm + garis pembatas */
+      .label-box { border: 2px solid #000; width: 100%; height: 135mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .cut-guide { width: 100%; border-top: 1.5px dashed #444; margin: 2mm 0; }
       
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
@@ -405,15 +405,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 4px !important; } 
       .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
       .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
+      
+      /* Gambar produk dibuat 2x lipat lebih besar */
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
-      .preview-img { max-width: 48%; max-height: 65px; object-fit: contain; display: block; } 
+      .preview-img { max-width: 95%; max-height: 120px; object-fit: contain; display: block; } 
       
       @media print { 
-        body { background: #fff; }
+        body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
-        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; page-break-after: always; break-after: page; } 
-        @page { size: A4 portrait; margin: 0; }
+        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; padding: 0px 8mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
+        @page { size: A4 portrait; margin: 0mm; }
       }
     </style></head><body>
       <div class="action-bar">
