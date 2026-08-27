@@ -62,18 +62,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
-  // Konversi Nomor Serial Excel (seperti 46261) menjadi Format Tanggal Terbaca
   const parseExcelDate = (val) => {
     if (!val) return '-';
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-    // Jika nilai berupa angka serial Excel (misal: 46261)
     if (!isNaN(val) && (typeof val === 'number' || String(val).match(/^\d{5}$/))) {
       const serial = Number(val);
-      // Excel menghitung tanggal mulai 30 Desember 1899 (karena bug tahun kabisat 1900 di Excel)
       const excelEpoch = new Date(Date.UTC(1899, 11, 30));
       const jsDate = new Date(excelEpoch.getTime() + serial * 86400000);
-      
       const day = String(jsDate.getUTCDate()).padStart(2, '0');
       const month = monthNames[jsDate.getUTCMonth()];
       const year = jsDate.getUTCFullYear();
@@ -200,8 +196,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const renderHeaderLogoHtmlLabel = () => {
-    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:95px; max-width:160px; object-fit:contain; display:block; margin:auto;">`;
-    return `<div style="font-weight:900; font-size:20px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:11px; letter-spacing:4px;">PRINT</span></div>`;
+    if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:75px; max-width:140px; object-fit:contain; display:block; margin:auto;">`;
+    return `<div style="font-weight:900; font-size:18px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:10px; letter-spacing:3px;">PRINT</span></div>`;
   };
 
   const renderHeaderLogoHtmlSJ = () => {
@@ -304,6 +300,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       });
     }
 
+    // Dibungkus per pasang (2 label per halaman A4)
     const pagePairs = [];
     for (let i = 0; i < allLabelBoxes.length; i += 2) {
       pagePairs.push(allLabelBoxes.slice(i, i + 2));
@@ -313,7 +310,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       const labelsHtml = await Promise.all(pair.map(async (item) => {
         const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
         const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
-        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
+        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:10px; opacity:0.5;">[ No Image ]</div>` : '';
 
         const itemsHtml = item.itemsList.map(it => 
           `• ${it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
@@ -322,14 +319,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         return `
           <div class="label-box">
             <table class="header-table"><tr>
-              <td style="width: 25%; vertical-align: middle; padding: 6px 8px;">${renderHeaderLogoHtmlLabel()}</td>
-              <td style="width: 58%; text-align:center; font-size:7.5px; line-height: 1.3; vertical-align: middle; padding: 6px 8px;">
-                <strong style="font-size:11px;">WELLEN PRINT</strong><br>
+              <td style="width: 25%; vertical-align: middle; padding: 4px 6px;">${renderHeaderLogoHtmlLabel()}</td>
+              <td style="width: 58%; text-align:center; font-size:7px; line-height: 1.2; vertical-align: middle; padding: 4px 6px;">
+                <strong style="font-size:10px;">WELLEN PRINT</strong><br>
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
-              <td style="width: 17%; text-align:center; vertical-align: middle; padding: 6px 8px;">
-                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:40px; height:40px; display:block; margin:auto;">` : ''}
-                <div style="font-size: 8px; font-weight: bold; margin-top: 2px; letter-spacing: 0.5px;">${item.displayTrackingId}</div>
+              <td style="width: 17%; text-align:center; vertical-align: middle; padding: 4px 6px;">
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:36px; height:36px; display:block; margin:auto;">` : ''}
+                <div style="font-size: 7.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
               </td>
             </tr></table>
             
@@ -355,7 +352,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                   <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col">${item.NO_WPP || '-'}</td></tr>
                   <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col">${item.NO_SPK || '-'}</td></tr>
                   <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col">${itemsHtml}</td></tr>
-                  <tr><td class="label-col">TOTAL QTY</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11.5px;">${item.totalCombinedQty} PCS</strong></td></tr>
+                  <tr><td class="label-col">TOTAL QTY</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11px;">${item.totalCombinedQty} PCS</strong></td></tr>
                   <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col">${item.DATE_PRODUCTION || '-'}</td></tr>
                 </table>
               </div>
@@ -374,7 +371,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         `;
       }));
 
-      return labelsHtml.join('<div class="cut-guide"></div>');
+      // Halaman A4 pas berisi 2 label dengan garis putus-putus di tengah
+      return `<div class="label-page">${labelsHtml.join('<div class="cut-guide"></div>')}</div>`;
     }));
 
     const fullHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Label - Wellen Print</title><style>
@@ -385,30 +383,36 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-      .label-page { width: 210mm; height: 297mm; padding: 4mm 6mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; } 
-      .label-box { border: 2px solid #000; width: 100%; height: 133mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
-      .cut-guide { width: 100%; border-top: 1.5px dashed #000; margin: 1.5mm 0; }
+      
+      /* Ukuran persis A4 dan di-lock tingginya agar 1 halaman fix isi 2 label */
+      .label-page { width: 210mm; height: 297mm; padding: 8mm 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
+      
+      /* Tinggi persis 136mm per label agar 2 buah pas 272mm (pas di dalam 297mm A4) */
+      .label-box { border: 2px solid #000; width: 100%; height: 136mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .cut-guide { width: 100%; border-top: 1.5px dashed #666; margin: 2mm 0; }
+      
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
-      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 8px; font-size: 10px; line-height: 1.3; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; } 
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 6px; font-size: 9.5px; line-height: 1.25; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; } 
       .grid-box:nth-child(2n) { border-right: none; } 
       .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
       .align-table { width: 100%; border-collapse: collapse; }
-      .align-table td { border: none; padding: 1.5px 0; vertical-align: middle; font-size: 9.5px; }
+      .align-table td { border: none; padding: 1px 0; vertical-align: middle; font-size: 9px; }
       .label-col { width: 38%; font-weight: bold; }
       .sep-col { width: 4%; text-align: center; }
       .val-col { width: 58%; }
-      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 5px !important; } 
-      .visual-title { font-size: 10.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
-      .koli-title { font-size: 14px; font-weight: bold; margin: 1px 0; letter-spacing: 0.5px; } 
+      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 4px !important; } 
+      .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
+      .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
-      .preview-img { max-width: 48%; max-height: 75px; object-fit: contain; display: block; } 
+      .preview-img { max-width: 48%; max-height: 65px; object-fit: contain; display: block; } 
+      
       @media print { 
         body { background: #fff; }
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
-        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; } 
+        .label-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 297mm; page-break-after: always; break-after: page; } 
         @page { size: A4 portrait; margin: 0; }
       }
     </style></head><body>
