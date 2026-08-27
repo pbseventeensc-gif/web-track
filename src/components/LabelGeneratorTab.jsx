@@ -195,7 +195,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     reader.readAsDataURL(file);
   };
 
-  // Logo KOP diperbesar ukurannya
   const renderHeaderLogoHtmlLabel = () => {
     if (headerLogoUrl) return `<img src="${headerLogoUrl}" style="height:95px; max-width:180px; object-fit:contain; display:block; margin:auto;">`;
     return `<div style="font-weight:900; font-size:22px; line-height:1; color:#000; text-align:center;">WELLEN<br><span style="font-size:12px; letter-spacing:4px;">PRINT</span></div>`;
@@ -308,7 +307,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
     const pagesHtml = await Promise.all(pagePairs.map(async (pair) => {
       const labelsHtml = await Promise.all(pair.map(async (item) => {
-        // Gambar produk dibuat 2x lipat lebih besar
         const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
         const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
         const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
@@ -384,10 +382,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
       
-      /* Halaman A4 persis 297mm tanpa margin ekstra */
       .label-page { width: 210mm; height: 297mm; padding: 0px 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
-      
-      /* Kotak label dikunci tingginya tepat 135mm agar 2 buah pas 270mm + garis pembatas */
       .label-box { border: 2px solid #000; width: 100%; height: 135mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
       .cut-guide { width: 100%; border-top: 1.5px dashed #444; margin: 2mm 0; }
       
@@ -405,8 +400,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 4px !important; } 
       .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
       .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
-      
-      /* Gambar produk dibuat 2x lipat lebih besar */
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
       .preview-img { max-width: 95%; max-height: 120px; object-fit: contain; display: block; } 
       
@@ -452,15 +445,15 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <tr>
             <td style="text-align: center;">${idx + 1}</td>
             <td>${it.ITEM_DESCRIPTION || '-'}</td>
-            <td>${it.MEDIA || '-'}<br><span style="font-size:11px;">Ukuran: ${it.UKURAN || '-'}</span></td>
-            <td style="text-align: right; padding-right: 15px;">${qty.toLocaleString()}</td>
+            <td>${it.MEDIA || '-'}<br><span style="font-size:10px;">Ukuran: ${it.UKURAN || '-'}</span></td>
+            <td style="text-align: right; padding-right: 12px;">${qty.toLocaleString()}</td>
           </tr>
         ` : `
           <tr>
             <td style="text-align: center;">${idx + 1}</td>
             <td>${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
             <td style="text-align: center;">${it.UKURAN || '-'}</td>
-            <td style="text-align: right; padding-right: 15px;">${qty.toLocaleString()}</td>
+            <td style="text-align: right; padding-right: 12px;">${qty.toLocaleString()}</td>
           </tr>
         `;
       }).join('');
@@ -472,7 +465,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <div class="logo-sec">${renderHeaderLogoHtmlSJ()}</div>
               <div style="text-align: right;">
                 <div class="sj-title">TANDA TERIMA</div>
-                <div style="font-size: 11px; font-weight: bold; margin-top: 3px;">Tracking ID: ${group.TRACKING_ID}</div>
+                <div style="font-size: 10.5px; font-weight: bold; margin-top: 2px;">Tracking ID: ${group.TRACKING_ID}</div>
               </div>
             </div>
             <div class="info-row">
@@ -484,13 +477,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             </div>
             <table class="item-grid-table">
               <thead>
-                <tr><th style="width: 8%;">NO</th><th style="width: 35%;">NAMA ITEM / PRODUK</th><th style="width: 35%;">MEDIA & UKURAN</th><th style="width: 22%;">QTY</th></tr>
+                <tr><th style="width: 8%;">NO</th><th style="width: 38%;">NAMA ITEM / PRODUK</th><th style="width: 34%;">MEDIA & UKURAN</th><th style="width: 20%;">QTY</th></tr>
               </thead>
               <tbody>
                 ${rowsHtml}
               </tbody>
               <tfoot>
-                <tr><td colspan="3" class="text-center font-bold">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 15px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
+                <tr><td colspan="3" class="text-center font-bold">TOTAL KESELURUHAN</td><td style="text-align: right; padding-right: 12px;" class="font-bold">${grandTotal.toLocaleString()}</td></tr>
               </tfoot>
             </table>
             <div class="signature-row"><div class="sig-box">PENGIRIM</div><div class="sig-box">PENERIMA</div></div>
@@ -501,16 +494,16 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <div class="sj-page classic-page">
             <div class="sj-top-classic">
               <div class="logo-sec-cl">${renderHeaderLogoHtmlSJ()}
-                <div style="font-size:11px; margin-top:5px; line-height:1.2;">
+                <div style="font-size:10px; margin-top:3px; line-height:1.2;">
                   Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br>
                   Telp. 021 -5506999 &nbsp;&nbsp;&nbsp; Fax -
                 </div>
               </div>
               <div class="sj-title-cl">
-                <div style="font-size:24px; font-weight:bold;">SURAT JALAN</div>
-                <div style="font-size:15px; font-weight:bold; margin-top:2px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
-                <div style="font-size:11px; font-weight: bold; margin-top: 2px;">Tracking ID: ${group.TRACKING_ID}</div>
-                <div style="font-size:13px; margin-top:5px; text-align:left;">
+                <div style="font-size:22px; font-weight:bold;">SURAT JALAN</div>
+                <div style="font-size:14px; font-weight:bold; margin-top:2px;">${group.NO_SJ || 'SJ-0826-01920'}</div>
+                <div style="font-size:10.5px; font-weight: bold; margin-top: 2px;">Tracking ID: ${group.TRACKING_ID}</div>
+                <div style="font-size:12px; margin-top:4px; text-align:left;">
                   Kepada Yth, :<br>
                   <strong>${group.CLIENT || '-'}</strong><br>
                   ${group.DELIVERY_ADDRESS || '-'} - UP: ${group.RECIPIENT_NAME || '-'} (${group.RECIPIENT_PHONE || ''})
@@ -524,10 +517,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               </thead>
               <tbody>
                 ${rowsHtml}
-                <tr style="height: 120px;"><td colspan="4"></td></tr>
+                <tr style="height: 90px;"><td colspan="4"></td></tr>
               </tbody>
               <tfoot>
-                <tr><td colspan="3" style="text-align:right; font-weight:bold; padding-right:10px;">TOTAL</td><td style="text-align: right; padding-right: 15px; font-weight:bold;">${grandTotal.toLocaleString()}</td></tr>
+                <tr><td colspan="3" style="text-align:right; font-weight:bold; padding-right:10px;">TOTAL</td><td style="text-align: right; padding-right: 12px; font-weight:bold;">${grandTotal.toLocaleString()}</td></tr>
               </tfoot>
             </table>
 
@@ -535,7 +528,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <div class="footer-left">
                 <div>Tgl &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.DATE_PRODUCTION || '-'}</div>
                 <div>Nama File &nbsp;&nbsp;: ${group.BRAND || '-'}</div>
-                <div style="margin-top:15px;">Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
+                <div style="margin-top:10px;">Inv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.NO_WPP || '-'}</div>
                 <div>PO &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${group.PO_NUMBER || '-'}</div>
               </div>
               <div class="footer-right">
@@ -557,42 +550,45 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-      .sj-page { width: 210mm; height: 148mm; padding: 10mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 12px; } 
-      .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
-      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } 
-      .sj-title { font-size: 28px; font-weight: bold; text-align: right; } 
-      .info-row { display: flex; gap: 15px; margin-bottom: 8px; } 
-      .info-box { border: 1.5px solid #000; padding: 6px 10px; font-size: 12px; line-height: 1.4; } 
-      .left-box { flex: 1; height: 75px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 5px; } 
-      .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 12px; } 
-      .meta-table td { padding: 3px 6px; border: none; } 
-      .date-box { border: 1.5px solid #000; height: 38px; display: flex; flex-direction: column; text-align: center; font-size: 11px; } 
-      .date-header { border-bottom: 1.5px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } 
-      .date-value { padding-top: 3px; font-weight: bold; font-size: 12px; } 
-      .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 12px; margin-bottom: 10px; } 
-      .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 6px; } 
-      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 12px; } 
-      .item-grid-table tfoot td { background: #f8f8f8; font-size: 12.5px; } 
-      .signature-row { display: flex; justify-space-around; text-align: center; font-size: 12px; font-weight: bold; margin-top: 10px; } 
-      .sig-box { width: 200px; border-top: 1px solid transparent; padding-top: 35px; } 
       
-      .classic-page { padding: 8mm !important; }
-      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
+      /* Ukuran Surat Jalan disesuaikan persis 21cm x 13.5cm (Half Letter custom) */
+      .sj-page { width: 210mm; height: 135mm; padding: 6mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
+      
+      .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
+      .sj-top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; } 
+      .sj-title { font-size: 24px; font-weight: bold; text-align: right; } 
+      .info-row { display: flex; gap: 12px; margin-bottom: 4px; } 
+      .info-box { border: 1.5px solid #000; padding: 5px 8px; font-size: 11px; line-height: 1.3; } 
+      .left-box { flex: 1; height: 68px; } .right-box-container { width: 42%; display: flex; flex-direction: column; gap: 4px; } 
+      .meta-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; } 
+      .meta-table td { padding: 2px 5px; border: none; } 
+      .date-box { border: 1.5px solid #000; height: 32px; display: flex; flex-direction: column; text-align: center; font-size: 10.5px; } 
+      .date-header { border-bottom: 1.5px solid #000; font-weight: bold; padding: 1px 0; background: #f8f8f8; } 
+      .date-value { padding-top: 2px; font-weight: bold; font-size: 11.5px; } 
+      .item-grid-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; font-size: 11px; margin-bottom: 6px; } 
+      .item-grid-table th, .item-grid-table td { border: 1.5px solid #000; padding: 4px 6px; } 
+      .item-grid-table th { text-align: center; background: #f8f8f8; font-size: 11px; } 
+      .item-grid-table tfoot td { background: #f8f8f8; font-size: 11.5px; } 
+      .signature-row { display: flex; justify-content: space-around; text-align: center; font-size: 11px; font-weight: bold; margin-top: 4px; } 
+      .sig-box { width: 180px; border-top: 1px solid transparent; padding-top: 28px; } 
+      
+      .classic-page { padding: 6mm 8mm !important; }
+      .sj-top-classic { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 6px; }
       .logo-sec-cl { width: 45%; }
-      .sj-title-cl { width: 52%; border: 1.5px solid #000; padding: 6px; font-size: 12px; }
-      .classic-table th, .classic-table td { border: 1px solid #000; padding: 6px; font-size: 12px; }
-      .classic-footer { display: flex; border: 1px solid #000; border-top: none; font-size: 11px; }
-      .footer-left { width: 45%; padding: 6px; border-right: 1px solid #000; line-height: 1.4; }
+      .sj-title-cl { width: 52%; border: 1.5px solid #000; padding: 5px; font-size: 11px; }
+      .classic-table th, .classic-table td { border: 1px solid #000; padding: 4px 6px; font-size: 11px; }
+      .classic-footer { display: flex; border: 1px solid #000; border-top: none; font-size: 10.5px; }
+      .footer-left { width: 45%; padding: 5px; border-right: 1px solid #000; line-height: 1.3; }
       .footer-right { width: 55%; display: flex; }
-      .sig-col { flex: 1; border-right: 1px solid #000; text-align: center; padding: 4px; display: flex; flex-direction: column; justify-content: space-between; height: 60px; font-size: 11px; font-weight: bold; }
+      .sig-col { flex: 1; border-right: 1px solid #000; text-align: center; padding: 3px; display: flex; flex-direction: column; justify-content: space-between; height: 50px; font-size: 10.5px; font-weight: bold; }
       .sig-col:last-child { border-right: none; }
 
       @media print { 
-        body { background: #fff; }
+        body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
         .page-wrapper { margin-top: 0; gap: 0; }
-        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 148mm; } 
-        @page { size: A5 landscape; margin: 0; }
+        .sj-page { box-shadow: none; margin-bottom: 0; width: 210mm; height: 135mm; page-break-after: always; break-after: page; page-break-inside: avoid; } 
+        @page { size: 210mm 135mm; margin: 0mm; }
       }
     </style></head><body>
       <div class="action-bar">
@@ -601,8 +597,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <div class="control-group">
             <label>Kertas:</label>
             <select id="paperSize">
-              <option value="A5">A5 Landscape (148 x 210 mm)</option>
-              <option value="A4">A4 Landscape</option>
+              <option value="HalfLetter">21,0 x 13,5 cm (Half Letter Custom)</option>
+              <option value="A5">A5 Landscape</option>
             </select>
           </div>
           <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
