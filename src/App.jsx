@@ -449,7 +449,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       <div class="page-wrapper">${pagesHtml}</div>
     </body></html>`;
 
-    openPrintWindow(fullHtml);
+    openPrintWindow(fullSjHtml);
   };
 
   const handlePrintSuratJalan = async () => {
@@ -758,7 +758,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISual_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
                           <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
