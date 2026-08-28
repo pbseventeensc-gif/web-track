@@ -1,142 +1,710 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import LabelGeneratorTab from './components/LabelGeneratorTab';
+import * as XLSX from 'xlsx';
 import KawanLamaTab from './components/KawanLamaTab';
-import PackingPanel from './components/PackingPanel';
+import LabelGeneratorTab from './components/LabelGeneratorTab';
 import MainTrackingTable from './components/MainTrackingTable';
+import FinishingPanel from './components/FinishingPanel';
+import DesignPanel from './components/DesignPanel';
+import PackingPanel from './components/PackingPanel';
+import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
+import CustomModulesIndex from './custom-modules/Index';
+
+const STAFF_QC_LIST = [
+  "Budi (QC Paking)", "Siti (QC Paking)", "Agus (QC Checker)",
+  "Dewi (QC Checker)", "Eko (QC Deliver)", "Rian (QC Deliver)"
+];
+
+// Daftar 4 User Staf Paking Resmi
+const PACKING_USERS = [
+  { id: 'paking_1', name: 'Staf Paking 1 (Budi)', pin: '1111' },
+  { id: 'paking_2', name: 'Staf Paking 2 (Siti)', pin: '2222' },
+  { id: 'paking_3', name: 'Staf Paking 3 (Joko)', pin: '3333' },
+  { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
+];
+
+function CircularGaugeCard({ title, percent, color, detailText }) {
+  const strokeDasharray = 2 * Math.PI * 36;
+  const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
+  return (
+    <div className="bg-white p-5 rounded-3xl border border-stone-200/80 flex flex-col items-center shadow-sm hover:shadow-md transition-all hover:scale-[1.02] dark:bg-neutral-800/80 dark:border-neutral-700">
+      <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:opacity-70 mb-3">{title}</h4>
+      <div className="relative w-36 h-36 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="7" className="text-stone-100 dark:text-neutral-700 fill-none" />
+          <circle cx="40" cy="40" r="36" stroke={color} strokeWidth="7" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="fill-none transition-all duration-700 ease-out" />
+        </svg>
+        <div className="absolute flex flex-col items-center justify-center text-center">
+          <span className="text-2xl font-black text-stone-800 dark:text-neutral-100">{percent}%</span>
+          <span className="text-[9px] font-bold text-stone-400 uppercase">Progress</span>
+        </div>
+      </div>
+      <p className="text-xs font-bold mt-3 text-stone-600 dark:opacity-80">{detailText}</p>
+    </div>
+  );
+}
 
 export default function App() {
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('wellen_dark_mode') === 'true');
-  const [activeTab, setActiveTab] = useState('admin_pusat'); // 'admin_pusat', 'kawan_lama', 'labels', 'packing', 'tracking'
-  const [imageModalData, setImageModalData] = useState(null);
+  const searchParams = new URLSearchParams(window.location.search);
+  const isBranchMode = searchParams.get('mode') === 'cabang';
+  const scanParam = searchParams.get('scan'); 
+
+  const [spkList, setSpkList] = useState([]);
+  
+  const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
+    const s = localStorage.getItem('kl_special_admin_session');
+    return s ? JSON.parse(s) : null;
+  });
+
+  const [activeTab, setActiveTab] = useState(
+    scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
+  );
+  
+  const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
+  const [selectedSpkIds, setSelectedSpkIds] = useState([]);
+  const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
+  
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
+  const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
+  const [scannedInput, setScannedInput] = useState('');
+  const [lastScanMessage, setLastScanMessage] = useState('');
+  const [selectedSpkId, setSelectedSpkId] = useState('');
+  const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
+  const [isImporting, setIsImporting] = useState(false);
+
+  const [currentAdmin, setCurrentAdmin] = useState(() => { 
+    const s = localStorage.getItem('kl_admin_session'); 
+    return s ? JSON.parse(s) : null; 
+  });
+  
+  const [currentBranch, setCurrentBranch] = useState(() => { 
+    const s = localStorage.getItem('kl_branch_session'); 
+    return s ? JSON.parse(s) : null; 
+  });
+
+  const [packingStaffSession, setPackingStaffSession] = useState(() => {
+    const s = localStorage.getItem('packing_staff_session');
+    return s ? JSON.parse(s) : null;
+  });
+  const [selectedPackingUser, setSelectedPackingUser] = useState(PACKING_USERS[0].id);
+  const [packingPin, setPackingPin] = useState('');
+
+  const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
+  const [klAdminUser, setKlAdminUser] = useState('');
+  const [klAdminPass, setKlAdminPass] = useState('');
+
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
-    localStorage.setItem('wellen_dark_mode', isDarkMode);
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (scanParam) {
+      setActiveTab('paking');
+      setSearchTerm(scanParam); 
     }
-  }, [isDarkMode]);
+  }, [scanParam]);
 
-  const handleOpenImageModal = (url, title) => {
-    setImageModalData({ url, title });
+  useEffect(() => { 
+    if (isBranchMode && !currentBranch) {
+      setShowBranchLoginModal(true); 
+    }
+  }, [isBranchMode, currentBranch]);
+
+  useEffect(() => { 
+    fetchSpkData(); 
+
+    const channel = supabase
+      .channel('spk_data_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'spk_data' },
+        () => {
+          fetchSpkData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const openImageModal = (url, title) => { if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview' }); };
+  const closeImageModal = () => setModalImageModalInfo({ isOpen: false, url: '', title: '' });
+  const toggleTheme = () => setIsDarkMode(prev => { localStorage.setItem('theme', !prev ? 'dark' : 'light'); return !prev; });
+
+  const fetchSpkData = async () => {
+    const { data } = await supabase
+      .from('spk_data')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (data) { 
+      setSpkList(data); 
+      if (data.length > 0 && !selectedSpkId) initFinishingForm(data[0]); 
+    }
   };
 
-  const handleCloseImageModal = () => {
-    setImageModalData(null);
+  const initFinishingForm = (item) => {
+    if (!item) return; 
+    setSelectedSpkId(item.id);
+    setFinishingForm({ 
+      finishing_type: item.finishing_type || 'inhouse', 
+      sub_vendor_name: item.sub_vendor_name || '', 
+      qty_finish_sub_out: item.qty_finish_sub_out || 0, 
+      qty_finish: item.qty_finish || 0 
+    });
   };
 
-  return (
-    <div className={`min-h-screen p-4 sm:p-6 transition-colors duration-200 ${isDarkMode ? 'bg-[#0F172A] text-slate-100' : 'bg-[#F4F1EA] text-[#2C3531]'}`}>
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header App & Menu Navigasi Tab */}
-        <div className={`p-4 rounded-2xl border flex flex-col lg:flex-row justify-between items-center gap-4 shadow-sm ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-          <div className="flex items-center gap-3">
+  const handleSelectSpk = (spkId) => {
+    setSelectedSpkId(spkId); 
+    const item = spkList.find(s => String(s.id) === String(spkId));
+    if (item) {
+      setFinishingForm({ 
+        finishing_type: item.finishing_type || 'inhouse', 
+        sub_vendor_name: item.sub_vendor_name || '', 
+        qty_finish_sub_out: item.qty_finish_sub_out || 0, 
+        qty_finish: item.qty_finish || 0 
+      });
+    }
+  };
+
+  const handleToggleCheck = (id) => {
+    setSelectedSpkIds(prev => { 
+      const exist = prev.includes(id); 
+      if (!exist) handleSelectSpk(id); 
+      return exist ? prev.filter(item => item !== id) : [...prev, id]; 
+    });
+  };
+
+  const handleToggleSelectAll = (filteredItems) => {
+    if (selectedSpkIds.length === filteredItems.length && filteredItems.length > 0) {
+      setSelectedSpkIds([]);
+    } else { 
+      setSelectedSpkIds(filteredItems.map(item => item.id)); 
+      if (filteredItems.length > 0) handleSelectSpk(filteredItems[0].id); 
+    }
+  };
+
+  const handleUpdateField = async (id, payload) => {
+    const { error } = await supabase.from('spk_data').update(payload).eq('id', id);
+    if (!error) {
+      setSpkList(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+    } else {
+      alert('Gagal memperbarui data: ' + error.message);
+    }
+  };
+
+  const handleUpdateQty = async (id, field, value, maxAllowed, customErrorMessage) => {
+    const val = Number(value) || 0;
+    if (maxAllowed && val > maxAllowed) return alert(customErrorMessage || `❌ Gagal: Jumlah tidak boleh melebihi ${maxAllowed.toLocaleString()} pcs!`);
+    handleUpdateField(id, { [field]: val });
+  };
+
+  const handleDeleteSpk = async (id, noSpk) => {
+    if (confirm(`⚠️ Hapus data SPK "${noSpk || id}" dari sistem?`)) {
+      const { error } = await supabase.from('spk_data').delete().eq('id', id);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => item.id !== id));
+        setSelectedSpkIds(prev => prev.filter(selectedId => selectedId !== id));
+        alert(`✅ SPK "${noSpk}" berhasil dihapus.`);
+      } else {
+        alert('Gagal menghapus SPK: ' + error.message);
+      }
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedSpkIds.length === 0) return alert('⚠️ Silakan centang minimal 1 SPK yang ingin dihapus!');
+    if (confirm(`🚨 YAKIN HAPUS ${selectedSpkIds.length} DATA SPK TERPILIH? Tindakan ini tidak dapat dibatalkan.`)) {
+      const { error } = await supabase.from('spk_data').delete().in('id', selectedSpkIds);
+      if (!error) {
+        setSpkList(prev => prev.filter(item => !selectedSpkIds.includes(item.id)));
+        setSelectedSpkIds([]);
+        alert('✅ Semua SPK terpilih berhasil dibersihkan.');
+      } else {
+        alert('Gagal hapus massal: ' + error.message);
+      }
+    }
+  };
+
+  const handleProcessScan = async (codeValue) => {
+    if (!codeValue) return;
+    const cleanCode = codeValue.toString().replace(/[\r\n]+/g, '').trim().toLowerCase();
+    const targetItem = spkList.find(item => 
+      (item.qr_address || '').toLowerCase().includes(cleanCode) || 
+      (item.store_code || '').toLowerCase() === cleanCode || 
+      (item.no_spk || '').toLowerCase().includes(cleanCode) || 
+      (item.project || '').toLowerCase().includes(cleanCode)
+    );
+    if (!targetItem) { 
+      setLastScanMessage(`❌ SPK "${cleanCode}" tidak ditemukan!`); 
+      setScannedInput(''); 
+      return; 
+    }
+    
+    const updaterValue = qcStaffName ? `${qcStaffName} (OK)` : 'VERIFIED (OK)';
+    let updatePayload = { tes_scan: updaterValue };
+    if (scanTargetColumn === 'qc_paking') updatePayload.qc_paking = updaterValue;
+    if (scanTargetColumn === 'qc_checker') updatePayload.qc_checker = updaterValue;
+    if (scanTargetColumn === 'qc_deliver') updatePayload.qc_deliver = updaterValue;
+    if (scanTargetColumn === 'qty_finish') updatePayload.qty_finish = targetItem.qty_order;
+
+    await handleUpdateField(targetItem.id, updatePayload);
+    setLastScanMessage(`✅ SUKSES UPDATE SPK ${targetItem.no_spk}!`); 
+    setScannedInput('');
+  };
+
+  const handleSubmitInput = (e) => { e.preventDefault(); handleProcessScan(scannedInput); };
+
+  const handleBatchPrint = async () => {
+    const items = spkList.filter(item => selectedSpkIds.includes(item.id));
+    if (items.length === 0) return alert('⚠️ Centang minimal 1 SPK!');
+    const html = items.map(item => `<div style="page-break-after:always; padding:20px; font-family:Arial; border:2px solid #000;"><h2>STORE: ${item.project}</h2><p>SPK: ${item.no_spk}</p></div>`).join('');
+    const pw = window.open('', '_blank', 'width=800,height=800'); 
+    pw.document.write(`<html><body>${html}</body></html>`); 
+    pw.document.close(); 
+    setTimeout(() => pw.print(), 500);
+  };
+
+  const handleUploadSuratJalan = async (e, item) => {
+    const file = e.target.files[0]; 
+    if (!file) return;
+    const fileName = `sj_${item.no_spk}_${Date.now()}`;
+    const { error } = await supabase.storage.from('surat-jalan').upload(fileName, file);
+    if (!error) {
+      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
+      handleUpdateField(item.id, { surat_jalan_url: data.publicUrl });
+      alert('Surat Jalan Diunggah!');
+    }
+  };
+
+  const processImportData = async (rawRows) => {
+    const formattedData = rawRows
+      .filter(row => row && row.length > 7) 
+      .map((row, index) => {
+        const colF = row[5] ? String(row[5]).trim() : ''; 
+        const colG = row[6] ? String(row[6]).trim() : ''; 
+        const colH = row[7] ? String(row[7]).trim() : ''; 
+
+        if (!colF && !colG && !colH) return null;
+
+        return {
+          no_spk: colH.split('_')[0] || `SPK-${index + 1}`,
+          client: colF || '-',
+          project: colG || '-',
+          bahan: null,       
+          ukuran: null,      
+          qty_order: null,   
+          qty_print: 0, 
+          qty_finish: 0, 
+          qty_pack: 0, 
+          qty_ship: 0,
+          store_code: colH || '-',
+          delivery_route: '-'
+        };
+      })
+      .filter(item => item !== null);
+
+    if (formattedData.length > 0) {
+      const { error } = await supabase.from('spk_data').insert(formattedData);
+      if (error) {
+        alert("❌ Error saat menyimpan ke database: " + error.message);
+      } else {
+        alert(`✅ Sukses! ${formattedData.length} data berhasil diimpor.`);
+        await fetchSpkData();
+      }
+    } else {
+      alert("⚠️ Tidak ada data ditemukan pada Kolom F, G, H mulai baris ke-5.");
+    }
+  };
+
+  const handleExcelUpload = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const wb = XLSX.read(evt.target.result, { type: 'binary' });
+      const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { range: 4, header: 1 });
+      await processImportData(rawData);
+    };
+    reader.readAsBinaryString(file); e.target.value = '';
+  };
+
+  const handleGoogleSheetImport = async () => {
+    const sheetUrl = prompt("🌐 Masukkan URL Link Google Sheets (Pastikan akses disetel 'Anyone with the link can view' / Publik):");
+    if (!sheetUrl) return;
+
+    setIsImporting(true);
+    try {
+      let csvUrl = sheetUrl.trim();
+      if (csvUrl.includes('/edit')) {
+        csvUrl = csvUrl.replace(/\/edit.*$/, '/export?format=csv');
+      }
+      if (!csvUrl.includes('format=csv')) {
+        csvUrl += (csvUrl.includes('?') ? '&' : '?') + 'format=csv';
+      }
+
+      const response = await fetch(csvUrl);
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data (Status: ${response.status}). Pastikan link Google Sheets sudah publik.`);
+      }
+      
+      const csvText = await response.text();
+      const workbook = XLSX.read(csvText, { type: 'string' });
+      const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { range: 4, header: 1 });
+      
+      await processImportData(rawData);
+    } catch (err) {
+      alert("❌ Terjadi kesalahan saat import Google Sheets: " + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handlePackingLoginSubmit = (e) => {
+    e.preventDefault();
+    const foundUser = PACKING_USERS.find(u => u.id === selectedPackingUser);
+    if (foundUser && foundUser.pin === packingPin.trim()) {
+      const sessionData = { username: foundUser.name, loginTime: new Date().toISOString() };
+      localStorage.setItem('packing_staff_session', JSON.stringify(sessionData));
+      setPackingStaffSession(sessionData);
+      alert(`✅ Selamat datang, ${foundUser.name}!`);
+    } else {
+      alert('❌ PIN Staf Paking salah! (Gunakan PIN sesuai akun masing-masing: 1111, 2222, 3333, atau 4444)');
+    }
+  };
+
+  const handleKawanLamaAdminLogin = (e) => {
+    e.preventDefault();
+    if (klAdminUser.trim() === 'admin_kl' && klAdminPass.trim() === 'kawanlama2026') {
+      const sessionData = { username: 'Admin Kawan Lama', loginTime: new Date().toISOString() };
+      localStorage.setItem('kl_special_admin_session', JSON.stringify(sessionData));
+      setCurrentKawanLamaAdmin(sessionData);
+      setShowKawanLamaAdminModal(false);
+      setActiveTab('label');
+      alert('✅ Berhasil Login sebagai Admin Kawan Lama!');
+    } else {
+      alert('❌ Username atau Password Admin Kawan Lama salah!');
+    }
+  };
+
+  const getPercent = (qty, total) => (!total || total <= 0) ? 0 : Math.min(100, Math.round((qty / total) * 100));
+  const getStatusBadge = (p) => p >= 100 ? { text: 'text-green-800 bg-green-100', icon: '🟢' } : p > 0 ? { text: 'text-yellow-800 bg-yellow-100', icon: '🟡' } : { text: 'text-red-800 bg-red-100', icon: '🔴' };
+
+  const totalSpk = spkList.length;
+  const displayedList = spkList.filter(item => 
+    (item.no_spk || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (item.project || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.client || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const isAuthenticated = scanParam 
+    ? (packingStaffSession || currentAdmin || currentKawanLamaAdmin) 
+    : isBranchMode 
+      ? currentBranch 
+      : (currentAdmin || currentKawanLamaAdmin);
+
+  if (!isAuthenticated && scanParam) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
+        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+          <div className="text-5xl">📦</div>
+          <div>
+            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Login Staf Paking</h1>
+            <p className="text-xs opacity-60 mt-1">Pilih nama Anda dan masukkan PIN untuk verifikasi paking.</p>
+          </div>
+          
+          <form onSubmit={handlePackingLoginSubmit} className="space-y-4 text-left">
             <div>
-              <h1 className="text-lg sm:text-xl font-black tracking-wider bg-gradient-to-r from-indigo-500 to-teal-500 bg-clip-text text-transparent">
-                WELLEN PRINT TRACKING
-              </h1>
-              <p className="text-[11px] opacity-70 mt-0.5">Sistem Manajemen Label, Surat Jalan & Tracking Terpadu</p>
+              <label className="text-xs font-bold block mb-1">Pilih Staf Paking:</label>
+              <select 
+                value={selectedPackingUser} 
+                onChange={(e) => setSelectedPackingUser(e.target.value)} 
+                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 cursor-pointer font-bold"
+              >
+                {PACKING_USERS.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
             </div>
-          </div>
+            <div>
+              <label className="text-xs font-bold block mb-1">PIN Keamanan:</label>
+              <input 
+                type="password" 
+                value={packingPin} 
+                onChange={(e) => setPackingPin(e.target.value)} 
+                placeholder="Masukkan 4 digit PIN" 
+                maxLength={4}
+                required 
+                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 tracking-widest text-center font-bold text-lg" 
+              />
+            </div>
+            <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+              🚀 MASUK KE PANEL PAKING
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Tombol Tab Navigasi Lengkap */}
-          <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-neutral-900 p-1.5 rounded-xl border border-stone-300 dark:border-neutral-700 flex-wrap justify-center">
-            <button 
-              onClick={() => setActiveTab('admin_pusat')} 
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'admin_pusat' ? 'bg-indigo-600 text-white shadow-md' : 'opacity-70 hover:opacity-100'}`}
-            >
-              👑 Admin Pusat
-            </button>
-            <button 
-              onClick={() => setActiveTab('kawan_lama')} 
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'kawan_lama' ? 'bg-indigo-600 text-white shadow-md' : 'opacity-70 hover:opacity-100'}`}
-            >
-              🏢 Kawan Lama
-            </button>
-            <button 
-              onClick={() => setActiveTab('labels')} 
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'labels' ? 'bg-indigo-600 text-white shadow-md' : 'opacity-70 hover:opacity-100'}`}
-            >
-              🏷️ Label & SJ
-            </button>
-            <button 
-              onClick={() => setActiveTab('packing')} 
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'packing' ? 'bg-indigo-600 text-white shadow-md' : 'opacity-70 hover:opacity-100'}`}
-            >
-              📋 QC & Packing
-            </button>
-            <button 
-              onClick={() => setActiveTab('tracking')} 
-              className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeTab === 'tracking' ? 'bg-indigo-600 text-white shadow-md' : 'opacity-70 hover:opacity-100'}`}
-            >
-              📦 Tracking Utama
-            </button>
+  if (!isAuthenticated) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
+        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+          <div className="text-5xl">🔐</div>
+          <div>
+            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Web-Track Monitoring</h1>
+            <p className="text-xs opacity-60 mt-1">Sistem Terpadu Manajemen SPK & Kawan Lama</p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)} 
-              className="px-3.5 py-2 rounded-xl text-xs font-bold border shadow-sm transition-all bg-stone-100 dark:bg-neutral-900 border-stone-300 dark:border-neutral-700 hover:opacity-80 cursor-pointer"
-            >
-              {isDarkMode ? '☀️ Light' : '🌙 Dark'}
-            </button>
+          
+          <div className="space-y-3 pt-2">
+            {isBranchMode ? (
+              <button onClick={() => setShowBranchLoginModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+                🏢 LOGIN CABANG KAWAN LAMA
+              </button>
+            ) : (
+              <>
+                <button onClick={() => setShowAdminLoginModal(true)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+                  🔑 LOGIN ADMIN PUSAT
+                </button>
+                <button onClick={() => setShowKawanLamaAdminModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
+                  🏢 LOGIN ADMIN KAWAN LAMA (3 Tab)
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Konten Berdasarkan Tab yang Dipilih */}
-        <div>
-          {activeTab === 'admin_pusat' && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-                <h3 className="font-bold text-sm mb-1">👑 Dashboard Admin Pusat</h3>
-                <p className="text-xs opacity-70">Akses penuh pengelolaan data, label koli, dan surat jalan.</p>
-              </div>
-              <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={handleOpenImageModal} />
-            </div>
-          )}
-
-          {activeTab === 'kawan_lama' && (
-            <div className="space-y-4">
-              <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
-                <h3 className="font-bold text-sm mb-1 text-amber-500">🏢 Portal Kawan Lama (kawanlama_kl)</h3>
-                <p className="text-xs opacity-70">Panel khusus untuk pemantauan dan manajemen order Kawan Lama Group.</p>
-              </div>
-              <KawanLamaTab isDarkMode={isDarkMode} onOpenImageModal={handleOpenImageModal} />
-            </div>
-          )}
-
-          {activeTab === 'labels' && (
-            <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={handleOpenImageModal} />
-          )}
-
-          {activeTab === 'packing' && (
-            <PackingPanel isDarkMode={isDarkMode} />
-          )}
-
-          {activeTab === 'tracking' && (
-            <MainTrackingTable isDarkMode={isDarkMode} />
-          )}
-        </div>
-
-        {/* Modal Preview Gambar */}
-        {imageModalData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-            <div className={`p-4 rounded-2xl max-w-2xl w-full relative shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-300 text-black'}`}>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-sm">🖼️ {imageModalData.title}</h3>
-                <button onClick={handleCloseImageModal} className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer transition-all">✕ Tutup</button>
-              </div>
-              <div className="flex justify-center items-center bg-stone-100 dark:bg-neutral-900 rounded-xl p-4 max-h-[75vh] overflow-hidden border border-stone-200 dark:border-neutral-800">
-                <img src={imageModalData.url} alt="Preview" className="max-w-full max-h-[70vh] object-contain rounded-lg shadow" />
-              </div>
+        {showKawanLamaAdminModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+              <h3 className="text-sm font-black uppercase text-emerald-600">Login Admin Kawan Lama</h3>
+              <p className="text-[11px] opacity-70">Akses khusus: Cetak Label & SJ, Project Kawan Lama, dan Customer & Label Custom.</p>
+              
+              <form onSubmit={handleKawanLamaAdminLogin} className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold block mb-1">Username:</label>
+                  <input type="text" value={klAdminUser} onChange={(e) => setKlAdminUser(e.target.value)} placeholder="admin_kl" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold block mb-1">Password:</label>
+                  <input type="password" value={klAdminPass} onChange={(e) => setKlAdminPass(e.target.value)} placeholder="kawanlama2026" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={() => setShowKawanLamaAdminModal(false)} className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-stone-300 dark:bg-neutral-700">Batal</button>
+                  <button type="submit" className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white">Masuk</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
 
+        <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
+        <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
       </div>
+    );
+  }
+
+  return (
+    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
+          <div>
+            <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
+              {scanParam ? '📦 PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? '🏢 PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
+            </h1>
+            <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
+              {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
+              {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
+            </button>
+            {scanParam && (
+              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Staf Paking
+              </button>
+            )}
+            {isBranchMode && (
+              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
+                🔒 Logout Cabang
+              </button>
+            )}
+            {currentKawanLamaAdmin && (
+              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Admin Kawan Lama
+              </button>
+            )}
+            {currentAdmin && (
+              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
+                🔒 Logout Admin
+              </button>
+            )}
+            
+            {!isBranchMode && !scanParam && !currentKawanLamaAdmin && (
+              <>
+                <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
+                  📷 Scan QC Station
+                </button>
+                <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">
+                  📁 Upload SPK Excel
+                  <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
+                </label>
+                <button 
+                  onClick={handleGoogleSheetImport} 
+                  disabled={isImporting}
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
+                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
+                  } text-white cursor-pointer`}
+                >
+                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* JIKA DIAKSES VIA SCAN QR */}
+        {scanParam ? (
+          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+        ) : (
+          <>
+            {isBranchMode ? (
+              <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
+            ) : (
+              currentKawanLamaAdmin ? (
+                <div className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    {[
+                      { id: 'label', label: '🏷️ Cetak Label & SJ' },
+                      { id: 'kawan_lama', label: '🏢 Project Kawan Lama' },
+                      { id: 'custom_modules', label: '👥 Customer & Label Custom' }
+                    ].map(t => (
+                      <button 
+                        key={t.id} 
+                        onClick={() => setActiveTab(t.id)} 
+                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm cursor-pointer ${
+                          activeTab === t.id 
+                            ? 'bg-emerald-600 text-white shadow-md' 
+                            : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {activeTab === 'label' && <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />}
+                  {activeTab === 'kawan_lama' && <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentKawanLamaAdmin} isBranchMode={false} />}
+                  {activeTab === 'custom_modules' && <CustomModulesIndex isDarkMode={isDarkMode} />}
+                </div>
+              ) : (
+                <>
+                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                    {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
+                      const isLocked = t === 'kawan_lama' && !currentAdmin;
+
+                      return (
+                        <button 
+                          key={t} 
+                          onClick={() => !isLocked && setActiveTab(t)} 
+                          disabled={isLocked}
+                          title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
+                          className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
+                            ${isLocked 
+                              ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
+                              : activeTab === t 
+                                ? 'bg-indigo-600 text-white shadow-md' 
+                                : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
+                            }`}
+                        >
+                          {t === 'label' 
+                            ? '🏷️ Cetak Label & SJ' 
+                            : t === 'kawan_lama' 
+                              ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
+                              : t === 'design'
+                                ? '🎨 Desain & Pra-Cetak'
+                                : t === 'custom_modules'
+                                  ? '👥 Customer & Label Custom'
+                                  : t}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {activeTab === 'dashboard' && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
+                      <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
+                      <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
+                      <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
+                    </div>
+                  )}
+
+                  {activeTab === 'design' && (
+                    <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'finishing' && (
+                    <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
+                  )}
+
+                  {activeTab === 'paking' && (
+                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'kawan_lama' && (
+                    <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={false} />
+                  )}
+                  
+                  {activeTab === 'label' && (
+                    <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'custom_modules' && (
+                    <CustomModulesIndex isDarkMode={isDarkMode} />
+                  )}
+
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
+                    <MainTrackingTable 
+                      isDarkMode={isDarkMode}
+                      activeTab={activeTab}
+                      spkList={spkList}
+                      displayedList={displayedList}
+                      selectedSpkIds={selectedSpkIds}
+                      handleToggleCheck={handleToggleCheck}
+                      handleToggleSelectAll={handleToggleSelectAll}
+                      handleUpdateQty={handleUpdateQty}
+                      handleUpdateField={handleUpdateField}
+                      handleDeleteSpk={handleDeleteSpk}
+                      handleBatchDelete={handleBatchDelete}
+                      handleBatchPrint={handleBatchPrint}
+                      openImageModal={openImageModal}
+                      handleUploadSuratJalan={handleUploadSuratJalan}
+                      getPercent={getPercent}
+                      getStatusBadge={getStatusBadge}
+                      STAFF_QC_LIST={STAFF_QC_LIST}
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                    />
+                  )}
+                </>
+              )
+            )}
+          </>
+        )}
+
+      </div>
+
+      <ScanQCModal isOpen={showScanModal} onClose={() => setShowScanModal(false)} isDarkMode={isDarkMode} scanTargetColumn={scanTargetColumn} setScanTargetColumn={setScanTargetColumn} scannedInput={scannedInput} setScannedInput={setScannedInput} handleSubmitInput={handleSubmitInput} lastScanMessage={lastScanMessage} />
+      <ImagePreviewModal isOpen={modalImageInfo.isOpen} onClose={closeImageModal} modalImageInfo={modalImageInfo} />
+      <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
+      <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
     </div>
   );
 }
