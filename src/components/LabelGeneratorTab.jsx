@@ -343,7 +343,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
 
         const itemsHtml = item.itemsList.map(it => 
-          `• ${it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
+          `• ${it.PROJECT || it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
         ).join('<br>');
 
         return `
@@ -462,17 +462,23 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       const rowsHtml = group.itemsList.map((it, idx) => {
         const qty = Number(it.QTY_TOTAL || 0);
         grandTotal += qty;
+        
+        // Menggabungkan PROJECT dan MEDIA sebagai Nama Barang pada Surat Jalan secara otomatis
+        const namaBarangVal = it.PROJECT 
+          ? `${it.PROJECT}${it.MEDIA ? ' - ' + it.MEDIA : ''}` 
+          : (it.ITEM_DESCRIPTION || '-');
+
         return sjFormatType === 'modern' ? `
           <tr>
             <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
-            <td style="width: 38%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'}</td>
+            <td style="width: 38%; font-size: 12px; font-weight: bold;">${namaBarangVal}</td>
             <td style="width: 34%; font-size: 11.5px; font-weight: bold;">${it.MEDIA || '-'}<br><span style="font-size: 11px;">Ukuran: ${it.UKURAN || '-'}</span></td>
             <td style="text-align: right; padding-right: 10px; width: 20%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
           </tr>
         ` : `
           <tr>
             <td style="text-align: center; width: 8%; font-size: 12px; font-weight: bold;">${idx + 1}</td>
-            <td style="width: 55%; font-size: 12px; font-weight: bold;">${it.ITEM_DESCRIPTION || '-'} ${it.BRAND ? '_' + it.BRAND : ''}</td>
+            <td style="width: 55%; font-size: 12px; font-weight: bold;">${namaBarangVal}</td>
             <td style="text-align: center; width: 22%; font-size: 11.5px; font-weight: bold;">${it.UKURAN || '-'}</td>
             <td style="text-align: right; padding-right: 10px; width: 15%; font-size: 13px; font-weight: bold;">${qty.toLocaleString()}</td>
           </tr>
