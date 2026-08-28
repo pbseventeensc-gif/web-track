@@ -1,4 +1,4 @@
-tuliskan ke kodeku import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
 import { supabase } from './supabaseClient';
