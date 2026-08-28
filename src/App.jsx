@@ -412,14 +412,9 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
-      
-      /* Dikunci pas 297mm dengan padding atas/bawah 2mm agar aman tanpa halaman kosong */
       .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
-      
-      /* Tinggi label disesuaikan persis 131mm agar 2 label + garis pemisah pas 293mm */
       .label-box { border: 2px solid #000; width: 100%; height: 131mm; max-height: 131mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
       .cut-guide { width: 100%; border-top: 1px dashed #444; margin: 0.5mm 0; }
-      
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
@@ -436,7 +431,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
       .preview-img { max-width: 95%; max-height: 105px; object-fit: contain; display: block; } 
-      
       @media print { 
         body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
@@ -455,7 +449,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       <div class="page-wrapper">${pagesHtml}</div>
     </body></html>`;
 
-    openPrintWindow(fullHtml);
+    openPrintWindow(fullSjHtml);
   };
 
   const handlePrintSuratJalan = async () => {
@@ -676,17 +670,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      <div className={`p-4 rounded-2xl border flex flex-col lg:flex-row justify-between items-center gap-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm transition-all ${isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'}`}>
+          <label className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-[#6B8E85] hover:bg-[#57756D] transition-all">
             📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
-          <button onClick={handleDownloadTemplate} className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-sm transition-all">📥 Download Template Excel</button>
+          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#D97706] hover:bg-amber-600 text-white shadow-sm transition-all">📥 Download Template Excel</button>
           
-          <div className="flex items-center gap-1.5 ml-1 bg-stone-100 dark:bg-neutral-900 p-1.5 rounded-xl border border-stone-300 dark:border-neutral-700">
-            <span className="text-[10px] font-bold px-1 opacity-70">Format SJ:</span>
-            <button onClick={() => setSjFormatType('modern')} className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Modern</button>
-            <button onClick={() => setSjFormatType('classic')} className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Klasik</button>
+          <div className="flex items-center gap-1.5 ml-1 bg-neutral-900 p-1.5 rounded-xl border border-neutral-700 text-white">
+            <span className="text-[11px] font-bold px-1 opacity-70">Format SJ:</span>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Klasik</button>
           </div>
         </div>
 
@@ -701,10 +695,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={handlePrintSuratJalan} className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95">
+          <button onClick={handlePrintSuratJalan} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#0D9488] hover:bg-teal-600 text-white cursor-pointer active:scale-95">
             📄 Cetak Surat Jalan
           </button>
-          <button onClick={handlePrintLabels} className="px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95">
+          <button onClick={handlePrintLabels} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#4F46E5] hover:bg-indigo-500 text-white cursor-pointer active:scale-95">
             🏷️ Cetak Label Koli
           </button>
         </div>
