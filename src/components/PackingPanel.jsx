@@ -65,13 +65,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Normalisasi Kode Item (Hapus spasi, strip, underscore agar pencocokan 100% akurat)
-  const normalizeCode = (str) => {
+  // Helper pembersih string kode untuk mencocokkan nama file secara akurat
+  const cleanKey = (str) => {
     if (!str) return '';
     return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  // Parser Excel Matriks
+  // Parser Excel Matriks (Sheet: 206 - A, 206 - B, etc.)
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -173,7 +173,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         });
 
         if (parsedRecords.length === 0) {
-          throw new Error('Format data sheet matriks tidak ditemukan.');
+          throw new Error('Tidak ada format data matriks toko yang terbaca.');
         }
 
         const { error } = await supabase
@@ -195,7 +195,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Upload Massal Foto Desain dengan Fuzzy Code Matching & Base64/Storage URL
+  // Upload Massal Foto Desain Item (Bulk Upload)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -206,7 +206,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       for (const file of files) {
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        const normalizedKey = normalizeCode(rawFileName);
+        const normalizedKey = cleanKey(rawFileName);
 
         const fileExt = file.name.split('.').pop();
         const uploadPath = `label-designs/${Date.now()}_${normalizedKey}.${fileExt}`;
@@ -221,36 +221,41 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         }
       }
 
-      // Sinkronkan foto ke seluruh box di database
-      const { data: currentRows } = await supabase.from('packing_tracking').select('id, items_detail');
-      
+      const { data: currentRows, error: fetchErr } = await supabase
+        .from('packing_tracking')
+        .select('id, items_detail');
+
+      if (fetchErr) throw fetchErr;
+
+      let updatedCount = 0;
       if (currentRows) {
         for (const row of currentRows) {
           if (row.items_detail && Array.isArray(row.items_detail)) {
-            let changed = false;
-            const updatedItems = row.items_detail.map((item) => {
-              const itemKey = normalizeCode(item.code);
-              // Cek kecocokan kode
+            let hasChange = false;
+            const newDetails = row.items_detail.map((item) => {
+              const itemCodeClean = cleanKey(item.code);
+
               for (const [imgKey, imgUrl] of Object.entries(imageMap)) {
-                if (itemKey.includes(imgKey) || imgKey.includes(itemKey)) {
-                  changed = true;
+                if (itemCodeClean === imgKey || itemCodeClean.includes(imgKey) || imgKey.includes(itemCodeClean)) {
+                  hasChange = true;
                   return { ...item, image_url: imgUrl };
                 }
               }
               return item;
             });
 
-            if (changed) {
+            if (hasChange) {
               await supabase
                 .from('packing_tracking')
-                .update({ items_detail: updatedItems, updated_at: new Date().toISOString() })
+                .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
                 .eq('id', row.id);
+              updatedCount++;
             }
           }
         }
       }
 
-      alert(`✅ Berhasil mengunggah ${files.length} foto desain dan disinkronkan ke seluruh label box!`);
+      alert(`✅ Berhasil mengupload foto desain dan mencocokkan ke ${updatedCount} box koli!`);
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
@@ -615,14 +620,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 0mm !important;
+                margin: 5mm !important;
               }
               html, body {
                 width: 210mm !important;
                 height: 297mm !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                overflow: hidden !important;
+                background: #ffffff !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
@@ -633,13 +638,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 visibility: visible !important;
               }
               .print-area {
-                position: fixed !important;
-                left: 10mm !important;
-                top: 10mm !important;
-                width: 190mm !important;
-                height: 275mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 195mm !important;
+                height: 270mm !important;
+                margin: 0 auto !important;
                 box-sizing: border-box !important;
                 page-break-after: avoid !important;
                 page-break-inside: avoid !important;
@@ -648,82 +652,103 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             }
           `}</style>
           
-          <div className="w-[190mm] h-[275mm] font-sans text-black border-2 border-black bg-white flex flex-col justify-between box-border overflow-hidden">
+          <div style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
+            
             {/* Header Box Label */}
-            <div className="grid grid-cols-12 border-b-2 border-black h-[40mm]">
-              <div className="col-span-2 border-r-2 border-black flex items-center justify-center font-black text-4xl text-red-600 p-1">
+            <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
+              
+              <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
                 {selectedLabelItem.box_code || 'B1'}
               </div>
-              <div className="col-span-8 flex flex-col justify-between">
-                <div className="text-center font-black text-sm py-1 border-b border-black tracking-tight leading-none uppercase">
+
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
+                <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
                   {selectedLabelItem.client_pt}
                 </div>
-                <div className="grid grid-cols-12 text-[11px] border-b border-black leading-none">
-                  <div className="col-span-3 px-1 py-1 font-bold">NOMOR TOKO</div>
-                  <div className="col-span-1 text-center py-1">:</div>
-                  <div className="col-span-3 px-1 py-1 font-black">{selectedLabelItem.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                  <div className={`col-span-3 text-center py-1 font-black text-white ${selectedLabelItem.delivery_type === 'DALAM KOTA' ? 'bg-red-600' : 'bg-blue-600'}`}>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+                  <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
+                  <div style={{ textAlign: 'center' }}>:</div>
+                  <div style={{ fontWeight: '900', textAlign: 'center' }}>{selectedLabelItem.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                  <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: selectedLabelItem.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
                     {selectedLabelItem.delivery_type || 'DALAM KOTA'}
                   </div>
-                  <div className="col-span-2 border-l border-black text-center py-1 font-black">
+                  <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {selectedLabelItem.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                   </div>
                 </div>
-                <div className="grid grid-cols-12 text-[11px] border-b border-black leading-none">
-                  <div className="col-span-3 px-1 py-1 font-bold">MINISO</div>
-                  <div className="col-span-1 text-center py-1">:</div>
-                  <div className="col-span-8 px-1 py-1 font-black truncate">{selectedLabelItem.store_name}</div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+                  <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
+                  <div style={{ textAlign: 'center' }}>:</div>
+                  <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {selectedLabelItem.store_name}
+                  </div>
                 </div>
-                <div className="text-center text-[9px] font-bold py-0.5 border-b border-black tracking-tight truncate leading-none">
+
+                <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
                   {selectedLabelItem.promo_title}
                 </div>
-                <div className="text-center text-[9px] font-black py-0.5 leading-none">
+
+                <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
                   {selectedLabelItem.no_spk}
                 </div>
               </div>
-              <div className="col-span-2 border-l-2 border-black flex flex-col items-center justify-center p-1 text-center">
-                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={48} />
-                <span className="font-black text-sm mt-0.5">{selectedLabelItem.area_code || 'Q1'}</span>
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={42} />
+                <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{selectedLabelItem.area_code || 'Q1'}</span>
               </div>
             </div>
 
             {/* List 6 Item Rows */}
-            <div className="flex-1 flex flex-col divide-y-2 divide-black overflow-hidden">
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
               {(selectedLabelItem.items_detail && selectedLabelItem.items_detail.length > 0 
                 ? [...selectedLabelItem.items_detail, ...Array(Math.max(0, 6 - selectedLabelItem.items_detail.length)).fill({})]
                 : Array(6).fill({})
               ).slice(0, 6).map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col border-b border-black last:border-b-0 min-h-0 overflow-hidden">
-                  <div className="flex justify-between border-b border-black text-[9px] font-bold px-1.5 py-0.5 bg-stone-50 leading-none">
-                    <span>{item.material || 'PVC'}</span>
-                    <span>Ukuran : {item.size || '-'}</span>
+                <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                  
+                  <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
+                    <span>{item.material || (item.code ? 'PVC' : '')}</span>
+                    <span>{item.size ? `Ukuran : ${item.size}` : ''}</span>
                   </div>
-                  <div className="flex-1 grid grid-cols-12 items-stretch min-h-0">
-                    <div className="col-span-5 border-r border-black p-1.5 flex flex-col justify-between">
-                      <div className="text-base font-black text-red-600 tracking-tight leading-tight">
-                        {item.code || '-'}
+
+                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
+                    
+                    <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                        {item.code || ''}
                       </div>
-                      <div className="text-[10px] font-bold text-stone-800 leading-tight">
-                        {item.desc || '-'}
+                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
+                        {item.desc || ''}
                       </div>
                     </div>
-                    <div className="col-span-2 border-r border-black flex flex-col items-center justify-center p-1 text-center">
-                      <span className="text-2xl font-black leading-none">{item.qty || (item.code ? 0 : '')}</span>
-                      {item.code && <span className="text-[10px] font-bold text-stone-600">{item.unit || 'Pcs'}</span>}
+
+                    <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                      <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>
+                        {item.qty || (item.code ? 0 : '')}
+                      </span>
+                      {item.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{item.unit || 'Pcs'}</span>}
                     </div>
-                    <div className="col-span-5 flex items-center justify-center p-1 overflow-hidden bg-stone-50">
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
                       {item.image_url ? (
-                        <img src={item.image_url} alt="Preview" className="h-[28mm] w-full object-contain" />
+                        <img src={item.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain' }} />
                       ) : (
-                        <div className="w-full h-full bg-blue-100/50 flex items-center justify-center text-[9px] text-stone-400 italic">
-                          Preview Desain
-                        </div>
+                        item.code && (
+                          <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>
+                            Preview Desain
+                          </div>
+                        )
                       )}
                     </div>
+
                   </div>
                 </div>
               ))}
             </div>
+
           </div>
         </div>
       )}
