@@ -7,8 +7,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [selectedLabelItem, setSelectedLabelItem] = useState(null);
-  const printRef = useRef();
 
   const stages = [
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
@@ -65,7 +65,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Parser Excel Matriks (Sheet: 206 - A, 206 - B, etc.)
+  // Parser Excel Matriks
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -90,13 +90,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
           if (!data || data.length < 7) return;
 
-          // Baris Header Item Matriks (Row index 1 s/d 4)
           const rowCodes = data[1] || [];
           const rowDescs = data[2] || [];
           const rowMaterials = data[3] || [];
           const rowSizes = data[4] || [];
 
-          // Parse Daftar Item Katalog (Mulai kolom L / index 12)
           let catalogItems = [];
           for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
             if (rowCodes[colIdx]) {
@@ -110,10 +108,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             }
           }
 
-          // Parse Baris Tiap Toko (Mulai row 6 / index 6 ke bawah)
           for (let r = 6; r < data.length; r++) {
             const row = data[r];
-            if (!row || !row[1]) continue; // jika nomor toko kosong
+            if (!row || !row[1]) continue;
 
             const storeNo = row[1];
             const prCode = row[2] || '';
@@ -126,7 +123,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             const deliveryType = row[9] || 'DALAM KOTA';
             const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
 
-            // Ambil Qty Item Toko Ini
             let storeItems = [];
             let totalQty = 0;
 
@@ -139,7 +135,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   material: cat.material,
                   size: cat.size,
                   qty: qtyVal,
-                  unit: 'Pcs'
+                  unit: 'Pcs',
+                  image_url: '' // Nanti otomatis terisi lewat bulk upload foto
                 });
                 totalQty += qtyVal;
               }
@@ -173,7 +170,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           throw new Error('Tidak ada format data matriks toko yang terbaca.');
         }
 
-        // Upsert batch ke Supabase
         const { error } = await supabase
           .from('packing_tracking')
           .upsert(parsedRecords, { onConflict: 'tracking_id' });
@@ -191,6 +187,68 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     };
 
     reader.readAsBinaryString(file);
+  };
+
+  // Upload Massal Foto Desain Item (Bulk Upload)
+  const handleBulkUploadDesignImages = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files || files.length === 0) return;
+
+    setIsUploadingImages(true);
+    try {
+      let imageMap = {};
+
+      for (const file of files) {
+        // Ambil nama file tanpa ekstensi untuk dicocokkan ke kode item
+        const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        // Normalisasi nama (hapus spasi berlebih)
+        const cleanNameKey = rawFileName.replace(/\s+/g, ' ').trim().toLowerCase();
+
+        const fileExt = file.name.split('.').pop();
+        const uploadPath = `label-designs/design_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('surat-jalan')
+          .upload(uploadPath, file, { contentType: file.type, upsert: true });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(uploadPath);
+          imageMap[cleanNameKey] = urlData.publicUrl;
+        }
+      }
+
+      // Update URL gambar ke seluruh packing_tracking yang memiliki kode item bersangkutan
+      let updatedCount = 0;
+      for (const item of packingList) {
+        if (item.items_detail && Array.isArray(item.items_detail)) {
+          let hasChange = false;
+          const newDetails = item.items_detail.map((detail) => {
+            const itemCodeKey = String(detail.code).replace(/\s+/g, ' ').trim().toLowerCase();
+            if (imageMap[itemCodeKey]) {
+              hasChange = true;
+              return { ...detail, image_url: imageMap[itemCodeKey] };
+            }
+            return detail;
+          });
+
+          if (hasChange) {
+            await supabase
+              .from('packing_tracking')
+              .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
+              .eq('id', item.id);
+            updatedCount++;
+          }
+        }
+      }
+
+      alert(`✅ Berhasil mengupload ${files.length} foto desain dan disinkronkan ke ${updatedCount} box koli!`);
+      fetchPackingData();
+    } catch (err) {
+      alert('❌ Gagal upload foto desain: ' + err.message);
+    } finally {
+      setIsUploadingImages(false);
+      e.target.value = '';
+    }
   };
 
   const handlePrintLabel = (item) => {
@@ -405,6 +463,19 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 disabled={isImporting}
               />
             </label>
+
+            <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
+              {isUploadingImages ? '⏳ Uploading Foto...' : '🖼️ Upload Desain Item'}
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple
+                className="hidden" 
+                onChange={handleBulkUploadDesignImages}
+                disabled={isUploadingImages}
+              />
+            </label>
+
             <button 
               onClick={handleDownloadPackingReport}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
@@ -528,14 +599,21 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* TEMPLATE PRINT A4 KHUSUS LABEL MINISO */}
+      {/* TEMPLATE PRINT A4 PAS 1 HALAMAN */}
       {selectedLabelItem && (
         <div className="print-area hidden print:block">
           <style>{`
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 8mm;
+                margin: 6mm;
+              }
+              html, body {
+                height: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               body * {
                 visibility: hidden;
@@ -548,24 +626,27 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 left: 0;
                 top: 0;
                 width: 100%;
+                height: 100%;
+                page-break-after: avoid;
+                page-break-inside: avoid;
               }
             }
           `}</style>
           
-          <div className="w-full font-sans text-black border-2 border-black bg-white">
+          <div className="w-full h-[282mm] font-sans text-black border-2 border-black bg-white flex flex-col justify-between box-border">
             {/* Header Box Label */}
-            <div className="grid grid-cols-12 border-b-2 border-black">
-              <div className="col-span-2 border-r-2 border-black flex items-center justify-center font-black text-4xl text-red-600 p-2">
+            <div className="grid grid-cols-12 border-b-2 border-black h-[42mm]">
+              <div className="col-span-2 border-r-2 border-black flex items-center justify-center font-black text-4xl text-red-600 p-1">
                 {selectedLabelItem.box_code || 'B1'}
               </div>
               <div className="col-span-8 flex flex-col justify-between">
-                <div className="text-center font-black text-lg py-1 border-b border-black tracking-tight">
+                <div className="text-center font-black text-sm py-1 border-b border-black tracking-tight leading-none uppercase">
                   {selectedLabelItem.client_pt}
                 </div>
-                <div className="grid grid-cols-12 text-xs border-b border-black">
-                  <div className="col-span-3 px-2 py-1 font-bold">NOMOR TOKO</div>
+                <div className="grid grid-cols-12 text-[11px] border-b border-black leading-none">
+                  <div className="col-span-3 px-1 py-1 font-bold">NOMOR TOKO</div>
                   <div className="col-span-1 text-center py-1">:</div>
-                  <div className="col-span-3 px-2 py-1 font-black">{selectedLabelItem.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                  <div className="col-span-3 px-1 py-1 font-black">{selectedLabelItem.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
                   <div className={`col-span-3 text-center py-1 font-black text-white ${selectedLabelItem.delivery_type === 'DALAM KOTA' ? 'bg-red-600' : 'bg-blue-600'}`}>
                     {selectedLabelItem.delivery_type || 'DALAM KOTA'}
                   </div>
@@ -573,50 +654,55 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                     {selectedLabelItem.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                   </div>
                 </div>
-                <div className="grid grid-cols-12 text-xs border-b border-black">
-                  <div className="col-span-3 px-2 py-1 font-bold">MINISO</div>
+                <div className="grid grid-cols-12 text-[11px] border-b border-black leading-none">
+                  <div className="col-span-3 px-1 py-1 font-bold">MINISO</div>
                   <div className="col-span-1 text-center py-1">:</div>
-                  <div className="col-span-8 px-2 py-1 font-black truncate">{selectedLabelItem.store_name}</div>
+                  <div className="col-span-8 px-1 py-1 font-black truncate">{selectedLabelItem.store_name}</div>
                 </div>
-                <div className="text-center text-[10px] font-bold py-0.5 border-b border-black tracking-tight">
+                <div className="text-center text-[9px] font-bold py-0.5 border-b border-black tracking-tight truncate leading-none">
                   {selectedLabelItem.promo_title}
                 </div>
-                <div className="text-center text-[10px] font-black py-0.5">
+                <div className="text-center text-[9px] font-black py-0.5 leading-none">
                   {selectedLabelItem.no_spk}
                 </div>
               </div>
-              <div className="col-span-2 border-l-2 border-black flex flex-col items-center justify-center p-2 text-center">
-                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={65} />
-                <span className="font-black text-lg mt-1">{selectedLabelItem.area_code || 'Q1'}</span>
+              <div className="col-span-2 border-l-2 border-black flex flex-col items-center justify-center p-1 text-center">
+                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={50} />
+                <span className="font-black text-sm mt-0.5">{selectedLabelItem.area_code || 'Q1'}</span>
               </div>
             </div>
 
-            {/* List Item Rows */}
-            <div className="divide-y-2 divide-black">
-              {(selectedLabelItem.items_detail && selectedLabelItem.items_detail.length > 0 ? selectedLabelItem.items_detail : [1, 2, 3, 4, 5, 6]).slice(0, 6).map((item, idx) => (
-                <div key={idx} className="border-b border-black last:border-b-0">
-                  <div className="flex justify-between border-b border-black text-[10px] font-bold px-2 py-0.5 bg-stone-100">
+            {/* List 6 Item Rows (Tepat Mengisi Sisa Lembar A4) */}
+            <div className="flex-1 flex flex-col divide-y-2 divide-black">
+              {(selectedLabelItem.items_detail && selectedLabelItem.items_detail.length > 0 
+                ? [...selectedLabelItem.items_detail, ...Array(Math.max(0, 6 - selectedLabelItem.items_detail.length)).fill({})]
+                : Array(6).fill({})
+              ).slice(0, 6).map((item, idx) => (
+                <div key={idx} className="flex-1 flex flex-col border-b border-black last:border-b-0 min-h-0">
+                  <div className="flex justify-between border-b border-black text-[9px] font-bold px-1.5 py-0.5 bg-stone-50 leading-none">
                     <span>{item.material || 'PVC'}</span>
                     <span>Ukuran : {item.size || '-'}</span>
                   </div>
-                  <div className="grid grid-cols-12 min-h-[38mm] items-stretch">
-                    <div className="col-span-5 border-r border-black p-2 flex flex-col justify-between">
-                      <div className="text-xl font-black text-red-600 tracking-tight">
+                  <div className="flex-1 grid grid-cols-12 items-stretch min-h-0">
+                    <div className="col-span-5 border-r border-black p-1.5 flex flex-col justify-between">
+                      <div className="text-base font-black text-red-600 tracking-tight leading-tight">
                         {item.code || '-'}
                       </div>
-                      <div className="text-xs font-bold text-stone-800">
+                      <div className="text-[10px] font-bold text-stone-800 leading-tight">
                         {item.desc || '-'}
                       </div>
                     </div>
                     <div className="col-span-2 border-r border-black flex flex-col items-center justify-center p-1 text-center">
-                      <span className="text-3xl font-black">{item.qty || 0}</span>
-                      <span className="text-xs font-bold text-stone-600">{item.unit || 'Pcs'}</span>
+                      <span className="text-2xl font-black leading-none">{item.qty || (item.code ? 0 : '')}</span>
+                      {item.code && <span className="text-[10px] font-bold text-stone-600">{item.unit || 'Pcs'}</span>}
                     </div>
                     <div className="col-span-5 flex items-center justify-center p-1 overflow-hidden bg-stone-50">
                       {item.image_url ? (
-                        <img src={item.image_url} alt="Preview" className="max-h-[34mm] object-contain" />
+                        <img src={item.image_url} alt="Preview" className="max-h-[30mm] max-w-full object-contain" />
                       ) : (
-                        <span className="text-[10px] text-stone-400 italic">Preview Desain</span>
+                        <div className="w-full h-full bg-blue-100/50 flex items-center justify-center text-[10px] text-stone-400 italic">
+                          Preview Desain
+                        </div>
                       )}
                     </div>
                   </div>
