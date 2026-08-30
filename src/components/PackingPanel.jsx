@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../supabaseClient';
@@ -63,6 +63,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       alert('❌ Gagal memperbarui status: ' + error.message);
       fetchPackingData();
     }
+  };
+
+  // Normalisasi Kode Item (Hapus spasi, strip, underscore agar pencocokan 100% akurat)
+  const normalizeCode = (str) => {
+    if (!str) return '';
+    return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
   // Parser Excel Matriks
@@ -136,7 +142,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   size: cat.size,
                   qty: qtyVal,
                   unit: 'Pcs',
-                  image_url: '' // Nanti otomatis terisi lewat bulk upload foto
+                  image_url: ''
                 });
                 totalQty += qtyVal;
               }
@@ -167,7 +173,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         });
 
         if (parsedRecords.length === 0) {
-          throw new Error('Tidak ada format data matriks toko yang terbaca.');
+          throw new Error('Format data sheet matriks tidak ditemukan.');
         }
 
         const { error } = await supabase
@@ -176,7 +182,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
         if (error) throw error;
 
-        alert(`✅ Berhasil import ${parsedRecords.length} data label box toko!`);
+        alert(`✅ Berhasil import ${parsedRecords.length} box toko!`);
         fetchPackingData();
       } catch (err) {
         alert('❌ Gagal Import Excel: ' + err.message);
@@ -189,7 +195,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Upload Massal Foto Desain Item (Bulk Upload)
+  // Upload Massal Foto Desain dengan Fuzzy Code Matching & Base64/Storage URL
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -199,13 +205,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       let imageMap = {};
 
       for (const file of files) {
-        // Ambil nama file tanpa ekstensi untuk dicocokkan ke kode item
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        // Normalisasi nama (hapus spasi berlebih)
-        const cleanNameKey = rawFileName.replace(/\s+/g, ' ').trim().toLowerCase();
+        const normalizedKey = normalizeCode(rawFileName);
 
         const fileExt = file.name.split('.').pop();
-        const uploadPath = `label-designs/design_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const uploadPath = `label-designs/${Date.now()}_${normalizedKey}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('surat-jalan')
@@ -213,35 +217,40 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
         if (!uploadError) {
           const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(uploadPath);
-          imageMap[cleanNameKey] = urlData.publicUrl;
+          imageMap[normalizedKey] = urlData.publicUrl;
         }
       }
 
-      // Update URL gambar ke seluruh packing_tracking yang memiliki kode item bersangkutan
-      let updatedCount = 0;
-      for (const item of packingList) {
-        if (item.items_detail && Array.isArray(item.items_detail)) {
-          let hasChange = false;
-          const newDetails = item.items_detail.map((detail) => {
-            const itemCodeKey = String(detail.code).replace(/\s+/g, ' ').trim().toLowerCase();
-            if (imageMap[itemCodeKey]) {
-              hasChange = true;
-              return { ...detail, image_url: imageMap[itemCodeKey] };
-            }
-            return detail;
-          });
+      // Sinkronkan foto ke seluruh box di database
+      const { data: currentRows } = await supabase.from('packing_tracking').select('id, items_detail');
+      
+      if (currentRows) {
+        for (const row of currentRows) {
+          if (row.items_detail && Array.isArray(row.items_detail)) {
+            let changed = false;
+            const updatedItems = row.items_detail.map((item) => {
+              const itemKey = normalizeCode(item.code);
+              // Cek kecocokan kode
+              for (const [imgKey, imgUrl] of Object.entries(imageMap)) {
+                if (itemKey.includes(imgKey) || imgKey.includes(itemKey)) {
+                  changed = true;
+                  return { ...item, image_url: imgUrl };
+                }
+              }
+              return item;
+            });
 
-          if (hasChange) {
-            await supabase
-              .from('packing_tracking')
-              .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
-              .eq('id', item.id);
-            updatedCount++;
+            if (changed) {
+              await supabase
+                .from('packing_tracking')
+                .update({ items_detail: updatedItems, updated_at: new Date().toISOString() })
+                .eq('id', row.id);
+            }
           }
         }
       }
 
-      alert(`✅ Berhasil mengupload ${files.length} foto desain dan disinkronkan ke ${updatedCount} box koli!`);
+      alert(`✅ Berhasil mengunggah ${files.length} foto desain dan disinkronkan ke seluruh label box!`);
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
@@ -255,7 +264,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setSelectedLabelItem(item);
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 400);
   };
 
   const compressImage = (file) => {
@@ -465,7 +474,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </label>
 
             <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Uploading Foto...' : '🖼️ Upload Desain Item'}
+              {isUploadingImages ? '⏳ Menyimpan Foto...' : '🖼️ Upload Foto Desain'}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -599,43 +608,49 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* TEMPLATE PRINT A4 PAS 1 HALAMAN */}
+      {/* TEMPLATE PRINT A4 PAS TEPAT 1 HALAMAN */}
       {selectedLabelItem && (
         <div className="print-area hidden print:block">
           <style>{`
             @media print {
               @page {
                 size: A4 portrait;
-                margin: 6mm;
+                margin: 0mm !important;
               }
               html, body {
-                height: 100%;
+                width: 210mm !important;
+                height: 297mm !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                overflow: hidden !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               body * {
-                visibility: hidden;
+                visibility: hidden !important;
               }
               .print-area, .print-area * {
-                visibility: visible;
+                visibility: visible !important;
               }
               .print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                height: 100%;
-                page-break-after: avoid;
-                page-break-inside: avoid;
+                position: fixed !important;
+                left: 10mm !important;
+                top: 10mm !important;
+                width: 190mm !important;
+                height: 275mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                overflow: hidden !important;
               }
             }
           `}</style>
           
-          <div className="w-full h-[282mm] font-sans text-black border-2 border-black bg-white flex flex-col justify-between box-border">
+          <div className="w-[190mm] h-[275mm] font-sans text-black border-2 border-black bg-white flex flex-col justify-between box-border overflow-hidden">
             {/* Header Box Label */}
-            <div className="grid grid-cols-12 border-b-2 border-black h-[42mm]">
+            <div className="grid grid-cols-12 border-b-2 border-black h-[40mm]">
               <div className="col-span-2 border-r-2 border-black flex items-center justify-center font-black text-4xl text-red-600 p-1">
                 {selectedLabelItem.box_code || 'B1'}
               </div>
@@ -667,18 +682,18 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 </div>
               </div>
               <div className="col-span-2 border-l-2 border-black flex flex-col items-center justify-center p-1 text-center">
-                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={50} />
+                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={48} />
                 <span className="font-black text-sm mt-0.5">{selectedLabelItem.area_code || 'Q1'}</span>
               </div>
             </div>
 
-            {/* List 6 Item Rows (Tepat Mengisi Sisa Lembar A4) */}
-            <div className="flex-1 flex flex-col divide-y-2 divide-black">
+            {/* List 6 Item Rows */}
+            <div className="flex-1 flex flex-col divide-y-2 divide-black overflow-hidden">
               {(selectedLabelItem.items_detail && selectedLabelItem.items_detail.length > 0 
                 ? [...selectedLabelItem.items_detail, ...Array(Math.max(0, 6 - selectedLabelItem.items_detail.length)).fill({})]
                 : Array(6).fill({})
               ).slice(0, 6).map((item, idx) => (
-                <div key={idx} className="flex-1 flex flex-col border-b border-black last:border-b-0 min-h-0">
+                <div key={idx} className="flex-1 flex flex-col border-b border-black last:border-b-0 min-h-0 overflow-hidden">
                   <div className="flex justify-between border-b border-black text-[9px] font-bold px-1.5 py-0.5 bg-stone-50 leading-none">
                     <span>{item.material || 'PVC'}</span>
                     <span>Ukuran : {item.size || '-'}</span>
@@ -698,9 +713,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                     </div>
                     <div className="col-span-5 flex items-center justify-center p-1 overflow-hidden bg-stone-50">
                       {item.image_url ? (
-                        <img src={item.image_url} alt="Preview" className="max-h-[30mm] max-w-full object-contain" />
+                        <img src={item.image_url} alt="Preview" className="h-[28mm] w-full object-contain" />
                       ) : (
-                        <div className="w-full h-full bg-blue-100/50 flex items-center justify-center text-[10px] text-stone-400 italic">
+                        <div className="w-full h-full bg-blue-100/50 flex items-center justify-center text-[9px] text-stone-400 italic">
                           Preview Desain
                         </div>
                       )}
