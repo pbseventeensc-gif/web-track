@@ -9,6 +9,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [isImporting, setIsImporting] = useState(false);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [selectedLabelItem, setSelectedLabelItem] = useState(null);
+  const [isBatchPrinting, setIsBatchPrinting] = useState(false);
+
+  // Modal Custom Image Override per Toko
+  const [editingRowItem, setEditingRowItem] = useState(null);
 
   const stages = [
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
@@ -40,7 +44,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     const { data, error } = await supabase
       .from('packing_tracking')
       .select('*')
-      .order('id', { ascending: false });
+      .order('id', { ascending: true });
 
     if (!error && data) {
       setPackingList(data);
@@ -65,13 +69,23 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Helper pembersih string kode untuk mencocokkan nama file secara akurat
+  // Helper pembersih kode string
   const cleanKey = (str) => {
     if (!str) return '';
     return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  // Parser Excel Matriks (Sheet: 206 - A, 206 - B, etc.)
+  // Convert File ke Base64 Data URL
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Parser Excel Matriks
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -173,7 +187,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         });
 
         if (parsedRecords.length === 0) {
-          throw new Error('Tidak ada format data matriks toko yang terbaca.');
+          throw new Error('Tidak ada data matriks toko yang terbaca.');
         }
 
         const { error } = await supabase
@@ -182,7 +196,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
         if (error) throw error;
 
-        alert(`✅ Berhasil import ${parsedRecords.length} box toko!`);
+        alert(`✅ Berhasil import ${parsedRecords.length} data box toko!`);
         fetchPackingData();
       } catch (err) {
         alert('❌ Gagal Import Excel: ' + err.message);
@@ -195,30 +209,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Upload Massal Foto Desain Item (Bulk Upload)
+  // Upload Foto Desain (Smart Matching: Kode + Ukuran)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
 
     setIsUploadingImages(true);
     try {
-      let imageMap = {};
+      let imageList = [];
 
       for (const file of files) {
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         const normalizedKey = cleanKey(rawFileName);
-
-        const fileExt = file.name.split('.').pop();
-        const uploadPath = `label-designs/${Date.now()}_${normalizedKey}.${fileExt}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('surat-jalan')
-          .upload(uploadPath, file, { contentType: file.type, upsert: true });
-
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(uploadPath);
-          imageMap[normalizedKey] = urlData.publicUrl;
-        }
+        const base64Data = await readFileAsBase64(file);
+        imageList.push({ rawKey: normalizedKey, data: base64Data });
       }
 
       const { data: currentRows, error: fetchErr } = await supabase
@@ -227,35 +231,38 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       if (fetchErr) throw fetchErr;
 
-      let updatedCount = 0;
-      if (currentRows) {
-        for (const row of currentRows) {
-          if (row.items_detail && Array.isArray(row.items_detail)) {
-            let hasChange = false;
-            const newDetails = row.items_detail.map((item) => {
-              const itemCodeClean = cleanKey(item.code);
+      for (const row of currentRows || []) {
+        if (row.items_detail && Array.isArray(row.items_detail)) {
+          let hasChange = false;
+          const newDetails = row.items_detail.map((item) => {
+            const itemCodeClean = cleanKey(item.code);
+            const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
 
-              for (const [imgKey, imgUrl] of Object.entries(imageMap)) {
-                if (itemCodeClean === imgKey || itemCodeClean.includes(imgKey) || imgKey.includes(itemCodeClean)) {
-                  hasChange = true;
-                  return { ...item, image_url: imgUrl };
-                }
-              }
-              return item;
-            });
-
-            if (hasChange) {
-              await supabase
-                .from('packing_tracking')
-                .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
-                .eq('id', row.id);
-              updatedCount++;
+            // Prioritas 1: Kecocokan Kode + Ukuran spesifik
+            let matched = imageList.find(img => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
+            
+            // Prioritas 2: Kecocokan Kode Item saja
+            if (!matched) {
+              matched = imageList.find(img => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
             }
+
+            if (matched) {
+              hasChange = true;
+              return { ...item, image_url: matched.data };
+            }
+            return item;
+          });
+
+          if (hasChange) {
+            await supabase
+              .from('packing_tracking')
+              .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
+              .eq('id', row.id);
           }
         }
       }
 
-      alert(`✅ Berhasil mengupload foto desain dan mencocokkan ke ${updatedCount} box koli!`);
+      alert(`✅ Berhasil menyematkan ${files.length} foto desain dengan pencocokan Kode + Ukuran!`);
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
@@ -265,8 +272,50 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
+  // Override / Ganti Foto Satuan untuk 1 Item di Toko Tertentu
+  const handleSingleImageOverride = async (rowId, itemIndex, file) => {
+    if (!file) return;
+    try {
+      const base64Data = await readFileAsBase64(file);
+      const targetRow = packingList.find(p => p.id === rowId);
+      if (!targetRow || !targetRow.items_detail) return;
+
+      const updatedItems = [...targetRow.items_detail];
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: base64Data };
+
+      const { error } = await supabase
+        .from('packing_tracking')
+        .update({ items_detail: updatedItems, updated_at: new Date().toISOString() })
+        .eq('id', rowId);
+
+      if (error) throw error;
+
+      alert('✅ Foto item toko berhasil diperbarui!');
+      fetchPackingData();
+      if (editingRowItem) {
+        setEditingRowItem(prev => ({ ...prev, items_detail: updatedItems }));
+      }
+    } catch (err) {
+      alert('❌ Gagal mengubah gambar: ' + err.message);
+    }
+  };
+
+  // Trigger Cetak 1 Label Saja
   const handlePrintLabel = (item) => {
+    setIsBatchPrinting(false);
     setSelectedLabelItem(item);
+    setTimeout(() => {
+      window.print();
+    }, 300);
+  };
+
+  // Trigger Cetak SEMUA Label Sekaligus (Batch Print)
+  const handleBatchPrintAll = () => {
+    if (packingList.length === 0) {
+      return alert('⚠️ Tidak ada data label yang dapat dicetak.');
+    }
+    setIsBatchPrinting(true);
+    setSelectedLabelItem(null);
     setTimeout(() => {
       window.print();
     }, 400);
@@ -408,6 +457,107 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
+  // Komponen Label Satuan A4
+  const renderSingleLabelSheet = (item) => (
+    <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
+      
+      {/* Header Box Label */}
+      <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
+        <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
+          {item.box_code || 'B1'}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
+          <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
+            {item.client_pt}
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+            <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
+            <div style={{ textAlign: 'center' }}>:</div>
+            <div style={{ fontWeight: '900', textAlign: 'center' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+            <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
+              {item.delivery_type || 'DALAM KOTA'}
+            </div>
+            <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+            <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
+            <div style={{ textAlign: 'center' }}>:</div>
+            <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {item.store_name}
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
+            {item.promo_title}
+          </div>
+
+          <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
+            {item.no_spk}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+          <QRCodeSVG value={item.qr_address || item.tracking_id} size={42} />
+          <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{item.area_code || 'Q1'}</span>
+        </div>
+      </div>
+
+      {/* List 6 Item Rows */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {(item.items_detail && item.items_detail.length > 0 
+          ? [...item.items_detail, ...Array(Math.max(0, 6 - item.items_detail.length)).fill({})]
+          : Array(6).fill({})
+        ).slice(0, 6).map((sub, idx) => (
+          <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+            
+            <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
+              <span>{sub.material || (sub.code ? 'PVC' : '')}</span>
+              <span>{sub.size ? `Ukuran : ${sub.size}` : ''}</span>
+            </div>
+
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
+              
+              <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                  {sub.code || ''}
+                </div>
+                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
+                  {sub.desc || ''}
+                </div>
+              </div>
+
+              <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>
+                  {sub.qty || (sub.code ? 0 : '')}
+                </span>
+                {sub.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
+                {sub.image_url ? (
+                  <img src={sub.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain' }} />
+                ) : (
+                  sub.code && (
+                    <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>
+                      Preview Desain
+                    </div>
+                  )
+                )}
+              </div>
+
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       
@@ -460,7 +610,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* TABEL DATA PAKING */}
+      {/* TABEL DATA PAKING & ACTION TOOLBAR */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <h3 className="text-sm font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
@@ -479,7 +629,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </label>
 
             <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Menyimpan Foto...' : '🖼️ Upload Foto Desain'}
+              {isUploadingImages ? '⏳ Menyimpan Foto...' : '🖼️ Upload Foto Desain (Smart Match)'}
               <input 
                 type="file" 
                 accept="image/*" 
@@ -489,6 +639,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 disabled={isUploadingImages}
               />
             </label>
+
+            {/* TOMBOL CETAK SEMUA LABEL SEKALIGUS */}
+            <button 
+              onClick={handleBatchPrintAll}
+              className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              🖨️ Cetak Semua Label (Batch)
+            </button>
 
             <button 
               onClick={handleDownloadPackingReport}
@@ -512,7 +670,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 <th className="py-3 px-4">Box</th>
                 <th className="py-3 px-4">Nama Store / Project</th>
                 <th className="py-3 px-4">Tracking ID</th>
-                <th className="py-3 px-4 text-center">Aksi Label</th>
+                <th className="py-3 px-4 text-center">Label & Desain</th>
                 <th className="py-3 px-4 text-center">Status Packing</th>
                 <th className="py-3 px-4 text-center">Status Checker</th>
                 <th className="py-3 px-4 text-center">Bukti Paking</th>
@@ -537,12 +695,22 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                       <td className="py-3 px-4 font-mono text-[11px] text-emerald-500 font-bold">{item.tracking_id || '-'}</td>
                       
                       <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => handlePrintLabel(item)}
-                          className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold rounded-xl text-[11px] transition-all shadow-sm active:scale-95"
-                        >
-                          🖨️ Cetak A4
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handlePrintLabel(item)}
+                            className="px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold rounded-xl text-[11px] transition-all shadow-sm active:scale-95"
+                            title="Cetak label A4 khusus toko ini"
+                          >
+                            🖨️ Cetak
+                          </button>
+                          <button
+                            onClick={() => setEditingRowItem(item)}
+                            className="px-2 py-1.5 bg-stone-200 hover:bg-stone-300 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-stone-700 dark:text-stone-200 font-bold rounded-xl text-[11px] transition-all active:scale-95"
+                            title="Edit / Ganti Foto Satuan untuk toko ini"
+                          >
+                            ✏️ Foto
+                          </button>
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 text-center">
@@ -613,145 +781,98 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* TEMPLATE PRINT A4 PAS TEPAT 1 HALAMAN */}
-      {selectedLabelItem && (
-        <div className="print-area hidden print:block">
-          <style>{`
-            @media print {
-              @page {
-                size: A4 portrait;
-                margin: 5mm !important;
-              }
-              html, body {
-                width: 210mm !important;
-                height: 297mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              body * {
-                visibility: hidden !important;
-              }
-              .print-area, .print-area * {
-                visibility: visible !important;
-              }
-              .print-area {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 195mm !important;
-                height: 270mm !important;
-                margin: 0 auto !important;
-                box-sizing: border-box !important;
-                page-break-after: avoid !important;
-                page-break-inside: avoid !important;
-                overflow: hidden !important;
-              }
-            }
-          `}</style>
-          
-          <div style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
-            
-            {/* Header Box Label */}
-            <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
-              
-              <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
-                {selectedLabelItem.box_code || 'B1'}
+      {/* MODAL MANUAL EDIT / OVERRIDE FOTO PER TOKO */}
+      {editingRowItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-2xl max-h-[85vh] rounded-3xl p-6 overflow-y-auto shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
+            <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-neutral-700">
+              <div>
+                <h3 className="font-black text-base uppercase">Kelola Foto Desain Toko</h3>
+                <p className="text-xs text-stone-400 font-bold">{editingRowItem.store_name} ({editingRowItem.box_code})</p>
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
-                <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
-                  {selectedLabelItem.client_pt}
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-                  <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
-                  <div style={{ textAlign: 'center' }}>:</div>
-                  <div style={{ fontWeight: '900', textAlign: 'center' }}>{selectedLabelItem.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                  <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: selectedLabelItem.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
-                    {selectedLabelItem.delivery_type || 'DALAM KOTA'}
-                  </div>
-                  <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {selectedLabelItem.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-                  <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
-                  <div style={{ textAlign: 'center' }}>:</div>
-                  <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {selectedLabelItem.store_name}
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
-                  {selectedLabelItem.promo_title}
-                </div>
-
-                <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
-                  {selectedLabelItem.no_spk}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                <QRCodeSVG value={selectedLabelItem.qr_address || selectedLabelItem.tracking_id} size={42} />
-                <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{selectedLabelItem.area_code || 'Q1'}</span>
-              </div>
+              <button 
+                onClick={() => setEditingRowItem(null)}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* List 6 Item Rows */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              {(selectedLabelItem.items_detail && selectedLabelItem.items_detail.length > 0 
-                ? [...selectedLabelItem.items_detail, ...Array(Math.max(0, 6 - selectedLabelItem.items_detail.length)).fill({})]
-                : Array(6).fill({})
-              ).slice(0, 6).map((item, idx) => (
-                <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-                  
-                  <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
-                    <span>{item.material || (item.code ? 'PVC' : '')}</span>
-                    <span>{item.size ? `Ukuran : ${item.size}` : ''}</span>
+            <div className="space-y-4">
+              {editingRowItem.items_detail && editingRowItem.items_detail.map((itm, i) => (
+                <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${isDarkMode ? 'bg-neutral-700/40 border-neutral-600' : 'bg-stone-50 border-stone-200'}`}>
+                  <div className="flex-1">
+                    <div className="font-black text-sm text-red-500">{itm.code}</div>
+                    <div className="text-xs font-semibold">{itm.desc}</div>
+                    <div className="text-[11px] text-stone-400 font-mono">Ukuran: {itm.size} | Qty: {itm.qty} Pcs</div>
                   </div>
 
-                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
-                    
-                    <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                        {item.code || ''}
-                      </div>
-                      <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
-                        {item.desc || ''}
-                      </div>
-                    </div>
-
-                    <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                      <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>
-                        {item.qty || (item.code ? 0 : '')}
-                      </span>
-                      {item.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{item.unit || 'Pcs'}</span>}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain' }} />
-                      ) : (
-                        item.code && (
-                          <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>
-                            Preview Desain
-                          </div>
-                        )
-                      )}
-                    </div>
-
+                  <div className="flex items-center gap-3">
+                    {itm.image_url ? (
+                      <img src={itm.image_url} alt="Item" className="w-16 h-10 object-contain rounded-lg border bg-white" />
+                    ) : (
+                      <div className="w-16 h-10 rounded-lg bg-stone-200 dark:bg-neutral-600 flex items-center justify-center text-[9px] text-stone-400 italic">No Foto</div>
+                    )}
+                    <label className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95">
+                      Ganti Foto
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => handleSingleImageOverride(editingRowItem.id, i, e.target.files[0])}
+                      />
+                    </label>
                   </div>
                 </div>
               ))}
             </div>
-
           </div>
         </div>
       )}
+
+      {/* TEMPLATE PRINT A4 (DUKUNG SINGLE CETAK & BATCH CETAK SEMUA TOKO) */}
+      <div className="print-area hidden print:block">
+        <style>{`
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 5mm !important;
+            }
+            html, body {
+              width: 210mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body * {
+              visibility: hidden !important;
+            }
+            .print-area, .print-area * {
+              visibility: visible !important;
+            }
+            .print-area {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              margin: 0 auto !important;
+            }
+            .label-page {
+              page-break-after: always !important;
+              page-break-inside: avoid !important;
+              break-after: page !important;
+            }
+          }
+        `}</style>
+
+        {isBatchPrinting ? (
+          packingList.map((item) => <React.Fragment key={item.id}>{renderSingleLabelSheet(item)}</React.Fragment>)
+        ) : (
+          selectedLabelItem && renderSingleLabelSheet(selectedLabelItem)
+        )}
+      </div>
 
     </div>
   );
