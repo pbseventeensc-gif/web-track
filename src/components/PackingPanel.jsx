@@ -103,7 +103,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: true });
 
     if (!error && data) {
-      // Pasangkan otomatis gambar dari cache jika ada
       const synced = applyCachedImagesToRows(data, cachedDesignImages);
       setPackingList(synced);
     }
@@ -120,21 +119,23 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Helper pasang gambar dari list cache ke baris database
   const applyCachedImagesToRows = (rows, images) => {
     if (!images || images.length === 0) return rows;
     return rows.map((row) => {
       if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
       const updatedDetails = row.items_detail.map((item, idx) => {
-        // Cek jika item sudah punya gambar, pertahankan
         if (item.image_url && item.image_url.startsWith('data:image')) return item;
 
         const itemCodeClean = cleanKey(item.code);
         const itemCore = extractCoreCode(item.code);
 
-        // 1. Match Exact
-        let matched = images.find((img) => img.rawKey === itemCodeClean || img.coreKey === itemCore);
-        // 2. Match Slot / Index Urutan
+        // 1. Cek Exact Match (misal 207b13 atau b13)
+        let matched = images.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
+        // 2. Cek Core Match (misal 1-3)
+        if (!matched) {
+          matched = images.find((img) => img.coreKey === itemCore);
+        }
+        // 3. Fallback Index (Urutan 1, 2, 3, 4)
         if (!matched && images[idx]) {
           matched = images[idx];
         }
@@ -301,7 +302,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           catalogItems.forEach((cat, catIdx) => {
             const qtyVal = Number(row[cat.colIndex]) || 0;
             if (qtyVal > 0) {
-              // Cek apakah sudah ada di cache gambar
               const fallbackImg = cachedDesignImages[catIdx]?.data || '';
               storeItems.push({
                 code: cat.code,
@@ -416,7 +416,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Otomatis & Auto-Inject ke Semua Toko
+  // Upload Foto Desain Universal + Auto-Fallback Slot Matcher
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -429,7 +429,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
-      // Urutkan file berdasarkan nama
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
       const imageList = await Promise.all(
@@ -448,13 +447,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         })
       );
 
-      // Simpan ke LocalStorage agar tidak pernah hilang saat refresh/cetak
       try {
         localStorage.setItem('wellen_packing_design_images', JSON.stringify(imageList));
       } catch (err) {}
       setCachedDesignImages(imageList);
 
-      // Pasang gambar langsung ke State UI
       const updatedRows = [];
       const newPackingList = packingList.map((row) => {
         if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
@@ -464,8 +461,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCore = extractCoreCode(item.code);
 
           // 1. Cek Exact Match
-          let matched = imageList.find((img) => img.rawKey === itemCodeClean || img.coreKey === itemCore);
-          // 2. Cek Slot / Urutan Posisi (File 1 -> Item 1, File 2 -> Item 2)
+          let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
+          // 2. Cek Core Match (misal 1-3)
+          if (!matched) {
+            matched = imageList.find((img) => img.coreKey === itemCore);
+          }
+          // 3. Fallback Auto-Slot (Urutan 1, 2, 3, 4)
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
@@ -483,7 +484,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       setPackingList(newPackingList);
 
-      // Update Supabase
       if (updatedRows.length > 0) {
         await Promise.all(
           updatedRows.map((r) =>
@@ -495,7 +495,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ Berhasil! ${files.length} gambar telah langsung terpasang ke seluruh box toko.`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah otomatis dipasangkan ke seluruh box toko.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -514,6 +514,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       const updatedItems = [...targetRow.items_detail];
       updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: compressedBase64 };
 
+      // Update State lokal seketika
+      setPackingList((prev) =>
+        prev.map((p) => (p.id === rowId ? { ...p, items_detail: updatedItems } : p))
+      );
+
       const { error } = await supabase
         .from('packing_tracking')
         .update({ items_detail: updatedItems, updated_at: new Date().toISOString() })
@@ -522,7 +527,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       if (error) throw error;
 
       alert('✅ Foto item toko berhasil diperbarui!');
-      fetchPackingData();
       if (editingRowItem) {
         setEditingRowItem((prev) => ({ ...prev, items_detail: updatedItems }));
       }
@@ -535,7 +539,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(false);
 
-    // Ambil baris paling fresh dari state packingList
     const freshItem = packingList.find((p) => p.id === item.id) || item;
     setSelectedLabelItem(freshItem);
     setTimeout(() => {
@@ -697,7 +700,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  // Helper render image preview dengan fallback instan
   const renderItemImage = (sub, idx) => {
     const directUrl = sub.image_url || cachedDesignImages[idx]?.data;
     if (directUrl) {
