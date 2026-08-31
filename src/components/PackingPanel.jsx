@@ -95,12 +95,40 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  const readFileAsBase64 = (file) => {
-    return new Promise((resolve, reject) => {
+  // Kompresi Gambar Desain Otomatis (~20-40 KB) agar aman dari batas payload HTTP API
+  const compressDesignImage = (file) => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (err) => reject(err);
       reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 600;
+          const MAX_HEIGHT = 400;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.65));
+        };
+      };
     });
   };
 
@@ -124,7 +152,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       return;
     }
 
-    // Eksekusi Update Status
     const { error } = await supabase
       .from('packing_tracking')
       .update({
@@ -281,10 +308,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Upload Foto Desain (Smart Matching)
+  // Upload Foto Desain (Aman, Auto-Kompresi & Smart-Match)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
+
+    if (packingList.length === 0) {
+      alert('⚠️ Silakan Import Excel Matriks terlebih dahulu sebelum mengupload foto desain!');
+      e.target.value = '';
+      return;
+    }
 
     setIsUploadingImages(true);
     try {
@@ -293,8 +326,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       for (const file of files) {
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         const normalizedKey = cleanKey(rawFileName);
-        const base64Data = await readFileAsBase64(file);
-        imageList.push({ rawKey: normalizedKey, data: base64Data });
+        const compressedBase64 = await compressDesignImage(file);
+        imageList.push({ rawKey: normalizedKey, data: compressedBase64 });
       }
 
       const { data: currentRows, error: fetchErr } = await supabase
@@ -303,6 +336,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       if (fetchErr) throw fetchErr;
 
+      let matchCount = 0;
       for (const row of currentRows || []) {
         if (row.items_detail && Array.isArray(row.items_detail)) {
           let hasChange = false;
@@ -310,7 +344,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             const itemCodeClean = cleanKey(item.code);
             const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
 
+            // 1. Cek kombinasi Kode + Ukuran
             let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
+            
+            // 2. Cek Kode Item saja
             if (!matched) {
               matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
             }
@@ -323,6 +360,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           });
 
           if (hasChange) {
+            matchCount++;
             await supabase
               .from('packing_tracking')
               .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
@@ -331,7 +369,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         }
       }
 
-      alert(`✅ Berhasil menyematkan ${files.length} foto desain!`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah disinkronkan ke ${matchCount} box koli.`);
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
@@ -344,12 +382,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const handleSingleImageOverride = async (rowId, itemIndex, file) => {
     if (!file) return;
     try {
-      const base64Data = await readFileAsBase64(file);
+      const compressedBase64 = await compressDesignImage(file);
       const targetRow = packingList.find((p) => p.id === rowId);
       if (!targetRow || !targetRow.items_detail) return;
 
       const updatedItems = [...targetRow.items_detail];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: base64Data };
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: compressedBase64 };
 
       const { error } = await supabase
         .from('packing_tracking')
@@ -416,12 +454,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
+              height = Math.round((height * MAX_WIDTH) / width);
               width = MAX_WIDTH;
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
+              width = Math.round((width * MAX_HEIGHT) / height);
               height = MAX_HEIGHT;
             }
           }
@@ -768,7 +806,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 filteredList.map((item) => {
                   const isPackingDone = item.status_qc_packing === 'DONE';
                   const isCheckerDone = item.status_qc_checker === 'DONE';
-                  const isReadyToShip = isPackingDone && isCheckerDone;
 
                   return (
                     <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
@@ -879,7 +916,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               </button>
             </div>
 
-            {/* Target Status Switch */}
             <div className="flex gap-2 mb-4 bg-stone-100 dark:bg-neutral-700 p-1.5 rounded-2xl">
               <button
                 onClick={() => setScannerTargetStage('status_qc_packing')}
@@ -899,10 +935,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               </button>
             </div>
 
-            {/* Kamera Viewport Container */}
             <div id="qr-reader-container" className="rounded-2xl overflow-hidden border-2 border-dashed border-stone-300 dark:border-neutral-600 bg-black min-h-[260px]"></div>
 
-            {/* Scanner Feedback Box */}
             {lastScanFeedback && (
               <div className={`mt-4 p-3 rounded-2xl text-xs font-bold text-center animate-fade-in ${
                 lastScanFeedback.success ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
@@ -996,7 +1030,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         `}</style>
 
         {isSuratJalanPrinting && suratJalanGroup ? (
-          /* TEMPLATE CETAK SURAT JALAN RESMI */
           <div className="label-page p-6 font-sans text-black bg-white">
             <div className="border-b-2 border-black pb-4 mb-4 flex justify-between items-start">
               <div>
@@ -1036,7 +1069,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               </tbody>
             </table>
 
-            {/* Kolom Tanda Tangan */}
             <div className="grid grid-cols-3 text-center text-xs font-bold pt-12">
               <div>
                 <p>Bagian Packing</p>
