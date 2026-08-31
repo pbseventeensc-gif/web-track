@@ -720,98 +720,123 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const renderSingleLabelSheet = (item) => {
     const details = parseItems(item.items_detail);
-    const filledDetails = details.length > 0 
-      ? [...details, ...Array(Math.max(0, 6 - details.length)).fill({})]
-      : Array(6).fill({});
+
+    // Chunking: Bagi item menjadi grup berisi maksimal 6 item per halaman
+    const chunks = [];
+    if (details.length === 0) {
+      chunks.push([]);
+    } else {
+      for (let i = 0; i < details.length; i += 6) {
+        chunks.push(details.slice(i, i + 6));
+      }
+    }
 
     return (
-      <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
-        <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
-          <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
-            {item.box_code || 'B1'}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
-            <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
-              {item.client_pt}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-              <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
-              <div style={{ textAlign: 'center' }}>:</div>
-              <div style={{ fontWeight: '900', textAlign: 'center' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-              <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
-                {item.delivery_type || 'DALAM KOTA'}
-              </div>
-              <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
-              </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-              <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
-              <div style={{ textAlign: 'center' }}>:</div>
-              <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.store_name}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
-              {item.promo_title}
-            </div>
-            <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
-              {item.no_spk}
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-            <QRCodeSVG value={item.qr_address || item.tracking_id} size={42} />
-            <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{item.area_code || 'Q1'}</span>
-          </div>
-        </div>
+      <>
+        {chunks.map((chunk, pageIdx) => {
+          const totalPages = chunks.length;
+          const currentPage = pageIdx + 1;
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {filledDetails.slice(0, 6).map((sub, idx) => (
-            <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-              <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
-                <span>{sub.material || (sub.code ? 'PVC' : '')}</span>
-                <span>{sub.size ? `Ukuran : ${sub.size}` : ''}</span>
+          // Isi sisa baris kosong jika item < 6 agar layout tetap konsisten
+          const filledChunk = [...chunk, ...Array(Math.max(0, 6 - chunk.length)).fill({})];
+
+          return (
+            <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always' }}>
+              <div style={{ height: '40mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
+                <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '900', color: '#dc2626' }}>
+                  {item.box_code || 'B1'}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '15px', borderBottom: '1px solid #000', padding: '4px 0', textTransform: 'uppercase' }}>
+                    {item.client_pt}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '30mm 4mm 20mm 30mm 1fr', fontSize: '12px', borderBottom: '1px solid #000', height: '8mm', alignItems: 'center' }}>
+                    <div style={{ paddingLeft: '6px', fontWeight: 'bold' }}>NOMOR TOKO</div>
+                    <div style={{ textAlign: 'center' }}>:</div>
+                    <div style={{ fontWeight: '900', textAlign: 'center', fontSize: '14px' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                    <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
+                      {item.delivery_type || 'LUAR KOTA'}
+                    </div>
+                    <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>
+                      {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '30mm 4mm 1fr', fontSize: '12px', borderBottom: '1px solid #000', height: '8mm', alignItems: 'center' }}>
+                    <div style={{ paddingLeft: '6px', fontWeight: 'bold' }}>MINISO</div>
+                    <div style={{ textAlign: 'center' }}>:</div>
+                    <div style={{ fontWeight: '900', paddingLeft: '6px', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.store_name}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '11px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '2px 0' }}>
+                    {item.promo_title}
+                  </div>
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '11px', padding: '2px 0' }}>
+                    {item.no_spk}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                  <QRCodeSVG value={item.qr_address || item.tracking_id} size={48} />
+                  <div style={{ fontWeight: '900', fontSize: '24px', marginTop: '2px', lineHeight: '1', textAlign: 'center' }}>
+                    {item.area_code || 'Q1'}
+                  </div>
+                  <div style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px', textAlign: 'center', color: '#404040' }}>
+                    {currentPage} OF {totalPages}
+                  </div>
+                </div>
               </div>
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
-                <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                    {sub.code || ''}
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {chunk.map((sub, idx) => (
+                  <div key={idx} style={{ height: '38.2mm', borderBottom: '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                    <div style={{ height: '7mm', borderBottom: '1px solid #000', display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'center', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold', lineHeight: '1.1' }}>
+                      <div style={{ paddingLeft: '8px', paddingRight: '4px', overflow: 'hidden' }}>{sub.material || (sub.code ? 'PVC' : '')}</div>
+                      <div></div>
+                      <div style={{ textAlign: 'center' }}>{sub.size ? `Ukuran : ${sub.size}` : ''}</div>
+                    </div>
+                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
+                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'center' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.5px', lineHeight: 1 }}>
+                          {sub.code || ''}
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1, textTransform: 'uppercase' }}>
+                          {sub.desc || ''}
+                        </div>
+                      </div>
+                      <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                        <span style={{ fontSize: '30px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
+                        {sub.code && <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
+                        {sub.image_url ? (
+                          <img
+                            src={sub.image_url}
+                            alt={`Preview ${sub.code}`}
+                            decoding="sync"
+                            loading="eager"
+                            style={{
+                              height: '26mm',
+                              width: 'auto',
+                              maxWidth: '100%',
+                              objectFit: 'contain',
+                              display: 'block',
+                              margin: 'auto',
+                              printColorAdjust: 'exact',
+                              WebkitPrintColorAdjust: 'exact'
+                            }}
+                          />
+                        ) : (
+                          sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
-                    {sub.desc || ''}
-                  </div>
-                </div>
-                <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                  <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
-                  {sub.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
-                  {sub.image_url ? (
-                    <img 
-                      src={sub.image_url} 
-                      alt={`Preview ${sub.code}`}
-                      decoding="sync"
-                      loading="eager"
-                      style={{
-                        height: '28mm',
-                        width: 'auto',
-                        maxWidth: '100%',
-                        objectFit: 'contain',
-                        display: 'block',
-                        margin: 'auto',
-                        printColorAdjust: 'exact',
-                        WebkitPrintColorAdjust: 'exact'
-                      }}
-                    />
-                  ) : (
-                    sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
-                  )}
-                </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          );
+        })}
+      </>
     );
   };
 
