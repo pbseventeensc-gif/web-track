@@ -143,19 +143,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // v4: Ambil Huruf Terakhir + Angka Terakhir
-    const cleanStr = String(str).replace(/\.(jpg|jpeg|png|gif|webp|pdf)$/i, '');
-
-    const numMatches = cleanStr.match(/\d+/g);
-    const lastNum = numMatches ? numMatches[numMatches.length - 1] : '';
-
-    const letterMatches = cleanStr.match(/[a-zA-Z]/g);
-    const lastLetter = letterMatches ? letterMatches[letterMatches.length - 1].toLowerCase() : '';
-
-    if (lastLetter && lastNum) {
-      return lastLetter + lastNum;
-    }
-    return lastNum || lastLetter || cleanKey(cleanStr);
+    // Hanya ambil angka di paling akhir (misal: B.3-1 -> 1, atau B.1-1 -> 1)
+    const match = String(str).match(/(\d+)$/);
+    return match ? match[1] : '';
   };
 
   // Convert File ke Direct Display URL
@@ -411,7 +401,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
 
     setIsUploadingImages(true);
-    console.log("=== START BULK UPLOAD MATCHING (v4) ===");
     try {
       // Sort file agar urutan konsisten (misal: B.1-1, B.1-2, ...)
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
@@ -427,7 +416,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         window.__ACTIVE_DESIGN_URLS__[normalizedKey] = displayUrl;
         if (coreKey) {
           window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
-          console.log(`File: ${file.name} -> CoreKey extracted: ${coreKey}`);
         }
 
         return { 
@@ -439,7 +427,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         };
       });
 
-      let totalMatchesFound = 0;
+      let totalMatches = 0;
       const newPackingList = packingList.map((row) => {
         const details = parseItems(row.items_detail);
         if (details.length === 0) return row;
@@ -448,34 +436,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCodeClean = cleanKey(item.code);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Match
-          let matched = imageList.find((img) =>
-            img.rawKey === itemCodeClean ||
-            itemCodeClean.endsWith(img.rawKey) ||
-            img.rawKey.endsWith(itemCodeClean)
-          );
+          // 1. Cek Exact Match (Nama file sama persis dengan kode)
+          let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
 
-          // 2. Cek Core Match (Angka Akhir) - Paling Akurat
+          // 2. Cek Core Match (Misal: sama-sama akhiran "-1")
           if (!matched && itemCore) {
             matched = imageList.find((img) => img.coreKey === itemCore);
           }
 
-          // 3. Fallback: Jika jumlah file pas, pasangkan sesuai urutan
+          // 3. Fallback Urutan Posisi Slot (Jika jumlah file sama dengan jumlah item dalam satu box)
           if (!matched && imageList.length === details.length) {
             matched = imageList[itemIdx];
           }
 
           if (matched && matched.url) {
-            totalMatchesFound++;
-            const method = matched.rawKey === itemCodeClean ? 'EXACT' :
-                          (itemCodeClean.endsWith(matched.rawKey) || matched.rawKey.endsWith(itemCodeClean)) ? 'KEY-SUFFIX' :
-                          'CORE-MATCH';
-            console.log(`MATCH SUCCESS: Item [${item.code}] -> File [${matched.fileName}] (${method})`);
+            totalMatches++;
             return { ...item, image_url: matched.url };
-          } else {
-            console.warn(`MATCH FAILED: Item [${item.code}] Core:[${itemCore}] found no matching file.`);
-            return item;
           }
+          return item;
         });
 
         return { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
@@ -484,7 +462,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       // Update State UI Seketika
       setPackingList(newPackingList);
 
-      alert(`✅ Selesai! Berhasil memasangkan ${totalMatchesFound} desain.\n\nTips: Buka Console (Tekan F12 atau Inspect) untuk melihat rincian pencocokan.`);
+      alert(`✅ Selesai! Berhasil memasangkan ${totalMatches} desain ke item yang cocok.`);
     } catch (err) {
       alert('❌ Gagal mengunggah foto: ' + err.message);
     } finally {
@@ -780,9 +758,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   </div>
                   <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
                     {sub.desc || ''}
-                  </div>
-                  <div style={{ fontSize: '8px', color: '#94a3b8', fontStyle: 'italic' }}>
-                    ID: {extractCoreCode(sub.code)}
                   </div>
                 </div>
                 <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
@@ -1285,35 +1260,39 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* PRINT CONTAINER A4 */}
-      <div className="print-area hidden print:block">
+      {/* PRINT CONTAINER A4 - Diposisikan di luar layar agar gambar tetap dimuat browser tanpa mengganggu UI */}
+      <div className="print-area fixed top-0 left-0 -z-50 opacity-0 pointer-events-none print:static print:opacity-100 print:z-auto print:pointer-events-auto">
         <style>{`
           @media print {
             @page {
               size: A4 portrait;
-              margin: 0 !important;
+              margin: 5mm !important;
             }
             html, body {
-              width: 210mm;
-              height: 297mm;
+              width: 210mm !important;
               margin: 0 !important;
               padding: 0 !important;
-              background: #fff !important;
+              background: #ffffff !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body * {
+              visibility: hidden !important;
+            }
+            .print-area, .print-area * {
+              visibility: visible !important;
             }
             .print-area {
-              display: block !important;
-              width: 210mm !important;
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              margin: 0 auto !important;
             }
             .label-page {
               page-break-after: always !important;
               page-break-inside: avoid !important;
-              margin: 0 auto !important;
-              position: relative !important;
-              top: 0 !important;
-            }
-            img {
-              max-width: 100% !important;
-              display: block !important;
+              break-after: page !important;
             }
           }
         `}</style>
