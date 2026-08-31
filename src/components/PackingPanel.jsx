@@ -752,24 +752,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
                 {/* Middle Section: Kop Info */}
                 <div style={{ display: 'flex', flexDirection: 'column', borderRight: '2px solid #000' }}>
-                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '4px 0' }}>
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '4px 0', background: '#f8fafc' }}>
                     {item.client_pt}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 15mm 1fr 25mm', fontSize: '14px', borderBottom: '1px solid #000', height: '9mm', alignItems: 'stretch' }}>
-                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000' }}>NOMOR TOKO</div>
-                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>:</div>
-                    <div style={{ fontWeight: '900', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                    <div style={{ fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 15mm 1fr 25mm', fontSize: '14px', height: '9mm', alignItems: 'stretch' }}>
+                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>NOMOR TOKO</div>
+                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>:</div>
+                    <div style={{ fontWeight: '900', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                    <div style={{ fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {item.delivery_type || 'DALAM KOTA'}
                     </div>
-                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', borderBottom: '1px solid #000' }}>
                       {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 1fr', fontSize: '14px', borderBottom: '1px solid #000', height: '9mm', alignItems: 'center' }}>
-                    <div style={{ paddingLeft: '8px', fontWeight: 'bold' }}>MINISO</div>
-                    <div style={{ textAlign: 'center' }}>:</div>
-                    <div style={{ fontWeight: '900', paddingLeft: '8px', fontSize: '18px', lineHeight: '1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 1fr', fontSize: '14px', height: '9mm', alignItems: 'stretch' }}>
+                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>MINISO</div>
+                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>:</div>
+                    <div style={{ fontWeight: '900', paddingLeft: '8px', fontSize: '18px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottom: '1px solid #000' }}>
                       {item.store_name}
                     </div>
                   </div>
