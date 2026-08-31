@@ -814,7 +814,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                         <span style={{ fontSize: '64px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
                         {sub.code && <span style={{ fontSize: '20px', fontWeight: '900', color: '#000', marginTop: '0px' }}>{sub.unit || 'Pcs'}</span>}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', background: '#fff', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', background: '#fafafa', overflow: 'hidden' }}>
                         {sub.image_url ? (
                           <img
                             src={sub.image_url}
@@ -822,10 +822,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                             decoding="sync"
                             loading="eager"
                             style={{
-                              height: '100%',
-                              width: '100%',
-                              objectFit: 'fill',
+                              height: '35mm',
+                              width: 'auto',
+                              maxWidth: '100%',
+                              objectFit: 'contain',
                               display: 'block',
+                              margin: 'auto',
                               printColorAdjust: 'exact',
                               WebkitPrintColorAdjust: 'exact'
                             }}
