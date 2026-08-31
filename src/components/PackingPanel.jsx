@@ -762,7 +762,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                     <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>NOMOR TOKO</div>
                     <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>:</div>
                     <div style={{ fontWeight: '900', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                    <div style={{ fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+                    <div style={{ fontWeight: '900', color: item.delivery_type === 'DALAM KOTA' ? '#000' : '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#facc15' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
                       {item.delivery_type || 'DALAM KOTA'}
                     </div>
                     <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', borderBottom: '1px solid #000' }}>
@@ -1016,7 +1016,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                         <div className="text-[10px] text-stone-400 font-normal">{item.no_spk} | {item.promo_title}</div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${item.delivery_type === 'DALAM KOTA' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'}`}>
+                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${item.delivery_type === 'DALAM KOTA' ? 'bg-yellow-400 text-black' : 'bg-blue-500/10 text-blue-600'}`}>
                           {item.delivery_type || 'DALAM KOTA'}
                         </span>
                       </td>
