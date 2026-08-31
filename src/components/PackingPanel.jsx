@@ -183,8 +183,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       return;
     }
 
+    // FITUR BARU: Langsung filter tabel agar hanya muncul baris ini
+    setSearchTerm(targetItem.box_code);
+
     if (targetItem[scannerTargetStage] === 'DONE') {
-      setLastScanFeedback({ success: true, text: `ℹ️ ${targetItem.box_code} (${targetItem.store_name}) sudah berstatus DONE sebelumnya.` });
+      setLastScanFeedback({ success: true, text: `ℹ️ ${targetItem.box_code} sudah DONE.` });
+      // Tutup otomatis setelah 1 detik agar user bisa lihat baris datanya
+      setTimeout(() => {
+        setIsScannerOpen(false);
+        setLastScanFeedback(null);
+      }, 1000);
       return;
     }
 
@@ -199,9 +207,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     if (!error) {
       setLastScanFeedback({
         success: true,
-        text: `✅ ${targetItem.box_code} - ${targetItem.store_name} BERHASIL diverifikasi!`
+        text: `✅ ${targetItem.box_code} BERHASIL!`
       });
       fetchPackingData();
+      // Tutup otomatis setelah sukses
+      setTimeout(() => {
+        setIsScannerOpen(false);
+        setLastScanFeedback(null);
+      }, 1200);
     }
   };
 
@@ -971,14 +984,22 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             ))}
           </div>
 
-          <div className="w-full sm:w-72">
+          <div className="w-full sm:w-72 relative">
             <input
               type="text"
               placeholder="🔍 Cari Store, SPK, atau Box..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3.5 py-1.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 border-stone-200 dark:border-neutral-700 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3.5 py-1.5 pr-8 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 border-stone-200 dark:border-neutral-700 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-rose-500 font-bold text-sm"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
