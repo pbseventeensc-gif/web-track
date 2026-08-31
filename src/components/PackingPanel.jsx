@@ -126,16 +126,51 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Pembacaan file gambar Base64 yang valid dan aman untuk Safari
-  const readImageSafeBase64 = (file) => {
+  // Konversi otomatis file (termasuk CMYK / Hi-Res) menjadi RGB Base64 yang valid di browser
+  const convertToRgbWebBase64 = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target.result;
-        if (!result || typeof result !== 'string') {
-          return resolve('');
-        }
-        resolve(result);
+        const rawData = e.target.result;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 600;
+            const MAX_HEIGHT = 400;
+            let width = img.width || 600;
+            let height = img.height || 400;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round((width * MAX_HEIGHT) / height);
+                height = MAX_HEIGHT;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const convertedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            resolve(convertedDataUrl);
+          } catch (err) {
+            resolve(rawData);
+          }
+        };
+        img.onerror = () => {
+          resolve(rawData);
+        };
+        img.src = rawData;
       };
       reader.onerror = () => resolve('');
       reader.readAsDataURL(file);
@@ -393,13 +428,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
           const normalizedKey = cleanKey(rawFileName);
           const coreKey = extractCoreCode(rawFileName);
-          const base64Data = await readImageSafeBase64(file);
+          const validBase64 = await convertToRgbWebBase64(file);
           return { 
             index: idx, 
             fileName: rawFileName,
             rawKey: normalizedKey, 
             coreKey: coreKey, 
-            data: base64Data 
+            data: validBase64 
           };
         })
       );
@@ -421,7 +456,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           if (!matched) {
             matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
           }
-          // 3. Fallback Urutan Posisi Slot (File 1 -> Baris 1, File 2 -> Baris 2)
+          // 3. Fallback Urutan Posisi Slot
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
@@ -463,13 +498,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const handleSingleImageOverride = async (rowId, itemIndex, file) => {
     if (!file) return;
     try {
-      const base64Data = await readImageSafeBase64(file);
+      const validBase64 = await convertToRgbWebBase64(file);
       const targetRow = packingList.find((p) => p.id === rowId);
       if (!targetRow) return;
 
       const currentDetails = parseItems(targetRow.items_detail);
       const updatedItems = [...currentDetails];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: base64Data };
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: validBase64 };
 
       setPackingList((prev) =>
         prev.map((p) => (p.id === rowId ? { ...p, items_detail: updatedItems } : p))
@@ -491,11 +526,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Helper cetak aman untuk Safari / Mac (menunggu gambar termuat sempurna)
   const triggerSafePrint = () => {
     setTimeout(() => {
       window.print();
-    }, 600);
+    }, 700);
   };
 
   const handlePrintLabel = (item) => {
@@ -730,7 +764,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   {sub.image_url ? (
                     <img 
                       src={sub.image_url} 
-                      alt="Preview" 
+                      alt="Desain" 
                       style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
                     />
                   ) : (
@@ -816,7 +850,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </label>
 
             <label className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Menyimpan Foto...' : '🖼️ Upload Desain (Smart Match)'}
+              {isUploadingImages ? '⏳ Mengonversi Foto...' : '🖼️ Upload Desain (Smart Match)'}
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
             </label>
 
@@ -1202,7 +1236,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
                   <div className="flex items-center gap-3">
                     {itm.image_url ? (
-                      <img src={itm.image_url} alt="Item" className="w-16 h-10 object-contain rounded-lg border bg-white" />
+                      <img src={itm.image_url} alt="Desain" className="w-16 h-10 object-contain rounded-lg border bg-white" />
                     ) : (
                       <div className="w-16 h-10 rounded-lg bg-stone-200 dark:bg-neutral-600 flex items-center justify-center text-[9px] text-stone-400 italic">No Foto</div>
                     )}
