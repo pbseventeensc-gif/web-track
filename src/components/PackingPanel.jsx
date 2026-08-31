@@ -143,9 +143,17 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // Hanya ambil angka di paling akhir (misal: B.3-1 -> 1, atau B.1-1 -> 1)
-    const match = String(str).match(/(\d+)$/);
-    return match ? match[1] : '';
+    // v5 Smart Match: Ambil bagian setelah pemisah terakhir (- atau .)
+    // Contoh: "B.1-1" -> "1", "207 - B.3-5" -> "5", "B.10" -> "10"
+    const parts = String(str).split(/[-.]/);
+    const lastPart = parts[parts.length - 1].trim();
+
+    // Jika bagian terakhir murni angka, kembalikan itu
+    if (/^\d+$/.test(lastPart)) return lastPart;
+
+    // Fallback: Ambil angka terakhir di dalam bagian tersebut
+    const match = lastPart.match(/(\d+)$/);
+    return match ? match[1] : lastPart.toLowerCase();
   };
 
   // Convert File ke Direct Display URL
@@ -436,23 +444,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCodeClean = cleanKey(item.code);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Match (Nama file sama persis dengan kode)
-          let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
+          // 1. Cek Exact Match atau Partial Match Kunci Bersih
+          let matched = imageList.find((img) =>
+            img.rawKey === itemCodeClean ||
+            itemCodeClean.endsWith(img.rawKey) ||
+            img.rawKey.endsWith(itemCodeClean)
+          );
 
-          // 2. Cek Core Match (Misal: sama-sama akhiran "-1")
+          // 2. Cek Core Match (Pola akhiran angka yang sama, misal: "-1" atau ".5")
           if (!matched && itemCore) {
             matched = imageList.find((img) => img.coreKey === itemCore);
           }
 
-          // 3. Fallback Urutan Posisi Slot (Jika jumlah file sama dengan jumlah item dalam satu box)
-          if (!matched && imageList.length === details.length) {
-            matched = imageList[itemIdx];
-          }
-
           if (matched && matched.url) {
             totalMatches++;
+            console.log(`✅ MATCH: Item [${item.code}] -> File [${matched.fileName}] (Core: ${itemCore})`);
             return { ...item, image_url: matched.url };
           }
+          console.warn(`❌ FAIL: Item [${item.code}] (Core: ${itemCore}) found no match.`);
           return item;
         });
 
