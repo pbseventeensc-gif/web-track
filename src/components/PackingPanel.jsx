@@ -789,8 +789,18 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                     <img 
                       src={sub.image_url} 
                       alt={`Preview ${sub.code}`}
-                      title={sub.image_url}
-                      style={{ height: '28mm', maxWidth: '100%', objectFit: 'contain', display: 'block', margin: 'auto' }} 
+                      decoding="sync"
+                      loading="eager"
+                      style={{
+                        height: '28mm',
+                        width: 'auto',
+                        maxWidth: '100%',
+                        objectFit: 'contain',
+                        display: 'block',
+                        margin: 'auto',
+                        printColorAdjust: 'exact',
+                        WebkitPrintColorAdjust: 'exact'
+                      }}
                     />
                   ) : (
                     sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
