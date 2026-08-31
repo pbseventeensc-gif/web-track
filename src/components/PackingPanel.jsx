@@ -99,6 +99,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
+  // Ekstrak inti kode desain (misal: "206 - B.1-1" -> "11", "1-1" -> "11", "B.2-3" -> "23")
+  const extractCoreCode = (str) => {
+    if (!str) return '';
+    const afterDot = str.includes('.') ? str.split('.').pop() : str;
+    return cleanKey(afterDot);
+  };
+
   // Kompresi Gambar Desain Otomatis (~20-40 KB) agar aman dari batas payload HTTP API
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
@@ -348,7 +355,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain (Aman, Auto-Kompresi & Smart-Match)
+  // Upload Foto Desain Universal (Cocok ke Semua Huruf Urut Box A, B, C, D, E)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -366,8 +373,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       for (const file of files) {
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         const normalizedKey = cleanKey(rawFileName);
+        const coreKey = extractCoreCode(rawFileName);
         const compressedBase64 = await compressDesignImage(file);
-        imageList.push({ rawKey: normalizedKey, data: compressedBase64 });
+        
+        imageList.push({ 
+          rawKey: normalizedKey, 
+          coreKey: coreKey, 
+          data: compressedBase64 
+        });
       }
 
       const { data: currentRows, error: fetchErr } = await supabase
@@ -383,13 +396,19 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const newDetails = row.items_detail.map((item) => {
             const itemCodeClean = cleanKey(item.code);
             const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
+            const itemCore = extractCoreCode(item.code);
 
             // 1. Cek kombinasi Kode + Ukuran
             let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
             
-            // 2. Cek Kode Item saja
+            // 2. Cek Kode Item Lengkap
             if (!matched) {
               matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
+            }
+
+            // 3. Cek Universal Core Code (misal file "1-1.jpg" otomatis cocok ke A.1-1, B.1-1, C.1-1)
+            if (!matched && itemCore) {
+              matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
             }
 
             if (matched) {
@@ -409,7 +428,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         }
       }
 
-      alert(`✅ Berhasil! ${files.length} foto desain telah disinkronkan ke ${matchCount} box koli.`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah diterapkan secara universal ke seluruh Box pada ${matchCount} baris koli!`);
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
