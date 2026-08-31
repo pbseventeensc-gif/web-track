@@ -43,7 +43,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     { id: 'status_deliver', label: 'DELIVER', staff: 'Bagian: Staff Deliver', color: 'bg-purple-500' }
   ];
 
-  // Helper parsing items_detail aman
   const parseItems = (raw) => {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
@@ -127,41 +126,19 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  const compressDesignImage = (file) => {
+  // Pembacaan file gambar Base64 yang valid dan aman untuk Safari
+  const readImageSafeBase64 = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 450;
-          const MAX_HEIGHT = 300;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.6));
-        };
-        img.onerror = () => resolve(event.target.result);
+      reader.onload = (e) => {
+        const result = e.target.result;
+        if (!result || typeof result !== 'string') {
+          return resolve('');
+        }
+        resolve(result);
       };
       reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
     });
   };
 
@@ -396,7 +373,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Universal Massal (Direct Inject & Safe Matching)
+  // Upload Foto Desain Otomatis & Pasang ke Semua Toko
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -409,7 +386,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
-      // Urutkan file berdasarkan nama
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
       const imageList = await Promise.all(
@@ -417,13 +393,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
           const normalizedKey = cleanKey(rawFileName);
           const coreKey = extractCoreCode(rawFileName);
-          const compressedBase64 = await compressDesignImage(file);
+          const base64Data = await readImageSafeBase64(file);
           return { 
             index: idx, 
             fileName: rawFileName,
             rawKey: normalizedKey, 
             coreKey: coreKey, 
-            data: compressedBase64 
+            data: base64Data 
           };
         })
       );
@@ -439,13 +415,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCodeClean = cleanKey(item.code);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Code Match
+          // 1. Cek Exact Match
           let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
-          // 2. Cek Core Match (misal 1-1, 1-2)
+          // 2. Cek Core Match
           if (!matched) {
             matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
           }
-          // 3. Fallback Urutan Index (File 1 masuk Item 1, File 2 masuk Item 2)
+          // 3. Fallback Urutan Posisi Slot (File 1 -> Baris 1, File 2 -> Baris 2)
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
@@ -462,10 +438,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         return updatedRow;
       });
 
-      // Update State UI Seketika
       setPackingList(newPackingList);
 
-      // Simpan ke Supabase
       if (updatedRows.length > 0) {
         await Promise.all(
           updatedRows.map((r) =>
@@ -477,7 +451,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ SUKSES! ${files.length} foto desain berhasil dipasangkan ke ${matchCount} box koli.`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah dipasangkan ke ${matchCount} box toko.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -489,15 +463,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const handleSingleImageOverride = async (rowId, itemIndex, file) => {
     if (!file) return;
     try {
-      const compressedBase64 = await compressDesignImage(file);
+      const base64Data = await readImageSafeBase64(file);
       const targetRow = packingList.find((p) => p.id === rowId);
       if (!targetRow) return;
 
       const currentDetails = parseItems(targetRow.items_detail);
       const updatedItems = [...currentDetails];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: compressedBase64 };
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: base64Data };
 
-      // Update State lokal seketika
       setPackingList((prev) =>
         prev.map((p) => (p.id === rowId ? { ...p, items_detail: updatedItems } : p))
       );
@@ -518,6 +491,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
+  // Helper cetak aman untuk Safari / Mac (menunggu gambar termuat sempurna)
+  const triggerSafePrint = () => {
+    setTimeout(() => {
+      window.print();
+    }, 600);
+  };
+
   const handlePrintLabel = (item) => {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(false);
@@ -527,9 +507,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       ...freshItem,
       items_detail: parseItems(freshItem.items_detail)
     });
-    setTimeout(() => {
-      window.print();
-    }, 300);
+    triggerSafePrint();
   };
 
   const handleBatchPrintAll = () => {
@@ -537,9 +515,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
     setSelectedLabelItem(null);
-    setTimeout(() => {
-      window.print();
-    }, 400);
+    triggerSafePrint();
   };
 
   const handlePrintSuratJalan = (itemsToPrint) => {
@@ -547,9 +523,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setSelectedLabelItem(null);
     setIsSuratJalanPrinting(true);
     setSuratJalanGroup(itemsToPrint);
-    setTimeout(() => {
-      window.print();
-    }, 400);
+    triggerSafePrint();
   };
 
   const compressImage = (file) => {
@@ -754,7 +728,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
                   {sub.image_url ? (
-                    <img src={sub.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+                    <img 
+                      src={sub.image_url} 
+                      alt="Preview" 
+                      style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
+                    />
                   ) : (
                     sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
                   )}
