@@ -114,12 +114,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     if (!error && data) {
       const normalizedData = data.map(item => {
         const details = parseItems(item.items_detail).map((sub, idx) => {
-          // Ambil dari memory URL browser jika database masih kosong
-          // Gunakan kode item atau index spesifik untuk recovery URL desain lokal
+          const itemCode = sub.code || '';
+          const itemCore = extractCoreCode(itemCode);
+
+          // RECOVERY LOGIC: Cari link gambar di memory berdasarkan berbagai kemungkinan kunci
           const activeUrl = sub.image_url ||
-                           window.__ACTIVE_DESIGN_URLS__[sub.code] ||
-                           window.__ACTIVE_DESIGN_URLS__[cleanKey(sub.code)] ||
+                           window.__ACTIVE_DESIGN_URLS__[itemCode] ||
+                           window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
+                           window.__ACTIVE_DESIGN_URLS__[itemCore] ||
                            '';
+
           return { ...sub, image_url: activeUrl };
         });
         return {
@@ -138,10 +142,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // Ambil bagian paling akhir setelah tanda hubung atau titik (misal: B.3-1 -> 1)
-    const parts = str.split(/[-.]/);
-    const lastPart = parts[parts.length - 1].trim();
-    return cleanKey(lastPart);
+    // Mencari pola angka di akhir (misal: B.3-1 -> 1, atau B.1-1 -> 1)
+    const match = str.match(/[-.](\d+)$/);
+    if (match) return match[1];
+
+    // Jika tidak ada pola akhir, ambil kata terakhir setelah spasi atau tanda hubung
+    const parts = str.split(/[\s-.]/);
+    return cleanKey(parts[parts.length - 1]);
   };
 
   // Convert File ke Direct Display URL
