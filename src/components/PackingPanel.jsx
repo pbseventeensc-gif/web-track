@@ -118,10 +118,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCore = extractCoreCode(itemCode);
 
           // RECOVERY LOGIC: Cari link gambar di memory berdasarkan berbagai kemungkinan kunci
+          // Gunakan fallback ke string kosong jika undefined untuk menghindari "undefined" string
           const activeUrl = sub.image_url ||
                            window.__ACTIVE_DESIGN_URLS__[itemCode] ||
                            window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
-                           window.__ACTIVE_DESIGN_URLS__[itemCore] ||
+                           (itemCore ? window.__ACTIVE_DESIGN_URLS__[itemCore] : '') ||
                            '';
 
           return { ...sub, image_url: activeUrl };
@@ -142,13 +143,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // Mencari pola angka di akhir (misal: B.3-1 -> 1, atau B.1-1 -> 1)
-    const match = str.match(/[-.](\d+)$/);
-    if (match) return match[1];
-
-    // Jika tidak ada pola akhir, ambil kata terakhir setelah spasi atau tanda hubung
-    const parts = str.split(/[\s-.]/);
-    return cleanKey(parts[parts.length - 1]);
+    // Hanya ambil angka di paling akhir (misal: B.3-1 -> 1, atau B.1-1 -> 1)
+    const match = String(str).match(/(\d+)$/);
+    return match ? match[1] : '';
   };
 
   // Convert File ke Direct Display URL
@@ -417,7 +414,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         // Daftarkan ke Global URL Memory untuk recovery jika state reset
         window.__ACTIVE_DESIGN_URLS__[rawFileName] = displayUrl;
         window.__ACTIVE_DESIGN_URLS__[normalizedKey] = displayUrl;
-        window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
+        if (coreKey) {
+          window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
+        }
 
         return { 
           index: idx, 
@@ -428,7 +427,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         };
       });
 
-      let matchCount = 0;
+      let totalMatches = 0;
       const newPackingList = packingList.map((row) => {
         const details = parseItems(row.items_detail);
         if (details.length === 0) return row;
@@ -440,30 +439,30 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           // 1. Cek Exact Match (Nama file sama persis dengan kode)
           let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
 
-          // 2. Cek Core Match (Misal: sama-sama akhiran "-1" atau ".1")
-          if (!matched) {
-            matched = imageList.find((img) => img.coreKey === itemCore && itemCore !== '');
+          // 2. Cek Core Match (Misal: sama-sama akhiran "-1")
+          if (!matched && itemCore) {
+            matched = imageList.find((img) => img.coreKey === itemCore);
           }
 
-          // 3. Fallback Urutan Posisi Slot (Jika jumlah file sama dengan jumlah item)
+          // 3. Fallback Urutan Posisi Slot (Jika jumlah file sama dengan jumlah item dalam satu box)
           if (!matched && imageList.length === details.length) {
             matched = imageList[itemIdx];
           }
 
           if (matched && matched.url) {
+            totalMatches++;
             return { ...item, image_url: matched.url };
           }
           return item;
         });
 
-        matchCount++;
         return { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
       });
 
       // Update State UI Seketika
       setPackingList(newPackingList);
 
-      alert(`✅ Berhasil! ${files.length} gambar diproses untuk ${matchCount} box toko.`);
+      alert(`✅ Selesai! Berhasil memasangkan ${totalMatches} desain ke item yang cocok.`);
     } catch (err) {
       alert('❌ Gagal mengunggah foto: ' + err.message);
     } finally {
@@ -769,7 +768,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   {sub.image_url ? (
                     <img 
                       src={sub.image_url} 
-                      alt="Preview" 
+                      alt={`Preview ${sub.code}`}
+                      title={sub.image_url}
                       style={{ height: '28mm', maxWidth: '100%', objectFit: 'contain', display: 'block', margin: 'auto' }} 
                     />
                   ) : (
@@ -970,6 +970,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                           >
                             ✏️ Foto
                           </button>
+                        </div>
+                        <div className="text-[9px] mt-1 text-stone-400 font-bold">
+                          {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
                         </div>
                       </td>
 
