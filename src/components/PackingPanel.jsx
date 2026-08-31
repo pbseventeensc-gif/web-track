@@ -27,6 +27,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
   const [gSheetUrlInput, setGSheetUrlInput] = useState('');
 
+  // Custom Sheet Selector States (Pilih Sheet Tertentu)
+  const [isSheetSelectorOpen, setIsSheetSelectorOpen] = useState(false);
+  const [pendingWorkbook, setPendingWorkbook] = useState(null);
+  const [availableSheets, setAvailableSheets] = useState([]);
+  const [selectedSheets, setSelectedSheets] = useState([]);
+
   // Modal Custom Image Override
   const [editingRowItem, setEditingRowItem] = useState(null);
 
@@ -106,7 +112,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Kompresi Gambar Desain Otomatis (~20-40 KB) agar aman dari batas payload HTTP API
+  // Kompresi Gambar Desain Otomatis (~20-40 KB)
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -195,111 +201,135 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Core Workbook Parser (Dipakai bersama oleh Local File & Google Sheets)
-  const processMatrixWorkbook = async (wb) => {
-    const matrixSheets = wb.SheetNames.filter(
+  // Membuka Dialog Pilihan Sheet jika ada banyak sheet
+  const openSheetSelectorModal = (wb) => {
+    const allSheets = wb.SheetNames || [];
+    // Rekomendasikan centang sheet yang bukan 'LABEL' / 'DATA STORE'
+    const defaultSelected = allSheets.filter(
       (s) => !s.toUpperCase().includes('LABEL') && !s.toUpperCase().includes('DATA STORE')
     );
 
-    let parsedRecords = [];
-
-    matrixSheets.forEach((sheetName) => {
-      const ws = wb.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-      if (!data || data.length < 7) return;
-
-      const rowCodes = data[1] || [];
-      const rowDescs = data[2] || [];
-      const rowMaterials = data[3] || [];
-      const rowSizes = data[4] || [];
-
-      let catalogItems = [];
-      for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
-        if (rowCodes[colIdx]) {
-          catalogItems.push({
-            colIndex: colIdx,
-            code: String(rowCodes[colIdx]).trim(),
-            desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
-            material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
-            size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
-          });
-        }
-      }
-
-      for (let r = 6; r < data.length; r++) {
-        const row = data[r];
-        if (!row || !row[1]) continue;
-
-        const storeNo = row[1];
-        const prCode = row[2] || '';
-        const boxCode = row[3] || `B${r - 5}`;
-        const storeId = row[4] || '';
-        const clientPt = row[5] || 'PT. Miniso Lifestyle Trading Indonesia';
-        const storeName = row[6] || '';
-        const noPo = row[7] || '';
-        const spkWpp = row[8] || '';
-        const deliveryType = row[9] || 'DALAM KOTA';
-        const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
-
-        let storeItems = [];
-        let totalQty = 0;
-
-        catalogItems.forEach((cat) => {
-          const qtyVal = Number(row[cat.colIndex]) || 0;
-          if (qtyVal > 0) {
-            storeItems.push({
-              code: cat.code,
-              desc: cat.desc,
-              material: cat.material,
-              size: cat.size,
-              qty: qtyVal,
-              unit: 'Pcs',
-              image_url: ''
-            });
-            totalQty += qtyVal;
-          }
-        });
-
-        const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
-
-        parsedRecords.push({
-          tracking_id: trackingId,
-          no_spk: spkWpp.split('/')[0]?.trim() || spkWpp,
-          client_pt: clientPt,
-          promo_title: noPo,
-          store_name: storeName,
-          recipient_name: `Store #${storeNo} (${storeId})`,
-          total_qty: totalQty,
-          box_code: boxCode,
-          area_code: 'Q1',
-          delivery_type: deliveryType,
-          qr_address: qrAddress,
-          items_detail: storeItems,
-          status_qc_label: 'DONE',
-          status_qc_packing: 'PENDING',
-          status_qc_checker: 'PENDING',
-          status_deliver: 'PENDING',
-          updated_at: new Date().toISOString()
-        });
-      }
-    });
-
-    if (parsedRecords.length === 0) {
-      throw new Error('Tidak ada data matriks toko yang terbaca.');
-    }
-
-    const { error } = await supabase
-      .from('packing_tracking')
-      .upsert(parsedRecords, { onConflict: 'tracking_id' });
-
-    if (error) throw error;
-
-    alert(`✅ Berhasil import ${parsedRecords.length} data box toko!`);
-    fetchPackingData();
+    setPendingWorkbook(wb);
+    setAvailableSheets(allSheets);
+    setSelectedSheets(defaultSelected.length > 0 ? defaultSelected : allSheets);
+    setIsSheetSelectorOpen(true);
   };
 
-  // Parser Excel Matriks Lokal File
+  // Eksekusi Import Sheet yang Dipilih oleh Pengguna
+  const handleExecuteSelectedSheetsImport = async () => {
+    if (!pendingWorkbook || selectedSheets.length === 0) {
+      return alert('⚠️ Silakan centang minimal 1 sheet untuk di-import.');
+    }
+
+    setIsImporting(true);
+    try {
+      let parsedRecords = [];
+
+      selectedSheets.forEach((sheetName) => {
+        const ws = pendingWorkbook.Sheets[sheetName];
+        if (!ws) return;
+
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (!data || data.length < 7) return;
+
+        const rowCodes = data[1] || [];
+        const rowDescs = data[2] || [];
+        const rowMaterials = data[3] || [];
+        const rowSizes = data[4] || [];
+
+        let catalogItems = [];
+        for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
+          if (rowCodes[colIdx]) {
+            catalogItems.push({
+              colIndex: colIdx,
+              code: String(rowCodes[colIdx]).trim(),
+              desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
+              material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
+              size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
+            });
+          }
+        }
+
+        for (let r = 6; r < data.length; r++) {
+          const row = data[r];
+          if (!row || !row[1]) continue;
+
+          const storeNo = row[1];
+          const prCode = row[2] || '';
+          const boxCode = row[3] || `B${r - 5}`;
+          const storeId = row[4] || '';
+          const clientPt = row[5] || 'PT. Miniso Lifestyle Trading Indonesia';
+          const storeName = row[6] || '';
+          const noPo = row[7] || '';
+          const spkWpp = row[8] || '';
+          const deliveryType = row[9] || 'DALAM KOTA';
+          const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
+
+          let storeItems = [];
+          let totalQty = 0;
+
+          catalogItems.forEach((cat) => {
+            const qtyVal = Number(row[cat.colIndex]) || 0;
+            if (qtyVal > 0) {
+              storeItems.push({
+                code: cat.code,
+                desc: cat.desc,
+                material: cat.material,
+                size: cat.size,
+                qty: qtyVal,
+                unit: 'Pcs',
+                image_url: ''
+              });
+              totalQty += qtyVal;
+            }
+          });
+
+          const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
+
+          parsedRecords.push({
+            tracking_id: trackingId,
+            no_spk: spkWpp.split('/')[0]?.trim() || spkWpp,
+            client_pt: clientPt,
+            promo_title: noPo,
+            store_name: storeName,
+            recipient_name: `Store #${storeNo} (${storeId})`,
+            total_qty: totalQty,
+            box_code: boxCode,
+            area_code: 'Q1',
+            delivery_type: deliveryType,
+            qr_address: qrAddress,
+            items_detail: storeItems,
+            status_qc_label: 'DONE',
+            status_qc_packing: 'PENDING',
+            status_qc_checker: 'PENDING',
+            status_deliver: 'PENDING',
+            updated_at: new Date().toISOString()
+          });
+        }
+      });
+
+      if (parsedRecords.length === 0) {
+        throw new Error('Tidak ada data matriks toko yang terbaca pada sheet yang dipilih.');
+      }
+
+      const { error } = await supabase
+        .from('packing_tracking')
+        .upsert(parsedRecords, { onConflict: 'tracking_id' });
+
+      if (error) throw error;
+
+      alert(`✅ Berhasil mengimport ${parsedRecords.length} data box toko dari ${selectedSheets.length} sheet terpilih!`);
+      setIsSheetSelectorOpen(false);
+      setPendingWorkbook(null);
+      fetchPackingData();
+    } catch (err) {
+      alert('❌ Gagal Import Sheet: ' + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Parser Excel Lokal File
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -311,9 +341,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
-        await processMatrixWorkbook(wb);
+        openSheetSelectorModal(wb);
       } catch (err) {
-        alert('❌ Gagal Import Excel: ' + err.message);
+        alert('❌ Gagal membaca file Excel: ' + err.message);
       } finally {
         setIsImporting(false);
         e.target.value = '';
@@ -323,8 +353,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Import Langsung dari Link Google Spreadsheet
-  const handleImportGoogleSheet = async () => {
+  // Import dari URL Google Spreadsheet
+  const handleFetchGoogleSheet = async () => {
     if (!gSheetUrlInput.trim()) {
       return alert('⚠️ Silakan masukkan URL Google Sheets terlebih dahulu.');
     }
@@ -340,22 +370,23 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       const res = await fetch(exportUrl);
       if (!res.ok) {
-        throw new Error('Gagal mengakses Google Sheets. Pastikan hak akses disetel ke "Anyone with the link can view".');
+        throw new Error('Gagal mengakses Google Sheets. Pastikan akses disetel ke "Anyone with the link can view".');
       }
 
       const arrayBuffer = await res.arrayBuffer();
       const wb = XLSX.read(arrayBuffer, { type: 'array' });
-      await processMatrixWorkbook(wb);
+      
       setIsGSheetModalOpen(false);
       setGSheetUrlInput('');
+      openSheetSelectorModal(wb);
     } catch (err) {
-      alert('❌ Gagal Import Google Sheets: ' + err.message);
+      alert('❌ Gagal mengambil Google Sheets: ' + err.message);
     } finally {
       setIsImporting(false);
     }
   };
 
-  // Upload Foto Desain Universal (Cocok ke Semua Huruf Urut Box A, B, C, D, E)
+  // Upload Foto Desain Universal
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -406,7 +437,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
             }
 
-            // 3. Cek Universal Core Code (misal file "1-1.jpg" otomatis cocok ke A.1-1, B.1-1, C.1-1)
+            // 3. Cek Universal Core Code (misal file "1-1.jpg" cocok ke A.1-1, B.1-1, C.1-1)
             if (!matched && itemCore) {
               matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
             }
@@ -465,7 +496,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Cetak Label Satuan
   const handlePrintLabel = (item) => {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(false);
@@ -475,7 +505,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }, 300);
   };
 
-  // Cetak Semua Label
   const handleBatchPrintAll = () => {
     if (filteredList.length === 0) return alert('⚠️ Tidak ada data label yang dapat dicetak.');
     setIsSuratJalanPrinting(false);
@@ -486,7 +515,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }, 400);
   };
 
-  // Cetak Dokumen Surat Jalan
   const handlePrintSuratJalan = (itemsToPrint) => {
     setIsBatchPrinting(false);
     setSelectedLabelItem(null);
@@ -513,12 +541,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
+              height *= MAX_WIDTH / width;
               width = MAX_WIDTH;
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
+              width *= MAX_HEIGHT / height;
               height = MAX_HEIGHT;
             }
           }
@@ -631,7 +659,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  // Komponen Cetak Label A4
+  // Render Halaman Label Satuan A4
   const renderSingleLabelSheet = (item) => (
     <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
       <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
@@ -779,7 +807,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </button>
 
             <label className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isImporting ? '⏳ Mengimport...' : '📤 Import Excel Matriks'}
+              {isImporting ? '⏳ Membaca File...' : '📤 Import Excel Matriks'}
               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={isImporting} />
             </label>
 
@@ -969,6 +997,94 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
+      {/* MODAL PILIH SHEET (CUSTOM SHEET SELECTOR) */}
+      {isSheetSelectorOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
+              <div>
+                <h3 className="font-black text-sm uppercase flex items-center gap-2">📑 Pilih Sheet yang Akan Di-Import</h3>
+                <p className="text-xs text-stone-400">Total {availableSheets.length} sheet ditemukan</p>
+              </div>
+              <button
+                onClick={() => { setIsSheetSelectorOpen(false); setPendingWorkbook(null); }}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-bold text-stone-500 dark:text-stone-400">
+                {selectedSheets.length} sheet dipilih
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedSheets(availableSheets)}
+                  className="text-xs text-indigo-500 font-bold hover:underline cursor-pointer"
+                >
+                  Pilih Semua
+                </button>
+                <span className="text-stone-300">|</span>
+                <button
+                  onClick={() => setSelectedSheets([])}
+                  className="text-xs text-rose-500 font-bold hover:underline cursor-pointer"
+                >
+                  Hapus Pilihan
+                </button>
+              </div>
+            </div>
+
+            {/* List Checkbox Sheet */}
+            <div className="max-h-60 overflow-y-auto space-y-2 p-2 rounded-2xl bg-stone-50 dark:bg-neutral-900 border border-stone-200 dark:border-neutral-700 mb-6">
+              {availableSheets.map((sheetName) => {
+                const isChecked = selectedSheets.includes(sheetName);
+                return (
+                  <label
+                    key={sheetName}
+                    className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors border ${
+                      isChecked
+                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold'
+                        : 'hover:bg-stone-100 dark:hover:bg-neutral-800 border-transparent text-stone-600 dark:text-stone-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSheets(prev => [...prev, sheetName]);
+                        } else {
+                          setSelectedSheets(prev => prev.filter(s => s !== sheetName));
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span className="text-xs flex-1">{sheetName}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setIsSheetSelectorOpen(false); setPendingWorkbook(null); }}
+                className="px-4 py-2 bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleExecuteSelectedSheetsImport}
+                disabled={isImporting || selectedSheets.length === 0}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                {isImporting ? '⏳ Mengimport...' : `⚡ Import ${selectedSheets.length} Sheet`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL INPUT GOOGLE SPREADSHEET URL */}
       {isGSheetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -1003,11 +1119,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 Batal
               </button>
               <button
-                onClick={handleImportGoogleSheet}
+                onClick={handleFetchGoogleSheet}
                 disabled={isImporting}
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95"
               >
-                {isImporting ? '⏳ Mengambil Data...' : '⚡ Tarik & Import Data'}
+                {isImporting ? '⏳ Mengambil Sheet...' : '⚡ Lanjut Pilih Sheet'}
               </button>
             </div>
           </div>
