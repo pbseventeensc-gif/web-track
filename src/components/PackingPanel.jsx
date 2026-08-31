@@ -143,24 +143,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // 1. Hilangkan ekstensi secara aman (hanya di akhir)
+    // 1. Hilangkan ekstensi
     const cleanStr = String(str).replace(/\.(jpg|jpeg|png|gif|webp|pdf)$/i, '');
 
-    // 2. Cari pola angka-angka di bagian akhir (misal: "B.3-1" -> "3-1")
-    // Pola ini menangkap angka yang dipisahkan oleh titik atau dash di bagian akhir string
-    const complexMatch = cleanStr.match(/(\d+[\.\-]\d+)$/);
-    if (complexMatch) {
-      return complexMatch[1];
+    // 2. Ambil Kelompok Angka Terakhir (Misal: "B.1-12" -> "12")
+    const numMatches = cleanStr.match(/\d+/g);
+    const lastNum = numMatches ? numMatches[numMatches.length - 1] : '';
+
+    // 3. Ambil Huruf Terakhir (Misal: "B.1-12" -> "b")
+    const letterMatches = cleanStr.match(/[a-zA-Z]/g);
+    const lastLetter = letterMatches ? letterMatches[letterMatches.length - 1].toLowerCase() : '';
+
+    // Gabungkan Huruf + Angka Terakhir (Pattern: b1, b12)
+    // Ini memungkinkan B.1-1 cocok dengan B.3-1 (keduanya jadi b1)
+    if (lastLetter && lastNum) {
+      return lastLetter + lastNum;
     }
 
-    // 3. Fallback: Ambil kelompok angka terakhir saja
-    const simpleMatch = cleanStr.match(/\d+/g);
-    if (simpleMatch && simpleMatch.length > 0) {
-      return simpleMatch[simpleMatch.length - 1];
-    }
-
-    // 4. Ultimate Fallback: Gunakan cleanKey (alphanumeric only)
-    return cleanKey(cleanStr);
+    return lastNum || lastLetter || cleanKey(cleanStr);
   };
 
   // Convert File ke Direct Display URL
