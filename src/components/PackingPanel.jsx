@@ -755,14 +755,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '4px 0' }}>
                     {item.client_pt}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 15mm 1fr 25mm', fontSize: '14px', borderBottom: '1px solid #000', height: '9mm', alignItems: 'center' }}>
-                    <div style={{ paddingLeft: '8px', fontWeight: 'bold' }}>NOMOR TOKO</div>
-                    <div style={{ textAlign: 'center' }}>:</div>
-                    <div style={{ fontWeight: '900', fontSize: '24px' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                    <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#10b981' : '#ef4444', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', margin: '0 5px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 15mm 1fr 25mm', fontSize: '14px', borderBottom: '1px solid #000', height: '9mm', alignItems: 'stretch' }}>
+                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000' }}>NOMOR TOKO</div>
+                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>:</div>
+                    <div style={{ fontWeight: '900', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                    <div style={{ fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000' }}>
                       {item.delivery_type || 'DALAM KOTA'}
                     </div>
-                    <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                       {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                     </div>
                   </div>
