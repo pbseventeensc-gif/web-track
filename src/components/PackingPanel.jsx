@@ -14,6 +14,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [isSuratJalanPrinting, setIsSuratJalanPrinting] = useState(false);
   const [suratJalanGroup, setSuratJalanGroup] = useState(null);
 
+  // Global Memory Cache Gambar Desain
+  const [cachedDesignImages, setCachedDesignImages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wellen_packing_design_images');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +103,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: true });
 
     if (!error && data) {
-      setPackingList(data);
+      // Pasangkan otomatis gambar dari cache jika ada
+      const synced = applyCachedImagesToRows(data, cachedDesignImages);
+      setPackingList(synced);
     }
   };
 
@@ -108,6 +120,31 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
+  // Helper pasang gambar dari list cache ke baris database
+  const applyCachedImagesToRows = (rows, images) => {
+    if (!images || images.length === 0) return rows;
+    return rows.map((row) => {
+      if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
+      const updatedDetails = row.items_detail.map((item, idx) => {
+        // Cek jika item sudah punya gambar, pertahankan
+        if (item.image_url && item.image_url.startsWith('data:image')) return item;
+
+        const itemCodeClean = cleanKey(item.code);
+        const itemCore = extractCoreCode(item.code);
+
+        // 1. Match Exact
+        let matched = images.find((img) => img.rawKey === itemCodeClean || img.coreKey === itemCore);
+        // 2. Match Slot / Index Urutan
+        if (!matched && images[idx]) {
+          matched = images[idx];
+        }
+
+        return matched && matched.data ? { ...item, image_url: matched.data } : item;
+      });
+      return { ...row, items_detail: updatedDetails };
+    });
+  };
+
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -117,8 +154,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 450;
-          const MAX_HEIGHT = 300;
+          const MAX_WIDTH = 500;
+          const MAX_HEIGHT = 350;
           let width = img.width;
           let height = img.height;
 
@@ -138,7 +175,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.55));
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
         };
         img.onerror = () => resolve('');
       };
@@ -261,9 +298,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           let storeItems = [];
           let totalQty = 0;
 
-          catalogItems.forEach((cat) => {
+          catalogItems.forEach((cat, catIdx) => {
             const qtyVal = Number(row[cat.colIndex]) || 0;
             if (qtyVal > 0) {
+              // Cek apakah sudah ada di cache gambar
+              const fallbackImg = cachedDesignImages[catIdx]?.data || '';
               storeItems.push({
                 code: cat.code,
                 desc: cat.desc,
@@ -271,7 +310,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 size: cat.size,
                 qty: qtyVal,
                 unit: 'Pcs',
-                image_url: ''
+                image_url: fallbackImg
               });
               totalQty += qtyVal;
             }
@@ -302,7 +341,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       });
 
       if (parsedRecords.length === 0) {
-        throw new Error('Tidak ada data matriks toko yang terbaca pada sheet yang dipilih.');
+        throw new Error('Tidak ada data matriks toko yang terbaca.');
       }
 
       const { error } = await supabase
@@ -311,7 +350,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       if (error) throw error;
 
-      alert(`✅ Berhasil mengimport ${parsedRecords.length} data box toko dari ${selectedSheets.length} sheet terpilih!`);
+      alert(`✅ Berhasil mengimport ${parsedRecords.length} data box toko!`);
       setIsSheetSelectorOpen(false);
       setPendingWorkbook(null);
       fetchPackingData();
@@ -377,7 +416,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Universal + Smart Slot Matching
+  // Upload Foto Desain Otomatis & Auto-Inject ke Semua Toko
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -390,7 +429,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
-      // Urutkan file berdasarkan nama secara alfabetis/numerik agar slot terisi presisi
+      // Urutkan file berdasarkan nama
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
       const imageList = await Promise.all(
@@ -409,54 +448,42 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         })
       );
 
-      const updatedRows = [];
-      let matchCount = 0;
+      // Simpan ke LocalStorage agar tidak pernah hilang saat refresh/cetak
+      try {
+        localStorage.setItem('wellen_packing_design_images', JSON.stringify(imageList));
+      } catch (err) {}
+      setCachedDesignImages(imageList);
 
+      // Pasang gambar langsung ke State UI
+      const updatedRows = [];
       const newPackingList = packingList.map((row) => {
         if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
 
-        let hasChange = false;
         const newDetails = row.items_detail.map((item, itemIdx) => {
           const itemCodeClean = cleanKey(item.code);
-          const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Kode + Ukuran
-          let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
-          
-          // 2. Cek Exact Kode Lengkap
-          if (!matched) {
-            matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
-          }
-
-          // 3. Cek Universal Core Code (misal file "3-1.jpg" cocok ke "207 - B.3-1")
-          if (!matched && itemCore) {
-            matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
-          }
-
-          // 4. Smart Slot Fallback: Jika penamaan berbeda, petakan urutan file (File 1 -> Item 1, File 2 -> Item 2)
+          // 1. Cek Exact Match
+          let matched = imageList.find((img) => img.rawKey === itemCodeClean || img.coreKey === itemCore);
+          // 2. Cek Slot / Urutan Posisi (File 1 -> Item 1, File 2 -> Item 2)
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
 
           if (matched && matched.data) {
-            hasChange = true;
             return { ...item, image_url: matched.data };
           }
           return item;
         });
 
-        if (hasChange) {
-          matchCount++;
-          const updatedRow = { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
-          updatedRows.push(updatedRow);
-          return updatedRow;
-        }
-        return row;
+        const updatedRow = { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
+        updatedRows.push(updatedRow);
+        return updatedRow;
       });
 
       setPackingList(newPackingList);
 
+      // Update Supabase
       if (updatedRows.length > 0) {
         await Promise.all(
           updatedRows.map((r) =>
@@ -468,7 +495,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ Berhasil! ${files.length} foto desain telah langsung terpasang ke seluruh ${matchCount} box toko.`);
+      alert(`✅ Berhasil! ${files.length} gambar telah langsung terpasang ke seluruh box toko.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -507,7 +534,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const handlePrintLabel = (item) => {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(false);
-    setSelectedLabelItem(item);
+
+    // Ambil baris paling fresh dari state packingList
+    const freshItem = packingList.find((p) => p.id === item.id) || item;
+    setSelectedLabelItem(freshItem);
     setTimeout(() => {
       window.print();
     }, 300);
@@ -648,6 +678,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         if (error) throw error;
         alert('✅ Seluruh data paking berhasil dikosongkan!');
         setPackingList([]);
+        localStorage.removeItem('wellen_packing_design_images');
       } catch (err) {
         alert('❌ Gagal menghapus: ' + err.message);
       }
@@ -665,6 +696,25 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   });
 
   const totalSpk = packingList.length;
+
+  // Helper render image preview dengan fallback instan
+  const renderItemImage = (sub, idx) => {
+    const directUrl = sub.image_url || cachedDesignImages[idx]?.data;
+    if (directUrl) {
+      return (
+        <img 
+          src={directUrl} 
+          alt="Preview Desain" 
+          style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
+        />
+      );
+    }
+    return sub.code ? (
+      <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>
+        Preview Desain
+      </div>
+    ) : null;
+  };
 
   const renderSingleLabelSheet = (item) => (
     <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
@@ -731,11 +781,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 {sub.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
-                {sub.image_url ? (
-                  <img src={sub.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain' }} />
-                ) : (
-                  sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
-                )}
+                {renderItemImage(sub, idx)}
               </div>
             </div>
           </div>
@@ -1052,9 +1098,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                       checked={isChecked}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedSheets(prev => [...prev, sheetName]);
+                          setSelectedSheets((prev) => [...prev, sheetName]);
                         } else {
-                          setSelectedSheets(prev => prev.filter(s => s !== sheetName));
+                          setSelectedSheets((prev) => prev.filter((s) => s !== sheetName));
                         }
                       }}
                       className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
