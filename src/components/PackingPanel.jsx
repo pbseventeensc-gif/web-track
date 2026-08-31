@@ -27,7 +27,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
   const [gSheetUrlInput, setGSheetUrlInput] = useState('');
 
-  // Custom Sheet Selector States (Pilih Sheet Tertentu)
+  // Custom Sheet Selector States
   const [isSheetSelectorOpen, setIsSheetSelectorOpen] = useState(false);
   const [pendingWorkbook, setPendingWorkbook] = useState(null);
   const [availableSheets, setAvailableSheets] = useState([]);
@@ -62,7 +62,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     };
   }, []);
 
-  // Inisialisasi Scanner saat modal scan dibuka
   useEffect(() => {
     let qrScanner = null;
     if (isScannerOpen) {
@@ -76,9 +75,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         async (decodedText) => {
           handleQrScanSuccess(decodedText);
         },
-        (error) => {
-          // ignore frame scan errors
-        }
+        (error) => {}
       );
     }
 
@@ -105,14 +102,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
   };
 
-  // Ekstrak inti kode desain (misal: "206 - B.1-1" -> "11", "1-1" -> "11", "B.2-3" -> "23")
   const extractCoreCode = (str) => {
     if (!str) return '';
     const afterDot = str.includes('.') ? str.split('.').pop() : str;
     return cleanKey(afterDot);
   };
 
-  // Kompresi Gambar Desain Ultra Ringan & Instan
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -151,7 +146,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     });
   };
 
-  // Handler Scanner Kamera Otomatis
   const handleQrScanSuccess = async (decodedText) => {
     const cleanScanned = cleanKey(decodedText);
     const targetItem = packingList.find(
@@ -203,7 +197,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Membuka Dialog Pilihan Sheet jika ada banyak sheet
   const openSheetSelectorModal = (wb) => {
     const allSheets = wb.SheetNames || [];
     const defaultSelected = allSheets.filter(
@@ -216,7 +209,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsSheetSelectorOpen(true);
   };
 
-  // Eksekusi Import Sheet yang Dipilih oleh Pengguna
   const handleExecuteSelectedSheetsImport = async () => {
     if (!pendingWorkbook || selectedSheets.length === 0) {
       return alert('⚠️ Silakan centang minimal 1 sheet untuk di-import.');
@@ -259,7 +251,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const prCode = row[2] || '';
           const boxCode = row[3] || `B${r - 5}`;
           const storeId = row[4] || '';
-          const clientPt = row[5] || 'PT. Miniso Lifestyle Trading Indonesia';
+          const clientPt = row[5] || 'CV. MAJU MAKMUR RETALINDO';
           const storeName = row[6] || '';
           const noPo = row[7] || '';
           const spkWpp = row[8] || '';
@@ -330,7 +322,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Parser Excel Lokal File
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -354,7 +345,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
-  // Import dari URL Google Spreadsheet
   const handleFetchGoogleSheet = async () => {
     if (!gSheetUrlInput.trim()) {
       return alert('⚠️ Silakan masukkan URL Google Sheets terlebih dahulu.');
@@ -387,7 +377,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Universal (Parallel Batch Super Cepat)
+  // Upload Foto Desain Universal + Smart Slot Matching
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -400,14 +390,22 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
-      // Baca & Kompres semua gambar secara PARALEL
+      // Urutkan file berdasarkan nama secara alfabetis/numerik agar slot terisi presisi
+      files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
       const imageList = await Promise.all(
-        files.map(async (file) => {
+        files.map(async (file, idx) => {
           const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
           const normalizedKey = cleanKey(rawFileName);
           const coreKey = extractCoreCode(rawFileName);
           const compressedBase64 = await compressDesignImage(file);
-          return { rawKey: normalizedKey, coreKey: coreKey, data: compressedBase64 };
+          return { 
+            index: idx, 
+            fileName: rawFileName,
+            rawKey: normalizedKey, 
+            coreKey: coreKey, 
+            data: compressedBase64 
+          };
         })
       );
 
@@ -418,22 +416,27 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
 
         let hasChange = false;
-        const newDetails = row.items_detail.map((item) => {
+        const newDetails = row.items_detail.map((item, itemIdx) => {
           const itemCodeClean = cleanKey(item.code);
           const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek kombinasi Kode + Ukuran
+          // 1. Cek Exact Kode + Ukuran
           let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
           
-          // 2. Cek Kode Item Lengkap
+          // 2. Cek Exact Kode Lengkap
           if (!matched) {
             matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
           }
 
-          // 3. Cek Universal Core Code (misal file "1-1.jpg" cocok ke A.1-1, B.1-1, C.1-1)
+          // 3. Cek Universal Core Code (misal file "3-1.jpg" cocok ke "207 - B.3-1")
           if (!matched && itemCore) {
             matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
+          }
+
+          // 4. Smart Slot Fallback: Jika penamaan berbeda, petakan urutan file (File 1 -> Item 1, File 2 -> Item 2)
+          if (!matched && imageList[itemIdx]) {
+            matched = imageList[itemIdx];
           }
 
           if (matched && matched.data) {
@@ -452,10 +455,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         return row;
       });
 
-      // Update State secara instan di UI
       setPackingList(newPackingList);
 
-      // Simpan perubahan ke Supabase secara paralel serentak
       if (updatedRows.length > 0) {
         await Promise.all(
           updatedRows.map((r) =>
@@ -467,7 +468,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ Berhasil instan! ${files.length} foto diterapkan ke ${matchCount} box.`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah langsung terpasang ke seluruh ${matchCount} box toko.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -653,7 +654,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Filter Data
   const filteredList = packingList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
     const matchSearch =
@@ -666,7 +666,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  // Render Halaman Label Satuan A4
   const renderSingleLabelSheet = (item) => (
     <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
       <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
@@ -747,7 +746,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   return (
     <div className="space-y-8">
-      {/* HEADER RINGKASAN PROGRESS */}
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-lg font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
@@ -794,7 +792,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* ACTION BAR & FILTER TABS */}
       <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-2 flex-wrap">
@@ -805,7 +802,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               📷 Mode Scan Gudang (QC/Checker)
             </button>
 
-            {/* TOMBOL IMPORT GOOGLE SHEETS */}
             <button
               onClick={() => setIsGSheetModalOpen(true)}
               className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
@@ -853,7 +849,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           </div>
         </div>
 
-        {/* QUICK FILTER & SEARCH BAR */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t dark:border-neutral-700">
           <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-neutral-700/50 p-1 rounded-xl w-full sm:w-auto">
             {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((type) => (
@@ -882,7 +877,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           </div>
         </div>
 
-        {/* TABEL DATA PAKING */}
         <div className="overflow-x-auto mt-4">
           <table className="w-full text-left text-xs">
             <thead className={`border-b ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-200 text-stone-500'}`}>
@@ -1004,7 +998,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* MODAL PILIH SHEET (CUSTOM SHEET SELECTOR) */}
       {isSheetSelectorOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
@@ -1042,7 +1035,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               </div>
             </div>
 
-            {/* List Checkbox Sheet */}
             <div className="max-h-60 overflow-y-auto space-y-2 p-2 rounded-2xl bg-stone-50 dark:bg-neutral-900 border border-stone-200 dark:border-neutral-700 mb-6">
               {availableSheets.map((sheetName) => {
                 const isChecked = selectedSheets.includes(sheetName);
@@ -1092,7 +1084,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* MODAL INPUT GOOGLE SPREADSHEET URL */}
       {isGSheetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
@@ -1137,7 +1128,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* MODAL IN-APP QR SCANNER */}
       {isScannerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
           <div className={`w-full max-w-md rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
@@ -1183,7 +1173,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* MODAL EDIT FOTO SATUAN PER TOKO */}
       {editingRowItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`w-full max-w-2xl max-h-[85vh] rounded-3xl p-6 overflow-y-auto shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
@@ -1227,7 +1216,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* PRINT CONTAINER (A4 LABEL / SURAT JALAN) */}
+      {/* PRINT CONTAINER A4 */}
       <div className="print-area hidden print:block">
         <style>{`
           @media print {
