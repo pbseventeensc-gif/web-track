@@ -4,6 +4,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { supabase } from '../supabaseClient';
 
+// Global memory cache untuk link gambar aktif di browser
+if (!window.__ACTIVE_DESIGN_URLS__) {
+  window.__ACTIVE_DESIGN_URLS__ = {};
+}
+
 export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
@@ -107,10 +112,17 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: true });
 
     if (!error && data) {
-      const normalizedData = data.map(item => ({
-        ...item,
-        items_detail: parseItems(item.items_detail)
-      }));
+      const normalizedData = data.map(item => {
+        const details = parseItems(item.items_detail).map((sub, idx) => {
+          // Ambil dari memory URL browser jika database masih kosong
+          const activeUrl = sub.image_url || window.__ACTIVE_DESIGN_URLS__[sub.code] || window.__ACTIVE_DESIGN_URLS__[idx] || '';
+          return { ...sub, image_url: activeUrl };
+        });
+        return {
+          ...item,
+          items_detail: details
+        };
+      });
       setPackingList(normalizedData);
     }
   };
@@ -126,48 +138,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Kompresi File Gambar menjadi JPEG Blob Tajam
-  const compressToBlob = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 600;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob((blob) => {
-            resolve(blob || file);
-          }, 'image/jpeg', 0.85);
-        };
-        img.onerror = () => resolve(file);
-        img.src = e.target.result;
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
-    });
+  // Convert File ke Direct Display URL
+  const getFileObjectUrl = (file) => {
+    try {
+      return URL.createObjectURL(file);
+    } catch (e) {
+      return '';
+    }
   };
 
   const handleQrScanSuccess = async (decodedText) => {
@@ -285,9 +262,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           let storeItems = [];
           let totalQty = 0;
 
-          catalogItems.forEach((cat) => {
+          catalogItems.forEach((cat, catIdx) => {
             const qtyVal = Number(row[cat.colIndex]) || 0;
             if (qtyVal > 0) {
+              const activeImg = window.__ACTIVE_DESIGN_URLS__[cat.code] || window.__ACTIVE_DESIGN_URLS__[catIdx] || '';
               storeItems.push({
                 code: cat.code,
                 desc: cat.desc,
@@ -295,7 +273,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 size: cat.size,
                 qty: qtyVal,
                 unit: 'Pcs',
-                image_url: ''
+                image_url: activeImg
               });
               totalQty += qtyVal;
             }
@@ -401,7 +379,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain ke Supabase Storage (URL Asli CDN, Anti-Gagal & Anti-Rusak)
+  // Upload Foto Desain Langsung (Instant Display ObjectURL)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -416,39 +394,28 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     try {
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-      // 1. Upload semua file ke Supabase Storage Bucket 'surat-jalan'
-      const imageList = await Promise.all(
-        files.map(async (file, idx) => {
-          const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-          const normalizedKey = cleanKey(rawFileName);
-          const coreKey = extractCoreCode(rawFileName);
-          const blob = await compressToBlob(file);
+      const imageList = files.map((file, idx) => {
+        const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        const normalizedKey = cleanKey(rawFileName);
+        const coreKey = extractCoreCode(rawFileName);
+        const displayUrl = getFileObjectUrl(file);
 
-          const uniqueName = `desain_${normalizedKey}_${Date.now()}_${idx}.jpg`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('surat-jalan')
-            .upload(uniqueName, blob, { contentType: 'image/jpeg', upsert: true });
+        // Daftarkan ke Global URL Memory
+        window.__ACTIVE_DESIGN_URLS__[rawFileName] = displayUrl;
+        window.__ACTIVE_DESIGN_URLS__[normalizedKey] = displayUrl;
+        window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
+        window.__ACTIVE_DESIGN_URLS__[idx] = displayUrl;
 
-          let publicUrl = '';
-          if (!uploadError) {
-            const { data } = supabase.storage.from('surat-jalan').getPublicUrl(uniqueName);
-            publicUrl = data?.publicUrl || '';
-          }
-
-          return { 
-            index: idx, 
-            fileName: rawFileName,
-            rawKey: normalizedKey, 
-            coreKey: coreKey, 
-            url: publicUrl 
-          };
-        })
-      );
+        return { 
+          index: idx, 
+          fileName: rawFileName,
+          rawKey: normalizedKey, 
+          coreKey: coreKey, 
+          url: displayUrl 
+        };
+      });
 
       let matchCount = 0;
-      const updatedRows = [];
-
       const newPackingList = packingList.map((row) => {
         const details = parseItems(row.items_detail);
         if (details.length === 0) return row;
@@ -463,7 +430,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           if (!matched) {
             matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
           }
-          // 3. Fallback Urutan Posisi Slot (File 1 -> Baris 1, File 2 -> Baris 2)
+          // 3. Fallback Urutan Posisi Slot
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
@@ -475,79 +442,43 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         });
 
         matchCount++;
-        const updatedRow = { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
-        updatedRows.push(updatedRow);
-        return updatedRow;
+        return { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
       });
 
+      // Update State UI Seketika
       setPackingList(newPackingList);
 
-      if (updatedRows.length > 0) {
-        await Promise.all(
-          updatedRows.map((r) =>
-            supabase
-              .from('packing_tracking')
-              .update({ items_detail: r.items_detail, updated_at: r.updated_at })
-              .eq('id', r.id)
-          )
-        );
-      }
-
-      alert(`✅ Berhasil! ${files.length} foto desain telah diunggah ke Storage dan aktif di ${matchCount} box toko.`);
+      alert(`✅ Berhasil! ${files.length} gambar langsung aktif di seluruh ${matchCount} box toko.`);
     } catch (err) {
-      alert('❌ Gagal upload foto desain: ' + err.message);
+      alert('❌ Gagal mengunggah foto: ' + err.message);
     } finally {
       setIsUploadingImages(false);
       e.target.value = '';
     }
   };
 
-  const handleSingleImageOverride = async (rowId, itemIndex, file) => {
+  const handleSingleImageOverride = (rowId, itemIndex, file) => {
     if (!file) return;
     try {
-      const blob = await compressToBlob(file);
-      const uniqueName = `desain_single_${Date.now()}.jpg`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(uniqueName, blob, { contentType: 'image/jpeg', upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(uniqueName);
-      const publicUrl = data?.publicUrl || '';
-
+      const displayUrl = getFileObjectUrl(file);
       const targetRow = packingList.find((p) => p.id === rowId);
       if (!targetRow) return;
 
       const currentDetails = parseItems(targetRow.items_detail);
       const updatedItems = [...currentDetails];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: publicUrl };
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: displayUrl };
 
       setPackingList((prev) =>
         prev.map((p) => (p.id === rowId ? { ...p, items_detail: updatedItems } : p))
       );
 
-      const { error } = await supabase
-        .from('packing_tracking')
-        .update({ items_detail: updatedItems, updated_at: new Date().toISOString() })
-        .eq('id', rowId);
-
-      if (error) throw error;
-
-      alert('✅ Foto item berhasil diperbarui!');
       if (editingRowItem) {
         setEditingRowItem((prev) => ({ ...prev, items_detail: updatedItems }));
       }
+      alert('✅ Foto berhasil diperbarui!');
     } catch (err) {
       alert('❌ Gagal mengubah gambar: ' + err.message);
     }
-  };
-
-  const triggerSafePrint = () => {
-    setTimeout(() => {
-      window.print();
-    }, 600);
   };
 
   const handlePrintLabel = (item) => {
@@ -559,7 +490,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       ...freshItem,
       items_detail: parseItems(freshItem.items_detail)
     });
-    triggerSafePrint();
+    setTimeout(() => {
+      window.print();
+    }, 400);
   };
 
   const handleBatchPrintAll = () => {
@@ -567,7 +500,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
     setSelectedLabelItem(null);
-    triggerSafePrint();
+    setTimeout(() => {
+      window.print();
+    }, 500);
   };
 
   const handlePrintSuratJalan = (itemsToPrint) => {
@@ -575,7 +510,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setSelectedLabelItem(null);
     setIsSuratJalanPrinting(true);
     setSuratJalanGroup(itemsToPrint);
-    triggerSafePrint();
+    setTimeout(() => {
+      window.print();
+    }, 400);
   };
 
   const compressImage = (file) => {
@@ -693,6 +630,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         if (error) throw error;
         alert('✅ Seluruh data paking berhasil dikosongkan!');
         setPackingList([]);
+        window.__ACTIVE_DESIGN_URLS__ = {};
       } catch (err) {
         alert('❌ Gagal menghapus: ' + err.message);
       }
@@ -782,8 +720,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   {sub.image_url ? (
                     <img 
                       src={sub.image_url} 
-                      alt="" 
-                      style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
+                      alt="Preview" 
+                      style={{ height: '28mm', maxWidth: '100%', objectFit: 'contain', display: 'block', margin: 'auto' }} 
                     />
                   ) : (
                     sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
@@ -868,7 +806,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </label>
 
             <label className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Mengunggah ke Storage...' : '🖼️ Upload Desain (Smart Match)'}
+              {isUploadingImages ? '⏳ Memasang Foto...' : '🖼️ Upload Desain (Smart Match)'}
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
             </label>
 
