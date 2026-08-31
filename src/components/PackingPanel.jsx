@@ -14,16 +14,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [isSuratJalanPrinting, setIsSuratJalanPrinting] = useState(false);
   const [suratJalanGroup, setSuratJalanGroup] = useState(null);
 
-  // Global Memory Cache Gambar Desain
-  const [cachedDesignImages, setCachedDesignImages] = useState(() => {
-    try {
-      const saved = localStorage.getItem('wellen_packing_design_images');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +42,21 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     { id: 'status_qc_checker', label: 'QC CHECKER', staff: 'Bagian: Staff Checker', color: 'bg-amber-500' },
     { id: 'status_deliver', label: 'DELIVER', staff: 'Bagian: Staff Deliver', color: 'bg-purple-500' }
   ];
+
+  // Helper parsing items_detail aman
+  const parseItems = (raw) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
 
   useEffect(() => {
     fetchPackingData();
@@ -103,8 +108,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: true });
 
     if (!error && data) {
-      const synced = applyCachedImagesToRows(data, cachedDesignImages);
-      setPackingList(synced);
+      const normalizedData = data.map(item => ({
+        ...item,
+        items_detail: parseItems(item.items_detail)
+      }));
+      setPackingList(normalizedData);
     }
   };
 
@@ -119,33 +127,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  const applyCachedImagesToRows = (rows, images) => {
-    if (!images || images.length === 0) return rows;
-    return rows.map((row) => {
-      if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
-      const updatedDetails = row.items_detail.map((item, idx) => {
-        if (item.image_url && item.image_url.startsWith('data:image')) return item;
-
-        const itemCodeClean = cleanKey(item.code);
-        const itemCore = extractCoreCode(item.code);
-
-        // 1. Cek Exact Match (misal 207b13 atau b13)
-        let matched = images.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
-        // 2. Cek Core Match (misal 1-3)
-        if (!matched) {
-          matched = images.find((img) => img.coreKey === itemCore);
-        }
-        // 3. Fallback Index (Urutan 1, 2, 3, 4)
-        if (!matched && images[idx]) {
-          matched = images[idx];
-        }
-
-        return matched && matched.data ? { ...item, image_url: matched.data } : item;
-      });
-      return { ...row, items_detail: updatedDetails };
-    });
-  };
-
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -155,8 +136,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 500;
-          const MAX_HEIGHT = 350;
+          const MAX_WIDTH = 450;
+          const MAX_HEIGHT = 300;
           let width = img.width;
           let height = img.height;
 
@@ -178,7 +159,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           ctx.drawImage(img, 0, 0, width, height);
           resolve(canvas.toDataURL('image/jpeg', 0.6));
         };
-        img.onerror = () => resolve('');
+        img.onerror = () => resolve(event.target.result);
       };
       reader.onerror = () => resolve('');
     });
@@ -299,10 +280,9 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           let storeItems = [];
           let totalQty = 0;
 
-          catalogItems.forEach((cat, catIdx) => {
+          catalogItems.forEach((cat) => {
             const qtyVal = Number(row[cat.colIndex]) || 0;
             if (qtyVal > 0) {
-              const fallbackImg = cachedDesignImages[catIdx]?.data || '';
               storeItems.push({
                 code: cat.code,
                 desc: cat.desc,
@@ -310,7 +290,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                 size: cat.size,
                 qty: qtyVal,
                 unit: 'Pcs',
-                image_url: fallbackImg
+                image_url: ''
               });
               totalQty += qtyVal;
             }
@@ -416,19 +396,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Universal + Auto-Fallback Slot Matcher
+  // Upload Foto Desain Universal Massal (Direct Inject & Safe Matching)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
 
     if (packingList.length === 0) {
-      alert('⚠️ Silakan Import Data Toko terlebih dahulu sebelum mengupload foto desain!');
+      alert('⚠️ Silakan Import Data Toko terlebih dahulu!');
       e.target.value = '';
       return;
     }
 
     setIsUploadingImages(true);
     try {
+      // Urutkan file berdasarkan nama
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
       const imageList = await Promise.all(
@@ -447,26 +428,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         })
       );
 
-      try {
-        localStorage.setItem('wellen_packing_design_images', JSON.stringify(imageList));
-      } catch (err) {}
-      setCachedDesignImages(imageList);
-
+      let matchCount = 0;
       const updatedRows = [];
-      const newPackingList = packingList.map((row) => {
-        if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
 
-        const newDetails = row.items_detail.map((item, itemIdx) => {
+      const newPackingList = packingList.map((row) => {
+        const details = parseItems(row.items_detail);
+        if (details.length === 0) return row;
+
+        const newDetails = details.map((item, itemIdx) => {
           const itemCodeClean = cleanKey(item.code);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Match
+          // 1. Cek Exact Code Match
           let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
-          // 2. Cek Core Match (misal 1-3)
+          // 2. Cek Core Match (misal 1-1, 1-2)
           if (!matched) {
-            matched = imageList.find((img) => img.coreKey === itemCore);
+            matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
           }
-          // 3. Fallback Auto-Slot (Urutan 1, 2, 3, 4)
+          // 3. Fallback Urutan Index (File 1 masuk Item 1, File 2 masuk Item 2)
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
@@ -477,13 +456,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           return item;
         });
 
+        matchCount++;
         const updatedRow = { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
         updatedRows.push(updatedRow);
         return updatedRow;
       });
 
+      // Update State UI Seketika
       setPackingList(newPackingList);
 
+      // Simpan ke Supabase
       if (updatedRows.length > 0) {
         await Promise.all(
           updatedRows.map((r) =>
@@ -495,7 +477,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ Berhasil! ${files.length} foto desain telah otomatis dipasangkan ke seluruh box toko.`);
+      alert(`✅ SUKSES! ${files.length} foto desain berhasil dipasangkan ke ${matchCount} box koli.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -509,9 +491,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     try {
       const compressedBase64 = await compressDesignImage(file);
       const targetRow = packingList.find((p) => p.id === rowId);
-      if (!targetRow || !targetRow.items_detail) return;
+      if (!targetRow) return;
 
-      const updatedItems = [...targetRow.items_detail];
+      const currentDetails = parseItems(targetRow.items_detail);
+      const updatedItems = [...currentDetails];
       updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: compressedBase64 };
 
       // Update State lokal seketika
@@ -526,7 +509,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
       if (error) throw error;
 
-      alert('✅ Foto item toko berhasil diperbarui!');
+      alert('✅ Foto item berhasil diperbarui!');
       if (editingRowItem) {
         setEditingRowItem((prev) => ({ ...prev, items_detail: updatedItems }));
       }
@@ -540,7 +523,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsBatchPrinting(false);
 
     const freshItem = packingList.find((p) => p.id === item.id) || item;
-    setSelectedLabelItem(freshItem);
+    setSelectedLabelItem({
+      ...freshItem,
+      items_detail: parseItems(freshItem.items_detail)
+    });
     setTimeout(() => {
       window.print();
     }, 300);
@@ -681,7 +667,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         if (error) throw error;
         alert('✅ Seluruh data paking berhasil dikosongkan!');
         setPackingList([]);
-        localStorage.removeItem('wellen_packing_design_images');
       } catch (err) {
         alert('❌ Gagal menghapus: ' + err.message);
       }
@@ -700,97 +685,87 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const totalSpk = packingList.length;
 
-  const renderItemImage = (sub, idx) => {
-    const directUrl = sub.image_url || cachedDesignImages[idx]?.data;
-    if (directUrl) {
-      return (
-        <img 
-          src={directUrl} 
-          alt="Preview Desain" 
-          style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
-        />
-      );
-    }
-    return sub.code ? (
-      <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>
-        Preview Desain
+  const renderSingleLabelSheet = (item) => {
+    const details = parseItems(item.items_detail);
+    const filledDetails = details.length > 0 
+      ? [...details, ...Array(Math.max(0, 6 - details.length)).fill({})]
+      : Array(6).fill({});
+
+    return (
+      <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
+        <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
+          <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
+            {item.box_code || 'B1'}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
+            <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
+              {item.client_pt}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+              <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
+              <div style={{ textAlign: 'center' }}>:</div>
+              <div style={{ fontWeight: '900', textAlign: 'center' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+              <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
+                {item.delivery_type || 'DALAM KOTA'}
+              </div>
+              <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
+              <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
+              <div style={{ textAlign: 'center' }}>:</div>
+              <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {item.store_name}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
+              {item.promo_title}
+            </div>
+            <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
+              {item.no_spk}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+            <QRCodeSVG value={item.qr_address || item.tracking_id} size={42} />
+            <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{item.area_code || 'Q1'}</span>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {filledDetails.slice(0, 6).map((sub, idx) => (
+            <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+              <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
+                <span>{sub.material || (sub.code ? 'PVC' : '')}</span>
+                <span>{sub.size ? `Ukuran : ${sub.size}` : ''}</span>
+              </div>
+              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
+                <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                    {sub.code || ''}
+                  </div>
+                  <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
+                    {sub.desc || ''}
+                  </div>
+                </div>
+                <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                  <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
+                  {sub.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
+                  {sub.image_url ? (
+                    <img src={sub.image_url} alt="Preview" style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+                  ) : (
+                    sub.code && <div style={{ width: '100%', height: '100%', background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', color: '#6b7280', fontStyle: 'italic' }}>Preview Desain</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    ) : null;
+    );
   };
-
-  const renderSingleLabelSheet = (item) => (
-    <div className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always', margin: '0 auto 10mm auto' }}>
-      <div style={{ height: '36mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
-        <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '900', color: '#dc2626' }}>
-          {item.box_code || 'B1'}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
-          <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', borderBottom: '1px solid #000', padding: '2px 0', textTransform: 'uppercase', letterSpacing: '-0.3px' }}>
-            {item.client_pt}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 16mm 26mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-            <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>NOMOR TOKO</div>
-            <div style={{ textAlign: 'center' }}>:</div>
-            <div style={{ fontWeight: '900', textAlign: 'center' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-            <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>
-              {item.delivery_type || 'DALAM KOTA'}
-            </div>
-            <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '26mm 4mm 1fr', fontSize: '10px', borderBottom: '1px solid #000', height: '6mm', alignItems: 'center' }}>
-            <div style={{ paddingLeft: '4px', fontWeight: 'bold' }}>MINISO</div>
-            <div style={{ textAlign: 'center' }}>:</div>
-            <div style={{ fontWeight: '900', paddingLeft: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {item.store_name}
-            </div>
-          </div>
-          <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '9px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '1px 0' }}>
-            {item.promo_title}
-          </div>
-          <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '9px', padding: '1px 0' }}>
-            {item.no_spk}
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-          <QRCodeSVG value={item.qr_address || item.tracking_id} size={42} />
-          <span style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px' }}>{item.area_code || 'Q1'}</span>
-        </div>
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {(item.items_detail && item.items_detail.length > 0
-          ? [...item.items_detail, ...Array(Math.max(0, 6 - item.items_detail.length)).fill({})]
-          : Array(6).fill({})
-        ).slice(0, 6).map((sub, idx) => (
-          <div key={idx} style={{ height: '38.5mm', borderBottom: idx === 5 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-            <div style={{ height: '5mm', borderBottom: '1px solid #000', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold' }}>
-              <span>{sub.material || (sub.code ? 'PVC' : '')}</span>
-              <span>{sub.size ? `Ukuran : ${sub.size}` : ''}</span>
-            </div>
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
-              <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                  {sub.code || ''}
-                </div>
-                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1 }}>
-                  {sub.desc || ''}
-                </div>
-              </div>
-              <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                <span style={{ fontSize: '24px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
-                {sub.code && <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
-                {renderItemImage(sub, idx)}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-8">
@@ -1221,6 +1196,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
+      {/* MODAL KELOLA FOTO TOKO */}
       {editingRowItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`w-full max-w-2xl max-h-[85vh] rounded-3xl p-6 overflow-y-auto shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
@@ -1238,7 +1214,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </div>
 
             <div className="space-y-4">
-              {editingRowItem.items_detail && editingRowItem.items_detail.map((itm, i) => (
+              {parseItems(editingRowItem.items_detail).map((itm, i) => (
                 <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${isDarkMode ? 'bg-neutral-700/40 border-neutral-600' : 'bg-stone-50 border-stone-200'}`}>
                   <div className="flex-1">
                     <div className="font-black text-sm text-red-500">{itm.code}</div>
