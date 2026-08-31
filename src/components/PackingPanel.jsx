@@ -516,7 +516,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     // Tunggu render selesai dan pastikan semua gambar termuat sebelum dialog print muncul
     setTimeout(() => {
-      const images = document.querySelectorAll('.print-area img');
+      const printArea = document.querySelector('.print-area');
+      if (!printArea) return window.print();
+
+      const images = printArea.querySelectorAll('img');
+      if (images.length === 0) return window.print();
+
       const promises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
         return new Promise(resolve => {
@@ -524,10 +529,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           img.onerror = resolve;
         });
       });
+
       Promise.all(promises).then(() => {
-        window.print();
+        // Tambahan jeda ekstra agar Safari/Chrome sempat menggambar pixelnya
+        setTimeout(() => window.print(), 300);
       });
-    }, 600);
+    }, 800);
   };
 
   const handleBatchPrintAll = () => {
@@ -558,7 +565,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setSuratJalanGroup(itemsToPrint);
 
     setTimeout(() => {
-      const images = document.querySelectorAll('.print-area img');
+      const printArea = document.querySelector('.print-area');
+      if (!printArea) return window.print();
+
+      const images = printArea.querySelectorAll('img');
       const promises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
         return new Promise(resolve => {
@@ -566,10 +576,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           img.onerror = resolve;
         });
       });
+
       Promise.all(promises).then(() => {
-        window.print();
+        setTimeout(() => window.print(), 500);
       });
-    }, 600);
+    }, 1200);
   };
 
   const compressImage = (file) => {
