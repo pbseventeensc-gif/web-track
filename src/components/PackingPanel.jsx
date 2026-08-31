@@ -741,7 +741,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const currentPage = pageIdx + 1;
 
           return (
-            <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
+            <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', minHeight: '130mm', height: 'auto', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', marginBottom: '8mm', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
               <div style={{ height: '42mm', display: 'grid', gridTemplateColumns: '30mm 1fr 25mm', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
                 {/* Left Section: Box Code & QR */}
                 <div style={{ borderRight: '2px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
@@ -1355,13 +1355,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               margin: 0 auto !important;
             }
             .label-page {
-              page-break-after: always !important;
+              page-break-after: auto !important;
               page-break-inside: avoid !important;
-              break-after: page !important;
+              break-inside: avoid !important;
+              margin-bottom: 10mm !important;
             }
             .label-page:last-child {
               page-break-after: auto !important;
-              break-after: avoid !important;
             }
           }
         `}</style>
