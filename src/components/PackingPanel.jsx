@@ -23,6 +23,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const [scannerTargetStage, setScannerTargetStage] = useState('status_qc_packing');
   const [lastScanFeedback, setLastScanFeedback] = useState(null);
 
+  // Google Sheets Modal State
+  const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
+  const [gSheetUrlInput, setGSheetUrlInput] = useState('');
+
   // Modal Custom Image Override
   const [editingRowItem, setEditingRowItem] = useState(null);
 
@@ -184,7 +188,111 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Parser Excel Matriks
+  // Core Workbook Parser (Dipakai bersama oleh Local File & Google Sheets)
+  const processMatrixWorkbook = async (wb) => {
+    const matrixSheets = wb.SheetNames.filter(
+      (s) => !s.toUpperCase().includes('LABEL') && !s.toUpperCase().includes('DATA STORE')
+    );
+
+    let parsedRecords = [];
+
+    matrixSheets.forEach((sheetName) => {
+      const ws = wb.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      if (!data || data.length < 7) return;
+
+      const rowCodes = data[1] || [];
+      const rowDescs = data[2] || [];
+      const rowMaterials = data[3] || [];
+      const rowSizes = data[4] || [];
+
+      let catalogItems = [];
+      for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
+        if (rowCodes[colIdx]) {
+          catalogItems.push({
+            colIndex: colIdx,
+            code: String(rowCodes[colIdx]).trim(),
+            desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
+            material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
+            size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
+          });
+        }
+      }
+
+      for (let r = 6; r < data.length; r++) {
+        const row = data[r];
+        if (!row || !row[1]) continue;
+
+        const storeNo = row[1];
+        const prCode = row[2] || '';
+        const boxCode = row[3] || `B${r - 5}`;
+        const storeId = row[4] || '';
+        const clientPt = row[5] || 'PT. Miniso Lifestyle Trading Indonesia';
+        const storeName = row[6] || '';
+        const noPo = row[7] || '';
+        const spkWpp = row[8] || '';
+        const deliveryType = row[9] || 'DALAM KOTA';
+        const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
+
+        let storeItems = [];
+        let totalQty = 0;
+
+        catalogItems.forEach((cat) => {
+          const qtyVal = Number(row[cat.colIndex]) || 0;
+          if (qtyVal > 0) {
+            storeItems.push({
+              code: cat.code,
+              desc: cat.desc,
+              material: cat.material,
+              size: cat.size,
+              qty: qtyVal,
+              unit: 'Pcs',
+              image_url: ''
+            });
+            totalQty += qtyVal;
+          }
+        });
+
+        const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
+
+        parsedRecords.push({
+          tracking_id: trackingId,
+          no_spk: spkWpp.split('/')[0]?.trim() || spkWpp,
+          client_pt: clientPt,
+          promo_title: noPo,
+          store_name: storeName,
+          recipient_name: `Store #${storeNo} (${storeId})`,
+          total_qty: totalQty,
+          box_code: boxCode,
+          area_code: 'Q1',
+          delivery_type: deliveryType,
+          qr_address: qrAddress,
+          items_detail: storeItems,
+          status_qc_label: 'DONE',
+          status_qc_packing: 'PENDING',
+          status_qc_checker: 'PENDING',
+          status_deliver: 'PENDING',
+          updated_at: new Date().toISOString()
+        });
+      }
+    });
+
+    if (parsedRecords.length === 0) {
+      throw new Error('Tidak ada data matriks toko yang terbaca.');
+    }
+
+    const { error } = await supabase
+      .from('packing_tracking')
+      .upsert(parsedRecords, { onConflict: 'tracking_id' });
+
+    if (error) throw error;
+
+    alert(`✅ Berhasil import ${parsedRecords.length} data box toko!`);
+    fetchPackingData();
+  };
+
+  // Parser Excel Matriks Lokal File
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -196,107 +304,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       try {
         const bstr = evt.target.result;
         const wb = XLSX.read(bstr, { type: 'binary' });
-
-        const matrixSheets = wb.SheetNames.filter(
-          (s) => !s.toUpperCase().includes('LABEL') && !s.toUpperCase().includes('DATA STORE')
-        );
-
-        let parsedRecords = [];
-
-        matrixSheets.forEach((sheetName) => {
-          const ws = wb.Sheets[sheetName];
-          const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-          if (!data || data.length < 7) return;
-
-          const rowCodes = data[1] || [];
-          const rowDescs = data[2] || [];
-          const rowMaterials = data[3] || [];
-          const rowSizes = data[4] || [];
-
-          let catalogItems = [];
-          for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
-            if (rowCodes[colIdx]) {
-              catalogItems.push({
-                colIndex: colIdx,
-                code: String(rowCodes[colIdx]).trim(),
-                desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
-                material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
-                size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
-              });
-            }
-          }
-
-          for (let r = 6; r < data.length; r++) {
-            const row = data[r];
-            if (!row || !row[1]) continue;
-
-            const storeNo = row[1];
-            const prCode = row[2] || '';
-            const boxCode = row[3] || `B${r - 5}`;
-            const storeId = row[4] || '';
-            const clientPt = row[5] || 'PT. Miniso Lifestyle Trading Indonesia';
-            const storeName = row[6] || '';
-            const noPo = row[7] || '';
-            const spkWpp = row[8] || '';
-            const deliveryType = row[9] || 'DALAM KOTA';
-            const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
-
-            let storeItems = [];
-            let totalQty = 0;
-
-            catalogItems.forEach((cat) => {
-              const qtyVal = Number(row[cat.colIndex]) || 0;
-              if (qtyVal > 0) {
-                storeItems.push({
-                  code: cat.code,
-                  desc: cat.desc,
-                  material: cat.material,
-                  size: cat.size,
-                  qty: qtyVal,
-                  unit: 'Pcs',
-                  image_url: ''
-                });
-                totalQty += qtyVal;
-              }
-            });
-
-            const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
-
-            parsedRecords.push({
-              tracking_id: trackingId,
-              no_spk: spkWpp.split('/')[0]?.trim() || spkWpp,
-              client_pt: clientPt,
-              promo_title: noPo,
-              store_name: storeName,
-              recipient_name: `Store #${storeNo} (${storeId})`,
-              total_qty: totalQty,
-              box_code: boxCode,
-              area_code: 'Q1',
-              delivery_type: deliveryType,
-              qr_address: qrAddress,
-              items_detail: storeItems,
-              status_qc_label: 'DONE',
-              status_qc_packing: 'PENDING',
-              status_qc_checker: 'PENDING',
-              status_deliver: 'PENDING',
-              updated_at: new Date().toISOString()
-            });
-          }
-        });
-
-        if (parsedRecords.length === 0) {
-          throw new Error('Tidak ada data matriks toko yang terbaca.');
-        }
-
-        const { error } = await supabase
-          .from('packing_tracking')
-          .upsert(parsedRecords, { onConflict: 'tracking_id' });
-
-        if (error) throw error;
-
-        alert(`✅ Berhasil import ${parsedRecords.length} data box toko!`);
-        fetchPackingData();
+        await processMatrixWorkbook(wb);
       } catch (err) {
         alert('❌ Gagal Import Excel: ' + err.message);
       } finally {
@@ -308,13 +316,45 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     reader.readAsBinaryString(file);
   };
 
+  // Import Langsung dari Link Google Spreadsheet
+  const handleImportGoogleSheet = async () => {
+    if (!gSheetUrlInput.trim()) {
+      return alert('⚠️ Silakan masukkan URL Google Sheets terlebih dahulu.');
+    }
+
+    setIsImporting(true);
+    try {
+      const match = gSheetUrlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match || !match[1]) {
+        throw new Error('URL Google Spreadsheet tidak valid.');
+      }
+      const sheetId = match[1];
+      const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`;
+
+      const res = await fetch(exportUrl);
+      if (!res.ok) {
+        throw new Error('Gagal mengakses Google Sheets. Pastikan hak akses disetel ke "Anyone with the link can view".');
+      }
+
+      const arrayBuffer = await res.arrayBuffer();
+      const wb = XLSX.read(arrayBuffer, { type: 'array' });
+      await processMatrixWorkbook(wb);
+      setIsGSheetModalOpen(false);
+      setGSheetUrlInput('');
+    } catch (err) {
+      alert('❌ Gagal Import Google Sheets: ' + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   // Upload Foto Desain (Aman, Auto-Kompresi & Smart-Match)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
 
     if (packingList.length === 0) {
-      alert('⚠️ Silakan Import Excel Matriks terlebih dahulu sebelum mengupload foto desain!');
+      alert('⚠️ Silakan Import Data Toko terlebih dahulu sebelum mengupload foto desain!');
       e.target.value = '';
       return;
     }
@@ -711,6 +751,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               📷 Mode Scan Gudang (QC/Checker)
             </button>
 
+            {/* TOMBOL IMPORT GOOGLE SHEETS */}
+            <button
+              onClick={() => setIsGSheetModalOpen(true)}
+              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              🌐 Import Google Sheet
+            </button>
+
             <label className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
               {isImporting ? '⏳ Mengimport...' : '📤 Import Excel Matriks'}
               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={isImporting} />
@@ -901,6 +949,51 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           </table>
         </div>
       </div>
+
+      {/* MODAL INPUT GOOGLE SPREADSHEET URL */}
+      {isGSheetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
+              <h3 className="font-black text-sm uppercase flex items-center gap-2">🌐 Tarik Data Google Spreadsheet</h3>
+              <button
+                onClick={() => setIsGSheetModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 leading-relaxed">
+              Pastikan Spreadsheet Anda telah disetel akses publik (<strong>Anyone with the link can view</strong>), lalu tempel tautan URL di bawah:
+            </p>
+
+            <input
+              type="url"
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              value={gSheetUrlInput}
+              onChange={(e) => setGSheetUrlInput(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border text-xs bg-stone-50 dark:bg-neutral-900 border-stone-200 dark:border-neutral-700 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-4 font-mono"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsGSheetModalOpen(false)}
+                className="px-4 py-2 bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleImportGoogleSheet}
+                disabled={isImporting}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95"
+              >
+                {isImporting ? '⏳ Mengambil Data...' : '⚡ Tarik & Import Data'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL IN-APP QR SCANNER */}
       {isScannerOpen && (
