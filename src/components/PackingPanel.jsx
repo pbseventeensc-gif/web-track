@@ -737,50 +737,47 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const totalPages = chunks.length;
           const currentPage = pageIdx + 1;
 
-          // Isi sisa baris kosong jika item < 6 agar layout tetap konsisten
-          const filledChunk = [...chunk, ...Array(Math.max(0, 6 - chunk.length)).fill({})];
-
           return (
             <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
-              <div style={{ height: '40mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
-                <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '900', color: '#dc2626' }}>
-                  {item.box_code || 'B1'}
+              <div style={{ height: '52mm', display: 'grid', gridTemplateColumns: '42mm 1fr 28mm', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
+                <div style={{ borderRight: '2px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
+                  <div style={{ fontSize: '42px', fontWeight: '900', color: '#dc2626', lineHeight: '1', marginBottom: '4px' }}>{item.box_code || 'B1'}</div>
+                  <QRCodeSVG value={item.qr_address || item.tracking_id} size={90} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px solid #000' }}>
-                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '15px', borderBottom: '1px solid #000', padding: '4px 0', textTransform: 'uppercase' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', borderRight: '2px solid #000' }}>
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '6px 0' }}>
                     {item.client_pt}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '30mm 4mm 20mm 30mm 1fr', fontSize: '12px', borderBottom: '1px solid #000', height: '8mm', alignItems: 'center' }}>
-                    <div style={{ paddingLeft: '6px', fontWeight: 'bold' }}>NOMOR TOKO</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '40mm 4mm 1fr 40mm 1fr', fontSize: '15px', borderBottom: '1px solid #000', height: '11mm', alignItems: 'center' }}>
+                    <div style={{ paddingLeft: '8px', fontWeight: 'bold' }}>NOMOR TOKO</div>
                     <div style={{ textAlign: 'center' }}>:</div>
-                    <div style={{ fontWeight: '900', textAlign: 'center', fontSize: '14px' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                    <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#dc2626' : '#2563eb', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
-                      {item.delivery_type || 'LUAR KOTA'}
+                    <div style={{ fontWeight: '900', fontSize: '22px' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
+                    <div style={{ textAlign: 'center', fontWeight: '900', color: '#fff', background: '#0000FF', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
+                      {item.delivery_type || 'DALAM KOTA'}
                     </div>
-                    <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>
+                    <div style={{ borderLeft: '1px solid #000', textAlign: 'center', fontWeight: '900', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                       {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '30mm 4mm 1fr', fontSize: '12px', borderBottom: '1px solid #000', height: '8mm', alignItems: 'center' }}>
-                    <div style={{ paddingLeft: '6px', fontWeight: 'bold' }}>MINISO</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '40mm 4mm 1fr', fontSize: '15px', borderBottom: '1px solid #000', height: '11mm', alignItems: 'center' }}>
+                    <div style={{ paddingLeft: '8px', fontWeight: 'bold' }}>MINISO</div>
                     <div style={{ textAlign: 'center' }}>:</div>
-                    <div style={{ fontWeight: '900', paddingLeft: '6px', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontWeight: '900', paddingLeft: '8px', fontSize: '20px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {item.store_name}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '11px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '2px 0' }}>
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13px', borderBottom: '1px solid #000', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '3px 0' }}>
                     {item.promo_title}
                   </div>
-                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '11px', padding: '2px 0' }}>
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '13px', padding: '3px 0' }}>
                     {item.no_spk}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                  <QRCodeSVG value={item.qr_address || item.tracking_id} size={48} />
-                  <div style={{ fontWeight: '900', fontSize: '24px', marginTop: '2px', lineHeight: '1', textAlign: 'center' }}>
+                  <div style={{ fontWeight: '900', fontSize: '36px', lineHeight: '1', textAlign: 'center' }}>
                     {item.area_code || 'Q1'}
                   </div>
-                  <div style={{ fontWeight: '900', fontSize: '13px', marginTop: '1px', textAlign: 'center', color: '#404040' }}>
+                  <div style={{ fontWeight: '900', fontSize: '12px', marginTop: '8px', textAlign: 'center', color: '#000' }}>
                     {currentPage} OF {totalPages}
                   </div>
                 </div>
@@ -788,24 +785,23 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {chunk.map((sub, idx) => (
-                  <div key={idx} style={{ height: '38.2mm', borderBottom: '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
-                    <div style={{ height: '7mm', borderBottom: '1px solid #000', display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'center', background: '#f5f5f5', fontSize: '9px', fontWeight: 'bold', lineHeight: '1.1' }}>
+                  <div key={idx} style={{ height: '36mm', borderBottom: '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}>
+                    <div style={{ height: '8mm', borderBottom: '1px solid #000', display: 'grid', gridTemplateColumns: '95mm 1fr', alignItems: 'center', background: '#bfdbfe', fontSize: '11px', fontWeight: 'bold' }}>
                       <div style={{ paddingLeft: '8px', paddingRight: '4px', overflow: 'hidden' }}>{sub.material || (sub.code ? 'PVC' : '')}</div>
-                      <div></div>
                       <div style={{ textAlign: 'center' }}>{sub.size ? `Ukuran : ${sub.size}` : ''}</div>
                     </div>
-                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 25mm 1fr', alignItems: 'stretch' }}>
-                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'center' }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.5px', lineHeight: 1 }}>
+                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '70mm 30mm 1fr', alignItems: 'stretch' }}>
+                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
+                        <div style={{ fontSize: '38px', fontWeight: '900', color: '#dc2626', letterSpacing: '-0.5px', lineHeight: 1 }}>
                           {sub.code || ''}
                         </div>
-                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1, textTransform: 'uppercase' }}>
+                        <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#262626', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '4px' }}>
                           {sub.desc || ''}
                         </div>
                       </div>
                       <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                        <span style={{ fontSize: '30px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
-                        {sub.code && <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#525252' }}>{sub.unit || 'Pcs'}</span>}
+                        <span style={{ fontSize: '48px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
+                        {sub.code && <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#000', marginTop: '4px' }}>{sub.unit || 'Pcs'}</span>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px', background: '#fafafa', overflow: 'hidden' }}>
                         {sub.image_url ? (
@@ -815,7 +811,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                             decoding="sync"
                             loading="eager"
                             style={{
-                              height: '26mm',
+                              height: '24mm',
                               width: 'auto',
                               maxWidth: '100%',
                               objectFit: 'contain',
