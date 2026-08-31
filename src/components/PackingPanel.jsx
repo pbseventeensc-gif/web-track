@@ -741,7 +741,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const filledChunk = [...chunk, ...Array(Math.max(0, 6 - chunk.length)).fill({})];
 
           return (
-            <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', pageBreakAfter: 'always' }}>
+            <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
               <div style={{ height: '40mm', display: 'grid', gridTemplateColumns: '30mm 1fr 28mm', borderBottom: '2px solid #000', boxSizing: 'border-box' }}>
                 <div style={{ borderRight: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: '900', color: '#dc2626' }}>
                   {item.box_code || 'B1'}
@@ -1349,6 +1349,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               page-break-after: always !important;
               page-break-inside: avoid !important;
               break-after: page !important;
+            }
+            .label-page:last-child {
+              page-break-after: auto !important;
+              break-after: avoid !important;
             }
           }
         `}</style>
