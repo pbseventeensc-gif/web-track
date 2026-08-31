@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../supabaseClient';
 
 // Global memory cache untuk link gambar aktif di browser
@@ -82,25 +82,28 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   }, []);
 
   useEffect(() => {
-    let qrScanner = null;
+    let html5QrCode = null;
     if (isScannerOpen) {
-      qrScanner = new Html5QrcodeScanner(
-        "qr-reader-container",
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        false
-      );
+      html5QrCode = new Html5Qrcode("qr-reader-container");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-      qrScanner.render(
-        async (decodedText) => {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
           handleQrScanSuccess(decodedText);
         },
-        (error) => {}
-      );
+        (errorMessage) => {}
+      ).catch((err) => {
+        console.error("Gagal menjalankan kamera:", err);
+      });
     }
 
     return () => {
-      if (qrScanner) {
-        qrScanner.clear().catch(() => {});
+      if (html5QrCode) {
+        if (html5QrCode.isScanning) {
+          html5QrCode.stop().catch(err => console.error("Gagal stop scanner:", err));
+        }
       }
     };
   }, [isScannerOpen, scannerTargetStage, packingList]);
