@@ -112,7 +112,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Kompresi Gambar Desain Otomatis (~20-40 KB)
+  // Kompresi Gambar Desain Ultra Ringan & Instan
   const compressDesignImage = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -122,8 +122,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 600;
-          const MAX_HEIGHT = 400;
+          const MAX_WIDTH = 450;
+          const MAX_HEIGHT = 300;
           let width = img.width;
           let height = img.height;
 
@@ -143,9 +143,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.65));
+          resolve(canvas.toDataURL('image/jpeg', 0.55));
         };
+        img.onerror = () => resolve('');
       };
+      reader.onerror = () => resolve('');
     });
   };
 
@@ -204,7 +206,6 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   // Membuka Dialog Pilihan Sheet jika ada banyak sheet
   const openSheetSelectorModal = (wb) => {
     const allSheets = wb.SheetNames || [];
-    // Rekomendasikan centang sheet yang bukan 'LABEL' / 'DATA STORE'
     const defaultSelected = allSheets.filter(
       (s) => !s.toUpperCase().includes('LABEL') && !s.toUpperCase().includes('DATA STORE')
     );
@@ -386,7 +387,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Universal
+  // Upload Foto Desain Universal (Parallel Batch Super Cepat)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -399,68 +400,74 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
-      let imageList = [];
+      // Baca & Kompres semua gambar secara PARALEL
+      const imageList = await Promise.all(
+        files.map(async (file) => {
+          const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+          const normalizedKey = cleanKey(rawFileName);
+          const coreKey = extractCoreCode(rawFileName);
+          const compressedBase64 = await compressDesignImage(file);
+          return { rawKey: normalizedKey, coreKey: coreKey, data: compressedBase64 };
+        })
+      );
 
-      for (const file of files) {
-        const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-        const normalizedKey = cleanKey(rawFileName);
-        const coreKey = extractCoreCode(rawFileName);
-        const compressedBase64 = await compressDesignImage(file);
-        
-        imageList.push({ 
-          rawKey: normalizedKey, 
-          coreKey: coreKey, 
-          data: compressedBase64 
-        });
-      }
-
-      const { data: currentRows, error: fetchErr } = await supabase
-        .from('packing_tracking')
-        .select('id, items_detail');
-
-      if (fetchErr) throw fetchErr;
-
+      const updatedRows = [];
       let matchCount = 0;
-      for (const row of currentRows || []) {
-        if (row.items_detail && Array.isArray(row.items_detail)) {
-          let hasChange = false;
-          const newDetails = row.items_detail.map((item) => {
-            const itemCodeClean = cleanKey(item.code);
-            const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
-            const itemCore = extractCoreCode(item.code);
 
-            // 1. Cek kombinasi Kode + Ukuran
-            let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
-            
-            // 2. Cek Kode Item Lengkap
-            if (!matched) {
-              matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
-            }
+      const newPackingList = packingList.map((row) => {
+        if (!row.items_detail || !Array.isArray(row.items_detail)) return row;
 
-            // 3. Cek Universal Core Code (misal file "1-1.jpg" cocok ke A.1-1, B.1-1, C.1-1)
-            if (!matched && itemCore) {
-              matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
-            }
+        let hasChange = false;
+        const newDetails = row.items_detail.map((item) => {
+          const itemCodeClean = cleanKey(item.code);
+          const itemCombinedClean = cleanKey(`${item.code}${item.size}`);
+          const itemCore = extractCoreCode(item.code);
 
-            if (matched) {
-              hasChange = true;
-              return { ...item, image_url: matched.data };
-            }
-            return item;
-          });
-
-          if (hasChange) {
-            matchCount++;
-            await supabase
-              .from('packing_tracking')
-              .update({ items_detail: newDetails, updated_at: new Date().toISOString() })
-              .eq('id', row.id);
+          // 1. Cek kombinasi Kode + Ukuran
+          let matched = imageList.find((img) => img.rawKey === itemCombinedClean || itemCombinedClean.includes(img.rawKey));
+          
+          // 2. Cek Kode Item Lengkap
+          if (!matched) {
+            matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey) || img.rawKey.includes(itemCodeClean));
           }
+
+          // 3. Cek Universal Core Code (misal file "1-1.jpg" cocok ke A.1-1, B.1-1, C.1-1)
+          if (!matched && itemCore) {
+            matched = imageList.find((img) => img.coreKey === itemCore || img.rawKey === itemCore);
+          }
+
+          if (matched && matched.data) {
+            hasChange = true;
+            return { ...item, image_url: matched.data };
+          }
+          return item;
+        });
+
+        if (hasChange) {
+          matchCount++;
+          const updatedRow = { ...row, items_detail: newDetails, updated_at: new Date().toISOString() };
+          updatedRows.push(updatedRow);
+          return updatedRow;
         }
+        return row;
+      });
+
+      // Update State secara instan di UI
+      setPackingList(newPackingList);
+
+      // Simpan perubahan ke Supabase secara paralel serentak
+      if (updatedRows.length > 0) {
+        await Promise.all(
+          updatedRows.map((r) =>
+            supabase
+              .from('packing_tracking')
+              .update({ items_detail: r.items_detail, updated_at: r.updated_at })
+              .eq('id', r.id)
+          )
+        );
       }
 
-      alert(`✅ Berhasil! ${files.length} foto desain telah diterapkan secara universal ke seluruh Box pada ${matchCount} baris koli!`);
-      fetchPackingData();
+      alert(`✅ Berhasil instan! ${files.length} foto diterapkan ke ${matchCount} box.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -541,12 +548,12 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
+              height = Math.round((height * MAX_WIDTH) / width);
               width = MAX_WIDTH;
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
+              width = Math.round((width * MAX_HEIGHT) / height);
               height = MAX_HEIGHT;
             }
           }
