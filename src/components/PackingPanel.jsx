@@ -156,13 +156,14 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return match ? match[1] : lastPart.toLowerCase();
   };
 
-  // Convert File ke Direct Display URL
-  const getFileObjectUrl = (file) => {
-    try {
-      return URL.createObjectURL(file);
-    } catch (e) {
-      return '';
-    }
+  // Convert File ke Base64 (Lebih stabil untuk Print di Mac/Safari)
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleQrScanSuccess = async (decodedText) => {
@@ -409,31 +410,31 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
 
     setIsUploadingImages(true);
+    console.log("=== START BULK UPLOAD MATCHING (v6 Base64) ===");
     try {
-      // Sort file agar urutan konsisten (misal: B.1-1, B.1-2, ...)
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
-      const imageList = files.map((file, idx) => {
+      // Konversi semua file ke Base64 secara paralel
+      const imageList = await Promise.all(files.map(async (file, idx) => {
         const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
         const normalizedKey = cleanKey(rawFileName);
         const coreKey = extractCoreCode(rawFileName);
-        const displayUrl = getFileObjectUrl(file);
 
-        // Daftarkan ke Global URL Memory untuk recovery jika state reset
-        window.__ACTIVE_DESIGN_URLS__[rawFileName] = displayUrl;
-        window.__ACTIVE_DESIGN_URLS__[normalizedKey] = displayUrl;
-        if (coreKey) {
-          window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
-        }
+        // GUNAKAN BASE64 ALIH-ALIAH OBJECTURL
+        const base64Data = await readFileAsBase64(file);
+
+        window.__ACTIVE_DESIGN_URLS__[rawFileName] = base64Data;
+        window.__ACTIVE_DESIGN_URLS__[normalizedKey] = base64Data;
+        if (coreKey) window.__ACTIVE_DESIGN_URLS__[coreKey] = base64Data;
 
         return { 
           index: idx, 
           fileName: rawFileName,
           rawKey: normalizedKey, 
           coreKey: coreKey, 
-          url: displayUrl 
+          url: base64Data
         };
-      });
+      }));
 
       let totalMatches = 0;
       const newPackingList = packingList.map((row) => {
