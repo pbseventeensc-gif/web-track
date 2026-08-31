@@ -803,7 +803,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                     </div>
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '80mm 35mm 1fr', alignItems: 'stretch', minHeight: '37mm' }}>
                       <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                        <div style={{ fontSize: '48px', fontWeight: '900', color: '#dc2626', letterSpacing: '-1px', lineHeight: 1 }}>
+                        <div style={{ fontSize: '40px', fontWeight: '900', color: '#dc2626', letterSpacing: '-1px', lineHeight: 1 }}>
                           {sub.code || ''}
                         </div>
                         <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '2px' }}>
