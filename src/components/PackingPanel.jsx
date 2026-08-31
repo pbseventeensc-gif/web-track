@@ -115,7 +115,11 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       const normalizedData = data.map(item => {
         const details = parseItems(item.items_detail).map((sub, idx) => {
           // Ambil dari memory URL browser jika database masih kosong
-          const activeUrl = sub.image_url || window.__ACTIVE_DESIGN_URLS__[sub.code] || window.__ACTIVE_DESIGN_URLS__[idx] || '';
+          // Gunakan kode item atau index spesifik untuk recovery URL desain lokal
+          const activeUrl = sub.image_url ||
+                           window.__ACTIVE_DESIGN_URLS__[sub.code] ||
+                           window.__ACTIVE_DESIGN_URLS__[cleanKey(sub.code)] ||
+                           '';
           return { ...sub, image_url: activeUrl };
         });
         return {
@@ -134,8 +138,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    const afterDot = str.includes('.') ? str.split('.').pop() : str;
-    return cleanKey(afterDot);
+    // Ambil bagian paling akhir setelah tanda hubung atau titik (misal: B.3-1 -> 1)
+    const parts = str.split(/[-.]/);
+    const lastPart = parts[parts.length - 1].trim();
+    return cleanKey(lastPart);
   };
 
   // Convert File ke Direct Display URL
@@ -392,6 +398,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
     setIsUploadingImages(true);
     try {
+      // Sort file agar urutan konsisten (misal: B.1-1, B.1-2, ...)
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
       const imageList = files.map((file, idx) => {
@@ -400,11 +407,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         const coreKey = extractCoreCode(rawFileName);
         const displayUrl = getFileObjectUrl(file);
 
-        // Daftarkan ke Global URL Memory
+        // Daftarkan ke Global URL Memory untuk recovery jika state reset
         window.__ACTIVE_DESIGN_URLS__[rawFileName] = displayUrl;
         window.__ACTIVE_DESIGN_URLS__[normalizedKey] = displayUrl;
         window.__ACTIVE_DESIGN_URLS__[coreKey] = displayUrl;
-        window.__ACTIVE_DESIGN_URLS__[idx] = displayUrl;
 
         return { 
           index: idx, 
@@ -424,14 +430,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           const itemCodeClean = cleanKey(item.code);
           const itemCore = extractCoreCode(item.code);
 
-          // 1. Cek Exact Match
+          // 1. Cek Exact Match (Nama file sama persis dengan kode)
           let matched = imageList.find((img) => img.rawKey === itemCodeClean || itemCodeClean.includes(img.rawKey));
-          // 2. Cek Core Match
+
+          // 2. Cek Core Match (Misal: sama-sama akhiran "-1" atau ".1")
           if (!matched) {
-            matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
+            matched = imageList.find((img) => img.coreKey === itemCore && itemCore !== '');
           }
-          // 3. Fallback Urutan Posisi Slot
-          if (!matched && imageList[itemIdx]) {
+
+          // 3. Fallback Urutan Posisi Slot (Jika jumlah file sama dengan jumlah item)
+          if (!matched && imageList.length === details.length) {
             matched = imageList[itemIdx];
           }
 
@@ -448,7 +456,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       // Update State UI Seketika
       setPackingList(newPackingList);
 
-      alert(`✅ Berhasil! ${files.length} gambar langsung aktif di seluruh ${matchCount} box toko.`);
+      alert(`✅ Berhasil! ${files.length} gambar diproses untuk ${matchCount} box toko.`);
     } catch (err) {
       alert('❌ Gagal mengunggah foto: ' + err.message);
     } finally {
@@ -490,9 +498,21 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       ...freshItem,
       items_detail: parseItems(freshItem.items_detail)
     });
+
+    // Tunggu render selesai dan pastikan semua gambar termuat sebelum dialog print muncul
     setTimeout(() => {
-      window.print();
-    }, 400);
+      const images = document.querySelectorAll('.print-area img');
+      const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      Promise.all(promises).then(() => {
+        window.print();
+      });
+    }, 600);
   };
 
   const handleBatchPrintAll = () => {
@@ -500,9 +520,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
     setSelectedLabelItem(null);
+
     setTimeout(() => {
-      window.print();
-    }, 500);
+      const images = document.querySelectorAll('.print-area img');
+      const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      Promise.all(promises).then(() => {
+        window.print();
+      });
+    }, 800);
   };
 
   const handlePrintSuratJalan = (itemsToPrint) => {
@@ -510,9 +541,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     setSelectedLabelItem(null);
     setIsSuratJalanPrinting(true);
     setSuratJalanGroup(itemsToPrint);
+
     setTimeout(() => {
-      window.print();
-    }, 400);
+      const images = document.querySelectorAll('.print-area img');
+      const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      Promise.all(promises).then(() => {
+        window.print();
+      });
+    }, 600);
   };
 
   const compressImage = (file) => {
@@ -1208,8 +1250,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       )}
 
-      {/* PRINT CONTAINER A4 */}
-      <div className="print-area hidden print:block">
+      {/* PRINT CONTAINER A4 - Diposisikan di luar layar agar gambar tetap dimuat browser tanpa mengganggu UI */}
+      <div className="print-area fixed top-0 left-0 -z-50 opacity-0 pointer-events-none print:static print:opacity-100 print:z-auto print:pointer-events-auto">
         <style>{`
           @media print {
             @page {
