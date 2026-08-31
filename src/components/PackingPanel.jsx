@@ -739,7 +739,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
           return (
             <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', height: '270mm', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden' }}>
-              <div style={{ height: '42mm', display: 'grid', gridTemplateColumns: '30mm 1fr 20mm', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
+              <div style={{ height: '42mm', display: 'grid', gridTemplateColumns: '30mm 1fr 25mm', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
                 {/* Left Section: Box Code & QR */}
                 <div style={{ borderRight: '2px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
                   <div style={{ height: '12mm', borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: '900', color: '#dc2626', lineHeight: '1' }}>
@@ -783,13 +783,10 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   </div>
                 </div>
 
-                {/* Right Section: Pagination Only (Large) */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                  <div style={{ fontWeight: '900', fontSize: '28px', textAlign: 'center', color: '#000', lineHeight: '1.1' }}>
-                    {currentPage}
-                  </div>
-                  <div style={{ fontWeight: '900', fontSize: '14px', textAlign: 'center', color: '#000', borderTop: '2px solid #000', marginTop: '2px', paddingTop: '2px', width: '80%' }}>
-                    OF {totalPages}
+                {/* Right Section: Pagination Only (Horizontal & Large) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                  <div style={{ fontWeight: '900', fontSize: '20px', textAlign: 'center', color: '#000', whiteSpace: 'nowrap' }}>
+                    {currentPage} OF {totalPages}
                   </div>
                 </div>
               </div>
