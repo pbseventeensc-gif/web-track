@@ -183,8 +183,8 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
       return;
     }
 
-    // FITUR BARU: Langsung filter tabel agar hanya muncul baris ini
-    setSearchTerm(targetItem.box_code);
+    // FITUR BARU: Langsung filter tabel agar muncul SEMUA BOX untuk STORE ini
+    setSearchTerm(targetItem.store_name);
 
     if (targetItem[scannerTargetStage] === 'DONE') {
       setLastScanFeedback({ success: true, text: `ℹ️ ${targetItem.box_code} sudah DONE.` });
