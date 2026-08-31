@@ -126,53 +126,46 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return cleanKey(afterDot);
   };
 
-  // Konversi otomatis file (termasuk CMYK / Hi-Res) menjadi RGB Base64 yang valid di browser
-  const convertToRgbWebBase64 = (file) => {
+  // Kompresi File Gambar menjadi JPEG Blob Tajam
+  const compressToBlob = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        const rawData = e.target.result;
         const img = new Image();
-        img.crossOrigin = "anonymous";
         img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 600;
-            const MAX_HEIGHT = 400;
-            let width = img.width || 600;
-            let height = img.height || 400;
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 600;
+          let width = img.width;
+          let height = img.height;
 
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height = Math.round((height * MAX_WIDTH) / width);
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width = Math.round((width * MAX_HEIGHT) / height);
-                height = MAX_HEIGHT;
-              }
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
             }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            const convertedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-            resolve(convertedDataUrl);
-          } catch (err) {
-            resolve(rawData);
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
           }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob((blob) => {
+            resolve(blob || file);
+          }, 'image/jpeg', 0.85);
         };
-        img.onerror = () => {
-          resolve(rawData);
-        };
-        img.src = rawData;
+        img.onerror = () => resolve(file);
+        img.src = e.target.result;
       };
-      reader.onerror = () => resolve('');
+      reader.onerror = () => resolve(file);
       reader.readAsDataURL(file);
     });
   };
@@ -408,7 +401,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  // Upload Foto Desain Otomatis & Pasang ke Semua Toko
+  // Upload Foto Desain ke Supabase Storage (URL Asli CDN, Anti-Gagal & Anti-Rusak)
   const handleBulkUploadDesignImages = async (e) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
@@ -423,18 +416,32 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     try {
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
+      // 1. Upload semua file ke Supabase Storage Bucket 'surat-jalan'
       const imageList = await Promise.all(
         files.map(async (file, idx) => {
           const rawFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
           const normalizedKey = cleanKey(rawFileName);
           const coreKey = extractCoreCode(rawFileName);
-          const validBase64 = await convertToRgbWebBase64(file);
+          const blob = await compressToBlob(file);
+
+          const uniqueName = `desain_${normalizedKey}_${Date.now()}_${idx}.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('surat-jalan')
+            .upload(uniqueName, blob, { contentType: 'image/jpeg', upsert: true });
+
+          let publicUrl = '';
+          if (!uploadError) {
+            const { data } = supabase.storage.from('surat-jalan').getPublicUrl(uniqueName);
+            publicUrl = data?.publicUrl || '';
+          }
+
           return { 
             index: idx, 
             fileName: rawFileName,
             rawKey: normalizedKey, 
             coreKey: coreKey, 
-            data: validBase64 
+            url: publicUrl 
           };
         })
       );
@@ -456,13 +463,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
           if (!matched) {
             matched = imageList.find((img) => img.coreKey === itemCore || itemCodeClean.includes(img.coreKey));
           }
-          // 3. Fallback Urutan Posisi Slot
+          // 3. Fallback Urutan Posisi Slot (File 1 -> Baris 1, File 2 -> Baris 2)
           if (!matched && imageList[itemIdx]) {
             matched = imageList[itemIdx];
           }
 
-          if (matched && matched.data) {
-            return { ...item, image_url: matched.data };
+          if (matched && matched.url) {
+            return { ...item, image_url: matched.url };
           }
           return item;
         });
@@ -486,7 +493,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         );
       }
 
-      alert(`✅ Berhasil! ${files.length} foto desain telah dipasangkan ke ${matchCount} box toko.`);
+      alert(`✅ Berhasil! ${files.length} foto desain telah diunggah ke Storage dan aktif di ${matchCount} box toko.`);
     } catch (err) {
       alert('❌ Gagal upload foto desain: ' + err.message);
     } finally {
@@ -498,13 +505,24 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const handleSingleImageOverride = async (rowId, itemIndex, file) => {
     if (!file) return;
     try {
-      const validBase64 = await convertToRgbWebBase64(file);
+      const blob = await compressToBlob(file);
+      const uniqueName = `desain_single_${Date.now()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('surat-jalan')
+        .upload(uniqueName, blob, { contentType: 'image/jpeg', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('surat-jalan').getPublicUrl(uniqueName);
+      const publicUrl = data?.publicUrl || '';
+
       const targetRow = packingList.find((p) => p.id === rowId);
       if (!targetRow) return;
 
       const currentDetails = parseItems(targetRow.items_detail);
       const updatedItems = [...currentDetails];
-      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: validBase64 };
+      updatedItems[itemIndex] = { ...updatedItems[itemIndex], image_url: publicUrl };
 
       setPackingList((prev) =>
         prev.map((p) => (p.id === rowId ? { ...p, items_detail: updatedItems } : p))
@@ -529,7 +547,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
   const triggerSafePrint = () => {
     setTimeout(() => {
       window.print();
-    }, 700);
+    }, 600);
   };
 
   const handlePrintLabel = (item) => {
@@ -764,7 +782,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   {sub.image_url ? (
                     <img 
                       src={sub.image_url} 
-                      alt="Desain" 
+                      alt="" 
                       style={{ maxHeight: '30mm', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
                     />
                   ) : (
@@ -850,7 +868,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             </label>
 
             <label className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Mengonversi Foto...' : '🖼️ Upload Desain (Smart Match)'}
+              {isUploadingImages ? '⏳ Mengunggah ke Storage...' : '🖼️ Upload Desain (Smart Match)'}
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
             </label>
 
