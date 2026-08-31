@@ -783,13 +783,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   </div>
                 </div>
 
-                {/* Right Section: Area Code */}
+                {/* Right Section: Pagination Only (Large) */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                  <div style={{ fontWeight: '900', fontSize: '38px', lineHeight: '1', textAlign: 'center' }}>
-                    {item.area_code || 'Q1'}
+                  <div style={{ fontWeight: '900', fontSize: '28px', textAlign: 'center', color: '#000', lineHeight: '1.1' }}>
+                    {currentPage}
                   </div>
-                  <div style={{ fontWeight: '900', fontSize: '12px', marginTop: '4px', textAlign: 'center', color: '#000' }}>
-                    {currentPage} OF {totalPages}
+                  <div style={{ fontWeight: '900', fontSize: '14px', textAlign: 'center', color: '#000', borderTop: '2px solid #000', marginTop: '2px', paddingTop: '2px', width: '80%' }}>
+                    OF {totalPages}
                   </div>
                 </div>
               </div>
