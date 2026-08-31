@@ -143,23 +143,18 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    // 1. Hilangkan ekstensi
+    // v4: Ambil Huruf Terakhir + Angka Terakhir
     const cleanStr = String(str).replace(/\.(jpg|jpeg|png|gif|webp|pdf)$/i, '');
 
-    // 2. Ambil Kelompok Angka Terakhir (Misal: "B.1-12" -> "12")
     const numMatches = cleanStr.match(/\d+/g);
     const lastNum = numMatches ? numMatches[numMatches.length - 1] : '';
 
-    // 3. Ambil Huruf Terakhir (Misal: "B.1-12" -> "b")
     const letterMatches = cleanStr.match(/[a-zA-Z]/g);
     const lastLetter = letterMatches ? letterMatches[letterMatches.length - 1].toLowerCase() : '';
 
-    // Gabungkan Huruf + Angka Terakhir (Pattern: b1, b12)
-    // Ini memungkinkan B.1-1 cocok dengan B.3-1 (keduanya jadi b1)
     if (lastLetter && lastNum) {
       return lastLetter + lastNum;
     }
-
     return lastNum || lastLetter || cleanKey(cleanStr);
   };
 
@@ -416,7 +411,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
 
     setIsUploadingImages(true);
-    console.log("=== START BULK UPLOAD MATCHING ===");
+    console.log("=== START BULK UPLOAD MATCHING (v4) ===");
     try {
       // Sort file agar urutan konsisten (misal: B.1-1, B.1-2, ...)
       files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
