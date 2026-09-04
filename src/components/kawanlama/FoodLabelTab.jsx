@@ -170,17 +170,20 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
-          /* Pengaturan khusus ukuran A5 Landscape (Horizontal) untuk Dot Matrix */
+          /* Pengaturan presisi tinggi A5 Landscape agar pas 1 halaman penuh */
           @page {
             size: A5 landscape;
-            margin: 0.3cm;
+            margin: 0.2cm;
           }
           .a5-landscape-doc {
             width: 100% !important;
-            max-width: 20cm !important;
-            min-height: 13.2cm !important;
+            max-width: 20.4cm !important;
+            height: 13.6cm !important;
+            max-height: 13.6cm !important;
+            overflow: hidden !important;
             padding: 2mm !important;
             font-size: 8px !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
@@ -196,7 +199,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan diatur A5 Landscape (Horizontal) agar pas di 1 halaman.</p>
+          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan diatur agar pas murni 1 halaman A5 Landscape.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -358,95 +361,97 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN A5 LANDSCAPE (HORIZONTAL) - TANPA STORE TUJUAN */
+          /* PRATINJAU SURAT JALAN A5 LANDSCAPE PADAT (MUAT 1 HALAMAN PENUH) */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-3 rounded-xl shadow-sm print-page-break mx-auto a5-landscape-doc space-y-2"
-                style={{ width: '210mm', minHeight: '140mm', boxSizing: 'border-box' }}
+                className="bg-white text-black border-2 border-neutral-900 p-2.5 rounded-xl shadow-sm print-page-break mx-auto a5-landscape-doc flex flex-col justify-between"
+                style={{ width: '204mm', height: '136mm', boxSizing: 'border-box' }}
               >
-                {/* Header dengan Logo Wellen di Kiri Atas */}
-                <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-1.5">
-                  <div className="flex items-center gap-2.5">
-                    {wellenLogo ? (
-                      <img src={wellenLogo} alt="Logo Wellen" className="h-7 w-auto object-contain" />
-                    ) : (
-                      <div className="font-black text-xs border px-1.5 py-0.5">WELLEN</div>
-                    )}
-                    <div className="text-[8.5px] leading-tight text-neutral-800">
-                      <p className="font-black uppercase">{companyTitle}</p>
-                      <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
+                <div>
+                  {/* Header dengan Logo Wellen di Kiri Atas */}
+                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-1 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      {wellenLogo ? (
+                        <img src={wellenLogo} alt="Logo Wellen" className="h-6 w-auto object-contain" />
+                      ) : (
+                        <div className="font-black text-[10px] border px-1 py-0.5">WELLEN</div>
+                      )}
+                      <div className="text-[8px] leading-tight text-neutral-800">
+                        <p className="font-black uppercase">{companyTitle}</p>
+                        <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-black text-[8.5px] border border-neutral-900 px-1.5 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-black text-[9px] border border-neutral-900 px-2 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
-                  </div>
-                </div>
 
-                {/* Info Alamat Kirim (Tanpa Store Tujuan) */}
-                <div className="border border-neutral-900 p-1.5 text-[9.5px] space-y-0.5 bg-neutral-50">
-                  <div className="flex font-bold">
-                    <span className="w-24">KEPADA</span>
-                    <span>: {companyTitle}</span>
+                  {/* Info Alamat Kirim (Tanpa Store Tujuan) */}
+                  <div className="border border-neutral-900 p-1.5 text-[9px] space-y-0.5 bg-neutral-50 mb-1.5">
+                    <div className="flex font-bold">
+                      <span className="w-24">KEPADA</span>
+                      <span>: {companyTitle}</span>
+                    </div>
+                    <div className="flex font-bold text-orange-700">
+                      <span className="w-24">KIRIM KE (POOL)</span>
+                      <span>: {pool.poolName}</span>
+                    </div>
                   </div>
-                  <div className="flex font-bold text-orange-700">
-                    <span className="w-24">KIRIM KE (POOL)</span>
-                    <span>: {pool.poolName}</span>
-                  </div>
-                </div>
 
-                {/* Tabel Rincian Material */}
-                <table className="w-full border-collapse border border-neutral-900 text-[9.5px]">
-                  <thead>
-                    <tr className="bg-neutral-100 text-center font-bold">
-                      <th className="border border-neutral-900 p-1 w-8">NO</th>
-                      <th className="border border-neutral-900 p-1 text-left">KETERANGAN / MATERI & BAHAN</th>
-                      <th className="border border-neutral-900 p-1 w-16">JUMLAH</th>
-                      <th className="border border-neutral-900 p-1 w-12">SAT</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pool.materials.map((mat, mIdx) => (
-                      <React.Fragment key={mIdx}>
-                        <tr>
-                          <td className="border border-neutral-900 p-1 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
-                            {mIdx + 1}
-                          </td>
-                          <td colSpan="3" className="border border-neutral-900 p-1 font-bold bg-neutral-50/50">
-                            MATERI : {mat.name}
-                          </td>
-                        </tr>
-                        {mat.sizes.map((sz, sIdx) => (
-                          <tr key={sIdx}>
-                            <td className="border border-neutral-900 p-1 pl-3 text-neutral-800">
-                              {paperBahan} ( UK {sz.size} )
+                  {/* Tabel Rincian Material Ringkas */}
+                  <table className="w-full border-collapse border border-neutral-900 text-[9px]">
+                    <thead>
+                      <tr className="bg-neutral-100 text-center font-bold">
+                        <th className="border border-neutral-900 p-0.5 w-7">NO</th>
+                        <th className="border border-neutral-900 p-0.5 text-left">KETERANGAN / MATERI & BAHAN</th>
+                        <th className="border border-neutral-900 p-0.5 w-14">JUMLAH</th>
+                        <th className="border border-neutral-900 p-0.5 w-10">SAT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pool.materials.map((mat, mIdx) => (
+                        <React.Fragment key={mIdx}>
+                          <tr>
+                            <td className="border border-neutral-900 p-0.5 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
+                              {mIdx + 1}
                             </td>
-                            <td className="border border-neutral-900 p-1 text-center font-bold">
-                              {sz.qty}
-                            </td>
-                            <td className="border border-neutral-900 p-1 text-center">
-                              PCS
+                            <td colSpan="3" className="border border-neutral-900 p-0.5 font-bold bg-neutral-50/50">
+                              MATERI : {mat.name}
                             </td>
                           </tr>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
+                          {mat.sizes.map((sz, sIdx) => (
+                            <tr key={sIdx}>
+                              <td className="border border-neutral-900 p-0.5 pl-2 text-neutral-800">
+                                {paperBahan} ( UK {sz.size} )
+                              </td>
+                              <td className="border border-neutral-900 p-0.5 text-center font-bold">
+                                {sz.qty}
+                              </td>
+                              <td className="border border-neutral-900 p-0.5 text-center">
+                                PCS
+                              </td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-                {/* Footer Tanda Tangan Kompak */}
-                <div className="pt-1.5 flex justify-between text-[9.5px] font-semibold">
+                {/* Footer Tanda Tangan Kompak di Bagian Bawah */}
+                <div className="pt-1 flex justify-between text-[9px] font-semibold border-t border-neutral-300 mt-1">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
                     <p className="mt-0.5">Hormat Kami,</p>
-                    <div className="h-6"></div>
+                    <div className="h-5"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
                     <p className="mt-0.5">Diterima Oleh,</p>
-                    <div className="h-6"></div>
+                    <div className="h-5"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
