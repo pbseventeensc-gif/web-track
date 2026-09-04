@@ -94,7 +94,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             poolMap[store.pool] = {
               poolName: store.pool,
               stores: [],
-              itemTotals: {} // key: "ItemName__Size" -> qty
+              itemTotals: {} 
             };
           }
           poolMap[store.pool].stores.push(store.storeName);
@@ -113,7 +113,6 @@ export default function FoodLabelTab({ isDarkMode }) {
         });
 
         const poolSummaryArray = Object.values(poolMap).map((p) => {
-          // Kelompokkan item unik berdasarkan nama materinya agar item A5 & A4 berdampingan di bawah 1 nomor materi
           const materialMap = {};
           Object.values(p.itemTotals).forEach((it) => {
             if (!materialMap[it.name]) {
@@ -213,7 +212,7 @@ export default function FoodLabelTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Navigasi Tab Tampilan (Label Store vs Surat Jalan Pool) */}
+      {/* Navigasi Tab Tampilan */}
       {excelData.length > 0 && (
         <div className="no-print flex gap-2 border-b pb-3 dark:border-neutral-700">
           <button
@@ -356,7 +355,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                 key={idx} 
                 className="bg-white text-black border-2 border-neutral-900 p-6 rounded-xl shadow-sm print-page-break mx-auto max-w-3xl space-y-4"
               >
-                {/* Header Surat Jalan / Tanda Terima ala PT Wellen Brothers */}
                 <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-4">
                   <div className="flex items-center gap-3">
                     {wellenLogo ? (
@@ -379,7 +377,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                   TANDA TERIMA / SURAT JALAN
                 </div>
 
-                {/* Info Tujuan Pool & Daftar Store */}
                 <div className="border border-neutral-900 p-3 text-xs space-y-1 bg-neutral-50">
                   <div className="flex font-bold">
                     <span className="w-24">KEPADA</span>
@@ -395,7 +392,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </div>
                 </div>
 
-                {/* Tabel Rincian Akumulasi Material per Pool */}
                 <table className="w-full border-collapse border border-neutral-900 text-xs">
                   <thead>
                     <tr className="bg-neutral-100 text-center font-bold">
@@ -408,7 +404,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                   <tbody>
                     {pool.materials.map((mat, mIdx) => (
                       <React.Fragment key={mIdx}>
-                        {/* Baris Nama Materi Utama */}
                         <tr>
                           <td className="border border-neutral-900 p-2 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
                             {mIdx + 1}
@@ -417,7 +412,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                             MATERI : {mat.name}
                           </td>
                         </tr>
-                        {/* Baris Rincian Ukuran & Akumulasi Qty */}
                         {mat.sizes.map((sz, sIdx) => (
                           <tr key={sIdx}>
                             <td className="border border-neutral-900 p-1.5 pl-4 text-neutral-800">
@@ -436,10 +430,10 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </tbody>
                 </table>
 
-                {/* Footer Tanda Tangan */}
                 <div className="pt-4 flex justify-between text-xs font-semibold">
                   <div>
-                    <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'LONG', year: 'numeric' }).toUpperCase()}</p>
+                    {/* PERBAIKAN: Menggunakan month: 'long' (huruf kecil) agar tidak error RangeError */}
+                    <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
                     <p className="mt-1">Hormat Kami,</p>
                     <div className="h-12"></div>
                     <p className="font-bold underline">NINING</p>
