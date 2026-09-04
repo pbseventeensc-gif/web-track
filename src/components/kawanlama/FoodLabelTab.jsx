@@ -217,7 +217,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Surat Jalan A5 Portrait dengan spasi footer diatur pas 0.5 cm dari tabel.</p>
+          <p className="text-xs opacity-70 mt-0.5">Surat Jalan A5 Portrait dengan jarak footer tepat 0.2mm di bawah tabel.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -378,12 +378,12 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN A5 PORTRAIT DENGAN SPASI FOOTER 0.5 CM DARI TABEL */
+          /* PRATINJAU SURAT JALAN A5 PORTRAIT DENGAN FOOTER BERJARAK 0.2MM DARI TABEL */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-2 rounded-xl shadow-sm print-page-break mx-auto a5-portrait-doc flex flex-col justify-between"
+                className="bg-white text-black border-2 border-neutral-900 p-2 rounded-xl shadow-sm print-page-break mx-auto a5-portrait-doc flex flex-col justify-start"
                 style={{ width: '148mm', height: '210mm', boxSizing: 'border-box' }}
               >
                 <div>
@@ -458,8 +458,8 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </table>
                 </div>
 
-                {/* Footer Tanda Tangan dipetikan tepat 0.5cm (mt-[0.5cm]) dari garis batas tabel */}
-                <div className="pt-0.5 mt-[0.5cm] flex justify-between text-[8px] font-semibold border-t border-neutral-300">
+                {/* Footer Tanda Tangan dipetikan tepat 0.2mm (mt-[0.2mm]) persis di bawah tabel */}
+                <div className="pt-0.5 mt-[0.2mm] flex justify-between text-[8px] font-semibold border-t border-neutral-300">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
                     <p className="mt-0.2">Hormat Kami,</p>
