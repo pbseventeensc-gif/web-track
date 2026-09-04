@@ -4,7 +4,6 @@ import { Printer, FileSpreadsheet, Layers } from 'lucide-react';
 
 export default function FoodLabelTab({ isDarkMode }) {
   const [excelData, setExcelData] = useState([]);
-  const [itemHeaders, setItemHeaders] = useState([]);
   const [projectName, setProjectName] = useState('POP AGUSTUS CHATIME (SPK-0726-04858) - JABODETABEK');
   const [companyTitle, setCompanyTitle] = useState('PT FOODS BEVERAGES INDONESIA');
   const [paperBahan, setPaperBahan] = useState('ART CARTON 210 1MUKA NON LAM');
@@ -23,37 +22,61 @@ export default function FoodLabelTab({ isDarkMode }) {
       const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
       if (data.length > 1) {
-        const headerRow1 = data[0]; // Nama Item
-        const headerRow2 = data[1]; // Ukuran (A5/A4)
+        const headerRow1 = data[0]; // Baris 1: Nama Item / Kosong
+        const headerRow2 = data[1]; // Baris 2: Ukuran (A5 / A4)
         
-        // Ekstrak item mulai kolom ke-7 (index 6) ke atas
-        const items = [];
+        // Mapping kolom item (mulai kolom ke-7 / index 6 ke kanan)
+        // Karena 1 item bisa punya 2 kolom (A5 dan A4 berdampingan), kita deteksi berpasangan/individual
+        const itemColumns = [];
+        let currentItemName = '';
+
         for (let i = 6; i < headerRow1.length; i++) {
-          if (headerRow1[i]) {
-            items.push({
+          const colNameRaw = headerRow1[i];
+          if (colNameRaw && colNameRaw.trim() !== '') {
+            currentItemName = colNameRaw.trim();
+          }
+          const sizeRaw = headerRow2[i] ? String(headerRow2[i]).trim().toUpperCase() : 'A5';
+
+          if (currentItemName) {
+            itemColumns.push({
               index: i,
-              name: headerRow1[i],
-              size: headerRow2[i] || 'A5'
+              name: currentItemName,
+              size: sizeRaw.includes('A4') ? 'A4' : 'A5'
             });
           }
         }
-        setItemHeaders(items);
 
         // Parse baris data store (mulai baris ke-4, index 3 dst)
+        let lastPool = '';
         const rows = data.slice(3).map((row) => {
-          if (!row[4]) return null; // Jika nama store kosong
+          if (!row[4]) return null; // Jika nama store kosong (baris kosong/footer)
+
+          // Handle POOL yang seringkali hanya terisi di baris pertama group
+          if (row[1] && String(row[1]).trim() !== '') {
+            lastPool = String(row[1]).trim();
+          }
+
+          const storeName = row[4];
+          const poolName = lastPool || row[1] || '-';
+
+          // Kumpulkan item yang di-order (Qty > 0)
+          const itemsData = itemColumns.map((col) => {
+            const qtyVal = row[col.index];
+            return {
+              name: col.name,
+              size: col.size,
+              qty: (qtyVal !== undefined && qtyVal !== null && qtyVal !== '') ? Number(qtyVal) : 0
+            };
+          }).filter(item => item.qty > 0); // Sesuai catatan: jika qty 0 / tidak order, tidak usah tampil
+
           return {
             no: row[0],
-            pool: row[1],
+            pool: poolName,
             areaManager: row[2],
             site: row[3],
-            storeName: row[4],
+            storeName: storeName,
             city: row[5],
-            itemsData: items.map(it => ({
-              name: it.name,
-              size: it.size,
-              qty: row[it.index] !== undefined ? row[it.index] : 0
-            }))
+            itemsData: itemsData
           };
         }).filter(Boolean);
 
@@ -80,7 +103,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label Generator (2-in-1 A4)
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Import Excel alokasi store makanan, filter otomatis Qty 0, dan cetak 2 label per halaman.</p>
+          <p className="text-xs opacity-70 mt-0.5">Import Excel alokasi store makanan, otomatis mendeteksi ukuran A5/A4 dan filter Qty 0.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -152,8 +175,7 @@ export default function FoodLabelTab({ isDarkMode }) {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 print:block">
             {excelData.map((store, idx) => {
-              // Filter item yang qty > 0 (item yang tidak di-order otomatis tidak tampil)
-              const activeItems = store.itemsData.filter(item => Number(item.qty) > 0);
+              const activeItems = store.itemsData;
 
               return (
                 <div 
@@ -167,7 +189,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                     <p className="text-[11px] font-bold">{projectName}</p>
                   </div>
 
-                  {/* Sub Header Store Info */}
+                  {/* Sub Header Store Info (Memastikan POOL dan Store terbaca dengan benar) */}
                   <div className="text-[11px] font-bold mb-2 space-y-0.5 text-neutral-800">
                     <div className="flex">
                       <span className="w-16">POOL</span>
@@ -206,7 +228,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                                 <span className="text-[10px] leading-tight block">{paperBahan}</span>
                               </td>
                             )}
-                            <td className="border border-neutral-900 p-1 text-center">{item.size}</td>
+                            <td className="border border-neutral-900 p-1 text-center font-bold">{item.size}</td>
                             <td className="border border-neutral-900 p-1 text-center font-bold">{item.qty}</td>
                             <td className="border border-neutral-900 p-1 text-center">PCS</td>
                           </tr>
