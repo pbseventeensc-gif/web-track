@@ -79,33 +79,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     }
   };
 
-  const saveDestinationToDatabase = async () => {
-    if (!form.deliver_to.trim()) return;
-
-    const existing = destinations.find(d => d.client_name.toLowerCase() === form.deliver_to.trim().toLowerCase());
-    if (!existing) {
-      const newEntry = {
-        client_name: form.deliver_to.trim(),
-        address: form.kota_region.trim(),
-        pic_name: form.pic_name.trim(),
-        phone: form.phone.trim(),
-        hos_region: form.ops || '-'
-      };
-
-      const { data, error } = await supabase.from('pmg_destinations').insert([newEntry]).select();
-      if (!error && data) {
-        setDestinations(prev => [...prev, data[0]]);
-      }
-    }
-  };
-
-  const handleOpenPreview = async () => {
-    if (batchLabels.length === 0 && form.deliver_to.trim()) {
-      await saveDestinationToDatabase();
-    }
-    setPrintDataModal(true);
-  };
-
   const handleBatchExcelImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -165,8 +138,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Input data bebas (Deliver to, Alamat, PIC, Phone) yang otomatis tersimpan ke database.</p>
+          <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label Koli PMG</h2>
+          <p className="text-xs opacity-60">Atur manual atau import file Excel untuk cetak label koli.</p>
         </div>
         <label className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
           📂 Import Excel Alokasi Label Massal
@@ -183,14 +156,14 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
         <div>
-          <label className="block font-bold mb-1 opacity-70">Pilih dari Database Klien (Opsional)</label>
+          <label className="block font-bold mb-1 opacity-70">Pilih Tujuan Klien (Database)</label>
           <select 
             className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             value={selectedDest}
             onChange={handleDestChange}
             disabled={batchLabels.length > 0}
           >
-            <option value="">-- Pilih Klien Tersimpan atau Ketik Sendiri --</option>
+            <option value="">-- Pilih Tujuan Klien --</option>
             {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
           </select>
         </div>
@@ -205,56 +178,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             <option value="product_identity">Product Identity (Gaya Nestlé / 1-2 Gambar)</option>
             <option value="hanging_poster">Hanging Poster (Gaya Coca-Cola)</option>
           </select>
-        </div>
-      </div>
-
-      <div className={`p-4 rounded-2xl border space-y-3 text-xs ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
-        <p className="font-bold text-indigo-500 uppercase tracking-wide">✏️ Detail Pengiriman (Bisa Diketik Langsung & Auto-Save ke Database)</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block font-bold mb-1 opacity-70">Deliver to (Nama Perusahaan / Instansi)</label>
-            <input 
-              type="text"
-              value={form.deliver_to}
-              onChange={e => setForm({ ...form, deliver_to: e.target.value })}
-              placeholder="Contoh: HO Nestlé Jakarta"
-              disabled={batchLabels.length > 0}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
-            />
-          </div>
-          <div>
-            <label className="block font-bold mb-1 opacity-70">Alamat Lengkap</label>
-            <input 
-              type="text"
-              value={form.kota_region}
-              onChange={e => setForm({ ...form, kota_region: e.target.value })}
-              placeholder="Contoh: Arkadia Green Park Tower G..."
-              disabled={batchLabels.length > 0}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
-            />
-          </div>
-          <div>
-            <label className="block font-bold mb-1 opacity-70">PIC / UP</label>
-            <input 
-              type="text"
-              value={form.pic_name}
-              onChange={e => setForm({ ...form, pic_name: e.target.value })}
-              placeholder="Contoh: Bpk. Budi / Bagian Logistik"
-              disabled={batchLabels.length > 0}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
-            />
-          </div>
-          <div>
-            <label className="block font-bold mb-1 opacity-70">Phone No.</label>
-            <input 
-              type="text"
-              value={form.phone}
-              onChange={e => setForm({ ...form, phone: e.target.value })}
-              placeholder="Contoh: 08123456789"
-              disabled={batchLabels.length > 0}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
-            />
-          </div>
         </div>
       </div>
 
@@ -316,7 +239,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       </div>
 
       <button 
-        onClick={handleOpenPreview}
+        onClick={() => setPrintDataModal(true)}
         className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md"
       >
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
