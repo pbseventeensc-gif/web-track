@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 import * as XLSX from 'xlsx';
 
 export default function CustomLabelGenerator({ isDarkMode }) {
@@ -9,6 +9,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   
   const [batchLabels, setBatchLabels] = useState([]);
   
+  // State form yang mencakup Deliver to, Alamat, PIC/UP, dan Phone
   const [form, setForm] = useState({
     po_project: 'BANNER', 
     periode: '16-Agu-26',
@@ -16,9 +17,13 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     qty_total: '100',     
     pcs_per_koli: '20',   
     unit: 'PCS',
-    pic_name: '',
-    phone: '0852 3636 3673',
+    
+    // Field baru yang bisa diketik & otomatis masuk database
+    deliver_to: '',
     kota_region: '',
+    pic_name: '',
+    phone: '',
+
     transporter_dr: 'WAHANA - N-17779-2608-12',
     brand_name: 'NESTLÉ / PURINA',
     item_title: 'SHOPBLIND FRISKIES FELIX - PURINA ( UK 200 X 100 CM )',
@@ -56,8 +61,10 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     if (found) {
       setForm(prev => ({
         ...prev,
-        pic_name: found.client_name,
-        kota_region: found.address,
+        deliver_to: found.client_name || '',
+        kota_region: found.address || '',
+        pic_name: found.pic_name || found.client_name || '',
+        phone: found.phone || '',
         ops: found.hos_region || '-'
       }));
     }
@@ -72,6 +79,36 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Fungsi untuk menyimpan data manual baru ke database Supabase agar tidak mengulang
+  const saveDestinationToDatabase = async () => {
+    if (!form.deliver_to.trim()) return;
+
+    // Cek apakah data dengan nama deliver_to sudah ada
+    const existing = destinations.find(d => d.client_name.toLowerCase() === form.deliver_to.trim().toLowerCase());
+    if (!existing) {
+      const newEntry = {
+        client_name: form.deliver_to.trim(),
+        address: form.kota_region.trim(),
+        pic_name: form.pic_name.trim(),
+        phone: form.phone.trim(),
+        hos_region: form.ops || '-'
+      };
+
+      const { data, error } = await supabase.from('pmg_destinations').insert([newEntry]).select();
+      if (!error && data) {
+        setDestinations(prev => [...prev, data[0]]);
+      }
+    }
+  };
+
+  const handleOpenPreview = async () => {
+    // Jika menggunakan mode manual dan mengisi data baru, simpan otomatis ke DB
+    if (batchLabels.length === 0 && form.deliver_to.trim()) {
+      await saveDestinationToDatabase();
+    }
+    setPrintDataModal(true);
   };
 
   const handleBatchExcelImport = (e) => {
@@ -97,8 +134,9 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
           if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed')) {
             imported.push({
-              pic_name: clientName,
+              deliver_to: clientName,
               kota_region: address || 'Alamat menyusul',
+              pic_name: clientName,
               phone: phone,
               hos_region: hos,
               item_name: itemText,
@@ -133,7 +171,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label & Surat Jalan PMG</h2>
-          <p className="text-xs opacity-60">Atur manual atau import file Excel (otomatis membaca Kolom Item & Qty).</p>
+          <p className="text-xs opacity-60">Input data bebas (Deliver to, Alamat, PIC, Phone) yang otomatis tersimpan ke database.</p>
         </div>
         <label className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
           📂 Import Excel Alokasi Label Massal
@@ -143,21 +181,22 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
       {batchLabels.length > 0 && (
         <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex justify-between items-center text-xs text-emerald-700 dark:text-emerald-300 font-bold">
-          <span>✨ Mode Massal Aktif: {batchLabels.length} Label termuat (Item & Qty mengikuti file Excel).</span>
+          <span>✨ Mode Massal Aktif: {batchLabels.length} Label termuat dari file Excel.</span>
           <button onClick={() => setBatchLabels([])} className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px]">Reset ke Manual</button>
         </div>
       )}
       
+      {/* Pilihan Template & Pilih dari Database */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
         <div>
-          <label className="block font-bold mb-1 opacity-70">Pilih Tujuan Klien PMG (Manual)</label>
+          <label className="block font-bold mb-1 opacity-70">Pilih dari Database Klien (Opsional)</label>
           <select 
             className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             value={selectedDest}
             onChange={handleDestChange}
             disabled={batchLabels.length > 0}
           >
-            <option value="">-- Pilih Tujuan Klien --</option>
+            <option value="">-- Pilih Klien Tersimpan atau Ketik Sendiri --</option>
             {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
           </select>
         </div>
@@ -172,6 +211,57 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             <option value="product_identity">Product Identity (Gaya Nestlé / 1-2 Gambar)</option>
             <option value="hanging_poster">Hanging Poster (Gaya Coca-Cola)</option>
           </select>
+        </div>
+      </div>
+
+      {/* ⭐ FORM INPUT MANUAL (Deliver to, Alamat, PIC/UP, Phone) */}
+      <div className={`p-4 rounded-2xl border space-y-3 text-xs ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
+        <p className="font-bold text-indigo-500 uppercase tracking-wide">✏️ Detail Pengiriman (Bisa Diketik Langsung & Auto-Save ke Database)</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Deliver to (Nama Perusahaan / Instansi)</label>
+            <input 
+              type="text"
+              value={form.deliver_to}
+              onChange={e => setForm({ ...form, deliver_to: e.target.value })}
+              placeholder="Contoh: HO Nestlé Jakarta"
+              disabled={batchLabels.length > 0}
+              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Alamat Lengkap</label>
+            <input 
+              type="text"
+              value={form.kota_region}
+              onChange={e => setForm({ ...form, kota_region: e.target.value })}
+              placeholder="Contoh: Arkadia Green Park Tower G..."
+              disabled={batchLabels.length > 0}
+              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-70">PIC / UP (Pengganti Vehicle No.)</label>
+            <input 
+              type="text"
+              value={form.pic_name}
+              onChange={e => setForm({ ...form, pic_name: e.target.value })}
+              placeholder="Contoh: Bpk. Budi / Bagian Logistik"
+              disabled={batchLabels.length > 0}
+              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Phone No.</label>
+            <input 
+              type="text"
+              value={form.phone}
+              onChange={e => setForm({ ...form, phone: e.target.value })}
+              placeholder="Contoh: 08123456789"
+              disabled={batchLabels.length > 0}
+              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+            />
+          </div>
         </div>
       </div>
 
@@ -233,7 +323,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       </div>
 
       <button 
-        onClick={() => setPrintDataModal(true)}
+        onClick={handleOpenPreview}
         className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md"
       >
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
@@ -242,22 +332,58 @@ export default function CustomLabelGenerator({ isDarkMode }) {
       {/* MODAL PRATINJAU CETAK */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-3 print:hidden">
-              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Koli Label (Total: {totalKoli} Halaman)</h3>
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              #printable-area, #printable-area * {
+                visibility: visible;
+              }
+              #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+              }
+              .print-page-full {
+                width: 100vw;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                page-break-after: always;
+                break-after: page;
+                margin: 0 !important;
+                padding: 20mm !important;
+                box-sizing: border-box;
+                border: none !important;
+                background: white !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+
+          <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b pb-3 no-print">
+              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Koli Label (Total: {totalKoli} Halaman A4 Full)</h3>
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Buka Pengaturan Printer</button>
                 <button onClick={() => setPrintDataModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
 
-            <div className="space-y-8">
+            <div id="printable-area" className="space-y-8">
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
                 const currentKoliNumber = koliIdx + 1;
                 
-                const targetPic = batchLabels.length > 0 ? batchLabels[koliIdx]?.pic_name : (form.pic_name || 'Belum dipilih');
-                const targetAddress = batchLabels.length > 0 ? batchLabels[koliIdx]?.kota_region : form.kota_region;
-                const targetPhone = batchLabels.length > 0 ? batchLabels[koliIdx]?.phone : form.phone;
+                const targetDeliverTo = batchLabels.length > 0 ? batchLabels[koliIdx]?.deliver_to : (form.deliver_to || 'Belum diisi');
+                const targetAddress = batchLabels.length > 0 ? batchLabels[koliIdx]?.kota_region : (form.kota_region || 'Alamat belum diisi');
+                const targetPic = batchLabels.length > 0 ? batchLabels[koliIdx]?.pic_name : (form.pic_name || '-');
+                const targetPhone = batchLabels.length > 0 ? batchLabels[koliIdx]?.phone : (form.phone || '-');
                 const targetOps = batchLabels.length > 0 ? batchLabels[koliIdx]?.hos_region : form.ops;
 
                 const displayItemTitle = (batchLabels.length > 0 && batchLabels[koliIdx]?.item_name)
@@ -274,115 +400,118 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                 const activeImg = hasImg1 ? form.imageUrl : form.imageUrl2;
 
                 return (
-                  <div key={koliIdx} className="p-6 bg-white text-black font-sans text-xs border-2 border-dashed border-stone-400 rounded-xl space-y-3 relative page-break">
-                    <div className="absolute top-2 right-3 font-bold text-indigo-600 text-[11px] bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 print:hidden">
+                  <div key={koliIdx} className="print-page-full p-6 bg-white text-black font-sans text-xs border-2 border-dashed border-stone-400 rounded-xl space-y-3 relative">
+                    <div className="absolute top-2 right-3 font-bold text-indigo-600 text-[11px] bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 no-print">
                       Label Koli: {currentKoliNumber} of {totalKoli}
                     </div>
 
                     {templateType === 'product_identity' ? (
-                      <div style={{ border: '2px solid #000', padding: '18px' }}>
-                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
+                      <div style={{ border: '2px solid #000', padding: '22px', width: '100%', maxWidth: '180mm' }}>
+                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '12px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '45px', display: 'block' }} /> : null}
+                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '50px', display: 'block' }} /> : null}
                             </td>
-                            <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '18px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1></td>
+                            <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '20px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1></td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
-                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>}
+                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '50px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>}
                             </td>
                           </tr>
                         </table>
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '35%' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.po_project}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.periode}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.channel}</td></tr>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', width: '30%' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Alamat</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetAddress}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPic}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.po_project}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.periode}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.channel}</td></tr>
                           <tr>
-                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
-                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'black', fontSize: '14px', background: '#eef2f7' }}>
+                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
+                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'black', fontSize: '15px', background: '#eef2f7' }}>
                               : {displayPcs} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
                             </td>
                           </tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PENERIMA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPic}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>ALAMAT / KOTA</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetAddress}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.transporter_dr}</td></tr>
                         </table>
 
-                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px', background: '#fafafa' }}>
+                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '12px', background: '#fafafa' }}>
                           <tr>
                             {isSingleImage ? (
-                              <td style={{ textAlign: 'center', padding: '10px', width: '100%' }}>
-                                <img src={activeImg} alt="Produk" style={{ maxHeight: '150px', margin: 'auto', display: 'block' }} />
+                              <td style={{ textAlign: 'center', padding: '12px', width: '100%' }}>
+                                <img src={activeImg} alt="Produk" style={{ maxHeight: '180px', margin: 'auto', display: 'block' }} />
                               </td>
                             ) : (
                               <>
-                                <td style={{ textAlign: 'center', padding: '8px', width: '50%', borderRight: '1px solid #000' }}>
-                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 1 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '10px', width: '50%', borderRight: '1px solid #000' }}>
+                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 1 ]</span>}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '8px', width: '50%' }}>
-                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 2 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '10px', width: '50%' }}>
+                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 2 ]</span>}
                                 </td>
                               </>
                             )}
                           </tr>
                         </table>
 
-                        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', background: '#f2f2f2', padding: '8px', border: '1px solid #000', fontWeight: 'bold' }}>
+                        <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '14px', background: '#f2f2f2', padding: '10px', border: '1px solid #000', fontWeight: 'bold' }}>
                           <div>{displayItemTitle}</div>
-                          <div style={{ fontSize: '11px', color: '#333', marginTop: '3px', fontWeight: 'normal' }}>
+                          <div style={{ fontSize: '12px', color: '#333', marginTop: '4px', fontWeight: 'normal' }}>
                             QTY : {displayPcs} {form.unit}
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div style={{ border: '2px solid #000', padding: '18px' }}>
-                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
+                      <div style={{ border: '2px solid #000', padding: '22px', width: '100%', maxWidth: '180mm' }}>
+                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '12px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '45px', display: 'block' }} /> : null}
+                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '50px', display: 'block' }} /> : null}
                             </td>
                             <td style={{ textAlign: 'center', width: '50%' }}>
-                              <h2 style={{ margin: 0, color: '#cc0000', fontSize: '18px', fontStyle: 'italic' }}>Coca-Cola</h2>
-                              <h1 style={{ margin: '3px 0 0 0', fontSize: '14px', background: '#000', color: '#fff', padding: '3px' }}>{form.po_project}</h1>
+                              <h2 style={{ margin: 0, color: '#cc0000', fontSize: '20px', fontStyle: 'italic' }}>Coca-Cola</h2>
+                              <h1 style={{ margin: '4px 0 0 0', fontSize: '15px', background: '#000', color: '#fff', padding: '4px' }}>{form.po_project}</h1>
                             </td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
-                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>COCA-COLA</span>}
+                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '50px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>COCA-COLA</span>}
                             </td>
                           </tr>
                         </table>
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '30%' }}>OPS</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetOps}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>DELIVERY POINT NAME</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPic}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>ADDRESS</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetAddress}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>NO HP PIC</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPhone}</td></tr>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', width: '30%' }}>OPS</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetOps}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Address</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetAddress}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPic}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPhone}</td></tr>
                           <tr>
-                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', verticalAlign: 'top' }}>Brand & Item</td>
-                            <td style={{ border: '1px solid #000', padding: '5px' }}>
+                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Brand & Item</td>
+                            <td style={{ border: '1px solid #000', padding: '7px' }}>
                               <div>COCA - COLA - {displayItemTitle}</div>
                             </td>
                           </tr>
                           <tr>
-                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', verticalAlign: 'top' }}>QTY</td>
-                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>
+                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>QTY</td>
+                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', fontSize: '14px' }}>
                               : {displayPcs} {form.unit}
                             </td>
                           </tr>
                         </table>
 
-                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px', background: '#fafafa' }}>
+                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '12px', background: '#fafafa' }}>
                           <tr>
                             {isSingleImage ? (
-                              <td style={{ textAlign: 'center', padding: '10px', width: '100%' }}>
-                                <img src={activeImg} alt="Produk" style={{ maxHeight: '150px', margin: 'auto', display: 'block' }} />
+                              <td style={{ textAlign: 'center', padding: '12px', width: '100%' }}>
+                                <img src={activeImg} alt="Produk" style={{ maxHeight: '180px', margin: 'auto', display: 'block' }} />
                               </td>
                             ) : (
                               <>
-                                <td style={{ textAlign: 'center', padding: '8px', width: '50%', borderRight: '1px solid #000' }}>
-                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 1 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '10px', width: '50%', borderRight: '1px solid #000' }}>
+                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 1 ]</span>}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '8px', width: '50%' }}>
-                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 2 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '10px', width: '50%' }}>
+                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 2 ]</span>}
                                 </td>
                               </>
                             )}
@@ -390,11 +519,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         </table>
 
                         {!isSingleImage && (
-                          <div style={{ border: '1px solid #000', marginTop: '10px', background: '#ffffcc' }}>
-                            <div style={{ background: '#000', color: '#fff', padding: '4px 8px', fontWeight: 'bold', fontSize: '11px' }}>TOTAL QTY (Koli {currentKoliNumber} of {totalKoli})</div>
-                            <table style={{ width: '100%', fontWeight: 'bold', fontSize: '12px', padding: '6px' }}>
-                              <tr><td style={{ padding: '4px' }}>POWERADE</td><td style={{ textAlign: 'center' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_powerade} PCS</td></tr>
-                              <tr><td style={{ padding: '4px', borderTop: '1px dashed #ccc' }}>SPRITE NIPIS MINT</td><td style={{ textAlign: 'center', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
+                          <div style={{ border: '1px solid #000', marginTop: '12px', background: '#ffffcc' }}>
+                            <div style={{ background: '#000', color: '#fff', padding: '5px 10px', fontWeight: 'bold', fontSize: '12px' }}>TOTAL QTY (Koli {currentKoliNumber} of {totalKoli})</div>
+                            <table style={{ width: '100%', fontWeight: 'bold', fontSize: '13px', padding: '8px' }}>
+                              <tr><td style={{ padding: '5px' }}>POWERADE</td><td style={{ textAlign: 'center' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_powerade} PCS</td></tr>
+                              <tr><td style={{ padding: '5px', borderTop: '1px dashed #ccc' }}>SPRITE NIPIS MINT</td><td style={{ textAlign: 'center', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
                             </table>
                           </div>
                         )}
