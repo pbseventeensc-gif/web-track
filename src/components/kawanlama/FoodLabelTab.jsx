@@ -28,8 +28,11 @@ export default function FoodLabelTab({ isDarkMode }) {
         
         const itemColumns = [];
         let currentItemName = '';
+        
+        // Pastikan mencakup semua kolom hingga baris header terpanjang (mengatasi kolom T/terakhir yang terpotong)
+        const maxCols = Math.max(headerRow1.length, headerRow2.length);
 
-        for (let i = 6; i < headerRow1.length; i++) {
+        for (let i = 6; i < maxCols; i++) {
           const colNameRaw = headerRow1[i];
           if (colNameRaw !== undefined && colNameRaw !== null && String(colNameRaw).trim() !== '') {
             currentItemName = String(colNameRaw).trim();
