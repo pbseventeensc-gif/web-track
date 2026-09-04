@@ -5,14 +5,13 @@ import { Printer, FileSpreadsheet, Layers, Truck } from 'lucide-react';
 export default function FoodLabelTab({ isDarkMode }) {
   const [excelData, setExcelData] = useState([]);
   const [poolSummaryData, setPoolSummaryData] = useState([]);
-  const [activeTab, setActiveTab] = useState('labels'); // 'labels' atau 'delivery_orders'
+  const [activeTab, setActiveTab] = useState('labels');
   
   const [projectName, setProjectName] = useState('POP AGUSTUS CHATIME (SPK-0726-04858) - JABODETABEK');
   const [companyTitle, setCompanyTitle] = useState('PT FOODS BEVERAGES INDONESIA');
   const [paperBahan, setPaperBahan] = useState('ART CARTON 210 1MUKA NON LAM');
   const [wellenLogo, setWellenLogo] = useState(null);
 
-  // Handle Upload File Excel Alokasi & Proses Agregasi Pool
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -87,7 +86,6 @@ export default function FoodLabelTab({ isDarkMode }) {
 
         setExcelData(rows);
 
-        // AGREGASI DATA BERDASARKAN POOL (UNTUK SURAT JALAN)
         const poolMap = {};
         rows.forEach((store) => {
           if (!poolMap[store.pool]) {
@@ -172,6 +170,18 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
+          /* Pengaturan khusus ukuran Dot Matrix 21 x 14 cm Landscape */
+          @page {
+            size: 21cm 14cm;
+            margin: 0.5cm;
+          }
+          .dotmatrix-landscape {
+            width: 20cm !important;
+            height: 13cm !important;
+            max-width: none !important;
+            padding: 4mm !important;
+            font-size: 8.5px !important;
+          }
         }
       `}</style>
 
@@ -186,7 +196,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Import Excel alokasi, kelola cetak Label per Store atau Surat Jalan (Tanda Terima) per Pool.</p>
+          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan disesuaikan untuk printer dot matrix (21x14 cm Landscape).</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -233,7 +243,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan / Tanda Terima per Pool ({poolSummaryData.length})
+            <Truck size={14} /> Pratinjau Surat Jalan 21x14 cm ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -348,36 +358,34 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN / TANDA TERIMA PER POOL */
-          <div className="space-y-8">
+          /* PRATINJAU SURAT JALAN 21x14 CM (LANDSCAPE / DOT MATRIX) */
+          <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-6 rounded-xl shadow-sm print-page-break mx-auto max-w-3xl space-y-4"
+                className="bg-white text-black border-2 border-neutral-900 p-4 rounded-xl shadow-sm print-page-break mx-auto dotmatrix-landscape space-y-2.5"
+                style={{ width: '210mm', minHeight: '140mm', boxSizing: 'border-box' }}
               >
-                <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-4">
+                {/* Header dengan Logo Wellen di Kiri Atas */}
+                <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-2">
                   <div className="flex items-center gap-3">
                     {wellenLogo ? (
-                      <img src={wellenLogo} alt="Logo Wellen" className="h-10 w-auto object-contain" />
+                      <img src={wellenLogo} alt="Logo Wellen" className="h-8 w-auto object-contain" />
                     ) : (
-                      <div className="font-black text-lg">WELLEN</div>
+                      <div className="font-black text-sm border px-2 py-1">WELLEN</div>
                     )}
-                    <div className="text-[10px] leading-tight text-neutral-700">
-                      <p className="font-bold text-xs uppercase">{companyTitle}</p>
-                      <p>Jl. Ps Minggu Raya Kav. 2 No. 49</p>
-                      <p>Duren Tiga, Jakarta Selatan 12760</p>
+                    <div className="text-[9px] leading-tight text-neutral-800">
+                      <p className="font-black uppercase">{companyTitle}</p>
+                      <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
                     </div>
                   </div>
-                  <div className="text-right text-xs">
-                    <span className="font-bold border border-neutral-900 px-3 py-1 bg-neutral-100">POOL DELIVERY</span>
+                  <div className="text-right">
+                    <span className="font-black text-[10px] border border-neutral-900 px-2 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
                   </div>
                 </div>
 
-                <div className="text-center font-black text-sm tracking-wide underline uppercase">
-                  TANDA TERIMA / SURAT JALAN
-                </div>
-
-                <div className="border border-neutral-900 p-3 text-xs space-y-1 bg-neutral-50">
+                {/* Info Alamat Kirim & Store */}
+                <div className="border border-neutral-900 p-2 text-[10px] space-y-0.5 bg-neutral-50">
                   <div className="flex font-bold">
                     <span className="w-24">KEPADA</span>
                     <span>: {companyTitle}</span>
@@ -386,41 +394,42 @@ export default function FoodLabelTab({ isDarkMode }) {
                     <span className="w-24">KIRIM KE (POOL)</span>
                     <span>: {pool.poolName}</span>
                   </div>
-                  <div className="flex text-[11px] text-neutral-600 pt-1 border-t border-dashed border-neutral-300">
+                  <div className="flex text-[9.5px] text-neutral-700 pt-0.5 border-t border-dashed border-neutral-300">
                     <span className="w-24 font-semibold">STORE TUJUAN</span>
-                    <span>: {pool.stores.join(', ')}</span>
+                    <span className="truncate">: {pool.stores.join(', ')}</span>
                   </div>
                 </div>
 
-                <table className="w-full border-collapse border border-neutral-900 text-xs">
+                {/* Tabel Rincian Material (Dioptimalkan agar muat banyak item) */}
+                <table className="w-full border-collapse border border-neutral-900 text-[10px]">
                   <thead>
                     <tr className="bg-neutral-100 text-center font-bold">
-                      <th className="border border-neutral-900 p-1.5 w-10">NO</th>
-                      <th className="border border-neutral-900 p-1.5 text-left">KETERANGAN / MATERI & BAHAN</th>
-                      <th className="border border-neutral-900 p-1.5 w-20">JUMLAH</th>
-                      <th className="border border-neutral-900 p-1.5 w-16">SAT</th>
+                      <th className="border border-neutral-900 p-1 w-8">NO</th>
+                      <th className="border border-neutral-900 p-1 text-left">KETERANGAN / MATERI & BAHAN</th>
+                      <th className="border border-neutral-900 p-1 w-16">JUMLAH</th>
+                      <th className="border border-neutral-900 p-1 w-12">SAT</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pool.materials.map((mat, mIdx) => (
                       <React.Fragment key={mIdx}>
                         <tr>
-                          <td className="border border-neutral-900 p-2 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
+                          <td className="border border-neutral-900 p-1 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
                             {mIdx + 1}
                           </td>
-                          <td colSpan="3" className="border border-neutral-900 p-1.5 font-bold bg-neutral-50/50">
+                          <td colSpan="3" className="border border-neutral-900 p-1 font-bold bg-neutral-50/50">
                             MATERI : {mat.name}
                           </td>
                         </tr>
                         {mat.sizes.map((sz, sIdx) => (
                           <tr key={sIdx}>
-                            <td className="border border-neutral-900 p-1.5 pl-4 text-neutral-800">
+                            <td className="border border-neutral-900 p-1 pl-3 text-neutral-800">
                               {paperBahan} ( UK {sz.size} )
                             </td>
-                            <td className="border border-neutral-900 p-1.5 text-center font-bold">
+                            <td className="border border-neutral-900 p-1 text-center font-bold">
                               {sz.qty}
                             </td>
-                            <td className="border border-neutral-900 p-1.5 text-center">
+                            <td className="border border-neutral-900 p-1 text-center">
                               PCS
                             </td>
                           </tr>
@@ -430,18 +439,18 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </tbody>
                 </table>
 
-                <div className="pt-4 flex justify-between text-xs font-semibold">
+                {/* Footer Tanda Tangan Kompak */}
+                <div className="pt-2 flex justify-between text-[10px] font-semibold">
                   <div>
-                    {/* PERBAIKAN: Menggunakan month: 'long' (huruf kecil) agar tidak error RangeError */}
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
-                    <p className="mt-1">Hormat Kami,</p>
-                    <div className="h-12"></div>
+                    <p className="mt-0.5">Hormat Kami,</p>
+                    <div className="h-8"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
-                    <p className="mt-1">Diterima Oleh,</p>
-                    <div className="h-12"></div>
+                    <p className="mt-0.5">Diterima Oleh,</p>
+                    <div className="h-8"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
