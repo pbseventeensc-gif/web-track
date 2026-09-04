@@ -170,20 +170,21 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
-          /* Pengaturan presisi tinggi A5 Landscape agar pas 1 halaman penuh */
           @page {
             size: A5 landscape;
-            margin: 0.2cm;
+            margin: 0.1cm;
           }
           .a5-landscape-doc {
             width: 100% !important;
-            max-width: 20.4cm !important;
-            height: 13.6cm !important;
-            max-height: 13.6cm !important;
+            max-width: 20.6cm !important;
+            height: 13.8cm !important;
+            max-height: 13.8cm !important;
             overflow: hidden !important;
-            padding: 2mm !important;
-            font-size: 8px !important;
+            padding: 1.5mm !important;
+            font-size: 7.5px !important;
             box-sizing: border-box !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
           }
         }
       `}</style>
@@ -199,7 +200,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan diatur agar pas murni 1 halaman A5 Landscape.</p>
+          <p className="text-xs opacity-70 mt-0.5">Performa optimal (render berdasarkan tab aktif) & Surat Jalan A5 Landscape padat.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -290,7 +291,7 @@ export default function FoodLabelTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Printable Area */}
+      {/* Printable Area (Conditional rendering agar tab yang tidak aktif tidak dirender sehingga preview ringan) */}
       <div id="printable-area" className="space-y-6">
         {excelData.length === 0 ? (
           <div className={`no-print text-center py-16 rounded-3xl border border-dashed ${
@@ -301,7 +302,6 @@ export default function FoodLabelTab({ isDarkMode }) {
             <p className="text-xs opacity-70 mt-1">Silakan upload file Excel berformat Food Label untuk menampilkan pratinjau cetak.</p>
           </div>
         ) : activeTab === 'labels' ? (
-          /* PRATINJAU LABEL PER STORE */
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {excelData.map((store, idx) => {
               const activeItems = store.itemsData;
@@ -361,75 +361,75 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN A5 LANDSCAPE PADAT (MUAT 1 HALAMAN PENUH) */
+          /* PRATINJAU SURAT JALAN A5 LANDSCAPE SUPER PADAT (DIJAMIN 1 HALAMAN PENUH) */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-2.5 rounded-xl shadow-sm print-page-break mx-auto a5-landscape-doc flex flex-col justify-between"
-                style={{ width: '204mm', height: '136mm', boxSizing: 'border-box' }}
+                className="bg-white text-black border-2 border-neutral-900 p-2 rounded-xl shadow-sm print-page-break mx-auto a5-landscape-doc flex flex-col justify-between"
+                style={{ width: '204mm', height: '135mm', boxSizing: 'border-box' }}
               >
                 <div>
-                  {/* Header dengan Logo Wellen di Kiri Atas */}
-                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-1 mb-1.5">
-                    <div className="flex items-center gap-2">
+                  {/* Header Ringkas */}
+                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-0.5 mb-1">
+                    <div className="flex items-center gap-1.5">
                       {wellenLogo ? (
-                        <img src={wellenLogo} alt="Logo Wellen" className="h-6 w-auto object-contain" />
+                        <img src={wellenLogo} alt="Logo Wellen" className="h-5 w-auto object-contain" />
                       ) : (
-                        <div className="font-black text-[10px] border px-1 py-0.5">WELLEN</div>
+                        <div className="font-black text-[9px] border px-1 py-0.2">WELLEN</div>
                       )}
-                      <div className="text-[8px] leading-tight text-neutral-800">
+                      <div className="text-[7px] leading-tight text-neutral-800">
                         <p className="font-black uppercase">{companyTitle}</p>
                         <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="font-black text-[8.5px] border border-neutral-900 px-1.5 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
+                      <span className="font-black text-[8px] border border-neutral-900 px-1 py-0.2 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
                     </div>
                   </div>
 
-                  {/* Info Alamat Kirim (Tanpa Store Tujuan) */}
-                  <div className="border border-neutral-900 p-1.5 text-[9px] space-y-0.5 bg-neutral-50 mb-1.5">
+                  {/* Info Kepada & Pool */}
+                  <div className="border border-neutral-900 p-1 text-[8px] space-y-0.2 bg-neutral-50 mb-1">
                     <div className="flex font-bold">
-                      <span className="w-24">KEPADA</span>
+                      <span className="w-20">KEPADA</span>
                       <span>: {companyTitle}</span>
                     </div>
                     <div className="flex font-bold text-orange-700">
-                      <span className="w-24">KIRIM KE (POOL)</span>
+                      <span className="w-20">KIRIM KE (POOL)</span>
                       <span>: {pool.poolName}</span>
                     </div>
                   </div>
 
-                  {/* Tabel Rincian Material Ringkas */}
-                  <table className="w-full border-collapse border border-neutral-900 text-[9px]">
+                  {/* Tabel Super Padat */}
+                  <table className="w-full border-collapse border border-neutral-900 text-[8px]">
                     <thead>
                       <tr className="bg-neutral-100 text-center font-bold">
-                        <th className="border border-neutral-900 p-0.5 w-7">NO</th>
-                        <th className="border border-neutral-900 p-0.5 text-left">KETERANGAN / MATERI & BAHAN</th>
-                        <th className="border border-neutral-900 p-0.5 w-14">JUMLAH</th>
-                        <th className="border border-neutral-900 p-0.5 w-10">SAT</th>
+                        <th className="border border-neutral-900 p-0.2 w-6">NO</th>
+                        <th className="border border-neutral-900 p-0.2 text-left">KETERANGAN / MATERI & BAHAN</th>
+                        <th className="border border-neutral-900 p-0.2 w-12">JUMLAH</th>
+                        <th className="border border-neutral-900 p-0.2 w-8">SAT</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pool.materials.map((mat, mIdx) => (
                         <React.Fragment key={mIdx}>
                           <tr>
-                            <td className="border border-neutral-900 p-0.5 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
+                            <td className="border border-neutral-900 p-0.2 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
                               {mIdx + 1}
                             </td>
-                            <td colSpan="3" className="border border-neutral-900 p-0.5 font-bold bg-neutral-50/50">
+                            <td colSpan="3" className="border border-neutral-900 p-0.2 font-bold bg-neutral-50/50">
                               MATERI : {mat.name}
                             </td>
                           </tr>
                           {mat.sizes.map((sz, sIdx) => (
                             <tr key={sIdx}>
-                              <td className="border border-neutral-900 p-0.5 pl-2 text-neutral-800">
+                              <td className="border border-neutral-900 p-0.2 pl-2 text-neutral-800">
                                 {paperBahan} ( UK {sz.size} )
                               </td>
-                              <td className="border border-neutral-900 p-0.5 text-center font-bold">
+                              <td className="border border-neutral-900 p-0.2 text-center font-bold">
                                 {sz.qty}
                               </td>
-                              <td className="border border-neutral-900 p-0.5 text-center">
+                              <td className="border border-neutral-900 p-0.2 text-center">
                                 PCS
                               </td>
                             </tr>
@@ -440,18 +440,18 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </table>
                 </div>
 
-                {/* Footer Tanda Tangan Kompak di Bagian Bawah */}
-                <div className="pt-1 flex justify-between text-[9px] font-semibold border-t border-neutral-300 mt-1">
+                {/* Footer Tanda Tangan */}
+                <div className="pt-0.5 flex justify-between text-[8px] font-semibold border-t border-neutral-300">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
-                    <p className="mt-0.5">Hormat Kami,</p>
-                    <div className="h-5"></div>
+                    <p className="mt-0.2">Hormat Kami,</p>
+                    <div className="h-3"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
-                    <p className="mt-0.5">Diterima Oleh,</p>
-                    <div className="h-5"></div>
+                    <p className="mt-0.2">Diterima Oleh,</p>
+                    <div className="h-3"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
