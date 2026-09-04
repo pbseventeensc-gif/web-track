@@ -31,16 +31,23 @@ export default function FoodLabelTab({ isDarkMode }) {
 
         for (let i = 6; i < headerRow1.length; i++) {
           const colNameRaw = headerRow1[i];
-          if (colNameRaw && colNameRaw.trim() !== '') {
-            currentItemName = colNameRaw.trim();
+          if (colNameRaw !== undefined && colNameRaw !== null && String(colNameRaw).trim() !== '') {
+            currentItemName = String(colNameRaw).trim();
           }
-          const sizeRaw = headerRow2[i] ? String(headerRow2[i]).trim().toUpperCase() : 'A5';
+          
+          const sizeRaw = headerRow2[i] ? String(headerRow2[i]).trim().toUpperCase() : '';
+          
+          // Deteksi ukuran: cek teks 'A4' atau gunakan pola posisi kolom berpasangan (indeks ganjil = A4)
+          let itemSize = 'A5';
+          if (sizeRaw.includes('A4') || (sizeRaw === '' && i % 2 === 1)) {
+            itemSize = 'A4';
+          }
 
           if (currentItemName) {
             itemColumns.push({
               index: i,
               name: currentItemName,
-              size: sizeRaw.includes('A4') ? 'A4' : 'A5'
+              size: itemSize
             });
           }
         }
