@@ -54,7 +54,7 @@ export default function FoodLabelTab({ isDarkMode }) {
         }
 
         let lastPool = '';
-        const rows = data.slice(3).map((row) => {
+        const rows = data.slice(3).map((row, index) => {
           if (!row[4]) return null; 
 
           if (row[1] && String(row[1]).trim() !== '') {
@@ -73,6 +73,14 @@ export default function FoodLabelTab({ isDarkMode }) {
             };
           }).filter(item => item.qty > 0);
 
+          // Generate No SJ unik format YYYYMMDD-XXXX berdasarkan tanggal hari ini & index baris
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, '0');
+          const dd = String(today.getDate()).padStart(2, '0');
+          const randomCode = String(1001 + index).slice(-4);
+          const noSJ = `SJ-${yyyy}${mm}${dd}-${randomCode}`;
+
           return {
             no: row[0],
             pool: poolName,
@@ -80,6 +88,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             site: row[3],
             storeName: storeName,
             city: row[5],
+            noSJ: noSJ,
             itemsData: itemsData
           };
         }).filter(Boolean);
@@ -87,11 +96,19 @@ export default function FoodLabelTab({ isDarkMode }) {
         setExcelData(rows);
 
         const poolMap = {};
-        rows.forEach((store) => {
+        rows.forEach((store, idx) => {
           if (!poolMap[store.pool]) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const uniqueCode = String(8801 + idx);
+            const poolNoSJ = `SJ-${yyyy}${mm}${dd}-${uniqueCode}`;
+
             poolMap[store.pool] = {
               poolName: store.pool,
               stores: [],
+              noSJ: poolNoSJ,
               itemTotals: {} 
             };
           }
@@ -122,6 +139,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           return {
             poolName: p.poolName,
             stores: p.stores,
+            noSJ: p.noSJ,
             materials: Object.values(materialMap)
           };
         });
@@ -170,18 +188,19 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
+          /* Pengaturan ukuran A5 Portrait (Berdiri) presisi 1 halaman */
           @page {
-            size: A5 landscape;
-            margin: 0.1cm;
+            size: A5 portrait;
+            margin: 0.2cm;
           }
-          .a5-landscape-doc {
+          .a5-portrait-doc {
             width: 100% !important;
-            max-width: 20.6cm !important;
-            height: 13.8cm !important;
-            max-height: 13.8cm !important;
+            max-width: 14.4cm !important;
+            height: 20.6cm !important;
+            max-height: 20.6cm !important;
             overflow: hidden !important;
-            padding: 1.5mm !important;
-            font-size: 7.5px !important;
+            padding: 2mm !important;
+            font-size: 8px !important;
             box-sizing: border-box !important;
             page-break-inside: avoid;
             break-inside: avoid;
@@ -200,7 +219,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Performa optimal (render berdasarkan tab aktif) & Surat Jalan A5 Landscape padat.</p>
+          <p className="text-xs opacity-70 mt-0.5">Surat Jalan diatur Portrait (A5 Berdiri) dengan No SJ otomatis di pojok kanan atas.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -247,7 +266,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan A5 Landscape ({poolSummaryData.length})
+            <Truck size={14} /> Pratinjau Surat Jalan A5 Portrait ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -291,7 +310,7 @@ export default function FoodLabelTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Printable Area (Conditional rendering agar tab yang tidak aktif tidak dirender sehingga preview ringan) */}
+      {/* Printable Area */}
       <div id="printable-area" className="space-y-6">
         {excelData.length === 0 ? (
           <div className={`no-print text-center py-16 rounded-3xl border border-dashed ${
@@ -361,75 +380,76 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN A5 LANDSCAPE SUPER PADAT (DIJAMIN 1 HALAMAN PENUH) */
+          /* PRATINJAU SURAT JALAN A5 PORTRAIT (BERDIRI) DENGAN NO SJ DI POJOK KANAN ATAS */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-2 rounded-xl shadow-sm print-page-break mx-auto a5-landscape-doc flex flex-col justify-between"
-                style={{ width: '204mm', height: '135mm', boxSizing: 'border-box' }}
+                className="bg-white text-black border-2 border-neutral-900 p-3 rounded-xl shadow-sm print-page-break mx-auto a5-portrait-doc flex flex-col justify-between"
+                style={{ width: '148mm', height: '210mm', boxSizing: 'border-box' }}
               >
                 <div>
-                  {/* Header Ringkas */}
-                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-0.5 mb-1">
-                    <div className="flex items-center gap-1.5">
+                  {/* Header dengan Logo Wellen di Kiri & No SJ di Pojok Kanan Atas */}
+                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-1.5 mb-2">
+                    <div className="flex items-center gap-2">
                       {wellenLogo ? (
-                        <img src={wellenLogo} alt="Logo Wellen" className="h-5 w-auto object-contain" />
+                        <img src={wellenLogo} alt="Logo Wellen" className="h-7 w-auto object-contain" />
                       ) : (
-                        <div className="font-black text-[9px] border px-1 py-0.2">WELLEN</div>
+                        <div className="font-black text-[10px] border px-1.5 py-0.5">WELLEN</div>
                       )}
-                      <div className="text-[7px] leading-tight text-neutral-800">
+                      <div className="text-[8px] leading-tight text-neutral-800">
                         <p className="font-black uppercase">{companyTitle}</p>
                         <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-black text-[8px] border border-neutral-900 px-1 py-0.2 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
+                    <div className="text-right space-y-1">
+                      <span className="font-black text-[9px] border border-neutral-900 px-2 py-0.5 bg-neutral-100 block">TANDA TERIMA / SURAT JALAN</span>
+                      <span className="font-mono font-bold text-[9px] text-neutral-900 block">{pool.noSJ}</span>
                     </div>
                   </div>
 
                   {/* Info Kepada & Pool */}
-                  <div className="border border-neutral-900 p-1 text-[8px] space-y-0.2 bg-neutral-50 mb-1">
+                  <div className="border border-neutral-900 p-1.5 text-[9px] space-y-0.5 bg-neutral-50 mb-2">
                     <div className="flex font-bold">
-                      <span className="w-20">KEPADA</span>
+                      <span className="w-24">KEPADA</span>
                       <span>: {companyTitle}</span>
                     </div>
                     <div className="flex font-bold text-orange-700">
-                      <span className="w-20">KIRIM KE (POOL)</span>
+                      <span className="w-24">KIRIM KE (POOL)</span>
                       <span>: {pool.poolName}</span>
                     </div>
                   </div>
 
-                  {/* Tabel Super Padat */}
-                  <table className="w-full border-collapse border border-neutral-900 text-[8px]">
+                  {/* Tabel Rincian Material Muat 1 Halaman A5 Portrait */}
+                  <table className="w-full border-collapse border border-neutral-900 text-[9px]">
                     <thead>
                       <tr className="bg-neutral-100 text-center font-bold">
-                        <th className="border border-neutral-900 p-0.2 w-6">NO</th>
-                        <th className="border border-neutral-900 p-0.2 text-left">KETERANGAN / MATERI & BAHAN</th>
-                        <th className="border border-neutral-900 p-0.2 w-12">JUMLAH</th>
-                        <th className="border border-neutral-900 p-0.2 w-8">SAT</th>
+                        <th className="border border-neutral-900 p-1 w-8">NO</th>
+                        <th className="border border-neutral-900 p-1 text-left">KETERANGAN / MATERI & BAHAN</th>
+                        <th className="border border-neutral-900 p-1 w-16">JUMLAH</th>
+                        <th className="border border-neutral-900 p-1 w-12">SAT</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pool.materials.map((mat, mIdx) => (
                         <React.Fragment key={mIdx}>
                           <tr>
-                            <td className="border border-neutral-900 p-0.2 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
+                            <td className="border border-neutral-900 p-1 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
                               {mIdx + 1}
                             </td>
-                            <td colSpan="3" className="border border-neutral-900 p-0.2 font-bold bg-neutral-50/50">
+                            <td colSpan="3" className="border border-neutral-900 p-1 font-bold bg-neutral-50/50">
                               MATERI : {mat.name}
                             </td>
                           </tr>
                           {mat.sizes.map((sz, sIdx) => (
                             <tr key={sIdx}>
-                              <td className="border border-neutral-900 p-0.2 pl-2 text-neutral-800">
+                              <td className="border border-neutral-900 p-1 pl-3 text-neutral-800">
                                 {paperBahan} ( UK {sz.size} )
                               </td>
-                              <td className="border border-neutral-900 p-0.2 text-center font-bold">
+                              <td className="border border-neutral-900 p-1 text-center font-bold">
                                 {sz.qty}
                               </td>
-                              <td className="border border-neutral-900 p-0.2 text-center">
+                              <td className="border border-neutral-900 p-1 text-center">
                                 PCS
                               </td>
                             </tr>
@@ -441,17 +461,17 @@ export default function FoodLabelTab({ isDarkMode }) {
                 </div>
 
                 {/* Footer Tanda Tangan */}
-                <div className="pt-0.5 flex justify-between text-[8px] font-semibold border-t border-neutral-300">
+                <div className="pt-2 flex justify-between text-[9px] font-semibold border-t border-neutral-300">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
-                    <p className="mt-0.2">Hormat Kami,</p>
-                    <div className="h-3"></div>
+                    <p className="mt-0.5">Hormat Kami,</p>
+                    <div className="h-8"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
-                    <p className="mt-0.2">Diterima Oleh,</p>
-                    <div className="h-3"></div>
+                    <p className="mt-0.5">Diterima Oleh,</p>
+                    <div className="h-8"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
