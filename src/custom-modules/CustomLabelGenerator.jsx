@@ -9,7 +9,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   
   const [batchLabels, setBatchLabels] = useState([]);
   
-  // State form yang mencakup Deliver to, Alamat, PIC/UP, dan Phone
   const [form, setForm] = useState({
     po_project: 'BANNER', 
     periode: '16-Agu-26',
@@ -18,7 +17,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     pcs_per_koli: '20',   
     unit: 'PCS',
     
-    // Field baru yang bisa diketik & otomatis masuk database
     deliver_to: '',
     kota_region: '',
     pic_name: '',
@@ -81,11 +79,9 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     }
   };
 
-  // Fungsi untuk menyimpan data manual baru ke database Supabase agar tidak mengulang
   const saveDestinationToDatabase = async () => {
     if (!form.deliver_to.trim()) return;
 
-    // Cek apakah data dengan nama deliver_to sudah ada
     const existing = destinations.find(d => d.client_name.toLowerCase() === form.deliver_to.trim().toLowerCase());
     if (!existing) {
       const newEntry = {
@@ -104,7 +100,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   };
 
   const handleOpenPreview = async () => {
-    // Jika menggunakan mode manual dan mengisi data baru, simpan otomatis ke DB
     if (batchLabels.length === 0 && form.deliver_to.trim()) {
       await saveDestinationToDatabase();
     }
@@ -186,7 +181,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       )}
       
-      {/* Pilihan Template & Pilih dari Database */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
         <div>
           <label className="block font-bold mb-1 opacity-70">Pilih dari Database Klien (Opsional)</label>
@@ -214,7 +208,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      {/* ⭐ FORM INPUT MANUAL (Deliver to, Alamat, PIC/UP, Phone) */}
       <div className={`p-4 rounded-2xl border space-y-3 text-xs ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
         <p className="font-bold text-indigo-500 uppercase tracking-wide">✏️ Detail Pengiriman (Bisa Diketik Langsung & Auto-Save ke Database)</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -241,7 +234,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             />
           </div>
           <div>
-            <label className="block font-bold mb-1 opacity-70">PIC / UP (Pengganti Vehicle No.)</label>
+            <label className="block font-bold mb-1 opacity-70">PIC / UP</label>
             <input 
               type="text"
               value={form.pic_name}
@@ -329,7 +322,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>
 
-      {/* MODAL PRATINJAU CETAK */}
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <style>{`
