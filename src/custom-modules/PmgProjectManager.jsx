@@ -16,7 +16,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     project_name: '',
     delivery_date: new Date().toISOString().split('T')[0],
     
-    // ⭐ Field input baru yang bisa diketik bebas & auto-save
     deliver_to: '',
     address: '',
     pic_up: '',
@@ -156,7 +155,6 @@ export default function PmgProjectManager({ isDarkMode }) {
     reader.readAsBinaryString(file);
   };
 
-  // Fungsi auto-save data pengiriman baru ke database Supabase
   const saveDestinationToDatabase = async () => {
     if (!form.deliver_to.trim()) return null;
 
@@ -195,7 +193,6 @@ export default function PmgProjectManager({ isDarkMode }) {
       return alert('⚠️ DITOLAK: Surat Jalan dengan Transaction Code "' + form.transaction_code + '" sudah terdaftar!');
     }
 
-    // Auto-save deliver_to ke pmg_destinations jika diketik manual
     const savedDestId = await saveDestinationToDatabase();
 
     const { data: projData, error: projError } = await supabase
@@ -278,7 +275,6 @@ export default function PmgProjectManager({ isDarkMode }) {
       </div>
 
       <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
-        {/* ⭐ PILIH DARI DATABASE ATAU KETIK BEBAS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block font-bold mb-1 opacity-75">Pilih dari Database Klien (Opsional)</label>
@@ -302,7 +298,6 @@ export default function PmgProjectManager({ isDarkMode }) {
           </div>
         </div>
 
-        {/* ⭐ FIELD DETAIL PENGIRIMAN YANG BISA DIKETIK BEBAS & AUTO-SAVE */}
         <div className={`p-4 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
           <p className="font-bold text-indigo-500 uppercase tracking-wide">✏️ Detail Informasi Penerima (Bisa Diketik Langsung)</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -479,30 +474,36 @@ export default function PmgProjectManager({ isDarkMode }) {
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <style>{`
             @media print {
+              body, html {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
               body * {
-                visibility: hidden;
+                visibility: hidden !important;
               }
               #printable-pod-sj, #printable-pod-sj * {
-                visibility: visible;
+                visibility: visible !important;
               }
               #printable-pod-sj {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
               }
               .print-page-a4 {
-                width: 100vw;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                page-break-after: always;
-                break-after: page;
-                margin: 0 !important;
-                padding: 15mm !important;
-                box-sizing: border-box;
+                width: 100% !important;
+                max-width: 210mm !important;
+                min-height: 297mm !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                margin: 0 auto !important;
+                padding: 10mm !important;
+                box-sizing: border-box !important;
                 background: white !important;
+                display: block !important;
               }
               .no-print {
                 display: none !important;
@@ -512,7 +513,7 @@ export default function PmgProjectManager({ isDarkMode }) {
 
           <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3 no-print">
-              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Dokumen POD & Surat Jalan PMG (1 Halaman A4 Full)</h3>
+              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Dokumen POD & Surat Jalan PMG</h3>
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">🖨️ Cetak Dokumen</button>
                 <button onClick={() => setPrintData(null)} className="px-3 py-2 bg-stone-300 font-bold rounded-xl text-xs">✕ Tutup</button>
