@@ -260,6 +260,44 @@ export default function PmgProjectManager({ isDarkMode }) {
     return rows;
   };
 
+  // Fungsi cetak bersih menggunakan elemen HTML murni
+  const handlePrintDocument = () => {
+    const printContent = document.getElementById('printable-pod-sj').innerHTML;
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Cetak POD & Surat Jalan - PMG</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 15mm; background: #fff; color: #000; }
+            .print-page-a4 {
+              width: 100%;
+              max-width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto;
+              page-break-after: always;
+              break-after: page;
+              box-sizing: border-box;
+            }
+            table { width: 100%; border-collapse: collapse; font-size: 10px; }
+            th, td { border: 1px solid #000; padding: 5px; }
+          </style>
+        </head>
+        <body>
+          ${printContent}
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
@@ -472,54 +510,16 @@ export default function PmgProjectManager({ isDarkMode }) {
       {/* MODAL PRATINJAU CETAK */}
       {printData && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
-          <style>{`
-            @media print {
-              body, html {
-                background: white !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              body * {
-                visibility: hidden !important;
-              }
-              #printable-pod-sj, #printable-pod-sj * {
-                visibility: visible !important;
-              }
-              #printable-pod-sj {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              .print-page-a4 {
-                width: 100% !important;
-                max-width: 210mm !important;
-                min-height: 297mm !important;
-                page-break-after: always !important;
-                break-after: page !important;
-                margin: 0 auto !important;
-                padding: 10mm !important;
-                box-sizing: border-box !important;
-                background: white !important;
-                display: block !important;
-              }
-              .no-print {
-                display: none !important;
-              }
-            }
-          `}</style>
-
           <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b pb-3 no-print">
+            <div className="flex justify-between items-center border-b pb-3">
               <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Dokumen POD & Surat Jalan PMG</h3>
               <div className="flex gap-2">
-                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">🖨️ Cetak Dokumen</button>
-                <button onClick={() => setPrintData(null)} className="px-3 py-2 bg-stone-300 font-bold rounded-xl text-xs">✕ Tutup</button>
+                <button onClick={handlePrintDocument} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak Dokumen</button>
+                <button onClick={() => setPrintData(null)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
 
+            {/* KONTEN DOKUMEN (DIRENDER JUGA UNTUK POPUP PRINT) */}
             <div id="printable-pod-sj" className="space-y-6">
               {/* HALAMAN 1: PROOF OF DELIVERY (POD) */}
               <div className="print-page-a4 p-6 bg-white text-black font-sans text-xs border rounded-xl space-y-2" style={{ fontFamily: 'Arial, sans-serif' }}>
