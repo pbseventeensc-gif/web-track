@@ -6,6 +6,7 @@ import AdminMasterData from './kawanlama/AdminMasterData';
 import AdminPromoManager from './kawanlama/AdminPromoManager';
 import AdminBranchMonitoring from './kawanlama/AdminBranchMonitoring';
 import KawanLamaMultiLabelGenerator from './kawanlama/KawanLamaMultiLabelGenerator';
+import FoodLabelTab from './kawanlama/FoodLabelTab'; // ⭐ IMPORT TAB BARU
 import PinModal from './kawanlama/PinModal';
 import { updateBranchPin } from './kawanlama/PinManager';
 import { supabase } from '../supabaseClient';
@@ -138,7 +139,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
                   {currentUser?.role === 'admin_wilayah' ? `Admin Koordinator (${currentUser?.region?.toUpperCase()})` : 'Admin Pusat Kawan Lama'}
                 </span>
                 <h3 className="text-xs font-bold mt-1 text-stone-700 dark:text-neutral-200">
-                  Pengelolaan Data Promo, Approval Order, Monitoring Cabang, & Multi-Label Generator
+                  Pengelolaan Data Promo, Approval Order, Monitoring Cabang, & Label Generator
                 </h3>
               </div>
               <span className="text-xs font-mono opacity-60">User: {currentUser?.username || 'Admin'}</span>
@@ -202,6 +203,18 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
               >
                 🏷️ Multi-Label Generator
               </button>
+
+              {/* ⭐ TOMBOL TAB FOOD LABEL BARU (DIBUAT DI SEBELAH MULTI-LABEL) */}
+              <button 
+                onClick={() => setActiveSubTab('food_labels')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm ${
+                  activeSubTab === 'food_labels' 
+                    ? 'bg-orange-600 text-white shadow-md' 
+                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-stone-700 border border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                🍜 Food Label (Custom)
+              </button>
             </div>
           )}
         </div>
@@ -224,6 +237,10 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
         )}
         {isAdmin && activeSubTab === 'labels' && (
           <KawanLamaMultiLabelGenerator isDarkMode={isDarkMode} />
+        )}
+        {/* ⭐ ROUTING TAB FOOD LABEL */}
+        {isAdmin && activeSubTab === 'food_labels' && (
+          <FoodLabelTab isDarkMode={isDarkMode} />
         )}
 
         {isBranchMode && activeSubTab === 'order_baru' && (
