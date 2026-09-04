@@ -187,9 +187,9 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
-          /* Menghilangkan header/footer URL bawaan browser */
+          /* Paksa orientasi Landscape ukuran 20cm x 13cm murni 1 halaman */
           @page {
-            size: 20cm 13cm;
+            size: 20cm 13cm landscape;
             margin: 0mm;
           }
           body {
@@ -198,9 +198,9 @@ export default function FoodLabelTab({ isDarkMode }) {
           }
           .delivery-order-doc {
             width: 20cm !important;
-            height: 13cm !important;
+            height: 12.8cm !important;
             max-width: 20cm !important;
-            max-height: 13cm !important;
+            max-height: 12.8cm !important;
             overflow: hidden !important;
             padding: 2mm !important;
             font-size: 7.5px !important;
@@ -225,7 +225,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Ukuran 20x13 cm Landscape terkunci rapi 1 halaman penuh tanpa URL browser.</p>
+          <p className="text-xs opacity-70 mt-0.5">Pengaturan cetak dikunci strict Landscape (20x13 cm) agar tidak terpotong.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -272,7 +272,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan 20x13 cm ({poolSummaryData.length})
+            <Truck size={14} /> Pratinjau Surat Jalan 20x13 cm Landscape ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -386,13 +386,13 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE SUPER PADAT (DIJAMIN 1 HALAMAN) */
+          /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE (STRICT 1 HALAMAN) */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
                 className="bg-white text-black border-2 border-neutral-900 rounded-xl shadow-sm print-page-break mx-auto delivery-order-doc"
-                style={{ width: '20cm', height: '13cm', boxSizing: 'border-box' }}
+                style={{ width: '20cm', height: '12.8cm', boxSizing: 'border-box' }}
               >
                 <div>
                   {/* Header */}
