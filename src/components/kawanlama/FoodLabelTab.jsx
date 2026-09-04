@@ -170,17 +170,16 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
-          /* Pengaturan khusus ukuran Dot Matrix 21 x 14 cm Landscape */
+          /* Pengaturan ukuran kertas murni A5 Portrait untuk Surat Jalan */
           @page {
-            size: 21cm 14cm;
-            margin: 0.5cm;
+            size: A5;
+            margin: 0.4cm;
           }
-          .dotmatrix-landscape {
-            width: 20cm !important;
-            height: 13cm !important;
-            max-width: none !important;
-            padding: 4mm !important;
-            font-size: 8.5px !important;
+          .a5-document {
+            width: 100% !important;
+            max-width: 13.5cm !important;
+            padding: 2mm !important;
+            font-size: 8px !important;
           }
         }
       `}</style>
@@ -196,7 +195,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan disesuaikan untuk printer dot matrix (21x14 cm Landscape).</p>
+          <p className="text-xs opacity-70 mt-0.5">Format Surat Jalan disesuaikan ukuran A5 murni tanpa baris store tujuan.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -243,7 +242,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan 21x14 cm ({poolSummaryData.length})
+            <Truck size={14} /> Pratinjau Surat Jalan A5 ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -358,13 +357,13 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN 21x14 CM (LANDSCAPE / DOT MATRIX) */
+          /* PRATINJAU SURAT JALAN UKURAN A5 (TANPA STORE TUJUAN & LOGO KIRI ATAS) */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
                 key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 p-4 rounded-xl shadow-sm print-page-break mx-auto dotmatrix-landscape space-y-2.5"
-                style={{ width: '210mm', minHeight: '140mm', boxSizing: 'border-box' }}
+                className="bg-white text-black border-2 border-neutral-900 p-4 rounded-xl shadow-sm print-page-break mx-auto a5-document space-y-2.5"
+                style={{ width: '148mm', minHeight: '210mm', boxSizing: 'border-box' }}
               >
                 {/* Header dengan Logo Wellen di Kiri Atas */}
                 <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-2">
@@ -380,12 +379,12 @@ export default function FoodLabelTab({ isDarkMode }) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-black text-[10px] border border-neutral-900 px-2 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
+                    <span className="font-black text-[9px] border border-neutral-900 px-2 py-0.5 bg-neutral-100">TANDA TERIMA / SURAT JALAN</span>
                   </div>
                 </div>
 
-                {/* Info Alamat Kirim & Store */}
-                <div className="border border-neutral-900 p-2 text-[10px] space-y-0.5 bg-neutral-50">
+                {/* Info Alamat Kirim (Tanpa Store Tujuan) */}
+                <div className="border border-neutral-900 p-2 text-[10px] space-y-1 bg-neutral-50">
                   <div className="flex font-bold">
                     <span className="w-24">KEPADA</span>
                     <span>: {companyTitle}</span>
@@ -394,13 +393,9 @@ export default function FoodLabelTab({ isDarkMode }) {
                     <span className="w-24">KIRIM KE (POOL)</span>
                     <span>: {pool.poolName}</span>
                   </div>
-                  <div className="flex text-[9.5px] text-neutral-700 pt-0.5 border-t border-dashed border-neutral-300">
-                    <span className="w-24 font-semibold">STORE TUJUAN</span>
-                    <span className="truncate">: {pool.stores.join(', ')}</span>
-                  </div>
                 </div>
 
-                {/* Tabel Rincian Material (Dioptimalkan agar muat banyak item) */}
+                {/* Tabel Rincian Material */}
                 <table className="w-full border-collapse border border-neutral-900 text-[10px]">
                   <thead>
                     <tr className="bg-neutral-100 text-center font-bold">
@@ -439,18 +434,18 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </tbody>
                 </table>
 
-                {/* Footer Tanda Tangan Kompak */}
-                <div className="pt-2 flex justify-between text-[10px] font-semibold">
+                {/* Footer Tanda Tangan */}
+                <div className="pt-3 flex justify-between text-[10px] font-semibold">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
                     <p className="mt-0.5">Hormat Kami,</p>
-                    <div className="h-8"></div>
+                    <div className="h-10"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
                     <p className="mt-0.5">Diterima Oleh,</p>
-                    <div className="h-8"></div>
+                    <div className="h-10"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
