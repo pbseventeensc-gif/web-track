@@ -139,7 +139,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             poolName: p.poolName,
             stores: p.stores,
             noSJ: p.noSJ,
-      materials: Object.values(materialMap)
+            materials: Object.values(materialMap)
           };
         });
 
@@ -187,10 +187,14 @@ export default function FoodLabelTab({ isDarkMode }) {
             page-break-after: always;
             break-after: page;
           }
-          /* Pengaturan presisi ukuran 20cm x 13cm Landscape sesuai lembar cetak manual */
+          /* Menghilangkan header/footer URL bawaan browser */
           @page {
             size: 20cm 13cm;
-            margin: 0cm;
+            margin: 0mm;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
           }
           .delivery-order-doc {
             width: 20cm !important;
@@ -198,8 +202,8 @@ export default function FoodLabelTab({ isDarkMode }) {
             max-width: 20cm !important;
             max-height: 13cm !important;
             overflow: hidden !important;
-            padding: 3mm !important;
-            font-size: 8.5px !important;
+            padding: 2mm !important;
+            font-size: 7.5px !important;
             box-sizing: border-box !important;
             page-break-inside: avoid;
             break-inside: avoid;
@@ -221,7 +225,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Surat Jalan disesuaikan ukuran 20 cm x 13 cm Landscape.</p>
+          <p className="text-xs opacity-70 mt-0.5">Ukuran 20x13 cm Landscape terkunci rapi 1 halaman penuh tanpa URL browser.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -268,7 +272,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan 20x13 cm Landscape ({poolSummaryData.length})
+            <Truck size={14} /> Pratinjau Surat Jalan 20x13 cm ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -382,7 +386,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             })}
           </div>
         ) : (
-          /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE */
+          /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE SUPER PADAT (DIJAMIN 1 HALAMAN) */
           <div className="space-y-6">
             {poolSummaryData.map((pool, idx) => (
               <div 
@@ -392,26 +396,26 @@ export default function FoodLabelTab({ isDarkMode }) {
               >
                 <div>
                   {/* Header */}
-                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-1 mb-1">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-0.5 mb-1">
+                    <div className="flex items-center gap-1.5">
                       {wellenLogo ? (
-                        <img src={wellenLogo} alt="Logo Wellen" className="h-6 w-auto object-contain" />
+                        <img src={wellenLogo} alt="Logo Wellen" className="h-5 w-auto object-contain" />
                       ) : (
-                        <div className="font-black text-[10px] border px-1 py-0.2">WELLEN</div>
+                        <div className="font-black text-[9px] border px-1 py-0.2">WELLEN</div>
                       )}
-                      <div className="text-[8px] leading-tight text-neutral-800">
+                      <div className="text-[7.5px] leading-tight text-neutral-800">
                         <p className="font-black uppercase">{companyTitle}</p>
                         <p>Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
                       </div>
                     </div>
-                    <div className="text-right space-y-0.5">
-                      <span className="font-black text-[9px] border border-neutral-900 px-1.5 py-0.2 bg-neutral-100 block">TANDA TERIMA / SURAT JALAN</span>
-                      <span className="font-mono font-bold text-[9px] text-neutral-900 block">{pool.noSJ}</span>
+                    <div className="text-right space-y-0.2">
+                      <span className="font-black text-[8px] border border-neutral-900 px-1.5 py-0.2 bg-neutral-100 block">TANDA TERIMA / SURAT JALAN</span>
+                      <span className="font-mono font-bold text-[8.5px] text-neutral-900 block">{pool.noSJ}</span>
                     </div>
                   </div>
 
                   {/* Info Kepada & Pool */}
-                  <div className="border border-neutral-900 p-1 text-[9px] space-y-0.5 bg-neutral-50 mb-1">
+                  <div className="border border-neutral-900 p-1 text-[8.5px] space-y-0.2 bg-neutral-50 mb-1">
                     <div className="flex font-bold">
                       <span className="w-24">KEPADA</span>
                       <span>: {companyTitle}</span>
@@ -422,36 +426,36 @@ export default function FoodLabelTab({ isDarkMode }) {
                     </div>
                   </div>
 
-                  {/* Tabel Rincian */}
-                  <table className="w-full border-collapse border border-neutral-900 text-[8.5px]">
+                  {/* Tabel Super Padat */}
+                  <table className="w-full border-collapse border border-neutral-900 text-[8px]">
                     <thead>
                       <tr className="bg-neutral-100 text-center font-bold">
-                        <th className="border border-neutral-900 p-0.5 w-7">NO</th>
-                        <th className="border border-neutral-900 p-0.5 text-left">KETERANGAN / MATERI & BAHAN</th>
-                        <th className="border border-neutral-900 p-0.5 w-14">JUMLAH</th>
-                        <th className="border border-neutral-900 p-0.5 w-10">SAT</th>
+                        <th className="border border-neutral-900 p-0.2 w-6">NO</th>
+                        <th className="border border-neutral-900 p-0.2 text-left">KETERANGAN / MATERI & BAHAN</th>
+                        <th className="border border-neutral-900 p-0.2 w-12">JUMLAH</th>
+                        <th className="border border-neutral-900 p-0.2 w-8">SAT</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pool.materials.map((mat, mIdx) => (
                         <React.Fragment key={mIdx}>
                           <tr>
-                            <td className="border border-neutral-900 p-0.5 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
+                            <td className="border border-neutral-900 p-0.2 text-center font-bold align-top" rowSpan={mat.sizes.length + 1}>
                               {mIdx + 1}
                             </td>
-                            <td colSpan="3" className="border border-neutral-900 p-0.5 font-bold bg-neutral-50/50">
+                            <td colSpan="3" className="border border-neutral-900 p-0.2 font-bold bg-neutral-50/50">
                               MATERI : {mat.name}
                             </td>
                           </tr>
                           {mat.sizes.map((sz, sIdx) => (
                             <tr key={sIdx}>
-                              <td className="border border-neutral-900 p-0.5 pl-2 text-neutral-800">
+                              <td className="border border-neutral-900 p-0.2 pl-2 text-neutral-800">
                                 {paperBahan} ( UK {sz.size} )
                               </td>
-                              <td className="border border-neutral-900 p-0.5 text-center font-bold">
+                              <td className="border border-neutral-900 p-0.2 text-center font-bold">
                                 {sz.qty}
                               </td>
-                              <td className="border border-neutral-900 p-0.5 text-center">
+                              <td className="border border-neutral-900 p-0.2 text-center">
                                 PCS
                               </td>
                             </tr>
@@ -462,18 +466,18 @@ export default function FoodLabelTab({ isDarkMode }) {
                   </table>
                 </div>
 
-                {/* Footer Tanda Tangan (Nampel rapi di bawah tabel) */}
-                <div className="pt-0.5 mt-[2mm] flex justify-between text-[9px] font-semibold border-t border-neutral-300">
+                {/* Footer Tanda Tangan */}
+                <div className="pt-0.5 mt-[1mm] flex justify-between text-[8px] font-semibold border-t border-neutral-300">
                   <div>
                     <p>Jakarta, {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
-                    <p className="mt-0.5">Hormat Kami,</p>
-                    <div className="h-6"></div>
+                    <p className="mt-0.2">Hormat Kami,</p>
+                    <div className="h-3"></div>
                     <p className="font-bold underline">NINING</p>
                   </div>
                   <div className="text-right">
                     <p className="invisible">Spacer</p>
-                    <p className="mt-0.5">Diterima Oleh,</p>
-                    <div className="h-6"></div>
+                    <p className="mt-0.2">Diterima Oleh,</p>
+                    <div className="h-3"></div>
                     <p className="font-bold underline">( _________________________ )</p>
                   </div>
                 </div>
