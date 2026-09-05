@@ -376,6 +376,52 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                             QTY : {displayPcs} {form.unit}
                           </div>
                         </div>
+
+                        {/* --- BAGIAN GRAND TOTAL & TANDA TANGAN (YANG SEBELUMNYA HILANG) --- */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '10px', fontSize: '11px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
+                                Grand Total :
+                              </td>
+                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
+                                {displayPcs}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '5px', fontSize: '10px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Pengirim</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>NINING</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Penerima</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}></td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '3px' }}>
+                          - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
+                        </div>
+
                       </div>
                     ) : (
                       <div style={{ border: '2px solid #000', padding: '22px', width: '100%', maxWidth: '180mm' }}>
@@ -442,6 +488,52 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                             </table>
                           </div>
                         )}
+
+                        {/* --- BAGIAN GRAND TOTAL & TANDA TANGAN (YANG SEBELUMNYA HILANG - TEMPLATE COCA-COLA) --- */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '10px', fontSize: '11px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
+                                Grand Total :
+                              </td>
+                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
+                                {displayPcs}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '5px', fontSize: '10px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Pengirim</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>NINING</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Penerima</td>
+                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}></td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
+                            </tr>
+                            <tr>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '3px' }}>
+                          - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
+                        </div>
+
                       </div>
                     )}
                   </div>
