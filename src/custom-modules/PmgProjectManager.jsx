@@ -245,7 +245,7 @@ export default function PmgProjectManager({ isDarkMode }) {
   };
 
   const renderEmptyRows = (currentCount) => {
-    const targetRows = Math.max(0, 3 - currentCount); // Disesuaikan agar muat dalam 1 halaman HVS bersama tanda tangan
+    const targetRows = Math.max(0, 3 - currentCount); 
     const rows = [];
     for (let i = 0; i < targetRows; i++) {
       rows.push(
@@ -272,24 +272,48 @@ export default function PmgProjectManager({ isDarkMode }) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>POD & Surat Jalan - PMG (1 Halaman HVS)</title>
+          <title>POD & Surat Jalan - PMG (1 Halaman A4 Full)</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 0; padding: 5mm; background: #fff; color: #000; }
+            @page {
+              size: A4 portrait;
+              margin: 6mm;
+            }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 0; 
+              background: #fff; 
+              color: #000; 
+              -webkit-print-color-adjust: exact;
+            }
             .print-page-a4 {
-              width: 100%;
-              max-width: 210mm;
+              width: 198mm;
+              height: 285mm;
+              max-height: 285mm;
               margin: 0 auto;
               box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              overflow: hidden;
+            }
+            .section-box {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              max-height: 138mm;
+              overflow: hidden;
             }
             .divider-cut {
               border-bottom: 2px dashed #000;
-              margin: 6px 0;
+              margin: 4px 0;
               text-align: center;
               position: relative;
             }
             .divider-cut span {
               background: #fff;
-              padding: 0 10px;
+              padding: 0 8px;
               font-size: 8px;
               font-weight: bold;
               position: relative;
@@ -524,34 +548,34 @@ export default function PmgProjectManager({ isDarkMode }) {
         </div>
       </div>
 
-      {/* MODAL PRATINJAU CETAK (1 HALAMAN HVS: POD DI ATAS, SJ DI BAWAH) */}
+      {/* MODAL PRATINJAU CETAK (1 HALAMAN A4 FULL) */}
       {printData && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau 1 Halaman HVS (POD & Surat Jalan)</h3>
+              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau 1 Halaman A4 Full (POD & Surat Jalan)</h3>
               <div className="flex gap-2">
-                <button onClick={handlePrintDocument} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak 1 Halaman</button>
+                <button onClick={handlePrintDocument} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak 1 Halaman Full</button>
                 <button onClick={() => setPrintData(null)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
 
-            {/* KONTEN UTAMA 1 HALAMAN */}
-            <div id="printable-pod-sj" className="space-y-2 bg-white p-3 border rounded-xl">
+            {/* KONTEN UTAMA 1 HALAMAN A4 FULL */}
+            <div id="printable-pod-sj" className="space-y-1 bg-white p-3 border rounded-xl" style={{ height: '275mm', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               
               {/* ================= BAGIAN ATAS: PROOF OF DELIVERY (POD) ================= */}
-              <div className="space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
+              <div className="section-box space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px', width: '40%', verticalAlign: 'top' }}>
-                      <h2 style={{ margin: '0 0 2px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', width: '40%', verticalAlign: 'top' }}>
+                      <h2 style={{ margin: '0 0 1px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
                       <p style={{ margin: '1px 0', fontSize: '6px', lineHeight: '1.1' }}>EightyEight@Kasablanka Tower A.30 B Floor<br/>Jl. Raya Casablanca Kav 88 Jakarta 12870<br/>Tlp. +62 21 29820243 Fax: +62 21 29820244</p>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
-                      <h1 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', fontFamily: 'serif' }}>Proof Of Delivery</h1>
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
+                      <h1 style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', fontFamily: 'serif' }}>Proof Of Delivery</h1>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
-                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '28px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
+                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '24px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
                     </td>
                   </tr>
                 </table>
@@ -631,10 +655,10 @@ export default function PmgProjectManager({ isDarkMode }) {
                       <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}></td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}>Tanda Tangan dan Stempel</td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}>Tanda Tangan dan Stempel</td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}></td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
                     </tr>
                     <tr>
                       <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
@@ -651,26 +675,26 @@ export default function PmgProjectManager({ isDarkMode }) {
               </div>
 
               {/* GARIS PEMBATAS PUTUS-PUTUS DI TENGAH */}
-              <div className="divider-cut" style={{ borderBottom: '2px dashed #000', margin: '8px 0', textAlign: 'center' }}>
+              <div className="divider-cut" style={{ borderBottom: '2px dashed #000', margin: '4px 0', textAlign: 'center' }}>
                 <span style={{ background: '#fff', padding: '0 8px', fontSize: '7px', fontWeight: 'bold', position: 'relative', top: '-6px' }}>
                   ✂️ --- POTONG DI SINI --- ✂️
                 </span>
               </div>
 
               {/* ================= BAGIAN BAWAH: SURAT JALAN / DELIVERY ORDER ================= */}
-              <div className="space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
+              <div className="section-box space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '4px', width: '40%', verticalAlign: 'top' }}>
-                      <h2 style={{ margin: '0 0 2px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', width: '40%', verticalAlign: 'top' }}>
+                      <h2 style={{ margin: '0 0 1px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
                       <p style={{ margin: '1px 0', fontSize: '6px', lineHeight: '1.1' }}>EightyEight@Kasablanka Tower A.30 B Floor<br/>Jl. Raya Casablanca Kav 88 Jakarta 12870<br/>Tlp. +62 21 29820243 Fax: +62 21 29820244</p>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
                       <h3 style={{ margin: 0, fontSize: '8px', fontWeight: 'bold' }}>DELIVERY ORDER</h3>
                       <h1 style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', fontFamily: 'serif' }}>SURAT JALAN</h1>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
-                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '28px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
+                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
+                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '24px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
                     </td>
                   </tr>
                 </table>
@@ -750,10 +774,10 @@ export default function PmgProjectManager({ isDarkMode }) {
                       <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}></td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}>Tanda Tangan dan Stempel</td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}>Tanda Tangan dan Stempel</td>
-                      <td style={{ border: '1px solid #000', padding: '10px 3px' }}></td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
                     </tr>
                     <tr>
                       <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
