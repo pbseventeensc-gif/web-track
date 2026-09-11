@@ -21,6 +21,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     kota_region: '',
     pic_name: '',
     phone: '',
+    region_city: '',
 
     transporter_dr: 'WAHANA - N-17779-2608-12',
     brand_name: 'NESTLÉ / PURINA',
@@ -63,6 +64,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         kota_region: found.address || '',
         pic_name: found.pic_name || found.client_name || '',
         phone: found.phone || '',
+        region_city: found.hos_region ? `${found.hos_region} - ${found.address || ''}` : '-',
         ops: found.hos_region || '-'
       }));
     }
@@ -92,11 +94,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
         const imported = [];
         rawData.slice(1).forEach((row) => {
-          const hos = row[1] ? String(row[1]).trim() : '-';
+          // Kolom disesuaikan dengan struktur file Excel Alokasi CCOD/Wahana
+          const city = row[1] ? String(row[1]).trim() : '';
           const clientName = row[5] ? String(row[5]).trim() : (row[2] ? String(row[2]).trim() : '');
           const address = row[7] ? String(row[7]).trim() : (row[4] ? String(row[4]).trim() : '');
           const phone = row[8] ? String(row[8]).trim() : (row[6] ? String(row[6]).trim() : '-');
           const picName = row[9] ? String(row[9]).trim() : clientName;
+          const region = row[10] ? String(row[10]).trim() : '';
+          
+          // Qty diambil mutlak dari kolom Excel (misal indeks 11 atau 8 tergantung format)
           const rawQtyStr = row[11] !== undefined ? String(row[11]) : (row[8] ? String(row[8]) : '1');
           const qtyParsed = parseInt(rawQtyStr.replace(/\D/g, '')) || 1;
 
@@ -106,16 +112,16 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               kota_region: address || 'Alamat menyusul',
               pic_name: picName,
               phone: phone,
-              hos_region: hos,
+              region_city: `${region} - ${city}`.trim() !== '-' ? `${region} - ${city}` : '-',
               item_name: form.item_title,
-              custom_koli: qtyParsed
+              custom_koli: qtyParsed // Mengikuti mutlak dari Excel
             });
           }
         });
 
         if (imported.length > 0) {
           setBatchLabels(imported);
-          alert(`✅ Berhasil memuat ${imported.length} tujuan beserta QTY dari Excel!`);
+          alert(`✅ Berhasil memuat ${imported.length} tujuan beserta QTY murni dari Excel!`);
         } else {
           alert('⚠️ Format baris Excel tidak dikenali.');
         }
@@ -133,6 +139,68 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   const manualTotalKoli = Math.ceil(manualQty / manualKoliCapacity);
 
   const totalKoli = batchLabels.length > 0 ? batchLabels.length : manualTotalKoli;
+
+  // Fungsi cetak langsung menggunakan window baru agar printer fisik tidak kosong
+  const handleDirectPrint = () => {
+    const printableHTML = document.getElementById('printable-area').innerHTML;
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Cetak Label Koli PMG</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background: #fff;
+              color: #000;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-page-full {
+              width: 100%;
+              min-height: 100vh;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+              page-break-after: always;
+              break-after: page;
+              margin: 0;
+              padding: 10mm;
+              box-sizing: border-box;
+              background: white;
+            }
+            .no-print {
+              display: none !important;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+          </style>
+        </head>
+        <body>
+          <div>${printableHTML}</div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   return (
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
@@ -247,55 +315,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
-          <style>{`
-            @media print {
-              body, html {
-                background: #white !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              body * {
-                visibility: hidden !important;
-              }
-              #printable-area, #printable-area * {
-                visibility: visible !important;
-              }
-              #printable-area {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              .print-page-full {
-                width: 100vw !important;
-                height: 100vh !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: center !important;
-                align-items: center !important;
-                page-break-after: always !important;
-                break-after: page !important;
-                margin: 0 !important;
-                padding: 10mm !important;
-                box-sizing: border-box !important;
-                border: none !important;
-                background: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .no-print {
-                display: none !important;
-              }
-            }
-          `}</style>
-
           <div className="bg-white text-stone-900 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3 no-print">
               <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Koli Label (Total: {totalKoli} Halaman A4 Full)</h3>
               <div className="flex gap-2">
-                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Buka Pengaturan Printer</button>
+                <button onClick={handleDirectPrint} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Buka Pengaturan Printer</button>
                 <button onClick={() => setPrintDataModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
               </div>
             </div>
@@ -308,13 +332,14 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                 const targetAddress = batchLabels.length > 0 ? batchLabels[koliIdx]?.kota_region : (form.kota_region || 'Alamat belum diisi');
                 const targetPic = batchLabels.length > 0 ? batchLabels[koliIdx]?.pic_name : (form.pic_name || '-');
                 const targetPhone = batchLabels.length > 0 ? batchLabels[koliIdx]?.phone : (form.phone || '-');
+                const targetRegionCity = batchLabels.length > 0 ? batchLabels[koliIdx]?.region_city : (form.region_city || '-');
                 const targetOps = batchLabels.length > 0 ? batchLabels[koliIdx]?.hos_region : form.ops;
 
                 const displayItemTitle = (batchLabels.length > 0 && batchLabels[koliIdx]?.item_name)
                   ? batchLabels[koliIdx].item_name
                   : form.item_title;
 
-                const displayPcs = (batchLabels.length > 0 && batchLabels[koliIdx]?.custom_koli) 
+                const displayPcs = (batchLabels.length > 0 && batchLabels[koliIdx]?.custom_koli !== undefined) 
                   ? batchLabels[koliIdx].custom_koli 
                   : form.pcs_per_koli;
 
@@ -346,8 +371,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '30%' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', verticalAlign: 'top' }}>Alamat</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetAddress}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPic}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PIC / Phone No.</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPic} / {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Region & City</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetRegionCity}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.po_project}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.periode}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.channel}</td></tr>
@@ -379,7 +404,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           </tr>
                         </table>
 
-                        {/* --- KOTAK BAWAH KHUSUS PEMECAH KOLI --- */}
+                        {/* --- KOTAK BAWAH PEMECAH KOLI --- */}
                         <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', background: '#f2f2f2', padding: '8px', border: '1px solid #000', fontWeight: 'bold' }}>
                           <div>Koli {currentKoliNumber} of {totalKoli}</div>
                           <div style={{ fontSize: '11px', color: '#333', marginTop: '2px', fontWeight: 'normal' }}>
@@ -454,8 +479,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', width: '30%' }}>OPS</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetOps}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Address</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetAddress}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPic}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PIC / Phone</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPic} / {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Region & City</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetRegionCity}</td></tr>
                           <tr>
                             <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Brand & Item</td>
                             <td style={{ border: '1px solid #000', padding: '7px' }}>
