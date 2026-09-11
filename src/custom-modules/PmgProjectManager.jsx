@@ -11,7 +11,7 @@ export default function PmgProjectManager({ isDarkMode }) {
   const [selectedDest, setSelectedDest] = useState('');
   
   const [form, setForm] = useState({
-    dr_number: '',
+    dr_number: '', // 👈 Input DR No.
     transaction_code: '',
     project_name: '',
     delivery_date: new Date().toISOString().split('T')[0],
@@ -424,7 +424,18 @@ export default function PmgProjectManager({ isDarkMode }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* --- TAMBAHAN INPUT FIELD DR No. --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block font-bold mb-1 opacity-75">DR No. (Nomor Surat Jalan)</label>
+            <input 
+              type="text" 
+              placeholder="Cth: DR-001/PMG/IX/2026"
+              value={form.dr_number}
+              onChange={e => setForm({ ...form, dr_number: e.target.value })}
+              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            />
+          </div>
           <div>
             <label className="block font-bold mb-1 opacity-75">Transaction Code *</label>
             <input 
