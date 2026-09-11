@@ -93,21 +93,21 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         const imported = [];
         rawData.slice(1).forEach((row) => {
           const hos = row[1] ? String(row[1]).trim() : '-';
-          const clientName = row[2] ? String(row[2]).trim() : '';
-          const address = row[4] ? String(row[4]).trim() : '';
-          const phone = row[6] ? String(row[6]).trim() : '-';
-          const itemText = row[7] ? String(row[7]).trim() : '';
-          const rawQtyStr = row[8] ? String(row[8]) : '1';
+          const clientName = row[5] ? String(row[5]).trim() : (row[2] ? String(row[2]).trim() : '');
+          const address = row[7] ? String(row[7]).trim() : (row[4] ? String(row[4]).trim() : '');
+          const phone = row[8] ? String(row[8]).trim() : (row[6] ? String(row[6]).trim() : '-');
+          const picName = row[9] ? String(row[9]).trim() : clientName;
+          const rawQtyStr = row[11] !== undefined ? String(row[11]) : (row[8] ? String(row[8]) : '1');
           const qtyParsed = parseInt(rawQtyStr.replace(/\D/g, '')) || 1;
 
-          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed')) {
+          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer')) {
             imported.push({
               deliver_to: clientName,
               kota_region: address || 'Alamat menyusul',
-              pic_name: clientName,
+              pic_name: picName,
               phone: phone,
               hos_region: hos,
-              item_name: itemText,
+              item_name: form.item_title,
               custom_koli: qtyParsed
             });
           }
@@ -115,7 +115,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
         if (imported.length > 0) {
           setBatchLabels(imported);
-          alert(`✅ Berhasil memuat ${imported.length} tujuan beserta kolom ITEM & QTY dari Excel!`);
+          alert(`✅ Berhasil memuat ${imported.length} tujuan beserta QTY dari Excel!`);
         } else {
           alert('⚠️ Format baris Excel tidak dikenali.');
         }
@@ -249,32 +249,41 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <style>{`
             @media print {
+              body, html {
+                background: #white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
               body * {
-                visibility: hidden;
+                visibility: hidden !important;
               }
               #printable-area, #printable-area * {
-                visibility: visible;
+                visibility: visible !important;
               }
               #printable-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
               }
               .print-page-full {
-                width: 100vw;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                page-break-after: always;
-                break-after: page;
+                width: 100vw !important;
+                height: 100vh !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+                page-break-after: always !important;
+                break-after: page !important;
                 margin: 0 !important;
-                padding: 20mm !important;
-                box-sizing: border-box;
+                padding: 10mm !important;
+                box-sizing: border-box !important;
                 border: none !important;
                 background: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
               }
               .no-print {
                 display: none !important;
@@ -321,104 +330,105 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                     </div>
 
                     {templateType === 'product_identity' ? (
-                      <div style={{ border: '2px solid #000', padding: '22px', width: '100%', maxWidth: '180mm' }}>
-                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '12px' }}>
+                      <div style={{ border: '2px solid #000', padding: '16px', width: '100%', maxWidth: '180mm' }}>
+                        <table style={{ width: '100%', borderBottom: '2px solid #000', paddingBottom: '8px', marginBottom: '10px' }}>
                           <tr>
                             <td style={{ width: '25%' }}>
-                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '50px', display: 'block' }} /> : null}
+                              {form.logoLeftUrl ? <img src={form.logoLeftUrl} alt="Logo" style={{ maxHeight: '45px', display: 'block' }} /> : null}
                             </td>
-                            <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '20px', letterSpacing: '1px' }}>PRODUCT IDENTITY</h1></td>
+                            <td style={{ textAlign: 'center', width: '50%' }}><h1 style={{ margin: 0, fontSize: '18px', letterSpacing: '1px', fontWeight: 'bold' }}>PRODUCT IDENTITY</h1></td>
                             <td style={{ textAlign: 'right', width: '25%' }}>
-                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '50px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{form.brand_name}</span>}
+                              {form.logoRightUrl ? <img src={form.logoRightUrl} alt="Brand Logo" style={{ maxHeight: '45px', marginLeft: 'auto', display: 'block' }} /> : <span style={{ fontWeight: 'bold', fontSize: '12px' }}>{form.brand_name}</span>}
                             </td>
                           </tr>
                         </table>
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', width: '30%' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', verticalAlign: 'top' }}>Alamat</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetAddress}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPic}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {targetPhone}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.po_project}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.periode}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.channel}</td></tr>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', width: '30%' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>: {targetDeliverTo}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', verticalAlign: 'top' }}>Alamat</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetAddress}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PIC / UP</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPic}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Phone No.</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {targetPhone}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.po_project}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.periode}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.channel}</td></tr>
                           <tr>
-                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
-                            <td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'black', fontSize: '15px', background: '#eef2f7' }}>
+                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
+                            <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', fontSize: '13px', background: '#eef2f7' }}>
                               : {displayPcs} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
                             </td>
                           </tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '7px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '7px' }}>: {form.transporter_dr}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '5px' }}>: {form.transporter_dr}</td></tr>
                         </table>
 
-                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '12px', background: '#fafafa' }}>
+                        <table style={{ width: '100%', border: '1px solid #000', marginTop: '10px', background: '#fafafa' }}>
                           <tr>
                             {isSingleImage ? (
-                              <td style={{ textAlign: 'center', padding: '12px', width: '100%' }}>
-                                <img src={activeImg} alt="Produk" style={{ maxHeight: '180px', margin: 'auto', display: 'block' }} />
+                              <td style={{ textAlign: 'center', padding: '10px', width: '100%' }}>
+                                <img src={activeImg} alt="Produk" style={{ maxHeight: '140px', margin: 'auto', display: 'block' }} />
                               </td>
                             ) : (
                               <>
-                                <td style={{ textAlign: 'center', padding: '10px', width: '50%', borderRight: '1px solid #000' }}>
-                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 1 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '8px', width: '50%', borderRight: '1px solid #000' }}>
+                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 1 ]</span>}
                                 </td>
-                                <td style={{ textAlign: 'center', padding: '10px', width: '50%' }}>
-                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '160px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 2 ]</span>}
+                                <td style={{ textAlign: 'center', padding: '8px', width: '50%' }}>
+                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '130px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 2 ]</span>}
                                 </td>
                               </>
                             )}
                           </tr>
                         </table>
 
-                        <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '14px', background: '#f2f2f2', padding: '10px', border: '1px solid #000', fontWeight: 'bold' }}>
-                          <div>{displayItemTitle}</div>
-                          <div style={{ fontSize: '12px', color: '#333', marginTop: '4px', fontWeight: 'normal' }}>
+                        {/* --- KOTAK BAWAH KHUSUS PEMECAH KOLI --- */}
+                        <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', background: '#f2f2f2', padding: '8px', border: '1px solid #000', fontWeight: 'bold' }}>
+                          <div>Koli {currentKoliNumber} of {totalKoli}</div>
+                          <div style={{ fontSize: '11px', color: '#333', marginTop: '2px', fontWeight: 'normal' }}>
                             QTY : {displayPcs} {form.unit}
                           </div>
                         </div>
 
-                        {/* --- BAGIAN GRAND TOTAL & TANDA TANGAN (YANG SEBELUMNYA HILANG) --- */}
-                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '10px', fontSize: '11px' }}>
+                        {/* --- GRAND TOTAL & TANDA TANGAN --- */}
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '8px', fontSize: '10px' }}>
                           <tbody>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
+                              <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
                                 Grand Total :
                               </td>
-                              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
+                              <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
                                 {displayPcs}
                               </td>
                             </tr>
                           </tbody>
                         </table>
 
-                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '5px', fontSize: '10px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '4px', fontSize: '9px' }}>
                           <tbody>
                             <tr>
                               <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
                               <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Pengirim</td>
-                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>NINING</td>
-                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>Nama Lengkap Penerima</td>
-                              <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '3px', width: '25%' }}>Nama Lengkap Pengirim</td>
+                              <td style={{ border: '1px solid #000', padding: '3px', width: '25%' }}>NINING</td>
+                              <td style={{ border: '1px solid #000', padding: '3px', width: '25%' }}>Nama Lengkap Penerima</td>
+                              <td style={{ border: '1px solid #000', padding: '3px', width: '25%' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
-                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}>Tanda Tangan dan Stempel</td>
-                              <td style={{ border: '1px solid #000', padding: '15px 4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '12px 3px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '12px 3px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '12px 3px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '12px 3px' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
-                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '4px' }}>Tanggal</td>
-                              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '3px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '3px' }}></td>
+                              <td style={{ border: '1px solid #000', padding: '3px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '3px' }}></td>
                             </tr>
                           </tbody>
                         </table>
 
-                        <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '3px' }}>
+                        <div style={{ fontSize: '8px', fontStyle: 'italic', marginTop: '2px' }}>
                           - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
                         </div>
 
@@ -489,7 +499,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           </div>
                         )}
 
-                        {/* --- BAGIAN GRAND TOTAL & TANDA TANGAN (YANG SEBELUMNYA HILANG - TEMPLATE COCA-COLA) --- */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '10px', fontSize: '11px' }}>
                           <tbody>
                             <tr>
