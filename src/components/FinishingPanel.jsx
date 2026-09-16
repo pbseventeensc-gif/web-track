@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { Wrench, Trash2, Save, RotateCcw, Check, AlertCircle } from 'lucide-react';
 
 export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
   const [selectedSpkId, setSelectedSpkId] = useState('');
@@ -74,20 +75,20 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
     if (finishing_type === 'sub') {
       if (outQty > maxFinishingAllowed) {
-        alert(`❌ Gagal: Jumlah barang keluar ke vendor (${outQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
+        alert(`❌ Failed: Outgoing quantity to vendor (${outQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
         return;
       }
       if (outQty === 0 && backQty > 0) {
-        alert(`❌ Gagal: Barang belum pernah dikirim ke vendor (Out = 0 pcs). Tidak bisa mengisi Terima Back!`);
+        alert(`❌ Failed: Items have not been sent to vendor (Out = 0 pcs). Cannot enter Received Back quantity!`);
         return;
       }
       if (backQty > outQty) {
-        alert(`❌ Gagal: Jumlah barang balik (${backQty} pcs) melebihi jumlah yang dikirim ke vendor (${outQty} pcs)!`);
+        alert(`❌ Failed: Received back quantity (${backQty} pcs) exceeds quantity sent to vendor (${outQty} pcs)!`);
         return;
       }
     } else {
       if (backQty > maxFinishingAllowed) {
-        alert(`❌ Gagal: Jumlah Selesai Finishing (${backQty} pcs) tidak boleh melebihi Qty Print (${maxFinishingAllowed} pcs)!`);
+        alert(`❌ Failed: Completed Finishing Quantity (${backQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
         backQty = maxFinishingAllowed;
       }
     }
@@ -101,105 +102,168 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
     const { error } = await supabase.from('spk_data').update(payload).eq('id', activeItem.id);
     if (error) {
-      alert('Gagal menyimpan data finishing: ' + error.message);
+      alert('Failed to save finishing data: ' + error.message);
     } else {
-      alert(`✅ Data Finishing SPK ${activeItem.no_spk} (${activeItem.client}) berhasil disimpan! Total Selesai: ${backQty} pcs.`);
+      alert(`✅ Finishing data for SPK ${activeItem.no_spk} (${activeItem.client}) saved successfully! Total Completed: ${backQty} pcs.`);
       if (fetchSpkData) fetchSpkData();
+    }
+  };
+
+  // TOMBOL HAPUS SPK YANG TERPILIH
+  const handleDeleteSelectedSpk = async () => {
+    if (!activeSpkItem) return;
+    if (window.confirm(`⚠️ Are you sure you want to delete SPK "${activeSpkItem.no_spk}" (${activeSpkItem.client}) from the Finishing list?`)) {
+      const { error } = await supabase.from('spk_data').delete().eq('id', activeSpkItem.id);
+      if (!error) {
+        alert(`✅ SPK "${activeSpkItem.no_spk}" deleted successfully!`);
+        if (fetchSpkData) fetchSpkData();
+        setSelectedSpkId('');
+      } else {
+        alert('Failed to delete SPK: ' + error.message);
+      }
+    }
+  };
+
+  // TOMBOL HAPUS SEMUA DATA SPK DI FINISHING
+  const handleDeleteAllSpkData = async () => {
+    if (window.confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ALL ${spkList.length} SPK items from the Finishing panel list?`)) {
+      const { error } = await supabase.from('spk_data').delete().gt('id', 0);
+      if (!error) {
+        alert('✅ All SPK data in Finishing list has been permanently deleted!');
+        if (fetchSpkData) fetchSpkData();
+        setSelectedSpkId('');
+      } else {
+        alert('Failed to delete all SPK data: ' + error.message);
+      }
     }
   };
 
   const getPercent = (qty, total) => (!total || total <= 0) ? 0 : Math.min(100, Math.round((qty / total) * 100));
 
   const activeSpkItem = spkList.find((item) => String(item.id) === String(selectedSpkId)) || spkList[0];
-  if (!activeSpkItem) return null;
+  const hasSpkData = Boolean(spkList && spkList.length > 0 && activeSpkItem);
 
   return (
     <form
       onSubmit={handleSubmitFinishing}
-      className={`p-5 rounded-2xl border shadow-sm transition-colors space-y-4 max-h-[80vh] overflow-y-auto relative ${
-        isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white/90 border-[#D8D2C2] text-[#2F3E3B]'
-      }`}
+      className="p-6 rounded-3xl border border-slate-200 bg-white text-black shadow-2xs transition-colors space-y-5 max-h-[80vh] overflow-y-auto relative custom-scrollbar"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-3 gap-3 border-black/10 dark:border-white/10">
+      {/* HEADER MENU ALWAYS VISIBLE */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-3">
         <div className="flex items-center gap-3">
-          <span className="text-xl">🛠️</span>
+          <Wrench className="w-5 h-5 text-indigo-600" />
           <div>
-            <h3 className="font-bold text-sm">Panel Kontrol Finishing</h3>
-            <p className="text-xs opacity-70">Kelola pengerjaan Inhouse & Sub-Finishing (Makloon)</p>
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600">Finishing Control Panel</h3>
+            <p className="text-xs text-slate-500 font-medium">Manage Inhouse & Sub-Contract Finishing (Vendor Processing)</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-bold">Pilih SPK:</label>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <label className="text-xs font-extrabold text-black">Select SPK:</label>
           <select
             value={selectedSpkId}
             onChange={(e) => handleSelectSpk(e.target.value)}
-            className={`text-xs px-3 py-1.5 rounded-xl font-bold border focus:outline-none ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
-            }`}
+            disabled={!hasSpkData}
+            className="text-xs px-3 py-2 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer shadow-2xs max-w-[280px] truncate disabled:opacity-50"
           >
-            {spkList.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.no_spk} - {item.client} ({item.project})
-              </option>
-            ))}
+            {hasSpkData ? (
+              spkList.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.no_spk} - {item.client} ({item.project})
+                </option>
+              ))
+            ) : (
+              <option value="">No SPK Data Available</option>
+            )}
           </select>
+
+          {/* TOMBOL HAPUS SPK ACTIVE */}
+          {hasSpkData && (
+            <button
+              type="button"
+              onClick={handleDeleteSelectedSpk}
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              title="Delete currently selected SPK from Finishing list"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Active SPK
+            </button>
+          )}
+
+          {/* TOMBOL HAPUS SEMUA SPK */}
+          {hasSpkData && (
+            <button
+              type="button"
+              onClick={handleDeleteAllSpkData}
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-extrabold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              title="Delete ALL SPK data from Finishing list"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete All SPKs
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3 text-xs`}>
-        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
-          <div className="opacity-70 text-[10px]">Qty Order</div>
-          <div className="text-base font-bold">{activeSpkItem.qty_order?.toLocaleString()} pcs</div>
+      {!hasSpkData ? (
+        <div className="p-12 text-center text-slate-400 border border-dashed border-slate-300 rounded-2xl space-y-2 bg-slate-50/50 my-4">
+          <Wrench className="w-10 h-10 mx-auto opacity-40 text-slate-400" />
+          <p className="font-extrabold text-sm text-slate-700">No SPK Data Available in Finishing Panel</p>
+          <p className="text-xs text-slate-400 font-medium">Please import SPK data or create orders to display finishing controls.</p>
+        </div>
+      ) : (
+        <>
+          <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3 text-xs`}>
+        <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50">
+          <div className="text-slate-500 font-bold text-[10px] uppercase">Order Quantity</div>
+          <div className="text-base font-extrabold text-slate-900 mt-0.5">{activeSpkItem.qty_order?.toLocaleString()} Pcs</div>
         </div>
 
-        <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-amber-950/30 border-amber-800/50' : 'bg-amber-50 border-amber-200'}`}>
-          <div className="text-amber-600 dark:text-amber-400 font-medium text-[10px]">
-            {finishingForm.finishing_type === 'sub' ? 'Sisa Order (Belum Out)' : 'Sisa Order (Belum Selesai)'}
+        <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50">
+          <div className="text-amber-800 font-bold text-[10px] uppercase">
+            {finishingForm.finishing_type === 'sub' ? 'Remaining (Not Sent Out)' : 'Remaining (Incomplete)'}
           </div>
-          <div className="text-base font-bold text-amber-700 dark:text-amber-300">
+          <div className="text-base font-extrabold text-amber-900 mt-0.5">
             {finishingForm.finishing_type === 'sub'
               ? Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish_sub_out) || 0)).toLocaleString()
               : Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()}{' '}
-            pcs
+            Pcs
           </div>
         </div>
 
         {finishingForm.finishing_type === 'sub' ? (
           <>
-            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-blue-950/30 border-blue-800/50' : 'bg-blue-50 border-blue-200'}`}>
-              <div className="text-blue-600 dark:text-blue-400 font-medium text-[10px]">Dikirim ke Vendor (Out)</div>
-              <div className="text-base font-bold text-blue-700 dark:text-blue-300">
-                {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} pcs
+            <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50">
+              <div className="text-blue-800 font-bold text-[10px] uppercase">Sent to Vendor (Out)</div>
+              <div className="text-base font-extrabold text-blue-900 mt-0.5">
+                {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-green-950/30 border-green-800/50' : 'bg-emerald-50 border-emerald-200'}`}>
-              <div className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">Sudah Balik Vendor (Back)</div>
-              <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
-                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} pcs
+            <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50">
+              <div className="text-emerald-800 font-bold text-[10px] uppercase">Received Back (In)</div>
+              <div className="text-base font-extrabold text-emerald-900 mt-0.5">
+                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-amber-950/30 border-amber-800/50' : 'bg-amber-50 border-amber-200'}`}>
-              <div className="text-amber-600 dark:text-amber-400 font-medium text-[10px]">Belum Balik Vendor</div>
-              <div className="text-base font-bold text-amber-700 dark:text-amber-300">
-                {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} pcs
+            <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50">
+              <div className="text-amber-800 font-bold text-[10px] uppercase">Pending Vendor Return</div>
+              <div className="text-base font-extrabold text-amber-900 mt-0.5">
+                {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} Pcs
               </div>
             </div>
           </>
         ) : (
           <>
-            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-green-950/30 border-green-800/50' : 'bg-emerald-50 border-emerald-200'}`}>
-              <div className="text-emerald-600 dark:text-emerald-400 font-medium text-[10px]">Total Selesai Inhouse</div>
-              <div className="text-base font-bold text-emerald-700 dark:text-emerald-300">
-                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} pcs
+            <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50">
+              <div className="text-emerald-800 font-bold text-[10px] uppercase">Inhouse Completed</div>
+              <div className="text-base font-extrabold text-emerald-900 mt-0.5">
+                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-neutral-900/60 border-neutral-700' : 'bg-stone-50 border-[#E5E0D5]'}`}>
-              <div className="opacity-70 text-[10px]">Progres Finishing</div>
-              <div className="text-base font-bold">
+            <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="text-slate-500 font-bold text-[10px] uppercase">Finishing Progress</div>
+              <div className="text-base font-extrabold text-slate-900 mt-0.5">
                 {getPercent(Number(finishingForm.qty_finish) || 0, activeSpkItem.qty_order || 1)}%
               </div>
             </div>
@@ -209,22 +273,20 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end text-xs pt-2">
         <div>
-          <label className="block font-bold mb-1 opacity-80">Tipe Pengerjaan:</label>
+          <label className="block font-extrabold mb-1.5 text-black">Finishing Work Type:</label>
           <select
             value={finishingForm.finishing_type}
             onChange={(e) => handleTypeChange(e.target.value)}
-            className={`w-full p-2 rounded-xl font-semibold border ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-[#F8F6F0] border-[#C5BEAD] text-[#2F3E3B]'
-            }`}
+            className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none cursor-pointer"
           >
-            <option value="inhouse">🏠 Inhouse (Internal)</option>
-            <option value="sub">🏭 Sub-Finishing (Vendor/Luar)</option>
+            <option value="inhouse">Inhouse (Internal)</option>
+            <option value="sub">Sub-Finishing (Vendor/External)</option>
           </select>
         </div>
 
         {finishingForm.finishing_type !== 'sub' ? (
           <div>
-            <label className="block font-bold mb-1 opacity-80">Jumlah Selesai (pcs):</label>
+            <label className="block font-extrabold mb-1.5 text-black">Completed Quantity (pcs):</label>
             <input
               type="number"
               min="0"
@@ -234,33 +296,29 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                 let val = Number(e.target.value) || 0;
                 const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
                 if (val > maxAllowed) {
-                  alert(`❌ Gagal: Jumlah Finishing (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                  alert(`❌ Failed: Finishing quantity (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
                   val = maxAllowed;
                 }
                 setFinishingForm({ ...finishingForm, qty_finish: val });
               }}
-              className={`w-full p-2 rounded-xl font-semibold border ${
-                isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-              }`}
+              className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
             />
           </div>
         ) : (
           <>
             <div>
-              <label className="block font-bold mb-1 opacity-80">Nama Vendor / Makloon:</label>
+              <label className="block font-extrabold mb-1.5 text-black">Vendor / Sub-Contractor Name:</label>
               <input
                 type="text"
-                placeholder="Misal: CV Poly Mas"
+                placeholder="Example: CV Poly Mas"
                 value={finishingForm.sub_vendor_name}
                 onChange={(e) => setFinishingForm({ ...finishingForm, sub_vendor_name: e.target.value })}
-                className={`w-full p-2 rounded-xl font-semibold border ${
-                  isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                }`}
+                className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block font-bold mb-1 opacity-80">1. Kirim Out Vendor (pcs):</label>
+              <label className="block font-extrabold mb-1.5 text-black">1. Quantity Sent Out (pcs):</label>
               <input
                 type="number"
                 min="0"
@@ -270,21 +328,19 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                   let val = Number(e.target.value) || 0;
                   const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
                   if (val > maxAllowed) {
-                    alert(`❌ Gagal: Jumlah Out ke Vendor (${val} pcs) tidak boleh melebihi Qty Print (${maxAllowed} pcs)!`);
+                    alert(`❌ Failed: Outgoing quantity to vendor (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
                     val = maxAllowed;
                   }
                   const currentBack = Number(finishingForm.qty_finish) || 0;
                   const adjustedBack = currentBack > val ? val : currentBack;
                   setFinishingForm({ ...finishingForm, qty_finish_sub_out: val, qty_finish: adjustedBack });
                 }}
-                className={`w-full p-2 rounded-xl font-semibold border ${
-                  isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
-                }`}
+                className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block font-bold mb-1 opacity-80">2. Terima Back Vendor (pcs):</label>
+              <label className="block font-extrabold mb-1.5 text-black">2. Quantity Received Back (pcs):</label>
               <input
                 type="number"
                 min="0"
@@ -295,15 +351,15 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                   let val = Number(e.target.value) || 0;
                   const maxBack = Number(finishingForm.qty_finish_sub_out) || 0;
                   if (val > maxBack) {
-                    alert(`❌ Jumlah terima back tidak boleh melebihi jumlah yang dikirim ke vendor (${maxBack} pcs)!`);
+                    alert(`❌ Received back quantity cannot exceed quantity sent to vendor (${maxBack} pcs)!`);
                     val = maxBack;
                   }
                   setFinishingForm({ ...finishingForm, qty_finish: val });
                 }}
-                className={`w-full p-2 rounded-xl font-semibold border ${
+                className={`w-full p-2.5 rounded-xl font-extrabold border ${
                   Number(finishingForm.qty_finish_sub_out) <= 0
-                    ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-800'
-                    : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-[#C5BEAD] text-[#2F3E3B]'
+                    ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-300'
+                    : 'bg-white border-slate-300 text-black'
                 }`}
               />
             </div>
@@ -314,13 +370,13 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
       <div className="flex justify-end pt-2">
         <button
           type="submit"
-          className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all text-white ${
-            isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-[#6B8E85] hover:bg-[#57756D]'
-          }`}
+          className="px-5 py-2.5 rounded-xl font-extrabold text-xs shadow-2xs active:scale-95 transition-all text-white bg-indigo-600 hover:bg-indigo-500 cursor-pointer flex items-center gap-1.5"
         >
-          💾 Submit / Simpan Progress Finishing
+          <Save className="w-4 h-4" /> Save Finishing Progress
         </button>
       </div>
+        </>
+      )}
     </form>
   );
 }

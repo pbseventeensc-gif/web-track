@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search, Printer, Trash2, Upload, FileText, Check, Clock } from 'lucide-react';
 
 export default function MainTrackingTable({
   isDarkMode,
@@ -24,17 +25,15 @@ export default function MainTrackingTable({
   return (
     <div className="space-y-4">
       {/* Top Action Bar */}
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-center gap-3 ${
-        isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200/80'
-      }`}>
-        <div className="flex items-center gap-2 w-full sm:w-80">
-          <span>🔍</span>
+      <div className="p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 bg-white shadow-2xs">
+        <div className="flex items-center gap-2.5 w-full sm:w-80 relative bg-white border border-slate-300 rounded-xl px-3 py-2">
+          <Search className="w-4 h-4 text-slate-500" />
           <input
             type="text"
             placeholder="Cari No SPK / Project / Store..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs bg-transparent focus:outline-none"
+            className="w-full text-xs bg-transparent focus:outline-none font-semibold text-black placeholder-slate-400"
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -42,39 +41,35 @@ export default function MainTrackingTable({
             <>
               <button
                 onClick={handleBatchPrint}
-                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
+                className="px-3.5 py-2 bg-black hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
-                🖨️ Cetak Batch ({selectedSpkIds.length})
+                <Printer className="w-3.5 h-3.5 text-amber-400" /> Cetak Batch ({selectedSpkIds.length})
               </button>
               <button
                 onClick={handleBatchDelete}
-                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95"
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
-                🗑️ Hapus Massal ({selectedSpkIds.length})
+                <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Hapus Massal ({selectedSpkIds.length})
               </button>
             </>
           )}
-          <span className="text-xs opacity-70 ml-1">
-            Total: <strong>{displayedList.length}</strong> SPK
+          <span className="text-xs font-semibold text-slate-600 ml-1">
+            Total: <strong className="text-black font-black">{displayedList.length}</strong> SPK
           </span>
         </div>
       </div>
 
       {/* Table Container */}
-      <div className={`max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border shadow-sm custom-scrollbar ${
-        isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-stone-200/80'
-      }`}>
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className={`sticky top-0 z-20 font-bold border-b shadow-sm ${
-            isDarkMode ? 'bg-neutral-900 text-neutral-200 border-neutral-700' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
-          }`}>
+      <div className="max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
+        <table className="w-full text-left text-xs border-collapse bg-white">
+          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
             <tr>
               <th className="p-3 text-center w-10">
                 <input
                   type="checkbox"
                   checked={displayedList.length > 0 && selectedSpkIds.length === displayedList.length}
                   onChange={() => handleToggleSelectAll(displayedList)}
-                  className="cursor-pointer accent-indigo-600"
+                  className="cursor-pointer accent-indigo-600 w-4 h-4"
                 />
               </th>
               <th className="p-3">No. SPK & Info Store</th>
@@ -90,10 +85,10 @@ export default function MainTrackingTable({
               <th className="p-3 text-center w-20">Aksi</th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-stone-100'}`}>
+          <tbody className="divide-y divide-slate-100 bg-white">
             {displayedList.length === 0 ? (
               <tr>
-                <td colSpan="12" className="p-8 text-center opacity-60">
+                <td colSpan="12" className="p-8 text-center text-slate-400 font-medium">
                   Tidak ada data SPK yang ditemukan.
                 </td>
               </tr>
@@ -101,38 +96,33 @@ export default function MainTrackingTable({
               displayedList.map((item) => {
                 const isChecked = selectedSpkIds.includes(item.id);
                 const percent = getPercent(item.qty_print || 0, item.qty_order || 1);
-                const badge = getStatusBadge(percent);
 
                 return (
                   <tr
                     key={item.id}
-                    className={`transition-colors ${
-                      isChecked
-                        ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70'
-                        : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-stone-50'
-                    }`}
+                    className={`transition-colors hover:bg-slate-50/80 ${isChecked ? 'bg-indigo-50/60' : 'bg-white'}`}
                   >
                     <td className="p-3 text-center">
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => handleToggleCheck(item.id)}
-                        className="cursor-pointer accent-indigo-600"
+                        className="cursor-pointer accent-indigo-600 w-4 h-4"
                       />
                     </td>
 
-                    <td className="p-3 font-medium">
-                      <div className="font-bold text-indigo-500">{item.no_spk}</div>
-                      <div className="text-[11px] font-bold text-stone-800 dark:text-neutral-200">{item.project || '-'}</div>
-                      <div className="text-[10px] opacity-60">{item.client || '-'} ({item.store_code || '-'})</div>
+                    <td className="p-3">
+                      <div className="font-mono text-slate-600 font-bold text-xs">{item.no_spk}</div>
+                      <div className="font-bold text-slate-900 text-xs sm:text-sm mt-0.5">{item.project || '-'}</div>
+                      <div className="text-[10px] font-mono text-slate-400 font-medium mt-0.5">{item.client || '-'} ({item.store_code || '-'})</div>
                     </td>
 
                     <td className="p-3">
-                      <div>{item.bahan || 'Bahan Standar'}</div>
-                      <div className="text-[10px] opacity-60">{item.ukuran || '-'}</div>
+                      <div className="font-medium text-slate-700 text-xs">{item.bahan || 'Bahan Standar'}</div>
+                      <div className="text-[10px] font-medium text-slate-400 mt-0.5">{item.ukuran || '-'}</div>
                     </td>
 
-                    <td className="p-3 text-center font-bold">
+                    <td className="p-3 text-center font-black text-black text-sm">
                       {Number(item.qty_order || 0).toLocaleString()}
                     </td>
 
@@ -142,9 +132,7 @@ export default function MainTrackingTable({
                           type="number"
                           defaultValue={item.qty_print || 0}
                           onBlur={(e) => handleUpdateQty(item.id, 'qty_print', e.target.value, item.qty_order)}
-                          className={`w-16 p-1 text-center rounded border text-xs ${
-                            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'
-                          }`}
+                          className="w-16 p-1.5 text-center font-extrabold rounded-lg border border-slate-300 text-xs bg-white text-black"
                         />
                       </td>
                     )}
@@ -155,9 +143,7 @@ export default function MainTrackingTable({
                           type="number"
                           defaultValue={item.qty_finish || 0}
                           onBlur={(e) => handleUpdateQty(item.id, 'qty_finish', e.target.value, item.qty_order)}
-                          className={`w-16 p-1 text-center rounded border text-xs ${
-                            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'
-                          }`}
+                          className="w-16 p-1.5 text-center font-extrabold rounded-lg border border-slate-300 text-xs bg-white text-black"
                         />
                       </td>
                     )}
@@ -168,9 +154,7 @@ export default function MainTrackingTable({
                           type="number"
                           defaultValue={item.qty_pack || 0}
                           onBlur={(e) => handleUpdateQty(item.id, 'qty_pack', e.target.value, item.qty_order)}
-                          className={`w-16 p-1 text-center rounded border text-xs ${
-                            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'
-                          }`}
+                          className="w-16 p-1.5 text-center font-extrabold rounded-lg border border-slate-300 text-xs bg-white text-black"
                         />
                       </td>
                     )}
@@ -181,26 +165,32 @@ export default function MainTrackingTable({
                           type="number"
                           defaultValue={item.qty_ship || 0}
                           onBlur={(e) => handleUpdateQty(item.id, 'qty_ship', e.target.value, item.qty_order)}
-                          className={`w-16 p-1 text-center rounded border text-xs ${
-                            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'
-                          }`}
+                          className="w-16 p-1.5 text-center font-extrabold rounded-lg border border-slate-300 text-xs bg-white text-black"
                         />
                       </td>
                     )}
 
                     <td className="p-3 text-center">
-                      <span className={`px-2 py-1 rounded-xl text-[10px] font-bold ${badge.text}`}>
-                        {badge.icon} {percent}%
-                      </span>
+                      {percent === 100 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> 100%
+                        </span>
+                      ) : percent > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-600" /> {percent}%
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> 0%
+                        </span>
+                      )}
                     </td>
 
                     <td className="p-3 text-center">
                       <select
                         value={item.qc_checker || ''}
                         onChange={(e) => handleUpdateField(item.id, { qc_checker: e.target.value })}
-                        className={`p-1 rounded text-[11px] border focus:outline-none ${
-                          isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200'
-                        }`}
+                        className="p-1.5 rounded-lg text-xs font-bold border border-slate-300 bg-white text-black focus:outline-none"
                       >
                         <option value="">-- Pilih QC --</option>
                         {STAFF_QC_LIST.map((staff, idx) => (
@@ -215,13 +205,13 @@ export default function MainTrackingTable({
                           href={item.surat_jalan_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold inline-block hover:bg-emerald-500"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
                         >
-                          📄 Lihat SJ
+                          <FileText className="w-3.5 h-3.5 text-emerald-700" /> Lihat SJ
                         </a>
                       ) : (
-                        <label className="cursor-pointer px-2 py-1 bg-stone-200 dark:bg-neutral-700 hover:bg-stone-300 rounded text-[10px] font-bold inline-block">
-                          Upload SJ <input type="file" onChange={(e) => handleUploadSuratJalan(e, item)} className="hidden" />
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer">
+                          <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload SJ <input type="file" onChange={(e) => handleUploadSuratJalan(e, item)} className="hidden" />
                         </label>
                       )}
                     </td>
@@ -230,9 +220,10 @@ export default function MainTrackingTable({
                     <td className="p-3 text-center">
                       <button
                         onClick={() => handleDeleteSpk(item.id, item.no_spk)}
-                        className="px-2.5 py-1 rounded-xl font-bold text-[11px] bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all active:scale-95"
+                        title="Hapus SPK"
+                        className="w-8 h-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 inline-flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer"
                       >
-                        🗑️ Hapus
+                        <Trash2 className="w-3.5 h-3.5 text-rose-700" />
                       </button>
                     </td>
                   </tr>

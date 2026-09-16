@@ -225,28 +225,28 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Pengaturan cetak dikunci strict Landscape (20x13 cm) agar tidak terpotong.</p>
+          <p className="text-xs opacity-70 mt-0.5">Print settings locked to strict Landscape (20x13 cm) to prevent clipping.</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
           <label className="cursor-pointer bg-stone-700 hover:bg-stone-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
             <FileSpreadsheet size={16} />
-            {wellenLogo ? 'Ganti Logo Wellen' : 'Upload Logo Wellen'}
+            {wellenLogo ? 'Change Wellen Logo' : 'Upload Wellen Logo'}
             <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
           </label>
 
           <label className="cursor-pointer bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
             <FileSpreadsheet size={16} />
-            Upload Excel Alokasi
+            Upload Allocation Excel
             <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
           </label>
           
           <button 
             onClick={handlePrint}
             disabled={excelData.length === 0}
-            className="bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-700 dark:hover:bg-neutral-600 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow disabled:opacity-50 transition"
+            className="bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-700 dark:hover:bg-neutral-600 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow disabled:opacity-50 transition cursor-pointer"
           >
-            <Printer size={16} /> Cetak / Export PDF
+            <Printer size={16} /> Print / Export PDF
           </button>
         </div>
       </div>
@@ -256,23 +256,23 @@ export default function FoodLabelTab({ isDarkMode }) {
         <div className="no-print flex gap-2 border-b pb-3 dark:border-neutral-700">
           <button
             onClick={() => setActiveTab('labels')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'labels'
                 ? 'bg-orange-600 text-white shadow'
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Layers size={14} /> Pratinjau Label per Store ({excelData.length})
+            <Layers size={14} /> Store Label Preview ({excelData.length})
           </button>
           <button
             onClick={() => setActiveTab('delivery_orders')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'delivery_orders'
                 ? 'bg-orange-600 text-white shadow'
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
-            <Truck size={14} /> Pratinjau Surat Jalan 20x13 cm Landscape ({poolSummaryData.length})
+            <Truck size={14} /> Delivery Order Preview 20x13 cm Landscape ({poolSummaryData.length})
           </button>
         </div>
       )}
@@ -282,35 +282,35 @@ export default function FoodLabelTab({ isDarkMode }) {
         isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
       }`}>
         <div>
-          <label className="block text-xs font-bold opacity-70 mb-1">Judul PT / Perusahaan</label>
+          <label className="block text-xs font-bold opacity-70 mb-1">Company / PT Title</label>
           <input 
             type="text" 
             value={companyTitle} 
             onChange={(e) => setCompanyTitle(e.target.value)} 
             className={`w-full border rounded-xl px-3 py-2 text-xs font-medium ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200'
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-800'
             }`}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold opacity-70 mb-1">Nama Project / SPK</label>
+          <label className="block text-xs font-bold opacity-70 mb-1">Project / SPK Name</label>
           <input 
             type="text" 
             value={projectName} 
             onChange={(e) => setProjectName(e.target.value)} 
             className={`w-full border rounded-xl px-3 py-2 text-xs font-medium ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200'
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-800'
             }`}
           />
         </div>
         <div>
-          <label className="block text-xs font-bold opacity-70 mb-1">Keterangan Bahan Baku</label>
+          <label className="block text-xs font-bold opacity-70 mb-1">Material Description</label>
           <input 
             type="text" 
             value={paperBahan} 
             onChange={(e) => setPaperBahan(e.target.value)} 
             className={`w-full border rounded-xl px-3 py-2 text-xs font-medium ${
-              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200'
+              isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-200 text-stone-800'
             }`}
           />
         </div>
@@ -323,8 +323,8 @@ export default function FoodLabelTab({ isDarkMode }) {
             isDarkMode ? 'bg-neutral-800/50 border-neutral-700 text-neutral-400' : 'bg-white border-stone-300 text-stone-500'
           }`}>
             <FileSpreadsheet className="mx-auto h-12 w-12 opacity-40 mb-3" />
-            <p className="font-bold text-sm">Belum ada file Excel yang diunggah.</p>
-            <p className="text-xs opacity-70 mt-1">Silakan upload file Excel berformat Food Label untuk menampilkan pratinjau cetak.</p>
+            <p className="font-bold text-sm">No Excel file uploaded yet.</p>
+            <p className="text-xs opacity-70 mt-1">Please upload a Food Label Excel file to display the print preview.</p>
           </div>
         ) : activeTab === 'labels' ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

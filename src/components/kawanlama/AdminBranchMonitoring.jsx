@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
+import {
+  Bell,
+  Clock,
+  Send,
+  Search,
+  Check,
+  Mail,
+  EyeOff,
+  Layers,
+  ShieldCheck,
+  Globe,
+  MapPin,
+  Share2,
+  X,
+  SlidersHorizontal
+} from 'lucide-react';
 
 export default function AdminBranchMonitoring({ isDarkMode }) {
   // Pilihan: NASIONAL (Semua 103 Toko), PUSAT (Khusus Pusat), CIKOKOL, PASMING
@@ -8,7 +24,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const [branchStatus, setBranchStatus] = useState([]);
   const [activeTabFilter, setActiveTabFilter] = useState('belum'); 
   const [reminderHours, setReminderHours] = useState(24);
-  const [customMessage, setCustomMessage] = useState('Mohon segera melakukan input dan submit order promosi melalui portal Kawan Lama.');
+  const [customMessage, setCustomMessage] = useState('Please submit your promotion order immediately through the Kawan Lama portal.');
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [activePromoId, setActivePromoId] = useState(null);
@@ -183,51 +199,53 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-white p-6 rounded-3xl border border-slate-200 text-black shadow-xs">
       
-      {/* Selector Role & Wilayah */}
-      <div className={`p-4 rounded-3xl border shadow-sm flex items-center justify-between ${isDarkMode ? 'bg-indigo-900/30 border-indigo-700 text-indigo-200' : 'bg-indigo-50 border-indigo-200 text-indigo-800'}`}>
-        <div className="font-bold text-sm flex items-center gap-2">
-          <span>🎭 Filter Tampilan Wilayah:</span>
+      {/* Selector Role & Wilayah (Gambar 3: Zone Filter) */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex items-center justify-between">
+        <div className="font-extrabold text-xs sm:text-sm flex items-center gap-2 text-black">
+          <Globe className="w-4 h-4 text-indigo-600" /> Zone Filter:
         </div>
         <select 
           value={adminRole} 
           onChange={(e) => setAdminRole(e.target.value)}
-          className={`p-2.5 rounded-xl text-xs sm:text-sm font-bold border focus:outline-none ${isDarkMode ? 'bg-indigo-950 border-indigo-700 text-white' : 'bg-white border-indigo-300 text-stone-800'}`}
+          className="p-2.5 rounded-xl text-xs sm:text-sm font-extrabold border border-slate-300 bg-white text-black focus:outline-none cursor-pointer"
         >
-          <option value="NASIONAL">🌐 Nasional (Semua 103 Cabang)</option>
-          <option value="PUSAT">👑 Admin Pusat (DM)</option>
-          <option value="CIKOKOL">📍 Admin Sub Cikokol</option>
-          <option value="PASMING">📍 Admin Sub Pasming</option>
+          <option value="NASIONAL">National Zone (All 103 Stores)</option>
+          <option value="PUSAT">Central Zone (DM)</option>
+          <option value="CIKOKOL">Sub-Zone Cikokol</option>
+          <option value="PASMING">Sub-Zone Pasming</option>
         </select>
       </div>
 
       {/* Pengaturan Reminder */}
-      <div className={`p-6 rounded-3xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-        <h3 className="font-extrabold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400">⚙️ Pengaturan Reminder</h3>
+      <div className="p-6 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs space-y-4">
+        <h3 className="font-extrabold text-xs uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
+          <Bell className="w-4 h-4 text-indigo-600" /> REMINDER SETTINGS
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
           <div>
-            <label className="block font-bold mb-1.5 opacity-80 text-xs">Batas Waktu (Jam)</label>
-            <input type="number" value={reminderHours} onChange={e => setReminderHours(Number(e.target.value))} className={`w-full p-3 border rounded-xl font-bold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-indigo-400' : 'bg-slate-50 border-slate-300 text-indigo-600'}`} />
+            <label className="block font-bold mb-1.5 text-xs text-black">Time Limit (Hours)</label>
+            <input type="number" value={reminderHours} onChange={e => setReminderHours(Number(e.target.value))} className="w-full p-2.5 border border-slate-300 rounded-xl font-extrabold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 bg-white text-black" />
           </div>
           <div>
-            <label className="block font-bold mb-1.5 opacity-80 text-xs">Isi Pesan Custom</label>
-            <input type="text" value={customMessage} onChange={e => setCustomMessage(e.target.value)} className={`w-full p-3 border rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-700'}`} />
+            <label className="block font-bold mb-1.5 text-xs text-black">Custom Message</label>
+            <input type="text" value={customMessage} onChange={e => setCustomMessage(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 bg-white text-black" />
           </div>
         </div>
       </div>
 
-      {/* Tabel Tugas Follow-Up */}
-      <div className={`rounded-3xl border shadow-sm flex flex-col ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
-        <div className="p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 dark:border-neutral-700">
+      {/* Tabel Tugas Follow-Up (Gambar 1: FOLLOW-UP TASKS) */}
+      <div className="rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col">
+        <div className="p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 bg-white">
           
           <div className="flex flex-col">
-            <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-              📊 Tugas Follow-Up <span className="text-slate-400 font-medium">({displayedBranches.length} TOKO)</span>
+            <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-indigo-600" /> FOLLOW-UP TASKS <span className="text-slate-500 font-bold">({displayedBranches.length} STORES)</span>
             </h3>
             {hiddenBranchIds.length > 0 && (
-              <button onClick={handleShowAllHidden} className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1 text-left hover:underline">
-                👀 Tampilkan kembali {hiddenBranchIds.length} toko yang disembunyikan
+              <button onClick={handleShowAllHidden} className="text-[10px] text-amber-600 font-bold mt-1 text-left hover:underline">
+                Restore {hiddenBranchIds.length} hidden stores
               </button>
             )}
           </div>
@@ -235,23 +253,21 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
           <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto items-start sm:items-center">
             
             {/* Search Input */}
-            <div className="relative w-full sm:w-56">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50 text-sm">🔍</span>
+            <div className="relative w-full sm:w-64">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
                 type="text"
-                placeholder="Cari nama cabang..."
+                placeholder="Search branch / store name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2.5 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all ${
-                  isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white placeholder-neutral-500' : 'bg-white border-slate-300 text-slate-800'
-                }`}
+                className="w-full pl-9 pr-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 bg-white text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
               />
             </div>
 
             {/* Tab Filter & Action Buttons */}
             <div className="flex gap-2 w-full sm:w-auto flex-wrap items-center">
-              <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-red-50 border-red-200 text-red-700 shadow-sm dark:bg-red-900/40 dark:border-red-800 dark:text-red-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>⏳ Belum ({unsubmittedList.length})</button>
-              <button onClick={() => setActiveTabFilter('sudah')} className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'sudah' ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' : isDarkMode ? 'bg-transparent border-neutral-700 text-neutral-400 hover:bg-neutral-700' : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50'}`}>✅ Sudah ({submittedList.length})</button>
+              <button onClick={() => setActiveTabFilter('belum')} className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'belum' ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-2xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>Drafts ({unsubmittedList.length})</button>
+              <button onClick={() => setActiveTabFilter('sudah')} className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all border ${activeTabFilter === 'sudah' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-2xs' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}>Submitted ({submittedList.length})</button>
               
               {/* Tombol Blast WA */}
               {activeTabFilter === 'belum' && unsubmittedList.length > 0 && (
@@ -260,15 +276,15 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                     if(window.confirm(`Yakin ingin mengirim Blast WA ke ${unsubmittedList.length} toko yang belum submit?`)) {
                       unsubmittedList.forEach((b, index) => {
                         setTimeout(() => {
-                          const text = encodeURIComponent(`Halo ${b.branch_name} (Batas Waktu: ${reminderHours} Jam),\n\n${customMessage}\n\nTerima kasih.`);
+                          const text = encodeURIComponent(`Halo ${b.branch_name} (Deadline: ${reminderHours} Hours),\n\n${customMessage}\n\nThank you.`);
                           window.open(`https://wa.me/${b.phone}?text=${text}`, '_blank');
                         }, index * 1000);
                       });
                     }
                   }}
-                  className="px-4 py-2.5 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+                  className="px-4 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl text-xs font-bold shadow-2xs transition-all active:scale-95 whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
                 >
-                  🚀 Blast WA ({unsubmittedList.length})
+                  <Send className="w-3.5 h-3.5" /> Blast WA ({unsubmittedList.length})
                 </button>
               )}
 
@@ -276,36 +292,36 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
               {selectedBranchIds.length > 0 && (
                 <button 
                   onClick={handleHideSelected}
-                  className="px-4 py-2.5 bg-stone-600 hover:bg-stone-700 dark:bg-neutral-600 dark:hover:bg-neutral-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-2xs transition-all active:scale-95 flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
                 >
-                  👁️‍🗨️ Sembunyikan ({selectedBranchIds.length})
+                  <EyeOff className="w-3.5 h-3.5" /> Hide Selected ({selectedBranchIds.length})
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Tabel Data Cabang */}
-        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] w-full custom-scrollbar">
-          <table className="w-full text-sm text-left relative">
-            <thead className={`text-xs uppercase tracking-wider font-extrabold sticky top-0 z-10 shadow-sm ${isDarkMode ? 'bg-neutral-900 text-neutral-400' : 'bg-slate-50 text-slate-500'}`}>
+        {/* Tabel Data Cabang (Gambar 2: REMINDER Header & Circle Buttons) */}
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] w-full custom-scrollbar bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+          <table className="w-full text-sm text-left relative border-collapse bg-white">
+            <thead className="bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px] sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-4 rounded-tl-3xl w-12 text-center">
+                <th className="px-4 py-3.5 w-12 text-center">
                   <input 
                     type="checkbox" 
                     onChange={handleSelectAll}
                     checked={currentList.length > 0 && selectedBranchIds.length === currentList.length}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
                   />
                 </th>
-                <th className="px-6 py-4">Nama Cabang</th>
-                <th className="px-6 py-4 text-center">Status</th>
-                <th className="px-6 py-4 text-center rounded-tr-3xl">Aksi / Reminder</th>
+                <th className="px-6 py-3.5">BRANCH / STORE NAME</th>
+                <th className="px-6 py-3.5 text-center">STATUS</th>
+                <th className="px-6 py-3.5 text-center">REMINDER</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700' : 'divide-slate-100'}`}>
+            <tbody className="divide-y divide-slate-100 bg-white">
               {isLoading ? (
-                <tr><td colSpan="4" className="px-6 py-12 text-center font-bold animate-pulse">Memuat data...</td></tr>
+                <tr><td colSpan="4" className="px-6 py-12 text-center font-bold animate-pulse text-slate-400">Memuat data...</td></tr>
               ) : currentList.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-medium">
@@ -314,58 +330,77 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
                 </tr>
               ) : (
                 currentList.map(b => (
-                  <tr key={b.id} className={`group transition-colors ${isDarkMode ? 'hover:bg-neutral-700/40' : 'hover:bg-slate-50/70'}`}>
+                  <tr key={b.id} className="hover:bg-slate-50/80 transition-colors bg-white">
                     
-                    <td className="px-4 py-4 text-center">
+                    <td className="px-4 py-3.5 text-center">
                       <input 
                         type="checkbox" 
                         checked={selectedBranchIds.includes(b.id)}
                         onChange={() => handleToggleSelect(b.id)}
-                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-4 h-4"
                       />
                     </td>
 
-                    <td className="px-6 py-4 font-bold text-xs sm:text-sm uppercase whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span>{b.branch_name}</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-stone-100 dark:bg-neutral-900 opacity-60">
-                            Region: {b.region}
+                    <td className="px-6 py-3.5 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm uppercase">{b.branch_name}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-mono text-slate-400 font-medium">
+                            Zone: {b.region}
                           </span>
                           {adminRole !== 'NASIONAL' && b.is_delegated && (
-                            <span className="text-[10px] bg-orange-100 text-orange-700 w-fit px-2 py-0.5 rounded-md border border-orange-200">
-                              🚨 Titipan
+                            <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200 inline-block">
+                              Titipan
                             </span>
                           )}
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex px-3 py-1.5 rounded-md text-[10px] font-black uppercase whitespace-nowrap border ${b.status !== 'BELUM SUBMIT' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-red-100 text-red-600 border-red-200'}`}>
-                        {b.status}
+                    <td className="px-6 py-3.5 text-center">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                        b.status !== 'BELUM SUBMIT'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${b.status !== 'BELUM SUBMIT' ? 'bg-emerald-600' : 'bg-amber-600'}`} />
+                        {b.status !== 'BELUM SUBMIT' ? 'Submitted' : 'Draft'}
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap items-center justify-center gap-2">
+                    <td className="px-6 py-3.5">
+                      <div className="flex items-center justify-center gap-2.5">
                         {b.status === 'BELUM SUBMIT' ? (
                           <>
-                            <button onClick={() => sendWhatsAppReminder(b)} className="px-3 py-1.5 bg-[#25D366] text-white rounded-lg font-bold text-xs hover:bg-[#20bd5a] shadow-sm">💬 WA</button>
-                            <button onClick={() => sendEmailReminder(b)} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 shadow-sm">✉️ Email</button>
-                            
+                            <button
+                              onClick={() => sendWhatsAppReminder(b)}
+                              title="Send WhatsApp Reminder"
+                              className="w-8 h-8 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => sendEmailReminder(b)}
+                              title="Send Email Reminder"
+                              className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                            </button>
+
                             {adminRole !== 'NASIONAL' && adminRole !== 'PUSAT' && (
-                              <button 
-                                onClick={() => handleDelegateToPusat(b)} 
-                                className="px-3 py-1.5 bg-slate-800 text-slate-100 dark:bg-neutral-700 dark:text-neutral-300 rounded-lg font-bold text-xs hover:bg-orange-600 hover:text-white transition-colors shadow-sm flex items-center gap-1"
-                                title="Keteteran? Lempar follow-up toko ini ke Pusat"
+                              <button
+                                onClick={() => handleDelegateToPusat(b)}
+                                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer ml-1 active:scale-95"
+                                title="Escalate follow-up for this store to Central HQ"
                               >
-                                🏳️ Lempar Pusat
+                                <Share2 className="w-3.5 h-3.5 text-amber-400" /> Escalate to HQ
                               </button>
                             )}
                           </>
                         ) : (
-                          <span className="text-emerald-500 font-bold text-xs">✅ Selesai</span>
+                          <span className="text-emerald-700 font-extrabold text-xs inline-flex items-center gap-1">
+                            <Check className="w-4 h-4 text-emerald-600" /> Completed
+                          </span>
                         )}
                       </div>
                     </td>

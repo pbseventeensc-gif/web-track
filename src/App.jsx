@@ -1,6 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import * as XLSX from 'xlsx';
+import {
+  LayoutDashboard,
+  Palette,
+  Printer,
+  Scissors,
+  Package,
+  Truck,
+  Tag,
+  Building2,
+  Users,
+  Lock,
+  Camera,
+  FileSpreadsheet,
+  Globe,
+  Sun,
+  Moon,
+  LogOut,
+  Layers,
+  Box,
+  KeyRound,
+  ShieldCheck,
+  ChevronRight,
+  Menu,
+  X
+} from 'lucide-react';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
 import MainTrackingTable from './components/MainTrackingTable';
@@ -23,23 +48,107 @@ const PACKING_USERS = [
   { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
 ];
 
-function CircularGaugeCard({ title, percent, color, detailText }) {
-  const strokeDasharray = 2 * Math.PI * 36;
-  const strokeDashoffset = strokeDasharray - (percent / 100) * strokeDasharray;
+function DonutStatCard({
+  centerValue,
+  centerLabel,
+  percent = 0,
+  items = [],
+  description,
+  isDarkMode
+}) {
+  const radius = 36;
+  const strokeWidth = 9;
+  const circumference = 2 * Math.PI * radius;
+  const safePercent = Math.max(0, Math.min(100, percent));
+  const strokeDashoffset = circumference - (safePercent / 100) * circumference;
+
   return (
-    <div className="bg-white p-5 rounded-3xl border border-stone-200/80 flex flex-col items-center shadow-sm hover:shadow-md transition-all hover:scale-[1.02] dark:bg-neutral-800/80 dark:border-neutral-700">
-      <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-500 dark:opacity-70 mb-3">{title}</h4>
-      <div className="relative w-36 h-36 flex items-center justify-center">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="7" className="text-stone-100 dark:text-neutral-700 fill-none" />
-          <circle cx="40" cy="40" r="36" stroke={color} strokeWidth="7" strokeDasharray={strokeDasharray} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="fill-none transition-all duration-700 ease-out" />
+    <div className={`p-6 rounded-2xl border shadow-sm transition-all flex flex-col sm:flex-row items-center gap-6 ${
+      isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-slate-200'
+    }`}>
+      {/* Left Donut Ring Chart */}
+      <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r={radius}
+            stroke={isDarkMode ? '#374151' : '#E2E8F0'}
+            strokeWidth={strokeWidth}
+            className="fill-none"
+          />
+          {safePercent > 0 && (
+            <circle
+              cx="50"
+              cy="50"
+              r={radius}
+              stroke="#EA580C"
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              className="fill-none transition-all duration-700 ease-out"
+            />
+          )}
         </svg>
-        <div className="absolute flex flex-col items-center justify-center text-center">
-          <span className="text-2xl font-black text-stone-800 dark:text-neutral-100">{percent}%</span>
-          <span className="text-[9px] font-bold text-stone-400 uppercase">Progress</span>
+
+        <div className="absolute flex flex-col items-center justify-center text-center px-2">
+          <span
+            className="text-2xl font-black tracking-tight"
+            style={{ color: isDarkMode ? '#FFFFFF' : '#0F172A' }}
+          >
+            {centerValue}
+          </span>
+          {centerLabel && (
+            <span
+              className="text-xs font-bold leading-tight mt-1"
+              style={{ color: isDarkMode ? '#E2E8F0' : '#334155' }}
+            >
+              {centerLabel}
+            </span>
+          )}
         </div>
       </div>
-      <p className="text-xs font-bold mt-3 text-stone-600 dark:opacity-80">{detailText}</p>
+
+      {/* Right Breakdown List */}
+      <div className="flex-1 w-full space-y-3">
+        <div className="space-y-3">
+          {items.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs sm:text-sm">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: item.active ? '#EA580C' : '#94A3B8' }}
+                />
+                <span
+                  className="font-bold text-sm"
+                  style={{ color: isDarkMode ? '#F8FAFC' : '#0F172A' }}
+                >
+                  {item.label}
+                </span>
+              </div>
+              <span
+                className="font-extrabold text-sm"
+                style={{ color: isDarkMode ? '#FFFFFF' : '#000000' }}
+              >
+                {item.value} {item.percent !== undefined && `· ${item.percent}%`}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {description && (
+          <p
+            className="text-xs font-semibold pt-3 border-t leading-relaxed"
+            style={{
+              color: isDarkMode ? '#CBD5E1' : '#475569',
+              borderColor: isDarkMode ? '#374151' : '#E2E8F0'
+            }}
+          >
+            {description}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -509,67 +618,55 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className={`min-h-screen p-4 sm:p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
+      <div className="max-w-[1700px] w-full mx-auto space-y-6">
         
+        {/* HEADER BAR */}
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
-          <div>
-            <h1 className={`text-xl font-black tracking-tight ${isDarkMode ? 'text-blue-400' : 'text-indigo-600'}`}>
-              {scanParam ? '📦 PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? '🏢 PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
-            </h1>
-            <p className={`text-xs mt-0.5 font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
+              <Layers className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className={`text-lg font-extrabold tracking-tight ${isDarkMode ? 'text-neutral-100' : 'text-stone-800'}`}>
+                {scanParam ? 'PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? 'PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
+              </h1>
+              <p className={`text-xs font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
+                {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-yellow-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
-              {isDarkMode ? '☀️ Tema Terang' : '🌙 Tema Gelap'}
+
+          <div className="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
+            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm cursor-pointer ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-amber-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
+              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-stone-600" />}
+              <span>{isDarkMode ? 'Tema Terang' : 'Tema Gelap'}</span>
             </button>
+
             {scanParam && (
-              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Staf Paking
+              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                <LogOut className="w-3.5 h-3.5" /> Logout Staf Paking
               </button>
             )}
             {isBranchMode && (
-              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95">
-                🔒 Logout Cabang
+              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                <LogOut className="w-3.5 h-3.5" /> Logout Cabang
               </button>
             )}
             {currentKawanLamaAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Admin Kawan Lama
+              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                <LogOut className="w-3.5 h-3.5" /> Logout Admin KL
               </button>
             )}
             {currentAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm active:scale-95 cursor-pointer">
-                🔒 Logout Admin
+              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
+                <LogOut className="w-3.5 h-3.5" /> Logout Admin
               </button>
-            )}
-            
-            {!isBranchMode && !scanParam && !currentKawanLamaAdmin && (
-              <>
-                <button onClick={() => setShowScanModal(true)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
-                  📷 Scan QC Station
-                </button>
-                <label className="px-4 py-2 rounded-2xl cursor-pointer text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-500 text-white">
-                  📁 Upload SPK Excel
-                  <input type="file" accept=".xlsx" onChange={handleExcelUpload} className="hidden" />
-                </label>
-                <button 
-                  onClick={handleGoogleSheetImport} 
-                  disabled={isImporting}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-all active:scale-95 ${
-                    isImporting ? 'bg-stone-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
-                  } text-white cursor-pointer`}
-                >
-                  {isImporting ? '⏳ Memproses...' : '🌐 Import Google Sheet'}
-                </button>
-              </>
             )}
           </div>
         </div>
 
-        {/* JIKA DIAKSES VIA SCAN QR */}
+        {/* MAIN BODY AREA */}
         {scanParam ? (
           <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
         ) : (
@@ -577,74 +674,195 @@ export default function App() {
             {isBranchMode ? (
               <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
             ) : (
-              currentKawanLamaAdmin ? (
-                <div className="space-y-4">
-                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    {[
-                      { id: 'label', label: '🏷️ Cetak Label & SJ' },
-                      { id: 'kawan_lama', label: '🏢 Project Kawan Lama' },
-                      { id: 'custom_modules', label: '👥 Customer & Label Custom' }
-                    ].map(t => (
-                      <button 
-                        key={t.id} 
-                        onClick={() => setActiveTab(t.id)} 
-                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-sm cursor-pointer ${
-                          activeTab === t.id 
-                            ? 'bg-emerald-600 text-white shadow-md' 
-                            : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+              <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-                  {activeTab === 'label' && <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />}
-                  {activeTab === 'kawan_lama' && <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentKawanLamaAdmin} isBranchMode={false} />}
-                  {activeTab === 'custom_modules' && <CustomModulesIndex isDarkMode={isDarkMode} />}
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                    {['dashboard', 'design', 'produksi', 'finishing', 'paking', 'pengiriman', 'label', 'kawan_lama', 'custom_modules'].map(t => {
-                      const isLocked = t === 'kawan_lama' && !currentAdmin;
+                {/* MODERN SIDEBAR NAVIGATION (COMPACT LEFT) */}
+                <div className={`w-full lg:w-60 flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-stone-200/80 text-stone-800'}`}>
 
-                      return (
-                        <button 
-                          key={t} 
-                          onClick={() => !isLocked && setActiveTab(t)} 
-                          disabled={isLocked}
-                          title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
-                          className={`px-4 py-2.5 rounded-2xl text-xs font-bold capitalize transition-all whitespace-nowrap shadow-sm 
-                            ${isLocked 
-                              ? (isDarkMode ? 'bg-neutral-900/50 text-neutral-600 border border-neutral-800 cursor-not-allowed' : 'bg-stone-100 text-stone-400 border border-stone-200 cursor-not-allowed opacity-70')
-                              : activeTab === t 
-                                ? 'bg-indigo-600 text-white shadow-md' 
-                                : (isDarkMode ? 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700 border border-neutral-700' : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80')
-                            }`}
-                        >
-                          {t === 'label' 
-                            ? '🏷️ Cetak Label & SJ' 
-                            : t === 'kawan_lama' 
-                              ? (isLocked ? '🔒 Project Kawan Lama' : '🏢 Project Kawan Lama') 
-                              : t === 'design'
-                                ? '🎨 Desain & Pra-Cetak'
-                                : t === 'custom_modules'
-                                  ? '👥 Customer & Label Custom'
-                                  : t}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {activeTab === 'dashboard' && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <CircularGaugeCard title="Total SPK" percent={100} color="#4F46E5" detailText={`${totalSpk} Data Aktif`} />
-                      <CircularGaugeCard title="Produksi" percent={80} color="#D97706" detailText="Print & Finish" />
-                      <CircularGaugeCard title="Paking" percent={60} color="#9333EA" detailText="Siap Kirim" />
-                      <CircularGaugeCard title="Terkirim" percent={40} color="#0D9488" detailText="Delivery Done" />
+                  {currentKawanLamaAdmin ? (
+                    <div>
+                      <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                        Portal Admin Kawan Lama
+                      </h3>
+                      <div className="space-y-1">
+                        {[
+                          { id: 'label', label: 'Cetak Label & SJ', icon: Tag },
+                          { id: 'kawan_lama', label: 'Project Kawan Lama', icon: Building2 },
+                          { id: 'custom_modules', label: 'Customer & Label Custom', icon: Users }
+                        ].map(item => {
+                          const isActive = activeTab === item.id;
+                          const ItemIcon = item.icon;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setActiveTab(item.id)}
+                              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                                isActive
+                                  ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
+                                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-400 dark:text-neutral-400'}`} />
+                                <span>{item.label}</span>
+                              </div>
+                              {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* GROUP 1: PRODUKSI & MONITORING */}
+                      <div>
+                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                          Produksi & Monitoring
+                        </h3>
+                        <div className="space-y-1">
+                          {[
+                            { id: 'dashboard', label: 'Production Dashboard', icon: LayoutDashboard },
+                            { id: 'design', label: 'Desain & Pra-Cetak', icon: Palette },
+                            { id: 'produksi', label: 'Produksi Cetak', icon: Printer },
+                            { id: 'finishing', label: 'Finishing Panel', icon: Scissors },
+                            { id: 'paking', label: 'Paking Station', icon: Package },
+                            { id: 'pengiriman', label: 'Pengiriman & SJ', icon: Truck }
+                          ].map(item => {
+                            const isActive = activeTab === item.id;
+                            const ItemIcon = item.icon;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                                  isActive
+                                    ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
+                                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-400 dark:text-neutral-400'}`} />
+                                  <span>{item.label}</span>
+                                </div>
+                                {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* GROUP 2: PROJECT & CUSTOM MODUL */}
+                      <div>
+                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                          Project & Custom Modul
+                        </h3>
+                        <div className="space-y-1">
+                          {[
+                            { id: 'label', label: 'Cetak Label & SJ', icon: Tag },
+                            { id: 'kawan_lama', label: 'Project Kawan Lama', icon: Building2 },
+                            { id: 'custom_modules', label: 'Customer & Label Custom', icon: Users }
+                          ].map(item => {
+                            const isLocked = item.id === 'kawan_lama' && !currentAdmin;
+                            const isActive = activeTab === item.id;
+                            const ItemIcon = item.icon;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => !isLocked && setActiveTab(item.id)}
+                                disabled={isLocked}
+                                title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
+                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                                  isLocked
+                                    ? 'text-stone-300 dark:text-neutral-600 cursor-not-allowed bg-stone-50/50 dark:bg-neutral-900/40'
+                                    : isActive
+                                      ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
+                                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : (isLocked ? 'text-stone-300 dark:text-neutral-600' : 'text-stone-400 dark:text-neutral-400')}`} />
+                                  <span>{item.label}</span>
+                                </div>
+                                {isLocked ? (
+                                  <Lock className="w-3.5 h-3.5 text-amber-500/80" />
+                                ) : (
+                                  isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
                   )}
+
+                </div>
+
+                {/* MAIN PANEL CONTENT (MAXIMIZED RIGHT AREA) */}
+                <div className="flex-1 min-w-0 space-y-6">
+                  {activeTab === 'dashboard' && (() => {
+                    const printDone = spkList.filter(s => Number(s.qty_print) > 0 && Number(s.qty_print) >= Number(s.qty_order || 1)).length;
+                    const finishDone = spkList.filter(s => Number(s.qty_finish) > 0 && Number(s.qty_finish) >= Number(s.qty_order || 1)).length;
+                    const packDone = spkList.filter(s => Number(s.qty_pack) > 0 && Number(s.qty_pack) >= Number(s.qty_order || 1)).length;
+                    const shipDone = spkList.filter(s => Number(s.qty_ship) > 0 && Number(s.qty_ship) >= Number(s.qty_order || 1)).length;
+
+                    const shipPercent = totalSpk > 0 ? Math.round((shipDone / totalSpk) * 100) : 0;
+                    const finishPercent = totalSpk > 0 ? Math.round((finishDone / totalSpk) * 100) : 0;
+                    const packPercent = totalSpk > 0 ? Math.round((packDone / totalSpk) * 100) : 0;
+                    const printPercent = totalSpk > 0 ? Math.round((printDone / totalSpk) * 100) : 0;
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <DonutStatCard
+                          isDarkMode={isDarkMode}
+                          centerValue={`${shipPercent}%`}
+                          centerLabel={`${shipDone} dari ${totalSpk} SPK`}
+                          percent={shipPercent}
+                          items={[
+                            { label: 'Selesai Terkirim (Shipped)', value: `${shipDone} SPK`, percent: shipPercent, active: true },
+                            { label: 'Belum Terkirim / Dalam Proses', value: `${totalSpk - shipDone} SPK`, percent: 100 - shipPercent, active: false }
+                          ]}
+                          description={`Dari total ${totalSpk} SPK aktif, ${shipDone} SPK telah menyelesaikan seluruh tahapan pengiriman.`}
+                        />
+
+                        <DonutStatCard
+                          isDarkMode={isDarkMode}
+                          centerValue={`${finishPercent}%`}
+                          centerLabel={`${finishDone} dari ${totalSpk} SPK`}
+                          percent={finishPercent}
+                          items={[
+                            { label: 'Selesai Finishing', value: `${finishDone} SPK`, percent: finishPercent, active: true },
+                            { label: 'Proses Cetak & Pra-Cetak', value: `${totalSpk - finishDone} SPK`, percent: 100 - finishPercent, active: false }
+                          ]}
+                          description={`Total ${finishDone} SPK telah menyelesaikan pengerjaan finishing dan siap paking.`}
+                        />
+
+                        <DonutStatCard
+                          isDarkMode={isDarkMode}
+                          centerValue={`${packPercent}%`}
+                          centerLabel={`${packDone} dari ${totalSpk} SPK`}
+                          percent={packPercent}
+                          items={[
+                            { label: 'Selesai Paking Station', value: `${packDone} SPK`, percent: packPercent, active: true },
+                            { label: 'Proses Paking / Antrean', value: `${totalSpk - packDone} SPK`, percent: 100 - packPercent, active: false }
+                          ]}
+                          description={`Sebanyak ${packDone} SPK telah dibungkus dan ditempeli stiker pengiriman.`}
+                        />
+
+                        <DonutStatCard
+                          isDarkMode={isDarkMode}
+                          centerValue={`${printPercent}%`}
+                          centerLabel={`${printDone} dari ${totalSpk} SPK`}
+                          percent={printPercent}
+                          items={[
+                            { label: 'Selesai Cetak (Printed)', value: `${printDone} SPK`, percent: printPercent, active: true },
+                            { label: 'Belum Dicetak', value: `${totalSpk - printDone} SPK`, percent: 100 - printPercent, active: false }
+                          ]}
+                          description={`Pencatatan kuantitas produksi cetak SPK aktif di sistem.`}
+                        />
+                      </div>
+                    );
+                  })()}
 
                   {activeTab === 'design' && (
                     <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
@@ -659,9 +877,9 @@ export default function App() {
                   )}
 
                   {activeTab === 'kawan_lama' && (
-                    <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentAdmin} isBranchMode={false} />
+                    <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentKawanLamaAdmin || currentAdmin} isBranchMode={false} />
                   )}
-                  
+
                   {activeTab === 'label' && (
                     <LabelGeneratorTab isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
                   )}
@@ -671,7 +889,7 @@ export default function App() {
                   )}
 
                   {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
-                    <MainTrackingTable 
+                    <MainTrackingTable
                       isDarkMode={isDarkMode}
                       activeTab={activeTab}
                       spkList={spkList}
@@ -693,8 +911,9 @@ export default function App() {
                       setSearchTerm={setSearchTerm}
                     />
                   )}
-                </>
-              )
+                </div>
+
+              </div>
             )}
           </>
         )}

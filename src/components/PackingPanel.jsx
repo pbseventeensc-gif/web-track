@@ -3,13 +3,30 @@ import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../supabaseClient';
+import {
+  Camera,
+  Globe,
+  FileSpreadsheet,
+  Upload,
+  Printer,
+  FileText,
+  Download,
+  Trash2,
+  Check,
+  Clock,
+  Search,
+  Edit3,
+  Image as ImageIcon,
+  X,
+  Sparkles
+} from 'lucide-react';
 
 // Global memory cache untuk link gambar aktif di browser
 if (!window.__ACTIVE_DESIGN_URLS__) {
   window.__ACTIVE_DESIGN_URLS__ = {};
 }
 
-export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
+export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateField, onOpenImageModal }) {
   const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -722,7 +739,20 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     }
   };
 
-  const filteredList = packingList.filter((item) => {
+  const sourceList = packingList.length > 0 ? packingList : (spkList || []).map((item, idx) => ({
+    id: item.id || idx,
+    box_code: item.store_code || `W${idx + 1}`,
+    store_name: item.project || item.client || 'Store ' + (idx + 1),
+    no_spk: item.no_spk || `SPK-${idx + 1}`,
+    promo_title: item.bahan || item.ukuran || 'PROJECT X BANNER PR',
+    delivery_type: item.delivery_route === 'LUAR KOTA' ? 'LUAR KOTA' : 'DALAM KOTA',
+    status_qc_packing: item.qc_paking ? 'DONE' : 'PENDING',
+    status_qc_checker: item.qc_checker ? 'DONE' : 'PENDING',
+    bukti_paking_url: item.surat_jalan_url || null,
+    items_detail: []
+  }));
+
+  const filteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
     const matchSearch =
       searchTerm === '' ||
@@ -732,7 +762,7 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
     return matchDelivery && matchSearch;
   });
 
-  const totalSpk = packingList.length;
+  const totalSpk = sourceList.length;
 
   const renderSingleLabelSheet = (item) => {
     const details = parseItems(item.items_detail);
@@ -863,13 +893,13 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs text-black">
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-          <h2 className="text-lg font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
+          <h2 className="text-lg font-black uppercase tracking-wider text-black">
             Panel Kontrol Paking & Penanggung Jawab Scan
           </h2>
-          <span className="text-xs font-bold px-3 py-1 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl">
+          <span className="text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-800 rounded-xl">
             Total Box Koli: {totalSpk}
           </span>
         </div>
@@ -880,27 +910,27 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
 
             return (
-              <div key={stage.id} className={`p-6 rounded-3xl border flex flex-col justify-between ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+              <div key={stage.id} className="p-6 rounded-2xl border flex flex-col justify-between bg-white border-slate-200 shadow-2xs">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className={`text-xs font-black uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
+                    <h3 className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-black">
                       <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`}></div> {stage.label}
                     </h3>
-                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-500">{percent}%</span>
+                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-800">{percent}%</span>
                   </div>
-                  <p className="text-[11px] font-bold text-stone-400 mb-6">{stage.staff}</p>
+                  <p className="text-[11px] font-bold text-slate-600 mb-6">{stage.staff}</p>
 
                   <div className="text-center py-6 space-y-1">
-                    <span className="text-3xl font-black tracking-tight block text-stone-800 dark:text-neutral-100">
-                      {completedCount} <span className="text-sm font-medium text-stone-400">/ {totalSpk}</span>
+                    <span className="text-3xl font-black tracking-tight block text-black">
+                      {completedCount} <span className="text-sm font-medium text-slate-500">/ {totalSpk}</span>
                     </span>
-                    <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block">Box Selesai</span>
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Box Selesai</span>
                   </div>
                 </div>
 
-                <div className={`mt-6 pt-3 border-t text-[11px] font-bold flex justify-between items-center ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-100 text-stone-500'}`}>
+                <div className="mt-6 pt-3 border-t border-slate-200 text-[11px] font-bold flex justify-between items-center text-slate-700">
                   <span>Status:</span>
-                  <span className={percent === 100 ? 'text-emerald-500 font-black' : 'text-amber-500 font-bold'}>
+                  <span className={percent === 100 ? 'text-emerald-700 font-black' : 'text-amber-700 font-bold'}>
                     {percent === 100 ? '🟢 100% Selesai' : '🟡 In Progress'}
                   </span>
                 </div>
@@ -910,73 +940,78 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      <div className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
+      <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-2xs">
+
+        {/* ENTERPRISE ACTION TOOLBAR */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setIsScannerOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-xl text-xs shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+              className="px-4 py-2 bg-black hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
             >
-              📷 Mode Scan Gudang (QC/Checker)
+              <Camera className="w-4 h-4 text-amber-400" /> Mode Scan Gudang (QC/Checker)
             </button>
 
             <button
               onClick={() => setIsGSheetModalOpen(true)}
-              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
-              🌐 Import Google Sheet
+              <Globe className="w-3.5 h-3.5 text-slate-700" /> Google Sheet
             </button>
 
-            <label className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isImporting ? '⏳ Membaca File...' : '📤 Import Excel Matriks'}
+            <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" />
+              {isImporting ? 'Membaca File...' : 'Excel Matriks'}
               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={isImporting} />
             </label>
 
-            <label className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95">
-              {isUploadingImages ? '⏳ Memasang Foto...' : '🖼️ Upload Desain (Smart Match)'}
+            <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+              <Upload className="w-3.5 h-3.5 text-slate-700" />
+              {isUploadingImages ? 'Memasang Foto...' : 'Upload Desain'}
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
             </label>
 
             <button
               onClick={handleBatchPrintAll}
-              className="px-4 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
-              🖨️ Batch Print Label A4
+              <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
             </button>
 
             <button
               onClick={() => handlePrintSuratJalan(filteredList)}
-              className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
-              📄 Cetak Surat Jalan
+              <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
             </button>
 
             <button
               onClick={handleDownloadPackingReport}
-              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
-              📥 Report Excel
+              <Download className="w-3.5 h-3.5 text-slate-700" /> Export Excel
             </button>
 
             <button
               onClick={handleClearAllPackingData}
-              className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              🗑️ Hapus Data
+              <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t dark:border-neutral-700">
-          <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-neutral-700/50 p-1 rounded-xl w-full sm:w-auto">
+        {/* SUB-HEADER SEGMENTED CONTROL & SEARCH */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
             {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterDelivery(type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                   filterDelivery === type
-                    ? 'bg-white dark:bg-neutral-800 shadow-sm text-stone-900 dark:text-white'
-                    : 'text-stone-500 hover:text-stone-900 dark:text-stone-400'
+                    ? 'bg-white shadow-xs font-black text-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
                 }`}
               >
                 {type === 'ALL' ? 'Semua Box' : type}
@@ -984,43 +1019,45 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
             ))}
           </div>
 
-          <div className="w-full sm:w-72 relative">
+          <div className="w-full sm:w-80 relative">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="🔍 Cari Store, SPK, atau Box..."
+              placeholder="Cari Store, SPK, atau Box..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3.5 py-1.5 pr-8 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 border-stone-200 dark:border-neutral-700 text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs bg-white text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-semibold"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-rose-500 font-bold text-sm"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-600 font-bold"
               >
-                ✕
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
 
-        <div className="overflow-x-auto mt-4">
-          <table className="w-full text-left text-xs">
-            <thead className={`border-b ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-200 text-stone-500'}`}>
+        {/* ENTERPRISE DATA GRID TABLE (STICKY HEADER & INNER SCROLL) */}
+        <div className="max-h-[600px] overflow-y-auto overflow-x-auto mt-4 border border-slate-200/80 rounded-2xl shadow-2xs bg-white custom-scrollbar relative">
+          <table className="w-full text-left text-xs border-collapse bg-white">
+            <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Box</th>
-                <th className="py-3 px-4">Nama Store / SPK</th>
-                <th className="py-3 px-4">Tipe Kirim</th>
-                <th className="py-3 px-4 text-center">Label & Desain</th>
-                <th className="py-3 px-4 text-center">Status Packing</th>
-                <th className="py-3 px-4 text-center">Status Checker</th>
-                <th className="py-3 px-4 text-center">Bukti Foto</th>
-                <th className="py-3 px-4 text-center">Aksi Kamera</th>
+                <th className="py-3.5 px-4">Box</th>
+                <th className="py-3.5 px-4">Nama Store / SPK</th>
+                <th className="py-3.5 px-4">Tipe Kirim</th>
+                <th className="py-3.5 px-4 text-center">Label & Desain</th>
+                <th className="py-3.5 px-4 text-center">Status Packing</th>
+                <th className="py-3.5 px-4 text-center">Status Checker</th>
+                <th className="py-3.5 px-4 text-center">Bukti Foto</th>
+                <th className="py-3.5 px-4 text-center">Aksi Kamera</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-stone-100 dark:divide-neutral-700/50">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-6 text-center opacity-60">
+                  <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">
                     Tidak ada data box yang sesuai filter.
                   </td>
                 </tr>
@@ -1030,84 +1067,94 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
                   const isCheckerDone = item.status_qc_checker === 'DONE';
 
                   return (
-                    <tr key={item.id} className={`transition-colors ${isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50'}`}>
-                      <td className="py-3 px-4 font-black text-indigo-500">{item.box_code || '-'}</td>
-                      <td className="py-3 px-4 font-semibold">
-                        <div>{item.store_name || '-'}</div>
-                        <div className="text-[10px] text-stone-400 font-normal">{item.no_spk} | {item.promo_title}</div>
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors bg-white">
+                      <td className="py-3.5 px-4 font-mono text-slate-600 font-bold text-xs whitespace-nowrap">{item.box_code || '-'}</td>
+
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm">{item.store_name || '-'}</div>
+                        <div className="text-[10px] font-mono text-slate-400 font-medium mt-0.5">{item.no_spk} | {item.promo_title}</div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${item.delivery_type === 'DALAM KOTA' ? 'bg-yellow-400 text-black' : 'bg-blue-500/10 text-blue-600'}`}>
+
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-md font-extrabold text-[10px] uppercase tracking-wider text-center border ${
+                          item.delivery_type === 'DALAM KOTA'
+                            ? 'bg-amber-500/10 text-amber-800 border-amber-300'
+                            : 'bg-blue-500/10 text-blue-800 border-blue-300'
+                        }`}>
                           {item.delivery_type || 'DALAM KOTA'}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => handlePrintLabel(item)}
-                            className="px-2.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 font-bold rounded-xl text-[11px] transition-all shadow-sm active:scale-95"
+                            title="Cetak Label"
+                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
                           >
-                            🖨️ Cetak
+                            <Printer className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditingRowItem(item)}
-                            className="px-2 py-1.5 bg-stone-200 hover:bg-stone-300 dark:bg-neutral-700 text-stone-700 dark:text-stone-200 font-bold rounded-xl text-[11px] transition-all active:scale-95"
+                            title="Foto Desain"
+                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
                           >
-                            ✏️ Foto
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                        <div className="text-[9px] mt-1 text-stone-400 font-bold">
+                        <div className="text-[10px] mt-1 text-slate-600 font-bold">
                           {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
                         </div>
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         <button
                           onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm active:scale-95 ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
                             isPackingDone
-                              ? 'bg-emerald-500 text-white shadow-emerald-500/20'
-                              : 'bg-stone-200 dark:bg-neutral-700 text-stone-600 dark:text-stone-300 hover:bg-stone-300'
+                              ? 'bg-blue-50 text-blue-700 border-blue-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
                           }`}
                         >
-                          {isPackingDone ? '✓ DONE' : '▢ PENDING'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                          {isPackingDone ? 'Done' : 'Pending'}
                         </button>
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         <button
                           onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer shadow-sm active:scale-95 ${
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
                             isCheckerDone
-                              ? 'bg-amber-500 text-white shadow-amber-500/20'
-                              : 'bg-stone-200 dark:bg-neutral-700 text-stone-600 dark:text-stone-300 hover:bg-stone-300'
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
                           }`}
                         >
-                          {isCheckerDone ? '✓ CHECKED' : '▢ PENDING'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                          {isCheckerDone ? 'Checked' : 'Pending'}
                         </button>
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         {item.bukti_paking_url ? (
                           <div className="flex justify-center">
                             <img
                               src={item.bukti_paking_url}
                               alt="Bukti Paking"
                               onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
-                              className="w-10 h-10 object-cover rounded-xl border border-stone-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-md"
+                              className="w-9 h-9 object-cover rounded-lg border border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                             />
                           </div>
                         ) : (
-                          <span className="text-stone-400 italic text-[10px]">No Foto</span>
+                          <span className="text-slate-500 font-medium text-[11px]">No Foto</span>
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
-                        <label className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl font-bold cursor-pointer transition-all shadow-md ${
-                          uploadingId === item.id ? 'bg-stone-400 text-white cursor-wait' : 'bg-indigo-600 hover:bg-indigo-500 text-white active:scale-95'
+                      <td className="py-3.5 px-4 text-center">
+                        <label title="Ambil Foto Kamera" className={`w-8 h-8 rounded-full inline-flex items-center justify-center cursor-pointer transition-all shadow-2xs active:scale-95 border ${
+                          uploadingId === item.id ? 'bg-slate-300 text-slate-500 border-slate-300' : 'bg-black hover:bg-slate-800 text-white border-black'
                         }`}>
-                          {uploadingId === item.id ? '⏳' : '📸 Foto'}
+                          <Camera className="w-3.5 h-3.5" />
                           <input
                             type="file"
                             accept="image/*"
@@ -1124,6 +1171,16 @@ export default function PackingPanel({ isDarkMode, onOpenImageModal }) {
               )}
             </tbody>
           </table>
+
+          {/* BOTTOM PAGINATION BAR */}
+          <div className="px-6 py-3 bg-[#F8FAFC] border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-semibold text-slate-600">
+            <span>Showing 1-{filteredList.length} of {sourceList.length} items</span>
+            <div className="flex items-center gap-2">
+              <span>Page 1 of 1</span>
+              <button className="px-3 py-1 bg-white border border-slate-300 rounded-lg font-bold text-black hover:bg-slate-100 transition-all cursor-pointer">Previous</button>
+              <button className="px-3 py-1 bg-white border border-slate-300 rounded-lg font-bold text-black hover:bg-slate-100 transition-all cursor-pointer">Next</button>
+            </div>
+          </div>
         </div>
       </div>
 

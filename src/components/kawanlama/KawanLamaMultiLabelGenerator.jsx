@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import {
+  Tag,
+  Printer,
+  FileText,
+  PlusCircle,
+  FileSpreadsheet,
+  Upload,
+  Image as ImageIcon,
+  Sparkles,
+  Building2,
+  Check,
+  X
+} from 'lucide-react';
 
 export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const [labels, setLabels] = useState({});
@@ -106,64 +119,68 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const activeClientName = isManualCompany ? manualCompanyName : selectedPt;
 
   return (
-    <div className={`p-6 rounded-3xl shadow-sm space-y-6 border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+    <div className="p-6 rounded-3xl shadow-xs space-y-6 border bg-white border-slate-200 text-black">
       
       {/* Kontrol Atas / Panel Kontrol */}
-      <div className={`flex flex-col border-b pb-5 gap-4 print:hidden ${isDarkMode ? 'border-neutral-700' : 'border-stone-200'}`}>
+      <div className="flex flex-col border-b border-slate-200 pb-5 gap-5 print:hidden">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className={`font-extrabold text-base tracking-wide ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
-              🏷️ Kawan Lama Group - Multi Label & Surat Jalan Generator
+            <h2 className="font-extrabold text-base tracking-wide text-black flex items-center gap-2">
+              <Tag className="w-5 h-5 text-indigo-600" /> Kawan Lama Group - Multi Label & Delivery Order Generator
             </h2>
-            <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-              Atur PT, Nama Promo, No. SPK, Nama Pengirim, Logo Wellen Terkunci, dan upload Excel alokasi.
+            <p className="text-xs mt-0.5 text-slate-500 font-medium">
+              Set company, promo name, SPK number, creator, locked Wellen logo, and upload allocation Excel.
             </p>
           </div>
 
           {/* Tombol Switch Mode Cetak */}
-          <div className="flex items-center gap-2 bg-stone-200 dark:bg-neutral-900 p-1.5 rounded-2xl border border-stone-300 dark:border-neutral-700">
+          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setPrintMode('labels')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 printMode === 'labels' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-stone-700 dark:text-neutral-300 hover:bg-stone-300 dark:hover:bg-neutral-800'
+                  ? 'bg-indigo-600 text-white shadow-xs font-extrabold'
+                  : 'text-slate-700 hover:text-black hover:bg-slate-200'
               }`}
             >
-              🏷️ Cetak Label 2-in-1
+              <Tag className="w-3.5 h-3.5" /> Print 2-in-1 Labels
             </button>
             <button
               onClick={() => setPrintMode('do')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 printMode === 'do' 
-                  ? 'bg-emerald-600 text-white shadow-md' 
-                  : 'text-stone-700 dark:text-neutral-300 hover:bg-stone-300 dark:hover:bg-neutral-800'
+                  ? 'bg-indigo-600 text-white shadow-xs font-extrabold'
+                  : 'text-slate-700 hover:text-black hover:bg-slate-200'
               }`}
             >
-              📄 Cetak Surat Jalan (DO)
+              <FileText className="w-3.5 h-3.5" /> Print Delivery Order (DO)
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
-          {/* Pilihan PT / Perusahaan */}
+        {/* 3-COLUMN ENTERPRISE FORM GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start bg-slate-50 p-5 rounded-2xl border border-slate-200">
+
+          {/* 1. Pilihan PT / Perusahaan */}
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-                Pilih PT / Perusahaan:
+              <label className="text-xs font-extrabold text-black">
+                Select Company / PT:
               </label>
-              <button onClick={() => setShowAddCompanyModal(true)} className="text-[10px] text-indigo-400 font-bold hover:underline">+ Tambah PT</button>
+              <button onClick={() => setShowAddCompanyModal(true)} className="text-[11px] text-indigo-600 font-black hover:underline flex items-center gap-1 cursor-pointer">
+                <PlusCircle className="w-3 h-3" /> Add Company
+              </button>
             </div>
             {isManualCompany ? (
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 <input 
                   type="text" 
                   value={manualCompanyName} 
                   onChange={e => setManualCompanyName(e.target.value)} 
-                  placeholder="Ketik nama PT..." 
-                  className={`text-xs border p-2.5 rounded-xl font-bold w-full ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-stone-800'}`} 
+                  placeholder="Type company name..."
+                  className="text-xs border border-slate-300 p-2.5 rounded-xl font-bold w-full bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                 />
-                <button onClick={() => setIsManualCompany(false)} className="px-2.5 bg-stone-600 text-white rounded-xl text-xs" title="Kembali ke Dropdown">✕</button>
+                <button onClick={() => setIsManualCompany(false)} className="px-3 bg-slate-200 hover:bg-slate-300 text-black rounded-xl text-xs font-bold cursor-pointer" title="Back to dropdown">✕</button>
               </div>
             ) : (
               <select 
@@ -175,107 +192,83 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     setSelectedPt(e.target.value);
                   }
                 }}
-                className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  isDarkMode 
-                    ? 'bg-neutral-900 border-neutral-700 text-white' 
-                    : 'bg-stone-50 border-stone-300 text-stone-800'
-                }`}
+                className="text-xs border border-slate-300 p-2.5 rounded-xl font-black bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
               >
                 {companyList.map((c, i) => <option key={i} value={c}>{c}</option>)}
-                <option value="MANUAL_INPUT" className="font-bold text-indigo-400">✏️ Ketik Manual...</option>
+                <option value="MANUAL_INPUT" className="font-bold text-indigo-600">✏️ Type Manually...</option>
               </select>
             )}
           </div>
 
-          {/* Input Nama Promo / Judul Project */}
+          {/* 2. Input Nama Promo / Judul Project */}
           <div className="flex flex-col gap-1.5">
-            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              Nama Promo / Judul Project:
+            <label className="text-xs font-extrabold text-black">
+              Promo / Project Title:
             </label>
             <input 
               type="text" 
               value={activePromoTitle} 
               onChange={(e) => setActivePromoTitle(e.target.value)} 
-              placeholder="Contoh: PROMO 17 AGUSTUS ( TES )"
-              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isDarkMode 
-                  ? 'bg-neutral-900 border-neutral-700 text-white' 
-                  : 'bg-stone-50 border-stone-300 text-stone-800'
-              }`}
+              placeholder="Example: PROMO 17 AGUSTUS"
+              className="text-xs border border-slate-300 p-2.5 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
 
-          {/* Input No SPK / No Surat Jalan */}
+          {/* 3. Input No SPK / No Surat Jalan */}
           <div className="flex flex-col gap-1.5">
-            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              No. SPK / Surat Jalan:
+            <label className="text-xs font-extrabold text-black">
+              SPK / Delivery Order No:
             </label>
             <input 
               type="text" 
               value={spkNumber} 
               onChange={(e) => setSpkNumber(e.target.value)} 
-              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isDarkMode 
-                  ? 'bg-neutral-900 border-neutral-700 text-white' 
-                  : 'bg-stone-50 border-stone-300 text-stone-800'
-              }`}
+              className="text-xs border border-slate-300 p-2.5 rounded-xl font-mono font-black bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
 
-          {/* Input Nama Pembuat / Pengirim DO */}
+          {/* 4. Input Nama Pembuat / Pengirim DO */}
           <div className="flex flex-col gap-1.5">
-            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              Nama Pembuat (DO):
+            <label className="text-xs font-extrabold text-black">
+              Creator Name (DO):
             </label>
             <input 
               type="text" 
               value={senderName} 
               onChange={(e) => setSenderName(e.target.value)} 
-              placeholder="Contoh: Arini Lidya"
-              className={`text-xs border p-2.5 rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isDarkMode 
-                  ? 'bg-neutral-900 border-neutral-700 text-white' 
-                  : 'bg-stone-50 border-stone-300 text-stone-800'
-              }`}
+              placeholder="Example: Arini Lidya"
+              className="text-xs border border-slate-300 p-2.5 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
 
-          {/* Upload File Excel */}
+          {/* 5. Upload File Excel */}
           <div className="flex flex-col gap-1.5">
-            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              Upload Excel Alokasi:
+            <label className="text-xs font-extrabold text-black flex items-center gap-1">
+              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> Upload Allocation Excel:
             </label>
             <input 
               type="file" 
               accept=".xlsx" 
               onChange={handleFileUpload} 
-              className={`text-xs border p-2 rounded-xl cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-bold ${
-                isDarkMode 
-                  ? 'bg-neutral-900 border-neutral-700 text-neutral-300 file:bg-neutral-800 file:text-indigo-300 hover:file:bg-neutral-700' 
-                  : 'bg-stone-50 border-stone-300 text-stone-600 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100'
-              }`} 
+              className="text-xs border border-slate-300 p-2 rounded-xl cursor-pointer bg-white text-black file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
             />
           </div>
 
-          {/* Logo Wellen Terkunci */}
+          {/* 6. Logo Wellen Terkunci */}
           <div className="flex flex-col gap-1.5">
-            <label className={`text-[11px] font-bold ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-              Logo Wellen {wellenPrintLogo ? '(Terkunci)' : '(Kosong)'}:
+            <label className="text-xs font-extrabold text-black flex items-center gap-1">
+              <Upload className="w-3.5 h-3.5 text-indigo-600" /> Wellen Logo {wellenPrintLogo ? '(Locked)' : '(Optional)'}:
             </label>
             {wellenPrintLogo ? (
-              <button onClick={handleResetLogo} className="w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all">
-                🔓 Ganti / Reset Logo
+              <button onClick={handleResetLogo} className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all cursor-pointer">
+                🔓 Reset / Replace Logo
               </button>
             ) : (
               <input 
                 type="file" 
                 accept="image/*" 
                 onChange={handleLogoUpload} 
-                className={`text-xs border p-2 rounded-xl cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-bold ${
-                  isDarkMode 
-                    ? 'bg-neutral-900 border-neutral-700 text-neutral-300 file:bg-neutral-800 file:text-stone-300 hover:file:bg-neutral-700' 
-                    : 'bg-stone-50 border-stone-300 text-stone-600 file:bg-stone-200 file:text-stone-700 hover:file:bg-stone-300'
-                }`} 
+                className="text-xs border border-slate-300 p-2 rounded-xl cursor-pointer bg-white text-black file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-slate-100 file:text-black hover:file:bg-slate-200"
               />
             )}
           </div>
@@ -285,11 +278,9 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         <div className="flex justify-end pt-2">
           <button 
             onClick={() => window.print()} 
-            className={`py-3 px-6 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 ${
-              printMode === 'labels' ? 'bg-blue-600 hover:bg-blue-500' : 'bg-emerald-600 hover:bg-emerald-500'
-            }`}
+            className="py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
           >
-            🖨️ {printMode === 'labels' ? 'Cetak Label 2-in-1' : 'Cetak Surat Jalan (DO)'}
+            <Printer className="w-4 h-4" /> {printMode === 'labels' ? 'Print 2-in-1 Labels' : 'Print Delivery Order (DO)'}
           </button>
         </div>
       </div>

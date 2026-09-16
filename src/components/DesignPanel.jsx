@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { Check, Trash2, Search, Megaphone, RotateCcw, Clock } from 'lucide-react';
 
 export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
   const [orders, setOrders] = useState([]);
@@ -137,80 +138,68 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
 
   return (
     <div className="space-y-6">
-      {/* Sticky Header: Info Promo & Status Indikator */}
-      <div className={`sticky top-0 z-20 p-4 rounded-2xl border shadow-md backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-colors ${
-        isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'
-      }`}>
+      {/* Top Header Card */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white">
-              Promo Sedang Berjalan
+            <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-indigo-600 text-white">
+              Active Promo Campaign
             </span>
-            <span className="text-xs font-mono opacity-60">Total: {orders.length} Toko Approved</span>
+            <span className="text-xs font-mono font-medium text-slate-500">Total: {orders.length} Approved Stores</span>
           </div>
-          <h2 className="text-sm font-black mt-1 text-indigo-600 dark:text-indigo-400">
-            📢 {activePromoName}
+          <h2 className="text-sm font-extrabold mt-1 text-slate-900 flex items-center gap-1.5">
+            <Megaphone className="w-4 h-4 text-indigo-600" /> {activePromoName}
           </h2>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs w-full sm:w-64 ${
-            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-stone-50 border-stone-200'
-          }`}>
-            <span>🔍</span>
+          {/* Search Input */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari Cabang / Promo / ID..."
+              placeholder="Search store / promo / ID..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full bg-transparent focus:outline-none text-xs"
+              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-2xs"
             />
           </div>
 
-          <div className="flex items-center gap-3 text-[11px] whitespace-nowrap">
+          <div className="flex items-center gap-2 text-xs whitespace-nowrap">
             {pendingCount > 0 ? (
-              <span className="flex items-center gap-1.5 font-bold text-amber-500">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-                ⏳ {pendingCount} Toko Menunggu
+              <span className="px-3 py-1 rounded-full text-xs font-bold border bg-amber-50 text-amber-800 border-amber-200 inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600" /> {pendingCount} Pending Design
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 font-bold text-stone-400 opacity-60">
-                <span className="w-2 h-2 rounded-full bg-stone-400"></span>
-                ✨ Semua Siap (0 Antrean)
+              <span className="px-3 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-600 border-slate-200 inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> All Design Ready
               </span>
             )}
 
-            <span className="flex items-center gap-1 font-bold text-emerald-500">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> ✅ {readyCount} Toko Ready
+            <span className="px-3 py-1 rounded-full text-xs font-bold border bg-emerald-50 text-emerald-800 border-emerald-200 inline-flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" /> {readyCount} Ready
             </span>
           </div>
         </div>
       </div>
 
-      {/* Grid Tabel Pemantauan File Desain */}
-      <div className={`max-h-[620px] overflow-y-auto relative rounded-2xl border shadow-sm ${
-        isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white border-[#D8D2C2]'
-      }`}>
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className={`sticky top-0 z-10 font-bold border-b shadow-sm ${
-            isDarkMode ? 'bg-neutral-900 text-neutral-200 border-neutral-700' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'
-          }`}>
+      {/* ULTRA-CLEAN DATA GRID FOR DESIGN FILE PREPRESS */}
+      <div className="max-h-[620px] overflow-y-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
+        <table className="w-full text-left text-xs border-collapse bg-white">
+          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="p-3.5">Nama Promo & Cabang Toko</th>
-              <th className="p-3.5">Paket Item Order Toko</th>
-              <th className="p-3.5 w-44 text-center">Status Kesiapan File</th>
-              <th className="p-3.5">Catatan Teknis Desain</th>
-              <th className="p-3.5 text-center w-44">Aksi</th>
+              <th className="p-3.5">PROMO & STORE NAME</th>
+              <th className="p-3.5">ORDER PACKAGE ITEMS</th>
+              <th className="p-3.5 w-44 text-center">FILE STATUS</th>
+              <th className="p-3.5">TECHNICAL DESIGN NOTES</th>
+              <th className="p-3.5 text-center w-40">ACTIONS</th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-stone-100'}`}>
+          <tbody className="divide-y divide-slate-100 bg-white">
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan="5" className="p-6 text-center opacity-60">
-                  Belum ada antrean desain untuk order yang sudah di-approve.
+                <td colSpan="5" className="p-8 text-center text-slate-400 font-medium">
+                  No design queue available for approved store orders.
                 </td>
               </tr>
             ) : (
@@ -218,44 +207,41 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                 const isReady = order.design_status === 'READY';
                 const promoTitle = order.project_name || activePromoName;
                 const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
-                const branchName = order.kl_branches?.branch_name || 'Kantor Cabang';
+                const branchName = order.kl_branches?.branch_name || 'Store Branch';
 
                 return (
-                  <tr key={order.id} className={`transition-colors ${
-                    isReady 
-                      ? (isDarkMode ? 'bg-emerald-950/20 hover:bg-emerald-950/30' : 'bg-emerald-50/50 hover:bg-emerald-50/80') 
-                      : (isDarkMode ? 'bg-amber-950/20 hover:bg-amber-950/30' : 'bg-amber-50/50 hover:bg-amber-50/80')
-                  }`}>
+                  <tr key={order.id} className="hover:bg-slate-50/80 transition-colors bg-white">
                     <td className="p-3.5 align-top">
-                      <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide block">
-                        🏷️ {promoTitle}
+                      <span className="text-[10px] font-mono text-slate-400 font-medium uppercase block">
+                        {promoTitle}
                       </span>
-                      <strong className="text-xs block mt-0.5">
-                        🏢 {branchName}
+                      <strong className="font-bold text-slate-900 text-xs sm:text-sm block mt-0.5">
+                        {branchName}
                       </strong>
-                      <span className="text-[10px] font-mono opacity-50 block mt-0.5">
-                        ID: {order.id.slice(0, 8)} | Total: <strong>{totalQty} pcs</strong>
+                      <span className="text-[10px] font-mono text-slate-400 font-medium block mt-0.5">
+                        ID: {order.id.slice(0, 8)} | Total: <strong className="text-black font-extrabold">{totalQty} pcs</strong>
                       </span>
                     </td>
 
                     <td className="p-3.5 align-top">
                       <div className="space-y-1">
                         {order.kl_order_items?.map((item, idx) => (
-                          <div key={idx} className="text-[11px]">
-                            • <strong>{item.kl_master_items?.item_name}</strong> ({item.qty} pcs)
-                            <span className="opacity-70 ml-1 text-[10px]">[{item.kl_master_items?.size || '-'}]</span>
+                          <div key={idx} className="text-[11px] font-medium text-slate-700">
+                            • <strong className="text-slate-900 font-bold">{item.kl_master_items?.item_name}</strong> ({item.qty} pcs)
+                            <span className="text-slate-400 ml-1 text-[10px] font-mono">[{item.kl_master_items?.size || '-'}]</span>
                           </div>
                         ))}
                       </div>
                     </td>
 
                     <td className="p-3.5 text-center align-top">
-                      <span className={`inline-flex px-3 py-1 rounded-xl text-[10px] font-black tracking-wide border shadow-sm ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${
                         isReady
-                          ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/40 dark:text-emerald-400'
-                          : 'bg-amber-500/20 text-amber-600 border-amber-500/40 dark:text-amber-400 animate-pulse'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
                       }`}>
-                        {isReady ? '✅ READY CETAK' : '⏳ PROSES DESAIN'}
+                        <span className={`w-1.5 h-1.5 rounded-full ${isReady ? 'bg-emerald-600' : 'bg-amber-600'}`} />
+                        {isReady ? 'Ready for Print' : 'Pending Design'}
                       </span>
                     </td>
 
@@ -264,32 +250,31 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         type="text"
                         defaultValue={order.design_notes || ''}
                         onBlur={e => handleSaveNotes(order.id, e.target.value)}
-                        placeholder="Catatan ukuran/file untuk toko ini..."
-                        className={`w-full p-2 rounded-xl border text-xs focus:outline-none transition-all ${
-                          isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-800'
-                        }`}
+                        placeholder="Enter size / file notes..."
+                        className="w-full p-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       />
                     </td>
 
-                    {/* Tombol Aksi (Ready Cetak + Hapus Order) */}
+                    {/* Tombol Aksi */}
                     <td className="p-3.5 text-center align-top">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 whitespace-nowrap ${
+                          className={`px-3 py-1.5 rounded-xl font-extrabold text-xs shadow-2xs transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                             isReady
-                              ? 'bg-neutral-600 hover:bg-neutral-500 text-white'
+                              ? 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
                               : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                           }`}
                         >
-                          {isReady ? '↩ Batal' : '✔ Ready'}
+                          {isReady ? <><RotateCcw className="w-3.5 h-3.5" /> Undo</> : <><Check className="w-3.5 h-3.5" /> Ready</>}
                         </button>
+
                         <button
                           onClick={() => handleDeleteOrder(order.id, branchName)}
-                          title="Hapus order ini"
-                          className="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all active:scale-95"
+                          title="Delete Order"
+                          className="w-8 h-8 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold flex items-center justify-center transition-all cursor-pointer"
                         >
-                          🗑️ Hapus
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                         </button>
                       </div>
                     </td>

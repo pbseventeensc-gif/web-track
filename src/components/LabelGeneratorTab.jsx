@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
 import { supabase } from '../supabaseClient';
+import {
+  Printer,
+  FileSpreadsheet,
+  Layers,
+  Truck,
+  Upload,
+  Download,
+  Image as ImageIcon,
+  FileText,
+  Trash2,
+  Tag,
+  RefreshCw,
+  Check,
+  Clock
+} from 'lucide-react';
 
 export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
@@ -658,75 +673,91 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
   return (
     <div className="space-y-4">
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+      {/* Header Logo Card */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-20 h-14 rounded-xl border bg-stone-50 dark:bg-neutral-900 flex items-center justify-center overflow-hidden p-1">
-            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold opacity-50 text-center">No Logo</span>}
+          <div className="w-20 h-14 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden p-1">
+            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold text-slate-400 text-center">No Logo</span>}
           </div>
           <div>
-            <h4 className="font-bold text-xs">🖼️ Logo Header KOP (Label & Surat Jalan)</h4>
-            <p className="text-[11px] opacity-70">{headerLogoUrl ? '✅ Logo KOP aktif (Tersimpan)' : '⚠️ Menggunakan teks default "WELLEN PRINT"'}</p>
+            <h4 className="font-extrabold text-xs text-black flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-indigo-600" /> Logo Header (Label & Delivery Order)
+            </h4>
+            <p className="text-[11px] font-medium text-slate-500 mt-0.5">{headerLogoUrl ? 'Custom header logo active (Saved)' : 'Using default text "WELLEN PRINT"'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-purple-600 hover:bg-purple-500 transition-all active:scale-95">
-            🖼️ Upload Logo KOP Wellen <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5">
+            <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload Logo Header <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
           </label>
-          {headerLogoUrl && <button onClick={handleResetHeaderLogo} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">Reset</button>}
+          {headerLogoUrl && (
+            <button onClick={handleResetHeaderLogo} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
+              <RefreshCw className="w-3.5 h-3.5 text-rose-700" /> Reset
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-[#D8D2C2]'}`}>
+      {/* Action Toolbar Card */}
+      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col xl:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="px-4 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-[#6B8E85] hover:bg-[#57756D] transition-all">
-            📁 Import Excel Format Label & SJ <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs flex items-center gap-1.5">
+            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" /> Import Label & DO Excel <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
-          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#D97706] hover:bg-amber-600 text-white shadow-sm transition-all">📥 Download Template Excel</button>
+          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer">
+            <Download className="w-3.5 h-3.5 text-slate-700" /> Download Excel Template
+          </button>
           
-          <div className="flex items-center gap-1.5 ml-1 bg-neutral-900 p-1.5 rounded-xl border border-neutral-700 text-white">
-            <span className="text-[11px] font-bold px-1 opacity-70">Format SJ:</span>
-            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Modern</button>
-            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'}`}>Klasik</button>
+          <div className="flex items-center gap-1.5 ml-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-slate-800">
+            <span className="text-[11px] font-extrabold px-1 text-slate-500">DO Format:</span>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-700 hover:text-black'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-700 hover:text-black'}`}>Classic</button>
           </div>
+
+          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
+            <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 1 (Left) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
+          </label>
+          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
+            <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 2 (Right) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
+          </label>
+          {labelData.length > 0 && (
+            <button onClick={() => { if(confirm('Clear data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
+              <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-teal-600 hover:bg-teal-500 transition-all flex items-center gap-1.5">
-            🖼️ Upload Massal Gbr 1 (Kiri) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
-          </label>
-          <label className="px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer text-white shadow-sm bg-cyan-600 hover:bg-cyan-500 transition-all flex items-center gap-1.5">
-            🖼️ Upload Massal Gbr 2 (Kanan) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
-          </label>
-          {labelData.length > 0 && <button onClick={() => { if(confirm('Bersihkan data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition-all">🧹 Bersihkan</button>}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={handlePrintSuratJalan} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#0D9488] hover:bg-teal-600 text-white cursor-pointer active:scale-95">
-            📄 Cetak Surat Jalan
+        {/* PRINT BUTTONS: UNIFORM SIZE, NO LOUD COLORS, SAME SHAPE */}
+        <div className="flex items-center gap-2.5">
+          <button onClick={handlePrintSuratJalan} className="h-10 px-5 rounded-xl font-extrabold text-xs bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
+            <FileText className="w-4 h-4 text-slate-700" /> Print DO
           </button>
-          <button onClick={handlePrintLabels} className="px-4 py-2 rounded-xl font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all bg-[#4F46E5] hover:bg-indigo-500 text-white cursor-pointer active:scale-95">
-            🏷️ Cetak Label Koli
+          <button onClick={handlePrintLabels} className="h-10 px-5 rounded-xl font-extrabold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
+            <Tag className="w-4 h-4" /> Print Labels
           </button>
         </div>
       </div>
 
-      <div className={`overflow-x-auto rounded-2xl border shadow-sm ${isDarkMode ? 'bg-[#121829] border-neutral-800' : 'bg-white/90 border-[#D8D2C2]'}`}>
-        <table className="w-full text-left text-xs">
-          <thead className={`font-bold border-b ${isDarkMode ? 'bg-neutral-800 text-neutral-300 border-neutral-800' : 'bg-[#EFECE6] text-[#3D4F4B] border-[#D8D2C2]'}`}>
+      {/* ULTRA-CLEAN ENTERPRISE GRID TABLE */}
+      <div className="max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
+        <table className="w-full text-left text-xs border-collapse bg-white">
+          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
             <tr>
-              <th className="p-3 text-center w-10"><input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600" /></th>
-              <th className="p-3">No SPK / Tracking ID</th>
-              <th className="p-3">Client & Brand</th>
-              <th className="p-3">Penerima & Alamat</th>
-              <th className="p-3">Deskripsi / Media / Ukuran</th>
-              <th className="p-3">Total Qty</th>
-              <th className="p-3">Isi/Koli (Edit)</th>
-              <th className="p-3">Visual Image (1 & 2)</th>
+              <th className="p-3.5 text-center w-10">
+                <input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600 w-4 h-4" />
+              </th>
+              <th className="p-3.5">SPK NO. / TRACKING ID</th>
+              <th className="p-3.5">CLIENT & BRAND</th>
+              <th className="p-3.5">RECIPIENT & ADDRESS</th>
+              <th className="p-3.5">SPECIFICATION / MEDIA / SIZE</th>
+              <th className="p-3.5 text-center">TOTAL QTY</th>
+              <th className="p-3.5 text-center">ITEMS / PACKAGE</th>
+              <th className="p-3.5 text-center">VISUAL IMAGES</th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-[#EAE5D9]'}`}>
+          <tbody className="divide-y divide-slate-100 bg-white">
             {labelData.length === 0 ? (
-              <tr><td colSpan="8" className="p-6 text-center opacity-60">Tabel kosong. Silakan klik tombol <strong>"Download Template Excel"</strong> di atas.</td></tr>
+              <tr><td colSpan="8" className="p-8 text-center text-slate-400 font-medium">Table is empty. Please click <strong>"Download Excel Template"</strong> above or import data.</td></tr>
             ) : (
               labelData.map((row, idx) => {
                 const total = Number(row.QTY_TOTAL || 0); 
@@ -735,37 +766,37 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 const isChecked = selectedRows.includes(idx);
 
                 return (
-                  <tr key={idx} className={`transition-colors ${isChecked ? isDarkMode ? 'bg-indigo-950/40' : 'bg-indigo-50/70' : isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-[#F8F6F0]'}`}>
-                    <td className="p-3 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600" /></td>
-                    <td className="p-3 font-bold text-blue-500">{row.NO_SPK || '-'}<br /><span className="font-normal text-[10px] opacity-70">PO: {row.PO_NUMBER || '-'}</span><br /><span className="font-mono text-[10px] text-emerald-500 font-bold">ID: {row.TRACKING_ID}</span></td>
-                    <td className="p-3"><strong className="text-xs">{row.CLIENT || '-'}</strong><br /><span className="text-[10px] opacity-70">{row.BRAND || '-'}</span></td>
-                    <td className="p-3"><strong>{row.RECIPIENT_NAME || '-'}</strong> ({row.RECIPIENT_PHONE || '-'})<br /><span className="text-[10px] opacity-70">{row.DELIVERY_ADDRESS || '-'}</span></td>
-                    <td className="p-3">{row.ITEM_DESCRIPTION || '-'}<br /><span className="text-[10px] opacity-70">{row.MEDIA || '-'} ({row.UKURAN || '-'} )</span></td>
-                    <td className="p-3 font-bold">{total.toLocaleString()} Pcs</td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-1.5">
+                  <tr key={idx} className={`transition-colors hover:bg-slate-50/80 bg-white ${isChecked ? 'bg-indigo-50/60' : 'bg-white'}`}>
+                    <td className="p-3.5 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600 w-4 h-4" /></td>
+                    <td className="p-3.5"><div className="font-mono text-slate-600 font-bold text-xs">{row.NO_SPK || '-'}</div><div className="text-[10px] font-mono text-slate-400 font-medium">PO: {row.PO_NUMBER || '-'}</div><div className="font-mono text-[10px] text-emerald-600 font-bold">ID: {row.TRACKING_ID}</div></td>
+                    <td className="p-3.5"><div className="font-bold text-slate-900 text-xs sm:text-sm">{row.CLIENT || '-'}</div><div className="text-[10px] font-mono text-slate-400 font-medium">{row.BRAND || '-'}</div></td>
+                    <td className="p-3.5"><div className="font-bold text-slate-900 text-xs">{row.RECIPIENT_NAME || '-'} ({row.RECIPIENT_PHONE || '-'})</div><div className="text-[11px] font-medium text-slate-500">{row.DELIVERY_ADDRESS || '-'}</div></td>
+                    <td className="p-3.5"><div className="font-medium text-slate-700 text-xs">{row.ITEM_DESCRIPTION || '-'}</div><div className="text-[10px] text-slate-400 font-medium">{row.MEDIA || '-'} ({row.UKURAN || '-'})</div></td>
+                    <td className="p-3.5 text-center font-extrabold text-slate-900 text-sm">{total.toLocaleString()} Pcs</td>
+                    <td className="p-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <input 
                           type="number" 
                           value={row.QTY_PER_KOLI || 50} 
                           onChange={(e) => handleUpdateKoliRow(idx, e.target.value)} 
-                          className="w-16 px-2 py-1 rounded border text-xs font-bold text-center bg-white dark:bg-neutral-900 dark:border-neutral-700" 
+                          className="w-16 px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-center bg-white text-black"
                         />
-                        <span className="text-[10px] opacity-70">Pcs (<strong>{totalKoliCalc} Koli</strong>)</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">Pcs (<strong className="text-black">{totalKoliCalc} Koli</strong>)</span>
                       </div>
                     </td>
-                    <td className="p-3">
-                      <div className="flex flex-col gap-1.5">
+                    <td className="p-3.5 text-center">
+                      <div className="flex flex-col items-center gap-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold opacity-70">Gbr 1:</span>
-                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
-                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                          <span className="text-[10px] font-bold text-slate-400">Img 1:</span>
+                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`)} className="w-10 h-7 object-contain border border-slate-300 rounded-lg bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-2 py-1 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-lg text-[10px] font-bold transition-all shadow-2xs">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
                           </label>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold opacity-70">Gbr 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-6 object-contain border rounded bg-white cursor-pointer" /> : <span className="text-[10px] opacity-40">-</span>}
-                          <label className="cursor-pointer px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold">
+                          <span className="text-[10px] font-bold text-slate-400">Img 2:</span>
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-7 object-contain border border-slate-300 rounded-lg bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-lg text-[10px] font-bold transition-all shadow-2xs">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
                         </div>
