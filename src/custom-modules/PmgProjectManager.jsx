@@ -1,15 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
+import { Upload, Lock, Unlock, RefreshCw, Trash2, Check, Image as ImageIcon } from 'lucide-react';
 
 export default function PmgProjectManager({ isDarkMode }) {
   const [projects, setProjects] = useState([]);
   const [destinations, setDestinations] = useState([]);
   const [printData, setPrintData] = useState(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
-  const [pmgLogo, setPmgLogo] = useState(''); 
+
+  // LOCK PMG LOGO IN LOCALSTORAGE
+  const [pmgLogo, setPmgLogo] = useState(() => {
+    return localStorage.getItem('pmg_header_logo_locked') || '';
+  });
   const [selectedDest, setSelectedDest] = useState('');
-  
+
+  useEffect(() => {
+    if (pmgLogo) {
+      localStorage.setItem('pmg_header_logo_locked', pmgLogo);
+    }
+  }, [pmgLogo]);
+
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const logoBase64 = reader.result;
+        setPmgLogo(logoBase64);
+        localStorage.setItem('pmg_header_logo_locked', logoBase64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleResetLogo = () => {
+    if (window.confirm('Unlock & reset PMG Header Logo?')) {
+      setPmgLogo('');
+      localStorage.removeItem('pmg_header_logo_locked');
+    }
+  };
+
   const [form, setForm] = useState({
     dr_number: '', // 👈 Input DR No.
     transaction_code: '',
@@ -60,15 +91,6 @@ export default function PmgProjectManager({ isDarkMode }) {
         pic_up: found.pic_name || found.client_name || '',
         phone_no: found.phone || ''
       }));
-    }
-  };
-
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPmgLogo(reader.result);
-      reader.readAsDataURL(file);
     }
   };
 
@@ -348,9 +370,37 @@ export default function PmgProjectManager({ isDarkMode }) {
         <p className="text-xs opacity-60">Buat dokumen pengiriman dengan format resmi POD & Surat Jalan PMG.</p>
       </div>
 
-      <div className="p-4 border rounded-2xl dark:border-neutral-700 text-xs">
-        <label className="block font-bold mb-1 opacity-75">Upload Logo PMG (Header Dokumen):</label>
-        <input type="file" accept="image/*" onChange={handleLogoUpload} />
+      {/* PMG LOGO UPLOAD CARD WITH LOCALSTORAGE LOCK */}
+      <div className="p-4 border border-slate-200 bg-white text-black rounded-2xl text-xs shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-20 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center p-1 overflow-hidden">
+            {pmgLogo ? <img src={pmgLogo} alt="Logo PMG" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] text-slate-400 font-bold">No Logo</span>}
+          </div>
+          <div>
+            <h4 className="font-extrabold text-xs text-black flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-indigo-600" /> PMG Header Logo (Locked & Saved)
+            </h4>
+            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+              {pmgLogo ? '✅ Logo PMG locked and saved in system memory' : 'Upload PMG logo once to lock it for all documents'}
+            </p>
+          </div>
+        </div>
+        <div>
+          {pmgLogo ? (
+            <button
+              type="button"
+              onClick={handleResetLogo}
+              className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <Unlock className="w-3.5 h-3.5 text-rose-600" /> Unlock / Change PMG Logo
+            </button>
+          ) : (
+            <label className="px-3.5 py-2 bg-white hover:bg-slate-50 text-black border border-slate-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95">
+              <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload & Lock PMG Logo
+              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+            </label>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSaveProject} className="space-y-4 text-xs">

@@ -43,6 +43,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
   useEffect(() => {
     fetchDestinations();
+    const savedLogoLeft = localStorage.getItem('custom_label_logo_left');
+    const savedLogoRight = localStorage.getItem('custom_label_logo_right');
+    if (savedLogoLeft || savedLogoRight) {
+      setForm(prev => ({
+        ...prev,
+        logoLeftUrl: savedLogoLeft || prev.logoLeftUrl,
+        logoRightUrl: savedLogoRight || prev.logoRightUrl
+      }));
+    }
   }, []);
 
   const fetchDestinations = async () => {
@@ -75,7 +84,10 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm(prev => ({ ...prev, [field]: reader.result }));
+        const result = reader.result;
+        setForm(prev => ({ ...prev, [field]: result }));
+        if (field === 'logoLeftUrl') localStorage.setItem('custom_label_logo_left', result);
+        if (field === 'logoRightUrl') localStorage.setItem('custom_label_logo_right', result);
       };
       reader.readAsDataURL(file);
     }
