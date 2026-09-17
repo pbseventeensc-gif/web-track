@@ -38,11 +38,8 @@ export default function FoodLabelTab({ isDarkMode }) {
             currentItemName = String(colNameRaw).trim();
           }
           
-          const sizeRaw = headerRow2[i] ? String(headerRow2[i]).trim().toUpperCase() : '';
-          let itemSize = 'A5';
-          if (sizeRaw.includes('A4') || (sizeRaw === '' && i % 2 === 1)) {
-            itemSize = 'A4';
-          }
+          const sizeRaw = headerRow2[i] !== undefined && headerRow2[i] !== null ? String(headerRow2[i]).trim() : '';
+          const itemSize = sizeRaw || (i % 2 === 1 ? 'A4' : 'A5');
 
           if (currentItemName) {
             itemColumns.push({
