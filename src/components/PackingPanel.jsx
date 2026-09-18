@@ -228,9 +228,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           const spkWpp = row[8] || '';
           const deliveryType = row[9] || 'DALAM KOTA';
 
-          // GENERATE QR CODE UNIK SISTEM PER KOLI (Format: PRCODE-BOXCODE-STOREID)
+          // GENERATE QR CODE UNIK SISTEM SESUAI FORMAT ANDROID APP (Format: STORENO_BOXCODE_STOREID_STORENAME)
           const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
-          const qrAddress = trackingId;
+          const qrAddress = `${storeNo}_${boxCode}_${storeId}_${storeName}`;
 
           let storeItems = [];
           let totalQty = 0;
