@@ -1035,10 +1035,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <table className="w-full text-left border-collapse bg-white">
             <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-900 font-black uppercase tracking-wider text-xs">
               <tr>
-                <th className="py-4 px-3 text-center w-12 font-black">
+                <th className="py-4 pl-4 pr-1 text-center w-8 font-black">
                   <button
                     onClick={handleToggleSelectAll}
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
                       selectedRowIds.length === filteredList.length && filteredList.length > 0
                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
                         : 'border-slate-400 bg-white hover:border-emerald-600'
@@ -1046,11 +1046,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     title="Pilih Semua Baris"
                   >
                     {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
-                      <Check className="w-3 h-3 stroke-[3]" />
+                      <Check className="w-2.5 h-2.5 stroke-[3]" />
                     )}
                   </button>
                 </th>
-                <th className="py-4 px-4 font-black">BOX</th>
+                <th className="py-4 pl-1 pr-4 font-black">BOX</th>
                 <th className="py-4 px-4 font-black">NAMA STORE / SPK</th>
                 <th className="py-4 px-4 font-black">TIPE KIRIM</th>
                 <th className="py-4 px-4 text-center font-black">LABEL & DESAIN</th>
@@ -1095,28 +1095,21 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             : 'hover:bg-slate-50 bg-white'
                         }`}
                       >
-                        <td className="py-4 px-3 text-center w-12">
+                        <td className="py-4 pl-4 pr-1 text-center w-8">
                           <button
                             onClick={() => handleToggleSelectRow(item.id)}
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
                               isSelected
                                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
                                 : 'border-slate-300 bg-white hover:border-emerald-500'
                             }`}
                             title={isSelected ? 'Hapus Pilihan' : 'Pilih Baris Ini'}
                           >
-                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </button>
                         </td>
-                        <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-block w-3.5 h-3.5 rounded-full shadow-2xs shrink-0 transition-all ${
-                              isRowComplete
-                                ? 'bg-emerald-500 ring-2 ring-emerald-300'
-                                : 'bg-emerald-600 border border-emerald-700'
-                            }`} title={isRowComplete ? '100% Selesai' : 'Box Ready'} />
-                            <span className="font-black text-slate-950">{item.box_code || '-'}</span>
-                          </div>
+                        <td className="py-4 pl-1 pr-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
+                          <span className="font-black text-slate-950">{item.box_code || '-'}</span>
                         </td>
 
                         <td className="py-4 px-4">
