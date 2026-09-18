@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { QRCodeSVG } from 'qrcode.react';
-import { Html5Qrcode } from 'html5-qrcode';
 import { supabase } from '../supabaseClient';
 import {
   Camera,
   Globe,
-  FileSpreadsheet,
   Upload,
   Printer,
   FileText,
@@ -38,12 +36,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
   const [searchTerm, setSearchTerm] = useState('');
-
-  // In-App Scanner States
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [scannerTargetStage, setScannerTargetStage] = useState('status_qc_packing');
-  const [lastScanFeedback, setLastScanFeedback] = useState(null);
 
   // Google Sheets Modal State
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
@@ -97,33 +91,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       supabase.removeChannel(channel);
     };
   }, []);
-
-  useEffect(() => {
-    let html5QrCode = null;
-    if (isScannerOpen) {
-      html5QrCode = new Html5Qrcode("qr-reader-container");
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          handleQrScanSuccess(decodedText);
-        },
-        (errorMessage) => {}
-      ).catch((err) => {
-        console.error("Gagal menjalankan kamera:", err);
-      });
-    }
-
-    return () => {
-      if (html5QrCode) {
-        if (html5QrCode.isScanning) {
-          html5QrCode.stop().catch(err => console.error("Gagal stop scanner:", err));
-        }
-      }
-    };
-  }, [isScannerOpen, scannerTargetStage, packingList]);
 
   const fetchPackingData = async () => {
     const { data, error } = await supabase
@@ -184,55 +151,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       reader.onerror = (e) => reject(e);
       reader.readAsDataURL(file);
     });
-  };
-
-  const handleQrScanSuccess = async (decodedText) => {
-    const cleanScanned = cleanKey(decodedText);
-    const targetItem = packingList.find(
-      (item) =>
-        cleanKey(item.tracking_id) === cleanScanned ||
-        cleanKey(item.qr_address) === cleanScanned ||
-        cleanScanned.includes(cleanKey(item.box_code))
-    );
-
-    if (!targetItem) {
-      setLastScanFeedback({ success: false, text: `⚠️ QR (${decodedText}) tidak terdaftar!` });
-      return;
-    }
-
-    // FITUR BARU: Langsung filter tabel agar muncul SEMUA BOX untuk STORE ini
-    setSearchTerm(targetItem.store_name);
-
-    if (targetItem[scannerTargetStage] === 'DONE') {
-      setLastScanFeedback({ success: true, text: `ℹ️ ${targetItem.box_code} sudah DONE.` });
-      // Tutup otomatis setelah 1 detik agar user bisa lihat baris datanya
-      setTimeout(() => {
-        setIsScannerOpen(false);
-        setLastScanFeedback(null);
-      }, 1000);
-      return;
-    }
-
-    const { error } = await supabase
-      .from('packing_tracking')
-      .update({
-        [scannerTargetStage]: 'DONE',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', targetItem.id);
-
-    if (!error) {
-      setLastScanFeedback({
-        success: true,
-        text: `✅ ${targetItem.box_code} BERHASIL!`
-      });
-      fetchPackingData();
-      // Tutup otomatis setelah sukses
-      setTimeout(() => {
-        setIsScannerOpen(false);
-        setLastScanFeedback(null);
-      }, 1200);
-    }
   };
 
   const handleToggleStatus = async (id, fieldName, currentValue) => {
@@ -309,7 +227,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           const noPo = row[7] || '';
           const spkWpp = row[8] || '';
           const deliveryType = row[9] || 'DALAM KOTA';
-          const qrAddress = row[10] || `${prCode}_${storeId}_${storeName}`;
+
+          // GENERATE QR CODE UNIK SISTEM PER KOLI (Format: PRCODE-BOXCODE-STOREID)
+          const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
+          const qrAddress = trackingId;
 
           let storeItems = [];
           let totalQty = 0;
@@ -330,8 +251,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               totalQty += qtyVal;
             }
           });
-
-          const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
 
           parsedRecords.push({
             tracking_id: trackingId,
@@ -374,29 +293,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     } finally {
       setIsImporting(false);
     }
-  };
-
-  const handleImportExcel = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    const reader = new FileReader();
-
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        openSheetSelectorModal(wb);
-      } catch (err) {
-        alert('❌ Gagal membaca file Excel: ' + err.message);
-      } finally {
-        setIsImporting(false);
-        e.target.value = '';
-      }
-    };
-
-    reader.readAsBinaryString(file);
   };
 
   const handleFetchGoogleSheet = async () => {
@@ -752,14 +648,22 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     items_detail: []
   }));
 
+  const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
+  const pendingBoxCount = sourceList.length - completedBoxCount;
+
   const filteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
+
+    const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
+    const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
+
     const matchSearch =
       searchTerm === '' ||
       item.store_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.no_spk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.box_code?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchDelivery && matchSearch;
+
+    return matchDelivery && matchStatus && matchSearch;
   });
 
   const totalSpk = sourceList.length;
@@ -897,7 +801,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-lg font-black uppercase tracking-wider text-black">
-            Panel Kontrol Paking & Penanggung Jawab Scan
+            Panel Kontrol Paking
           </h2>
           <span className="text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-800 rounded-xl">
             Total Box Koli: {totalSpk}
@@ -908,15 +812,27 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           {stages.map((stage) => {
             const completedCount = packingList.filter((s) => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
+            const is100Percent = percent === 100 && totalSpk > 0;
 
             return (
-              <div key={stage.id} className="p-6 rounded-2xl border flex flex-col justify-between bg-white border-slate-200 shadow-2xs">
+              <div
+                key={stage.id}
+                className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
+                  is100Percent
+                    ? 'bg-emerald-50/80 border-emerald-400 shadow-xs'
+                    : 'bg-white border-slate-200 shadow-2xs'
+                }`}
+              >
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-black">
                       <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`}></div> {stage.label}
                     </h3>
-                    <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-800">{percent}%</span>
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl ${
+                      is100Percent ? 'bg-emerald-600 text-white' : 'bg-amber-500/10 text-amber-800'
+                    }`}>
+                      {percent}%
+                    </span>
                   </div>
                   <p className="text-[11px] font-bold text-slate-600 mb-6">{stage.staff}</p>
 
@@ -930,8 +846,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
                 <div className="mt-6 pt-3 border-t border-slate-200 text-[11px] font-bold flex justify-between items-center text-slate-700">
                   <span>Status:</span>
-                  <span className={percent === 100 ? 'text-emerald-700 font-black' : 'text-amber-700 font-bold'}>
-                    {percent === 100 ? '🟢 100% Selesai' : '🟡 In Progress'}
+                  <span className={is100Percent ? 'text-emerald-700 font-black' : 'text-amber-700 font-bold'}>
+                    {is100Percent ? '🟢 100% Selesai 🎉' : '🟡 In Progress'}
                   </span>
                 </div>
               </div>
@@ -946,24 +862,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setIsScannerOpen(true)}
-              className="px-4 py-2 bg-black hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Camera className="w-4 h-4 text-amber-400" /> Mode Scan Gudang (QC/Checker)
-            </button>
-
-            <button
               onClick={() => setIsGSheetModalOpen(true)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
             >
-              <Globe className="w-3.5 h-3.5 text-slate-700" /> Google Sheet
+              <Globe className="w-4 h-4 text-white" /> Import Google Sheet
             </button>
-
-            <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" />
-              {isImporting ? 'Membaca File...' : 'Excel Matriks'}
-              <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleImportExcel} disabled={isImporting} />
-            </label>
 
             <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
               <Upload className="w-3.5 h-3.5 text-slate-700" />
@@ -1002,21 +905,58 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         </div>
 
         {/* SUB-HEADER SEGMENTED CONTROL & SEARCH */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-200">
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
-            {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((type) => (
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pt-4 border-t border-slate-200">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status Progress Tabs */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
-                key={type}
-                onClick={() => setFilterDelivery(type)}
+                onClick={() => setFilterStatus('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  filterDelivery === type
+                  filterStatus === 'ALL'
                     ? 'bg-white shadow-xs font-black text-black'
                     : 'text-slate-700 hover:text-black font-semibold'
                 }`}
               >
-                {type === 'ALL' ? 'Semua Box' : type}
+                Semua ({sourceList.length})
               </button>
-            ))}
+              <button
+                onClick={() => setFilterStatus('IN_PROGRESS')}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'IN_PROGRESS'
+                    ? 'bg-amber-500 text-white shadow-xs font-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
+                }`}
+              >
+                ⏳ On Progress ({pendingBoxCount})
+              </button>
+              <button
+                onClick={() => setFilterStatus('COMPLETED')}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filterStatus === 'COMPLETED'
+                    ? 'bg-emerald-600 text-white shadow-xs font-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
+                }`}
+              >
+                ✅ Done ({completedBoxCount})
+              </button>
+            </div>
+
+            {/* Delivery Route Filter */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setFilterDelivery(type)}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                    filterDelivery === type
+                      ? 'bg-white shadow-xs font-black text-black'
+                      : 'text-slate-700 hover:text-black font-semibold'
+                  }`}
+                >
+                  {type === 'ALL' ? 'Semua Rute' : type}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="w-full sm:w-80 relative">
@@ -1051,7 +991,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <th className="py-3.5 px-4 text-center">Status Packing</th>
                 <th className="py-3.5 px-4 text-center">Status Checker</th>
                 <th className="py-3.5 px-4 text-center">Bukti Foto</th>
-                <th className="py-3.5 px-4 text-center">Aksi Kamera</th>
+                <th className="py-3.5 px-4 text-center">Catatan / Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -1065,13 +1005,35 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 filteredList.map((item) => {
                   const isPackingDone = item.status_qc_packing === 'DONE';
                   const isCheckerDone = item.status_qc_checker === 'DONE';
+                  const isRowComplete = isPackingDone && isCheckerDone;
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors bg-white">
-                      <td className="py-3.5 px-4 font-mono text-slate-600 font-bold text-xs whitespace-nowrap">{item.box_code || '-'}</td>
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isRowComplete
+                          ? 'bg-emerald-50/40 hover:bg-emerald-100/50'
+                          : 'hover:bg-slate-50/80 bg-white'
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 font-mono text-slate-600 font-bold text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {item.box_code || '-'}
+                          {isRowComplete && (
+                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" title="100% Selesai" />
+                          )}
+                        </div>
+                      </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-xs sm:text-sm">{item.store_name || '-'}</div>
+                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2 flex-wrap">
+                          {item.store_name || '-'}
+                          {isRowComplete && (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
+                              ✅ Done
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[10px] font-mono text-slate-400 font-medium mt-0.5">{item.no_spk} | {item.promo_title}</div>
                       </td>
 
@@ -1151,19 +1113,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                       </td>
 
                       <td className="py-3.5 px-4 text-center">
-                        <label title="Ambil Foto Kamera" className={`w-8 h-8 rounded-full inline-flex items-center justify-center cursor-pointer transition-all shadow-2xs active:scale-95 border ${
-                          uploadingId === item.id ? 'bg-slate-300 text-slate-500 border-slate-300' : 'bg-black hover:bg-slate-800 text-white border-black'
-                        }`}>
-                          <Camera className="w-3.5 h-3.5" />
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id)}
-                            disabled={uploadingId === item.id}
-                          />
-                        </label>
+                        <button
+                          disabled
+                          title="Aksi Kamera Dinonaktifkan Sementara (Dapat Diganti Nanti)"
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[11px] font-bold cursor-not-allowed inline-flex items-center gap-1"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Note
+                        </button>
                       </td>
                     </tr>
                   );
@@ -1310,51 +1267,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 {isImporting ? '⏳ Mengambil Sheet...' : '⚡ Lanjut Pilih Sheet'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {isScannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-          <div className={`w-full max-w-md rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
-            <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
-              <h3 className="font-black text-sm uppercase flex items-center gap-2">📷 In-App QR Scanner</h3>
-              <button
-                onClick={() => setIsScannerOpen(false)}
-                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="flex gap-2 mb-4 bg-stone-100 dark:bg-neutral-700 p-1.5 rounded-2xl">
-              <button
-                onClick={() => setScannerTargetStage('status_qc_packing')}
-                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
-                  scannerTargetStage === 'status_qc_packing' ? 'bg-emerald-600 text-white shadow-md' : 'text-stone-500 dark:text-stone-300'
-                }`}
-              >
-                QC PACKING
-              </button>
-              <button
-                onClick={() => setScannerTargetStage('status_qc_checker')}
-                className={`flex-1 py-2 text-xs font-black rounded-xl transition-all ${
-                  scannerTargetStage === 'status_qc_checker' ? 'bg-amber-500 text-white shadow-md' : 'text-stone-500 dark:text-stone-300'
-                }`}
-              >
-                QC CHECKER
-              </button>
-            </div>
-
-            <div id="qr-reader-container" className="rounded-2xl overflow-hidden border-2 border-dashed border-stone-300 dark:border-neutral-600 bg-black min-h-[260px]"></div>
-
-            {lastScanFeedback && (
-              <div className={`mt-4 p-3 rounded-2xl text-xs font-bold text-center animate-fade-in ${
-                lastScanFeedback.success ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-              }`}>
-                {lastScanFeedback.text}
-              </div>
-            )}
           </div>
         </div>
       )}
