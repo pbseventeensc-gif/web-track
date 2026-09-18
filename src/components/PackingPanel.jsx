@@ -1084,7 +1084,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         <td className="py-4 px-4 whitespace-nowrap">
                           <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider text-center border ${
                             item.delivery_type === 'DALAM KOTA'
-                              ? 'bg-amber-500/15 text-amber-900 border-amber-400'
+                              ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs'
                               : 'bg-blue-500/15 text-blue-900 border-blue-400'
                           }`}>
                             {item.delivery_type || 'DALAM KOTA'}
