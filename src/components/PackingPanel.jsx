@@ -1061,11 +1061,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         }`}
                       >
                         <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
-                          <div className="flex items-center gap-1.5">
-                            {item.box_code || '-'}
-                            {isRowComplete && (
-                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600" title="100% Selesai" />
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-block w-3.5 h-3.5 rounded-full shadow-2xs shrink-0 transition-all ${
+                              isRowComplete
+                                ? 'bg-emerald-500 ring-2 ring-emerald-300'
+                                : 'bg-emerald-600 border border-emerald-700'
+                            }`} title={isRowComplete ? '100% Selesai' : 'Box Ready'} />
+                            <span className="font-black text-slate-950">{item.box_code || '-'}</span>
                           </div>
                         </td>
 
