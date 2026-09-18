@@ -1200,13 +1200,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           </button>
                         )}
                       </td>
-                          title="Aksi Kamera Dinonaktifkan Sementara (Dapat Diganti Nanti)"
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[11px] font-bold cursor-not-allowed inline-flex items-center gap-1"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                          Note
-                        </button>
-                      </td>
                     </tr>
                   );
                 })
