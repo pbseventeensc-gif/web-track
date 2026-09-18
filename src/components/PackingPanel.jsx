@@ -1036,141 +1036,151 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   </td>
                 </tr>
               ) : (
-                filteredList.map((item) => {
+                filteredList.map((item, idx) => {
                   const isPackingDone = item.status_qc_packing === 'DONE';
                   const isCheckerDone = item.status_qc_checker === 'DONE';
                   const isRowComplete = isPackingDone && isCheckerDone;
 
+                  // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch
+                  const showProjectDivider = idx > 0 && item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title;
+
                   return (
-                    <tr
-                      key={item.id}
-                      className={`transition-colors ${
-                        isRowComplete
-                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60'
-                          : 'hover:bg-slate-50 bg-white'
-                      }`}
-                    >
-                      <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          {item.box_code || '-'}
-                          {isRowComplete && (
-                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600" title="100% Selesai" />
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-4 px-4">
-                        <div className="font-black text-slate-950 text-sm sm:text-base flex items-center gap-2 flex-wrap tracking-tight">
-                          {item.store_name || '-'}
-                          {isRowComplete && (
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-black border border-emerald-400">
-                              ✅ Done
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs font-mono text-slate-600 font-bold mt-0.5">{item.no_spk} | {item.promo_title}</div>
-                      </td>
-
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider text-center border ${
-                          item.delivery_type === 'DALAM KOTA'
-                            ? 'bg-amber-500/15 text-amber-900 border-amber-400'
-                            : 'bg-blue-500/15 text-blue-900 border-blue-400'
-                        }`}>
-                          {item.delivery_type || 'DALAM KOTA'}
-                        </span>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handlePrintLabel(item)}
-                            title="Cetak Label"
-                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
-                          >
-                            <Printer className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setEditingRowItem(item)}
-                            title="Foto Desain"
-                            className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="text-[10px] mt-1 text-slate-600 font-bold">
-                          {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
-                        </div>
-                      </td>
-
-                      {/* 1. BUKTI FOTO */}
-                      <td className="py-3.5 px-4 text-center">
-                        {item.bukti_paking_url ? (
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <img
-                              src={item.bukti_paking_url}
-                              alt="Bukti Paking"
-                              onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
-                              className="w-9 h-9 object-cover rounded-lg border border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
-                            />
-                            <div className="text-[10px] font-bold text-slate-800 leading-tight">
-                              <span className="block truncate max-w-[100px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
-                            </div>
+                    <React.Fragment key={item.id}>
+                      {showProjectDivider && (
+                        <tr className="bg-amber-100/90 border-y-2 border-amber-300">
+                          <td colSpan="8" className="py-2.5 px-4 text-center font-black text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
+                            📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        className={`transition-colors ${
+                          isRowComplete
+                            ? 'bg-emerald-50/60 hover:bg-emerald-100/60'
+                            : 'hover:bg-slate-50 bg-white'
+                        }`}
+                      >
+                        <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            {item.box_code || '-'}
+                            {isRowComplete && (
+                              <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600" title="100% Selesai" />
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-slate-400 font-medium text-[11px]">No Foto</span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* 2. STATUS PACKING */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
-                              isPackingDone
-                                ? 'bg-blue-50 text-blue-700 border-blue-300'
-                                : 'bg-slate-100 text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                            {isPackingDone ? 'Done' : 'Pending'}
-                          </button>
-                          {isPackingDone && (
-                            <div className="text-[10px] font-bold text-slate-800 leading-tight mt-0.5">
-                              <span className="block truncate max-w-[100px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                        <td className="py-4 px-4">
+                          <div className="font-black text-slate-950 text-sm sm:text-base flex items-center gap-2 flex-wrap tracking-tight">
+                            {item.store_name || '-'}
+                            {isRowComplete && (
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-black border border-emerald-400">
+                                ✅ Done
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs font-mono text-slate-600 font-bold mt-0.5">{item.no_spk} | {item.promo_title}</div>
+                        </td>
+
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider text-center border ${
+                            item.delivery_type === 'DALAM KOTA'
+                              ? 'bg-amber-500/15 text-amber-900 border-amber-400'
+                              : 'bg-blue-500/15 text-blue-900 border-blue-400'
+                          }`}>
+                            {item.delivery_type || 'DALAM KOTA'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handlePrintLabel(item)}
+                              title="Cetak Label"
+                              className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingRowItem(item)}
+                              title="Foto Desain"
+                              className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="text-[10px] mt-1 text-slate-600 font-bold">
+                            {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
+                          </div>
+                        </td>
+
+                        {/* 1. BUKTI FOTO (Layout: Foto -> User ID -> Timestamp) */}
+                        <td className="py-3.5 px-4 text-center">
+                          {item.bukti_paking_url ? (
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <img
+                                src={item.bukti_paking_url}
+                                alt="Bukti Paking"
+                                onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
+                                className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                              />
+                              <div className="text-[10px] font-black text-slate-900 leading-tight">
+                                <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
+                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                              </div>
                             </div>
+                          ) : (
+                            <span className="text-slate-400 font-bold text-[11px]">No Foto</span>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* 3. STATUS CHECKER */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
-                              isCheckerDone
-                                ? 'bg-amber-50 text-amber-800 border-amber-300'
-                                : 'bg-slate-100 text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
-                            {isCheckerDone ? 'Checked' : 'Pending'}
-                          </button>
-                          {isCheckerDone && (
-                            <div className="text-[10px] font-bold text-slate-800 leading-tight mt-0.5">
-                              <span className="block truncate max-w-[100px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                        {/* 2. STATUS PACKING (Layout: Done/Pending -> User ID -> Timestamp) */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                                isPackingDone
+                                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                              {isPackingDone ? 'Done' : 'Pending'}
+                            </button>
+                            {isPackingDone && (
+                              <div className="text-[10px] font-black text-slate-900 leading-tight mt-0.5">
+                                <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
+                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* 4. CATATAN / ACTION (EDITABLE NOTE) */}
-                      <td className="py-3.5 px-4 text-center">
+                        {/* 3. STATUS CHECKER (Layout: Checked/Pending -> User ID -> Timestamp) */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                                isCheckerDone
+                                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                              {isCheckerDone ? 'Checked' : 'Pending'}
+                            </button>
+                            {isCheckerDone && (
+                              <div className="text-[10px] font-black text-slate-900 leading-tight mt-0.5">
+                                <span className="block truncate max-w-[110px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
+                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 4. CATATAN / ACTION (EDITABLE NOTE) */}
+                        <td className="py-3.5 px-4 text-center">
                         {editingNoteId === item.id ? (
                           <div className="flex items-center justify-center gap-1">
                             <input
@@ -1225,9 +1235,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         )}
                       </td>
                     </tr>
-                  );
-                })
-              )}
+                  </React.Fragment>
+                );
+              })
+            )}
             </tbody>
           </table>
 
