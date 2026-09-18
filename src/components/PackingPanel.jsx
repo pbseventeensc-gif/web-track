@@ -56,6 +56,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [tempNoteText, setPendingNoteText] = useState('');
 
+  // Row Selection Circle Checklist States
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+
   const stages = [
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
     { id: 'status_qc_packing', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
@@ -197,6 +200,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
     if (error) {
       console.error('Gagal memperbarui catatan:', error.message);
+    }
+  };
+
+  const handleToggleSelectRow = (id) => {
+    setSelectedRowIds((prev) =>
+      prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedRowIds.length === filteredList.length && filteredList.length > 0) {
+      setSelectedRowIds([]);
+    } else {
+      setSelectedRowIds(filteredList.map((item) => item.id));
     }
   };
 
@@ -1018,6 +1035,21 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <table className="w-full text-left border-collapse bg-white">
             <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-900 font-black uppercase tracking-wider text-xs">
               <tr>
+                <th className="py-4 px-3 text-center w-12 font-black">
+                  <button
+                    onClick={handleToggleSelectAll}
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                      selectedRowIds.length === filteredList.length && filteredList.length > 0
+                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                        : 'border-slate-400 bg-white hover:border-emerald-600'
+                    }`}
+                    title="Pilih Semua Baris"
+                  >
+                    {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-4 px-4 font-black">BOX</th>
                 <th className="py-4 px-4 font-black">NAMA STORE / SPK</th>
                 <th className="py-4 px-4 font-black">TIPE KIRIM</th>
@@ -1031,7 +1063,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             <tbody className="divide-y divide-slate-200 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500 font-bold text-xs">
+                  <td colSpan="9" className="p-8 text-center text-slate-500 font-bold text-xs">
                     Tidak ada data box yang sesuai filter.
                   </td>
                 </tr>
@@ -1040,6 +1072,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   const isPackingDone = item.status_qc_packing === 'DONE';
                   const isCheckerDone = item.status_qc_checker === 'DONE';
                   const isRowComplete = isPackingDone && isCheckerDone;
+                  const isSelected = selectedRowIds.includes(item.id);
 
                   // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch
                   const showProjectDivider = idx > 0 && item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title;
@@ -1048,18 +1081,33 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan="8" className="py-2.5 px-4 text-center font-black text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
+                          <td colSpan="9" className="py-2.5 px-4 text-center font-black text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
                             📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---
                           </td>
                         </tr>
                       )}
                       <tr
                         className={`transition-colors ${
-                          isRowComplete
+                          isSelected
+                            ? 'bg-indigo-50/70 hover:bg-indigo-100/70'
+                            : isRowComplete
                             ? 'bg-emerald-50/60 hover:bg-emerald-100/60'
                             : 'hover:bg-slate-50 bg-white'
                         }`}
                       >
+                        <td className="py-4 px-3 text-center w-12">
+                          <button
+                            onClick={() => handleToggleSelectRow(item.id)}
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                              isSelected
+                                ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                                : 'border-slate-300 bg-white hover:border-emerald-500'
+                            }`}
+                            title={isSelected ? 'Hapus Pilihan' : 'Pilih Baris Ini'}
+                          >
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </button>
+                        </td>
                         <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span className={`inline-block w-3.5 h-3.5 rounded-full shadow-2xs shrink-0 transition-all ${
