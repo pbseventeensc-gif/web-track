@@ -1108,20 +1108,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </button>
                         </td>
-                        <td className="py-4 pl-1 pr-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
-                          <span className="font-black text-slate-950">{item.box_code || '-'}</span>
+                        <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 font-bold text-sm whitespace-nowrap">
+                          <span className="font-bold text-slate-900">{item.box_code || '-'}</span>
                         </td>
 
-                        <td className="py-4 px-4">
-                          <div className="font-black text-slate-950 text-sm sm:text-base flex items-center gap-2 flex-wrap tracking-tight">
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
                             {item.store_name || '-'}
                             {isRowComplete && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-black border border-emerald-400">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-400">
                                 ✅ Done
                               </span>
                             )}
                           </div>
-                          <div className="text-xs font-mono text-slate-600 font-bold mt-0.5">{item.no_spk} | {item.promo_title}</div>
+                          <div className="text-xs font-mono text-slate-500 font-medium mt-0.5">{item.no_spk} | {item.promo_title}</div>
                         </td>
 
                         <td className="py-4 px-4 whitespace-nowrap">
