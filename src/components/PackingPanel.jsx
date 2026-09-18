@@ -654,7 +654,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const handleClearAllPackingData = async () => {
     if (confirm('⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH data paking di database?')) {
       try {
-        const { error } = await supabase.from('packing_tracking').delete().not('tracking_id', 'is', null);
+        const { error } = await supabase.from('packing_tracking').delete().gt('id', 0);
         if (error) throw error;
         alert('✅ Seluruh data paking berhasil dikosongkan!');
         setPackingList([]);
@@ -665,18 +665,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const sourceList = packingList.length > 0 ? packingList : (spkList || []).map((item, idx) => ({
-    id: item.id || idx,
-    box_code: item.store_code || `W${idx + 1}`,
-    store_name: item.project || item.client || 'Store ' + (idx + 1),
-    no_spk: item.no_spk || `SPK-${idx + 1}`,
-    promo_title: item.bahan || item.ukuran || 'PROJECT X BANNER PR',
-    delivery_type: item.delivery_route === 'LUAR KOTA' ? 'LUAR KOTA' : 'DALAM KOTA',
-    status_qc_packing: item.qc_paking ? 'DONE' : 'PENDING',
-    status_qc_checker: item.qc_checker ? 'DONE' : 'PENDING',
-    bukti_paking_url: item.surat_jalan_url || null,
-    items_detail: []
-  }));
+  const sourceList = packingList;
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
