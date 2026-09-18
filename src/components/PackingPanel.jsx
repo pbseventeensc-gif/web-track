@@ -999,24 +999,24 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         </div>
 
         {/* ENTERPRISE DATA GRID TABLE (STICKY HEADER & INNER SCROLL) */}
-        <div className="max-h-[600px] overflow-y-auto overflow-x-auto mt-4 border border-slate-200/80 rounded-2xl shadow-2xs bg-white custom-scrollbar relative">
-          <table className="w-full text-left text-xs border-collapse bg-white">
-            <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+        <div className="max-h-[620px] overflow-y-auto overflow-x-auto mt-4 border border-slate-300 rounded-2xl shadow-xs bg-white custom-scrollbar relative">
+          <table className="w-full text-left border-collapse bg-white">
+            <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-900 font-black uppercase tracking-wider text-xs">
               <tr>
-                <th className="py-3.5 px-4">Box</th>
-                <th className="py-3.5 px-4">Nama Store / SPK</th>
-                <th className="py-3.5 px-4">Tipe Kirim</th>
-                <th className="py-3.5 px-4 text-center">Label & Desain</th>
-                <th className="py-3.5 px-4 text-center">Bukti Foto</th>
-                <th className="py-3.5 px-4 text-center">Status Packing</th>
-                <th className="py-3.5 px-4 text-center">Status Checker</th>
-                <th className="py-3.5 px-4 text-center">Catatan / Action</th>
+                <th className="py-4 px-4 font-black">BOX</th>
+                <th className="py-4 px-4 font-black">NAMA STORE / SPK</th>
+                <th className="py-4 px-4 font-black">TIPE KIRIM</th>
+                <th className="py-4 px-4 text-center font-black">LABEL & DESAIN</th>
+                <th className="py-4 px-4 text-center font-black">BUKTI FOTO</th>
+                <th className="py-4 px-4 text-center font-black">STATUS PACKING</th>
+                <th className="py-4 px-4 text-center font-black">STATUS CHECKER</th>
+                <th className="py-4 px-4 text-center font-black">CATATAN / ACTION</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-slate-200 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">
+                  <td colSpan="8" className="p-8 text-center text-slate-500 font-bold text-xs">
                     Tidak ada data box yang sesuai filter.
                   </td>
                 </tr>
@@ -1031,36 +1031,36 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                       key={item.id}
                       className={`transition-colors ${
                         isRowComplete
-                          ? 'bg-emerald-50/40 hover:bg-emerald-100/50'
-                          : 'hover:bg-slate-50/80 bg-white'
+                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60'
+                          : 'hover:bg-slate-50 bg-white'
                       }`}
                     >
-                      <td className="py-3.5 px-4 font-mono text-slate-600 font-bold text-xs whitespace-nowrap">
+                      <td className="py-4 px-4 font-mono text-slate-900 font-black text-sm whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {item.box_code || '-'}
                           {isRowComplete && (
-                            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" title="100% Selesai" />
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600" title="100% Selesai" />
                           )}
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-2 flex-wrap">
+                      <td className="py-4 px-4">
+                        <div className="font-black text-slate-950 text-sm sm:text-base flex items-center gap-2 flex-wrap tracking-tight">
                           {item.store_name || '-'}
                           {isRowComplete && (
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-black border border-emerald-400">
                               ✅ Done
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400 font-medium mt-0.5">{item.no_spk} | {item.promo_title}</div>
+                        <div className="text-xs font-mono text-slate-600 font-bold mt-0.5">{item.no_spk} | {item.promo_title}</div>
                       </td>
 
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-md font-extrabold text-[10px] uppercase tracking-wider text-center border ${
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider text-center border ${
                           item.delivery_type === 'DALAM KOTA'
-                            ? 'bg-amber-500/10 text-amber-800 border-amber-300'
-                            : 'bg-blue-500/10 text-blue-800 border-blue-300'
+                            ? 'bg-amber-500/15 text-amber-900 border-amber-400'
+                            : 'bg-blue-500/15 text-blue-900 border-blue-400'
                         }`}>
                           {item.delivery_type || 'DALAM KOTA'}
                         </span>

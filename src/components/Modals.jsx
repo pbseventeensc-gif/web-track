@@ -140,16 +140,55 @@ export function ScanQCModal({ isOpen, onClose, isDarkMode, scanTargetColumn, set
   );
 }
 
-/* 4. MODAL IMAGE PREVIEW */
+/* 4. MODAL IMAGE PREVIEW (EXTRA LARGE + HD DOWNLOAD) */
 export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
   if (!isOpen) return null;
 
+  const handleDownloadHD = () => {
+    if (!modalImageInfo?.url) return;
+    const link = document.createElement('a');
+    link.href = modalImageInfo.url;
+    link.download = `HD_${modalImageInfo.title || 'Foto_Bukti'}_${Date.now()}.jpg`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={onClose}>
-      <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} className="absolute -top-10 right-0 text-white hover:text-red-500 text-3xl font-bold">✕</button>
-        <img src={modalImageInfo.url} alt="Preview" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-stone-700" />
-        <div className="text-center mt-3 text-white font-bold text-sm tracking-widest">{modalImageInfo.title}</div>
+    <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-[100] p-3 sm:p-6 animate-fade-in" onClick={onClose}>
+      <div className="relative w-full max-w-6xl max-h-[96vh] flex flex-col items-center justify-center p-2" onClick={e => e.stopPropagation()}>
+        {/* Header Action Bar */}
+        <div className="w-full flex items-center justify-between mb-3 px-2">
+          <h3 className="text-white font-black text-sm sm:text-lg tracking-wide truncate max-w-[65%]">
+            🖼️ {modalImageInfo.title || 'Preview Foto Bukti Paking'}
+          </h3>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadHD}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95"
+              title="Download Foto Resolusi Tinggi (HD)"
+            >
+              📥 Download HD
+            </button>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/20 hover:bg-rose-600 text-white font-black flex items-center justify-center text-xl transition-all cursor-pointer"
+              title="Tutup Modal"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Extra Large Image Frame */}
+        <div className="relative w-full flex items-center justify-center overflow-hidden rounded-2xl bg-neutral-950/90 border border-neutral-800 p-2 shadow-2xl">
+          <img
+            src={modalImageInfo.url}
+            alt="Preview HD"
+            className="max-w-full max-h-[82vh] w-auto h-auto object-contain rounded-xl shadow-2xl transition-transform"
+          />
+        </div>
       </div>
     </div>
   );
