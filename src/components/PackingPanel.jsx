@@ -194,19 +194,31 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         if (!ws) return;
 
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        if (!data || data.length < 7) return;
+        if (!data || data.length < 2) return;
 
-        const rowCodes = data[1] || [];
-        const rowDescs = data[2] || [];
-        const rowMaterials = data[3] || [];
-        const rowSizes = data[4] || [];
+        // Smart Header Row Detection for Item Codes
+        let codeRowIdx = 1;
+        for (let r = 0; r < Math.min(6, data.length); r++) {
+          const row = data[r] || [];
+          const hasCodes = row.some((val, c) => c >= 10 && val && String(val).match(/^[A-Za-z0-9._-]+$/) && !String(val).toUpperCase().includes('QR'));
+          if (hasCodes) {
+            codeRowIdx = r;
+            break;
+          }
+        }
+
+        const rowCodes = data[codeRowIdx] || [];
+        const rowDescs = data[codeRowIdx + 1] || [];
+        const rowMaterials = data[codeRowIdx + 2] || [];
+        const rowSizes = data[codeRowIdx + 3] || [];
 
         let catalogItems = [];
-        for (let colIdx = 12; colIdx < rowCodes.length; colIdx++) {
-          if (rowCodes[colIdx]) {
+        for (let colIdx = 10; colIdx < rowCodes.length; colIdx++) {
+          const rawCode = rowCodes[colIdx];
+          if (rawCode && !String(rawCode).toUpperCase().includes('QR') && String(rawCode).trim() !== '') {
             catalogItems.push({
               colIndex: colIdx,
-              code: String(rowCodes[colIdx]).trim(),
+              code: String(rawCode).trim(),
               desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
               material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
               size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
@@ -214,13 +226,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           }
         }
 
-        for (let r = 6; r < data.length; r++) {
+        // Smart Store Row Scan (start scanning from r = 4)
+        for (let r = 4; r < data.length; r++) {
           const row = data[r];
-          if (!row || !row[1]) continue;
+          if (!row || !row[1] || String(row[1]).toUpperCase().includes('STORE') || String(row[1]).toUpperCase().includes('NOMOR')) continue;
 
           const storeNo = row[1];
           const prCode = row[2] || '';
-          const boxCode = row[3] || `B${r - 5}`;
+          const boxCode = row[3] || `B${r - 3}`;
           const storeId = row[4] || '';
           const clientPt = row[5] || 'CV. MAJU MAKMUR RETALINDO';
           const storeName = row[6] || '';
