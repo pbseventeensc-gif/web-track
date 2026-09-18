@@ -157,6 +157,21 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     });
   };
 
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${hours}:${mins} • ${day}/${month}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
   const handleToggleStatus = async (id, fieldName, currentValue) => {
     const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
     setPackingList((prev) => prev.map((item) => (item.id === id ? { ...item, [fieldName]: nextValue } : item)));
@@ -1091,47 +1106,67 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                       {/* 1. BUKTI FOTO */}
                       <td className="py-3.5 px-4 text-center">
                         {item.bukti_paking_url ? (
-                          <div className="flex justify-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
                             <img
                               src={item.bukti_paking_url}
                               alt="Bukti Paking"
                               onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
                               className="w-9 h-9 object-cover rounded-lg border border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                             />
+                            <div className="text-[10px] font-bold text-slate-800 leading-tight">
+                              <span className="block truncate max-w-[100px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-slate-500 font-medium text-[11px]">No Foto</span>
+                          <span className="text-slate-400 font-medium text-[11px]">No Foto</span>
                         )}
                       </td>
 
                       {/* 2. STATUS PACKING */}
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
-                            isPackingDone
-                              ? 'bg-blue-50 text-blue-700 border-blue-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                          {isPackingDone ? 'Done' : 'Pending'}
-                        </button>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                              isPackingDone
+                                ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                : 'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                            {isPackingDone ? 'Done' : 'Pending'}
+                          </button>
+                          {isPackingDone && (
+                            <div className="text-[10px] font-bold text-slate-800 leading-tight mt-0.5">
+                              <span className="block truncate max-w-[100px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* 3. STATUS CHECKER */}
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
-                            isCheckerDone
-                              ? 'bg-amber-50 text-amber-800 border-amber-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
-                          {isCheckerDone ? 'Checked' : 'Pending'}
-                        </button>
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                              isCheckerDone
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                            {isCheckerDone ? 'Checked' : 'Pending'}
+                          </button>
+                          {isCheckerDone && (
+                            <div className="text-[10px] font-bold text-slate-800 leading-tight mt-0.5">
+                              <span className="block truncate max-w-[100px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 font-semibold">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* 4. CATATAN / ACTION (EDITABLE NOTE) */}
