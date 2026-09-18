@@ -52,6 +52,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Modal Custom Image Override
   const [editingRowItem, setEditingRowItem] = useState(null);
 
+  // Editable Note States
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [tempNoteText, setPendingNoteText] = useState('');
+
   const stages = [
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
     { id: 'status_qc_packing', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
@@ -165,6 +169,19 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     if (error) {
       alert('❌ Gagal memperbarui status: ' + error.message);
       fetchPackingData();
+    }
+  };
+
+  const handleSaveNote = async (id, noteText) => {
+    setPackingList((prev) => prev.map((item) => (item.id === id ? { ...item, catatan: noteText } : item)));
+
+    const { error } = await supabase
+      .from('packing_tracking')
+      .update({ catatan: noteText, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Gagal memperbarui catatan:', error.message);
     }
   };
 
@@ -1001,9 +1018,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <th className="py-3.5 px-4">Nama Store / SPK</th>
                 <th className="py-3.5 px-4">Tipe Kirim</th>
                 <th className="py-3.5 px-4 text-center">Label & Desain</th>
+                <th className="py-3.5 px-4 text-center">Bukti Foto</th>
                 <th className="py-3.5 px-4 text-center">Status Packing</th>
                 <th className="py-3.5 px-4 text-center">Status Checker</th>
-                <th className="py-3.5 px-4 text-center">Bukti Foto</th>
                 <th className="py-3.5 px-4 text-center">Catatan / Action</th>
               </tr>
             </thead>
@@ -1082,34 +1099,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
-                            isPackingDone
-                              ? 'bg-blue-50 text-blue-700 border-blue-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                          {isPackingDone ? 'Done' : 'Pending'}
-                        </button>
-                      </td>
-
-                      <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
-                            isCheckerDone
-                              ? 'bg-amber-50 text-amber-800 border-amber-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-300'
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
-                          {isCheckerDone ? 'Checked' : 'Pending'}
-                        </button>
-                      </td>
-
+                      {/* 1. BUKTI FOTO */}
                       <td className="py-3.5 px-4 text-center">
                         {item.bukti_paking_url ? (
                           <div className="flex justify-center">
@@ -1125,9 +1115,91 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         )}
                       </td>
 
+                      {/* 2. STATUS PACKING */}
                       <td className="py-3.5 px-4 text-center">
                         <button
-                          disabled
+                          onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
+                            isPackingDone
+                              ? 'bg-blue-50 text-blue-700 border-blue-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                          {isPackingDone ? 'Done' : 'Pending'}
+                        </button>
+                      </td>
+
+                      {/* 3. STATUS CHECKER */}
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border active:scale-95 ${
+                            isCheckerDone
+                              ? 'bg-amber-50 text-amber-800 border-amber-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                          {isCheckerDone ? 'Checked' : 'Pending'}
+                        </button>
+                      </td>
+
+                      {/* 4. CATATAN / ACTION (EDITABLE NOTE) */}
+                      <td className="py-3.5 px-4 text-center">
+                        {editingNoteId === item.id ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="text"
+                              value={tempNoteText}
+                              onChange={(e) => setPendingNoteText(e.target.value)}
+                              placeholder="Tulis catatan..."
+                              className="w-28 px-2 py-1 border border-slate-300 rounded-md text-[11px] font-semibold bg-white text-black focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveNote(item.id, tempNoteText);
+                                  setEditingNoteId(null);
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => {
+                                handleSaveNote(item.id, tempNoteText);
+                                setEditingNoteId(null);
+                              }}
+                              className="p-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
+                              title="Simpan"
+                            >
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => setEditingNoteId(null)}
+                              className="p-1 rounded-md bg-slate-200 text-slate-600 hover:bg-slate-300 cursor-pointer"
+                              title="Batal"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingNoteId(item.id);
+                              setPendingNoteText(item.catatan || '');
+                            }}
+                            title="Klik untuk tulis/edit catatan"
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all border flex items-center justify-center gap-1.5 mx-auto ${
+                              item.catatan
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            <FileText className="w-3 h-3 text-slate-500" />
+                            <span className="truncate max-w-[90px]">{item.catatan || 'Note'}</span>
+                            <Edit3 className="w-2.5 h-2.5 text-slate-400 opacity-60" />
+                          </button>
+                        )}
+                      </td>
                           title="Aksi Kamera Dinonaktifkan Sementara (Dapat Diganti Nanti)"
                           className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-400 border border-slate-200 text-[11px] font-bold cursor-not-allowed inline-flex items-center gap-1"
                         >
