@@ -362,26 +362,26 @@ export default function PmgProjectManager({ isDarkMode }) {
   };
 
   return (
-    <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+    <div className={`p-4 rounded-2xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
-        <h3 className="font-extrabold text-sm uppercase text-indigo-600 dark:text-indigo-400">
+        <h3 className="font-bold text-xs uppercase text-indigo-600 dark:text-indigo-400 mb-0.5">
           📋 Input & Alokasi Surat Jalan / POD PMG
         </h3>
-        <p className="text-xs opacity-60">Buat dokumen pengiriman dengan format resmi POD & Surat Jalan PMG.</p>
+        <p className="text-[11px] opacity-60">Buat dokumen pengiriman dengan format resmi POD & Surat Jalan PMG.</p>
       </div>
 
       {/* PMG LOGO UPLOAD CARD WITH LOCALSTORAGE LOCK */}
-      <div className="p-4 border border-slate-200 bg-white text-black rounded-2xl text-xs shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-20 h-12 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center p-1 overflow-hidden">
-            {pmgLogo ? <img src={pmgLogo} alt="Logo PMG" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] text-slate-400 font-bold">No Logo</span>}
+      <div className="p-3 border border-slate-200 bg-white text-black rounded-xl text-xs shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-16 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center p-1 overflow-hidden">
+            {pmgLogo ? <img src={pmgLogo} alt="Logo PMG" className="max-w-full max-h-full object-contain" /> : <span className="text-[9px] text-slate-400 font-bold">No Logo</span>}
           </div>
           <div>
-            <h4 className="font-extrabold text-xs text-black flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-indigo-600" /> PMG Header Logo (Locked & Saved)
+            <h4 className="font-bold text-xs text-black flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-indigo-600" /> PMG Header Logo (Locked & Saved)
             </h4>
-            <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-              {pmgLogo ? '✅ Logo PMG locked and saved in system memory' : 'Upload PMG logo once to lock it for all documents'}
+            <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+              {pmgLogo ? '✅ Logo PMG locked in memory' : 'Upload PMG logo once to lock for all docs'}
             </p>
           </div>
         </div>
@@ -390,27 +390,27 @@ export default function PmgProjectManager({ isDarkMode }) {
             <button
               type="button"
               onClick={handleResetLogo}
-              className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
             >
-              <Unlock className="w-3.5 h-3.5 text-rose-600" /> Unlock / Change PMG Logo
+              <Unlock className="w-3.5 h-3.5 text-rose-600" /> Unlock Logo
             </button>
           ) : (
-            <label className="px-3.5 py-2 bg-white hover:bg-slate-50 text-black border border-slate-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95">
-              <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload & Lock PMG Logo
+            <label className="px-3 py-1.5 bg-white hover:bg-slate-50 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95">
+              <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload & Lock Logo
               <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
             </label>
           )}
         </div>
       </div>
 
-      <form onSubmit={handleSaveProject} className="space-y-4 text-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <form onSubmit={handleSaveProject} className="space-y-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div>
             <label className="block font-bold mb-1 opacity-75">Pilih dari Database Klien (Opsional)</label>
             <select 
               value={selectedDest}
               onChange={handleDestChange}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             >
               <option value="">-- Pilih Klien Tersimpan atau Ketik Sendiri --</option>
               {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
@@ -422,22 +422,22 @@ export default function PmgProjectManager({ isDarkMode }) {
               type="date" 
               value={form.delivery_date}
               onChange={e => setForm({ ...form, delivery_date: e.target.value })}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             />
           </div>
         </div>
 
-        <div className={`p-4 rounded-2xl border space-y-3 ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
-          <p className="font-bold text-indigo-500 uppercase tracking-wide">✏️ Detail Informasi Penerima (Bisa Diketik Langsung)</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`p-3 rounded-xl border space-y-2.5 ${isDarkMode ? 'bg-neutral-900/50 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}>
+          <p className="font-bold text-indigo-500 uppercase tracking-wide text-[11px]">✏️ Detail Informasi Penerima (Bisa Diketik Langsung)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div>
-              <label className="block font-bold mb-1 opacity-75">Deliver to (Nama Perusahaan / Instansi) *</label>
+              <label className="block font-bold mb-1 opacity-75">Deliver to (Nama Perusahaan) *</label>
               <input 
                 type="text" 
                 placeholder="Cth: HO Nestlé Jakarta"
                 value={form.deliver_to}
                 onChange={e => setForm({ ...form, deliver_to: e.target.value })}
-                className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+                className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
                 required
               />
             </div>
@@ -448,7 +448,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                 placeholder="Cth: Arkadia Green Park Tower G..."
                 value={form.address}
                 onChange={e => setForm({ ...form, address: e.target.value })}
-                className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+                className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
               />
             </div>
             <div>
@@ -458,7 +458,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                 placeholder="Cth: Bpk. Budi / Bagian Logistik"
                 value={form.pic_up}
                 onChange={e => setForm({ ...form, pic_up: e.target.value })}
-                className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+                className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
               />
             </div>
             <div>
@@ -468,14 +468,14 @@ export default function PmgProjectManager({ isDarkMode }) {
                 placeholder="Cth: 08123456789"
                 value={form.phone_no}
                 onChange={e => setForm({ ...form, phone_no: e.target.value })}
-                className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
+                className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-stone-300 text-stone-900'}`}
               />
             </div>
           </div>
         </div>
 
         {/* --- TAMBAHAN INPUT FIELD DR No. --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div>
             <label className="block font-bold mb-1 opacity-75">DR No. (Nomor Surat Jalan)</label>
             <input 
@@ -483,7 +483,7 @@ export default function PmgProjectManager({ isDarkMode }) {
               placeholder="Cth: DR-001/PMG/IX/2026"
               value={form.dr_number}
               onChange={e => setForm({ ...form, dr_number: e.target.value })}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             />
           </div>
           <div>
@@ -493,7 +493,7 @@ export default function PmgProjectManager({ isDarkMode }) {
               placeholder="Cth: 00001768/WB/PMG/VIII/2026"
               value={form.transaction_code}
               onChange={e => setForm({ ...form, transaction_code: e.target.value })}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
               required
             />
           </div>
@@ -504,33 +504,33 @@ export default function PmgProjectManager({ isDarkMode }) {
               placeholder="Cth: COCA COLA-CUSTOM BANNER"
               value={form.project_name}
               onChange={e => setForm({ ...form, project_name: e.target.value })}
-              className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
               required
             />
           </div>
         </div>
 
-        <div className="border rounded-2xl p-4 space-y-3 dark:border-neutral-700">
+        <div className="border rounded-xl p-3 space-y-2.5 dark:border-neutral-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div>
               <h4 className="font-bold text-xs uppercase text-indigo-500">Daftar Item Barang ({items.length} Item)</h4>
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedItemIndexes.length > 0 && (
-                <button type="button" onClick={handleRemoveSelectedItems} className="px-3 py-1.5 bg-rose-600 text-white font-bold rounded-lg text-[11px] shadow-sm">
+                <button type="button" onClick={handleRemoveSelectedItems} className="px-2.5 py-1 bg-rose-600 text-white font-bold rounded-lg text-[11px] shadow-xs cursor-pointer">
                   🗑️ Hapus Terpilih ({selectedItemIndexes.length})
                 </button>
               )}
               {items.length > 1 && (
-                <button type="button" onClick={handleClearAllItems} className="px-3 py-1.5 bg-rose-700 text-white font-bold rounded-lg text-[11px] shadow-sm">
+                <button type="button" onClick={handleClearAllItems} className="px-2.5 py-1 bg-rose-700 text-white font-bold rounded-lg text-[11px] shadow-xs cursor-pointer">
                   🔥 Hapus Semua Item
                 </button>
               )}
-              <label className="px-3 py-1.5 bg-emerald-600 text-white font-bold rounded-lg text-[11px] cursor-pointer shadow-sm">
+              <label className="px-2.5 py-1 bg-emerald-600 text-white font-bold rounded-lg text-[11px] cursor-pointer shadow-xs">
                 📂 Import Excel
                 <input type="file" accept=".xlsx, .xls" onChange={handleImportItemsExcel} className="hidden" />
               </label>
-              <button type="button" onClick={handleAddItemRow} className="px-3 py-1.5 bg-indigo-600 text-white font-bold rounded-lg text-[11px] shadow-sm">➕ Tambah Item</button>
+              <button type="button" onClick={handleAddItemRow} className="px-2.5 py-1 bg-indigo-600 text-white font-bold rounded-lg text-[11px] shadow-xs cursor-pointer">➕ Tambah Item</button>
             </div>
           </div>
 
@@ -550,7 +550,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                   <input 
                     type="text" placeholder="Nama Barang / Item"
                     value={item.item_name} onChange={e => handleItemChange(idx, 'item_name', e.target.value)}
-                    className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
+                    className={`w-full p-2 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
                     required
                   />
                 </div>
@@ -558,25 +558,25 @@ export default function PmgProjectManager({ isDarkMode }) {
                   <input 
                     type="text" placeholder="Ukuran / Keterangan"
                     value={item.dimensions} onChange={e => handleItemChange(idx, 'dimensions', e.target.value)}
-                    className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
+                    className={`w-full p-2 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-stone-300'}`}
                   />
                 </div>
                 <div className="sm:col-span-1">
                   <input 
                     type="text" inputMode="numeric" value={item.qty}
                     onChange={e => handleItemChange(idx, 'qty', e.target.value.replace(/\D/g, ''))}
-                    className={`w-full p-2.5 border-2 border-indigo-500 rounded-xl font-black text-center text-xs ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-white'}`}
+                    className={`w-full p-2 border-2 border-indigo-500 rounded-xl font-bold text-center text-xs ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-white'}`}
                   />
                 </div>
                 <div className="sm:col-span-1 text-center">
-                  {items.length > 1 && <button type="button" onClick={() => handleRemoveItemRow(idx)} className="text-rose-500 font-bold hover:scale-110 transition-transform">❌</button>}
+                  {items.length > 1 && <button type="button" onClick={() => handleRemoveItemRow(idx)} className="text-rose-500 font-bold hover:scale-110 transition-transform cursor-pointer">❌</button>}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md transition-all">
+        <button type="submit" className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all active:scale-95 cursor-pointer">
           💾 Simpan & Terbitkan Dokumen PMG
         </button>
       </form>
@@ -592,17 +592,21 @@ export default function PmgProjectManager({ isDarkMode }) {
 
         <div className="space-y-2 max-h-60 overflow-y-auto">
           {projects.map(p => (
-            <div key={p.id} className="p-4 border rounded-2xl flex justify-between items-center gap-4 dark:border-neutral-700">
-              <div className="flex items-center gap-3">
-                <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => setSelectedProjectIds(prev => prev.includes(p.id) ? prev.filter(i => i !== p.id) : [...prev, p.id])} className="w-4 h-4 accent-indigo-600" />
-                <div>
-                  <p className="font-bold text-indigo-500">{p.project_name}</p>
-                  <p className="opacity-70 text-[11px]">Trx Code: {p.transaction_code} | Tgl: {p.delivery_date}</p>
+            <div key={p.id} className="p-2.5 border rounded-xl flex items-center justify-between gap-3 dark:border-neutral-700">
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => setSelectedProjectIds(prev => prev.includes(p.id) ? prev.filter(i => i !== p.id) : [...prev, p.id])} className="w-4 h-4 accent-indigo-600 flex-shrink-0 cursor-pointer" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-xs text-indigo-600 dark:text-indigo-400 truncate">{p.project_name}</p>
+                  <p className="opacity-70 text-[10px] font-mono truncate">Trx Code: {p.transaction_code} | Tgl: {p.delivery_date}</p>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setPrintData(p)} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs shadow-sm">👁️ Cetak POD & SJ</button>
-                <button onClick={() => handleDeleteSingle(p.id, p.project_name)} className="px-3 py-2 bg-rose-50 text-rose-600 font-bold rounded-xl text-xs">🗑️ Hapus</button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => setPrintData(p)} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs whitespace-nowrap shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1">
+                  👁️ Cetak POD & SJ
+                </button>
+                <button onClick={() => handleDeleteSingle(p.id, p.project_name)} className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 font-bold rounded-xl text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer flex items-center gap-1">
+                  🗑️ Hapus
+                </button>
               </div>
             </div>
           ))}

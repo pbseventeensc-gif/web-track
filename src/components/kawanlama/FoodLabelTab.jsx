@@ -161,6 +161,12 @@ export default function FoodLabelTab({ isDarkMode }) {
     window.print();
   };
 
+  // Kelompokkan data label toko menjadi berpasangan (2 label per halaman HVS A4 Landscape)
+  const labelPairs = [];
+  for (let i = 0; i < excelData.length; i += 2) {
+    labelPairs.push(excelData.slice(i, i + 2));
+  }
+
   return (
     <div className="space-y-6">
       <style>{`
@@ -183,31 +189,90 @@ export default function FoodLabelTab({ isDarkMode }) {
           .print-page-break {
             page-break-after: always;
             break-after: page;
-          }
-          /* Paksa orientasi Landscape ukuran 20cm x 13cm murni 1 halaman */
-          @page {
-            size: 20cm 13cm landscape;
-            margin: 0mm;
-          }
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .delivery-order-doc {
-            width: 20cm !important;
-            height: 12.8cm !important;
-            max-width: 20cm !important;
-            max-height: 12.8cm !important;
-            overflow: hidden !important;
-            padding: 2mm !important;
-            font-size: 7.5px !important;
-            box-sizing: border-box !important;
             page-break-inside: avoid;
             break-inside: avoid;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
           }
+
+          ${activeTab === 'labels' ? `
+            @page {
+              size: A4 landscape;
+              margin-top: 8mm;
+              margin-bottom: 8mm;
+              margin-left: 2mm;
+              margin-right: 12mm;
+            }
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #fff !important;
+            }
+            #printable-area {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 285mm !important;
+              margin-left: -30mm !important;
+              padding: 0 !important;
+            }
+            .label-pair-page {
+              width: 285mm !important;
+              max-width: 285mm !important;
+              height: 184mm !important;
+              max-height: 184mm !important;
+              display: flex !important;
+              flex-direction: row !important;
+              justify-content: flex-start !important;
+              align-items: stretch !important;
+              gap: 5mm !important;
+              box-sizing: border-box !important;
+              page-break-after: always !important;
+              break-after: page !important;
+              page-break-inside: avoid !important;
+              margin-left: -30mm !important;
+              margin-right: auto !important;
+              margin-top: 0 !important;
+              margin-bottom: 0 !important;
+              padding: 0 !important;
+            }
+            .label-card-item {
+              width: 48.5% !important;
+              max-width: 48.5% !important;
+              height: 184mm !important;
+              max-height: 184mm !important;
+              box-sizing: border-box !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: flex-start !important;
+              padding: 4mm !important;
+              border-width: 2px !important;
+              border-radius: 16px !important;
+              overflow: hidden !important;
+            }
+          ` : `
+            @page {
+              size: 20cm 13cm landscape;
+              margin: 0mm;
+            }
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .delivery-order-doc {
+              width: 20cm !important;
+              height: 12.8cm !important;
+              max-width: 20cm !important;
+              max-height: 12.8cm !important;
+              overflow: hidden !important;
+              padding: 2mm !important;
+              font-size: 7.5px !important;
+              box-sizing: border-box !important;
+              page-break-inside: avoid;
+              break-inside: avoid;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+            }
+          `}
         }
       `}</style>
 
@@ -222,7 +287,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
             <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Print settings locked to strict Landscape (20x13 cm) to prevent clipping.</p>
+          <p className="text-xs opacity-70 mt-0.5">Cetak Label Toko (2 Label per Lembar HVS A4 Landscape) & Surat Jalan Pool (20x13 cm).</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
@@ -324,63 +389,83 @@ export default function FoodLabelTab({ isDarkMode }) {
             <p className="text-xs opacity-70 mt-1">Please upload a Food Label Excel file to display the print preview.</p>
           </div>
         ) : activeTab === 'labels' ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {excelData.map((store, idx) => {
-              const activeItems = store.itemsData;
-              return (
-                <div 
-                  key={idx} 
-                  className="bg-white text-black border-2 border-neutral-900 p-4 rounded-xl shadow-sm print-page-break mx-auto" 
-                  style={{ width: '100%', maxWidth: '210mm' }}
-                >
-                  <div className="relative border-b-2 border-neutral-900 pb-2 mb-2 flex items-center justify-center">
-                    {wellenLogo && (
-                      <div className="absolute left-2 top-1">
-                        <img src={wellenLogo} alt="Logo Wellen" className="h-8 w-auto object-contain" />
+          <div className="space-y-8">
+            {labelPairs.map((pair, pageIdx) => (
+              <div
+                key={pageIdx}
+                className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8"
+              >
+                {pair.map((store, idx) => {
+                  const activeItems = store.itemsData;
+                  const globalIndex = pageIdx * 2 + idx + 1;
+                  const totalKoli = excelData.length;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="label-card-item bg-white text-black border-2 border-neutral-900 p-4 sm:p-5 rounded-2xl shadow-sm flex-1 w-full md:w-[48.5%] min-h-[182mm] max-h-[184mm] overflow-hidden flex flex-col justify-start"
+                    >
+                      {/* Header dengan Koli Indicator */}
+                      <div className="relative border-b-2 border-neutral-900 pb-2 mb-2.5 flex items-center justify-between">
+                        {wellenLogo ? (
+                          <div className="flex-shrink-0">
+                            <img src={wellenLogo} alt="Logo Wellen" className="h-8 sm:h-9 w-auto object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-8" />
+                        )}
+                        <div className="text-center flex-1 px-2">
+                          <h3 className="font-extrabold text-xs sm:text-base tracking-wide uppercase">{companyTitle}</h3>
+                          <p className="text-[11px] sm:text-xs font-bold text-neutral-800">{projectName}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0 font-extrabold text-[11px] sm:text-xs bg-neutral-100 border-2 border-neutral-900 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                          KOLI {globalIndex} OF {totalKoli}
+                        </div>
                       </div>
-                    )}
-                    <div className="text-center w-full px-10">
-                      <h3 className="font-extrabold text-sm tracking-wide">{companyTitle}</h3>
-                      <p className="text-[11px] font-bold">{projectName}</p>
+
+                      {/* POOL & STORE Info */}
+                      <div className="text-xs sm:text-sm font-bold mb-2.5 space-y-0.5 text-neutral-900">
+                        <div className="flex"><span className="w-16 sm:w-18">POOL</span><span>: {store.pool}</span></div>
+                        <div className="flex"><span className="w-16 sm:w-18">STORE</span><span>: {store.storeName}</span></div>
+                      </div>
+
+                      {/* Table Fixed Width 100% - Clean Header & Full Item Name (No Wrap / No Ellipsis) */}
+                      <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-xs">
+                        <thead>
+                          <tr className="bg-neutral-100 text-center font-bold text-[10.5px] sm:text-xs">
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[5%]">NO</th>
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 text-left w-[49%]">ITEM</th>
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[19%]">BAHAN</th>
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[13%]">UKURAN</th>
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">QTY</th>
+                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">SAT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeItems.map((item, itemIdx) => (
+                            <tr key={itemIdx}>
+                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">{itemIdx + 1}</td>
+                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 font-bold text-[9.5px] sm:text-[10px] leading-tight whitespace-nowrap overflow-hidden">{item.name}</td>
+                              {itemIdx === 0 && (
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center align-middle font-bold" rowSpan={activeItems.length}>
+                                  <span className="text-[10px] sm:text-[11px] leading-snug block">{paperBahan}</span>
+                                </td>
+                              )}
+                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.size}</td>
+                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.qty}</td>
+                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">PCS</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  </div>
-
-                  <div className="text-[11px] font-bold mb-2 space-y-0.5 text-neutral-800">
-                    <div className="flex"><span className="w-16">POOL</span><span>: {store.pool}</span></div>
-                    <div className="flex"><span className="w-16">STORE</span><span>: {store.storeName}</span></div>
-                  </div>
-
-                  <table className="w-full border-collapse border border-neutral-900 text-[11px]">
-                    <thead>
-                      <tr className="bg-neutral-100 text-center font-bold">
-                        <th className="border border-neutral-900 p-1 w-8">NO</th>
-                        <th className="border border-neutral-900 p-1">ITEM</th>
-                        <th className="border border-neutral-900 p-1 w-24">BAHAN</th>
-                        <th className="border border-neutral-900 p-1 w-12">UKURAN</th>
-                        <th className="border border-neutral-900 p-1 w-12">QTY</th>
-                        <th className="border border-neutral-900 p-1 w-12">SAT</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {activeItems.map((item, itemIdx) => (
-                        <tr key={itemIdx}>
-                          <td className="border border-neutral-900 p-1 text-center font-medium">{itemIdx + 1}</td>
-                          <td className="border border-neutral-900 p-1 font-semibold">{item.name}</td>
-                          {itemIdx === 0 && (
-                            <td className="border border-neutral-900 p-1 text-center align-middle font-medium" rowSpan={activeItems.length}>
-                              <span className="text-[10px] leading-tight block">{paperBahan}</span>
-                            </td>
-                          )}
-                          <td className="border border-neutral-900 p-1 text-center font-bold">{item.size}</td>
-                          <td className="border border-neutral-900 p-1 text-center font-bold">{item.qty}</td>
-                          <td className="border border-neutral-900 p-1 text-center">PCS</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })}
+                  );
+                })}
+                {pair.length === 1 && (
+                  <div className="hidden md:block flex-1 w-[48.5%] invisible" />
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE (STRICT 1 HALAMAN) */

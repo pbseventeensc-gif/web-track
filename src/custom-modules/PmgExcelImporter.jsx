@@ -71,7 +71,7 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
       <h4 className="font-bold text-xs uppercase text-indigo-500 mb-2">📁 Import Master Alamat CCOD via Excel</h4>
       <p className="text-[11px] opacity-60 mb-3">Unggah file Excel <strong>Alokasi CCOD Banner - X Banner.xlsx</strong> untuk mengimpor Nama CCOD, Alamat, PIC, dan No HP secara otomatis.</p>
       
-      <label className={`block w-full py-3 px-4 rounded-xl cursor-pointer text-xs font-bold text-center transition-all shadow-sm ${loading ? 'bg-stone-400 text-white cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'}`}>
+      <label className={`block w-full py-2 px-3.5 rounded-xl cursor-pointer text-xs font-bold text-center transition-all shadow-sm ${loading ? 'bg-stone-400 text-white cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-95'}`}>
         {loading ? '⏳ Sedang Mengimpor ke Supabase...' : '📂 Pilih & Import File Alokasi CCOD'}
         <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={loading} className="hidden" />
       </label>

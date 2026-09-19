@@ -681,7 +681,7 @@ export default function App() {
 
                   {currentKawanLamaAdmin ? (
                     <div>
-                      <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-neutral-400 px-3 mb-2">
                         Portal Admin Kawan Lama
                       </h3>
                       <div className="space-y-1">
@@ -699,11 +699,11 @@ export default function App() {
                               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                                 isActive
                                   ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                                  : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-300 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-semibold'
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-400 dark:text-neutral-400'}`} />
+                                <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-500 dark:text-neutral-400'}`} />
                                 <span>{item.label}</span>
                               </div>
                               {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
@@ -716,7 +716,7 @@ export default function App() {
                     <>
                       {/* GROUP 1: PRODUKSI & MONITORING */}
                       <div>
-                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-neutral-400 px-3 mb-2">
                           Produksi & Monitoring
                         </h3>
                         <div className="space-y-1">
@@ -737,11 +737,11 @@ export default function App() {
                                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
                                   isActive
                                     ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                                    : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-300 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-semibold'
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5">
-                                  <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-400 dark:text-neutral-400'}`} />
+                                  <ItemIcon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-stone-500 dark:text-neutral-400'}`} />
                                   <span>{item.label}</span>
                                 </div>
                                 {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
@@ -753,7 +753,7 @@ export default function App() {
 
                       {/* GROUP 2: PROJECT & CUSTOM MODUL */}
                       <div>
-                        <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-neutral-500 px-3 mb-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-neutral-400 px-3 mb-2">
                           Project & Custom Modul
                         </h3>
                         <div className="space-y-1">
@@ -776,7 +776,7 @@ export default function App() {
                                     ? 'text-stone-300 dark:text-neutral-600 cursor-not-allowed bg-stone-50/50 dark:bg-neutral-900/40'
                                     : isActive
                                       ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-medium'
+                                      : 'text-stone-700 hover:text-stone-900 hover:bg-stone-100 dark:text-neutral-300 dark:hover:text-neutral-100 dark:hover:bg-neutral-700/50 font-semibold'
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5">

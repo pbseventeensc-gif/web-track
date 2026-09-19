@@ -244,30 +244,30 @@ export default function CustomLabelGenerator({ isDarkMode }) {
   };
 
   return (
-    <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+    <div className={`p-4 rounded-2xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label Koli PMG</h2>
-          <p className="text-xs opacity-60">Atur manual atau import file Excel untuk cetak label koli.</p>
+          <h2 className="font-bold text-xs uppercase text-indigo-600 dark:text-indigo-400">🏷️ Generator Label Koli PMG</h2>
+          <p className="text-[11px] opacity-60">Atur manual atau import file Excel untuk cetak label koli.</p>
         </div>
-        <label className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
+        <label className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs">
           📂 Import Excel Alokasi Label Massal
           <input type="file" accept=".xlsx, .xls" onChange={handleBatchExcelImport} className="hidden" />
         </label>
       </div>
 
       {batchLabels.length > 0 && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex justify-between items-center text-xs text-emerald-700 dark:text-emerald-300 font-bold">
+        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex justify-between items-center text-xs text-emerald-700 dark:text-emerald-300 font-bold">
           <span>✨ Mode Massal Aktif: {batchLabels.length} Label termuat dari file Excel.</span>
-          <button onClick={() => setBatchLabels([])} className="px-2.5 py-1 bg-rose-600 text-white rounded-lg text-[10px]">Reset ke Manual</button>
+          <button onClick={() => setBatchLabels([])} className="px-2 py-0.5 bg-rose-600 text-white rounded-lg text-[10px] cursor-pointer">Reset ke Manual</button>
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
         <div>
           <label className="block font-bold mb-1 opacity-70">Pilih Tujuan Klien (Database)</label>
           <select 
-            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             value={selectedDest}
             onChange={handleDestChange}
             disabled={batchLabels.length > 0}
@@ -280,7 +280,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         <div>
           <label className="block font-bold mb-1 opacity-70">Pilih Template Label</label>
           <select 
-            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
             value={templateType}
             onChange={(e) => setTemplateType(e.target.value)}
           >
@@ -290,29 +290,30 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
         <div className="sm:col-span-1">
-          <label className="block font-bold mb-1 text-indigo-500">Total Qty Keseluruhan (Manual)</label>
+          <label className="block font-bold mb-1 text-indigo-500 truncate">Total Qty Keseluruhan (Manual)</label>
           <input 
             type="text"
             inputMode="numeric"
             value={form.qty_total}
             onChange={e => setForm({ ...form, qty_total: e.target.value.replace(/\D/g, '') })}
-            className={`w-full p-3 border-2 border-indigo-500 rounded-xl font-black text-center text-base ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
+            className={`w-full p-2.5 border-2 border-indigo-500 rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
           />
         </div>
         <div className="sm:col-span-1">
-          <label className="block font-bold mb-1 opacity-70">Isi Per Koli (Pcs) (Manual)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate">Isi Per Koli (Pcs) (Manual)</label>
           <input 
             type="text"
             inputMode="numeric"
             value={form.pcs_per_koli}
             onChange={e => setForm({ ...form, pcs_per_koli: e.target.value.replace(/\D/g, '') })}
-            className={`w-full p-3 border rounded-xl font-bold text-center text-base ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
           />
         </div>
-        <div className="sm:col-span-1 flex items-end">
-          <div className="w-full p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center font-bold text-indigo-600 dark:text-indigo-400">
+        <div className="sm:col-span-1">
+          <label className="block font-bold mb-1 text-transparent select-none">Total Halaman</label>
+          <div className="w-full p-2.5 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-center font-bold text-xs text-indigo-600 dark:text-indigo-400 h-[38px] flex items-center justify-center">
             📦 Total Halaman: {totalKoli} Label
           </div>
         </div>
@@ -323,33 +324,33 @@ export default function CustomLabelGenerator({ isDarkMode }) {
             type="text"
             value={form.po_project}
             onChange={e => setForm({ ...form, po_project: e.target.value })}
-            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs pt-1">
         <div>
-          <label className="block font-bold mb-1 opacity-70">Logo Kiri (Opsional)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate" title="Logo Kiri (Opsional)">Logo Kiri (Opsional)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoLeftUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
         </div>
         <div>
-          <label className="block font-bold mb-1 opacity-70">Logo Kanan (Brand)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate" title="Logo Kanan (Brand)">Logo Kanan (Brand)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoRightUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
         </div>
         <div>
-          <label className="block font-bold mb-1 opacity-70">Foto Produk 1 (Kiri)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate" title="Foto Produk 1 (Kiri)">Foto Produk 1 (Kiri)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
         </div>
         <div>
-          <label className="block font-bold mb-1 opacity-70">Foto Produk 2 (Kanan)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate" title="Foto Produk 2 (Kanan)">Foto Produk 2 (Kanan)</label>
           <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl2')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
         </div>
       </div>
 
       <button 
         onClick={() => setPrintDataModal(true)}
-        className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md"
+        className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md cursor-pointer"
       >
         👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
       </button>

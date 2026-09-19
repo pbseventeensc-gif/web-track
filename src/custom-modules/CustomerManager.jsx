@@ -46,21 +46,21 @@ export default function CustomerManager({ isDarkMode }) {
   };
 
   return (
-    <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-      <h2 className="font-black text-lg mb-4 text-indigo-600 dark:text-indigo-400">👥 Manajemen Customer</h2>
+    <div className={`p-4 rounded-2xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+      <h2 className="font-bold text-xs uppercase mb-3 text-indigo-600 dark:text-indigo-400">👥 Manajemen Customer</h2>
       
-      <form onSubmit={handleAddCustomer} className="flex gap-2 mb-6">
+      <form onSubmit={handleAddCustomer} className="flex gap-2 mb-4">
         <input 
           type="text"
           placeholder="Nama Customer Baru..."
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className={`flex-1 p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          className={`flex-1 p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
         />
         <button 
           type="submit" 
           disabled={loading}
-          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl active:scale-95 transition-all"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl active:scale-95 transition-all cursor-pointer"
         >
           {loading ? '...' : 'Tambah'}
         </button>
@@ -68,11 +68,11 @@ export default function CustomerManager({ isDarkMode }) {
 
       <div className="space-y-2">
         {customers.map(c => (
-          <div key={c.id} className="flex justify-between items-center p-3 border rounded-xl dark:border-neutral-700">
-            <span className="font-bold text-sm">{c.customer_name}</span>
+          <div key={c.id} className="flex justify-between items-center p-2.5 border rounded-xl dark:border-neutral-700">
+            <span className="font-semibold text-xs">{c.customer_name}</span>
             <button 
               onClick={() => handleDelete(c.id, c.customer_name)}
-              className="text-rose-500 hover:text-rose-600 font-bold text-xs px-3 py-1 bg-rose-50 dark:bg-rose-950/30 rounded-lg"
+              className="text-rose-500 hover:text-rose-600 font-bold text-[11px] px-2.5 py-1 bg-rose-50 dark:bg-rose-950/30 rounded-lg cursor-pointer"
             >
               Hapus
             </button>

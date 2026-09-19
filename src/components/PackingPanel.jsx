@@ -584,8 +584,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1000;
-          const MAX_HEIGHT = 1000;
+          const MAX_WIDTH = 2048;
+          const MAX_HEIGHT = 2048;
           let width = img.width;
           let height = img.height;
 
@@ -608,7 +608,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
           canvas.toBlob((blob) => {
             resolve(blob);
-          }, 'image/jpeg', 0.7);
+          }, 'image/jpeg', 0.9);
         };
       };
     });
@@ -848,18 +848,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
 
   return (
-    <div className="space-y-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-xs text-black">
+    <div className="space-y-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs text-black">
       <div>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-          <h2 className="text-lg font-black uppercase tracking-wider text-black">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+          <h2 className="text-base font-bold uppercase tracking-wider text-black">
             Panel Kontrol Paking
           </h2>
-          <span className="text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-800 rounded-xl">
+          <span className="text-xs font-semibold px-2.5 py-0.5 bg-amber-500/10 text-amber-800 rounded-lg">
             Total Box Koli: {totalSpk}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {stages.map((stage) => {
             const completedCount = packingList.filter((s) => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
@@ -868,36 +868,36 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             return (
               <div
                 key={stage.id}
-                className={`p-6 rounded-2xl border flex flex-col justify-between transition-all ${
+                className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
                   is100Percent
                     ? 'bg-emerald-50/80 border-emerald-400 shadow-xs'
                     : 'bg-white border-slate-200 shadow-2xs'
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-black uppercase tracking-wider flex items-center gap-2 text-black">
-                      <div className={`w-2.5 h-2.5 rounded-full ${stage.color}`}></div> {stage.label}
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-black">
+                      <div className={`w-2 h-2 rounded-full ${stage.color}`}></div> {stage.label}
                     </h3>
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl ${
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${
                       is100Percent ? 'bg-emerald-600 text-white' : 'bg-amber-500/10 text-amber-800'
                     }`}>
                       {percent}%
                     </span>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-600 mb-6">{stage.staff}</p>
+                  <p className="text-[10px] font-semibold text-slate-500 mb-2">{stage.staff}</p>
 
-                  <div className="text-center py-6 space-y-1">
-                    <span className="text-3xl font-black tracking-tight block text-black">
-                      {completedCount} <span className="text-sm font-medium text-slate-500">/ {totalSpk}</span>
+                  <div className="text-center py-2 space-y-0.5">
+                    <span className="text-xl font-extrabold tracking-tight block text-black">
+                      {completedCount} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
                     </span>
-                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Box Selesai</span>
+                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block">Box Selesai</span>
                   </div>
                 </div>
 
-                <div className="mt-6 pt-3 border-t border-slate-200 text-[11px] font-bold flex justify-between items-center text-slate-700">
+                <div className="mt-2 pt-2 border-t border-slate-200/80 text-[10px] font-semibold flex justify-between items-center text-slate-700">
                   <span>Status:</span>
-                  <span className={is100Percent ? 'text-emerald-700 font-black' : 'text-amber-700 font-bold'}>
+                  <span className={is100Percent ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
                     {is100Percent ? '🟢 100% Selesai 🎉' : '🟡 In Progress'}
                   </span>
                 </div>
@@ -964,7 +964,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 onClick={() => setFilterStatus('ALL')}
                 className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                   filterStatus === 'ALL'
-                    ? 'bg-white shadow-xs font-black text-black'
+                    ? 'bg-white shadow-xs font-bold text-black'
                     : 'text-slate-700 hover:text-black font-semibold'
                 }`}
               >
@@ -974,7 +974,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 onClick={() => setFilterStatus('IN_PROGRESS')}
                 className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   filterStatus === 'IN_PROGRESS'
-                    ? 'bg-amber-500 text-white shadow-xs font-black'
+                    ? 'bg-amber-500 text-white shadow-xs font-bold'
                     : 'text-slate-700 hover:text-black font-semibold'
                 }`}
               >
@@ -984,7 +984,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 onClick={() => setFilterStatus('COMPLETED')}
                 className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                   filterStatus === 'COMPLETED'
-                    ? 'bg-emerald-600 text-white shadow-xs font-black'
+                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
                     : 'text-slate-700 hover:text-black font-semibold'
                 }`}
               >
@@ -1000,7 +1000,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   onClick={() => setFilterDelivery(type)}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
                     filterDelivery === type
-                      ? 'bg-white shadow-xs font-black text-black'
+                      ? 'bg-white shadow-xs font-bold text-black'
                       : 'text-slate-700 hover:text-black font-semibold'
                   }`}
                 >
@@ -1033,9 +1033,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         {/* ENTERPRISE DATA GRID TABLE (STICKY HEADER & INNER SCROLL) */}
         <div className="max-h-[620px] overflow-y-auto overflow-x-auto mt-4 border border-slate-300 rounded-2xl shadow-xs bg-white custom-scrollbar relative">
           <table className="w-full text-left border-collapse bg-white">
-            <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-900 font-black uppercase tracking-wider text-xs">
+            <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-800 font-bold uppercase tracking-wider text-xs">
               <tr>
-                <th className="py-4 pl-4 pr-1 text-center w-8 font-black">
+                <th className="py-4 pl-4 pr-1 text-center w-8 font-semibold">
                   <button
                     onClick={handleToggleSelectAll}
                     className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
@@ -1050,20 +1050,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     )}
                   </button>
                 </th>
-                <th className="py-4 pl-1 pr-4 font-black">BOX</th>
-                <th className="py-4 px-4 font-black">NAMA STORE / SPK</th>
-                <th className="py-4 px-4 font-black">TIPE KIRIM</th>
-                <th className="py-4 px-4 text-center font-black">LABEL & DESAIN</th>
-                <th className="py-4 px-4 text-center font-black">BUKTI FOTO</th>
-                <th className="py-4 px-4 text-center font-black">STATUS PACKING</th>
-                <th className="py-4 px-4 text-center font-black">STATUS CHECKER</th>
-                <th className="py-4 px-4 text-center font-black">CATATAN / ACTION</th>
+                <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
+                <th className="py-4 px-4 font-semibold">NAMA STORE / SPK</th>
+                <th className="py-4 px-4 font-semibold">TIPE KIRIM</th>
+                <th className="py-4 px-4 text-center font-semibold">LABEL & DESAIN</th>
+                <th className="py-4 px-4 text-center font-semibold">BUKTI FOTO</th>
+                <th className="py-4 px-4 text-center font-semibold">STATUS PACKING</th>
+                <th className="py-4 px-4 text-center font-semibold">STATUS CHECKER</th>
+                <th className="py-4 px-4 text-center font-semibold">CATATAN / ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-500 font-bold text-xs">
+                  <td colSpan="9" className="p-8 text-center text-slate-500 font-semibold text-xs">
                     Tidak ada data box yang sesuai filter.
                   </td>
                 </tr>
@@ -1081,7 +1081,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan="9" className="py-2.5 px-4 text-center font-black text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
+                          <td colSpan="9" className="py-2.5 px-4 text-center font-bold text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
                             📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---
                           </td>
                         </tr>
@@ -1108,15 +1108,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </button>
                         </td>
-                        <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 font-bold text-sm whitespace-nowrap">
+                        <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 font-semibold text-sm whitespace-nowrap">
                           <span className="font-bold text-slate-900">{item.box_code || '-'}</span>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
                             {item.store_name || '-'}
                             {isRowComplete && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-400">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-semibold border border-emerald-400">
                                 ✅ Done
                               </span>
                             )}
@@ -1125,7 +1125,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         </td>
 
                         <td className="py-4 px-4 whitespace-nowrap">
-                          <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-black text-xs uppercase tracking-wider text-center border ${
+                          <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-semibold text-xs uppercase tracking-wider text-center border ${
                             item.delivery_type === 'DALAM KOTA'
                               ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs'
                               : 'bg-blue-500/15 text-blue-900 border-blue-400'
@@ -1151,7 +1151,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                          <div className="text-[10px] mt-1 text-slate-600 font-bold">
+                          <div className="text-[10px] mt-1 text-slate-500 font-medium">
                             {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
                           </div>
                         </td>
@@ -1166,13 +1166,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                 onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
                                 className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                               />
-                              <div className="text-[10px] font-black text-slate-900 leading-tight">
+                              <div className="text-[10px] font-semibold text-slate-800 leading-tight">
                                 <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
-                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                                <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
                               </div>
                             </div>
                           ) : (
-                            <span className="text-slate-400 font-bold text-[11px]">No Foto</span>
+                            <span className="text-slate-400 font-semibold text-[11px]">No Foto</span>
                           )}
                         </td>
 
@@ -1181,7 +1181,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           <div className="flex flex-col items-center justify-center gap-1">
                             <button
                               onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
                                 isPackingDone
                                   ? 'bg-blue-50 text-blue-700 border-blue-300'
                                   : 'bg-slate-100 text-slate-700 border-slate-300'
@@ -1191,9 +1191,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               {isPackingDone ? 'Done' : 'Pending'}
                             </button>
                             {isPackingDone && (
-                              <div className="text-[10px] font-black text-slate-900 leading-tight mt-0.5">
+                              <div className="text-[10px] font-semibold text-slate-800 leading-tight mt-0.5">
                                 <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
-                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                                <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
                               </div>
                             )}
                           </div>
@@ -1204,7 +1204,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           <div className="flex flex-col items-center justify-center gap-1">
                             <button
                               onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer border active:scale-95 ${
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
                                 isCheckerDone
                                   ? 'bg-amber-50 text-amber-800 border-amber-300'
                                   : 'bg-slate-100 text-slate-700 border-slate-300'
@@ -1214,9 +1214,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               {isCheckerDone ? 'Checked' : 'Pending'}
                             </button>
                             {isCheckerDone && (
-                              <div className="text-[10px] font-black text-slate-900 leading-tight mt-0.5">
+                              <div className="text-[10px] font-semibold text-slate-800 leading-tight mt-0.5">
                                 <span className="block truncate max-w-[110px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
-                                <span className="text-[9px] font-mono text-slate-600 font-bold block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
+                                <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
                               </div>
                             )}
                           </div>
@@ -1302,7 +1302,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
             <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
               <div>
-                <h3 className="font-black text-sm uppercase flex items-center gap-2">📑 Pilih Sheet yang Akan Di-Import</h3>
+                <h3 className="font-bold text-sm uppercase flex items-center gap-2">📑 Pilih Sheet yang Akan Di-Import</h3>
                 <p className="text-xs text-stone-400">Total {availableSheets.length} sheet ditemukan</p>
               </div>
               <button
@@ -1374,7 +1374,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <button
                 onClick={handleExecuteSelectedSheetsImport}
                 disabled={isImporting || selectedSheets.length === 0}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               >
                 {isImporting ? '⏳ Mengimport...' : `⚡ Import ${selectedSheets.length} Sheet`}
               </button>
@@ -1387,7 +1387,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
             <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
-              <h3 className="font-black text-sm uppercase flex items-center gap-2">🌐 Tarik Data Google Spreadsheet</h3>
+              <h3 className="font-bold text-sm uppercase flex items-center gap-2">🌐 Tarik Data Google Spreadsheet</h3>
               <button
                 onClick={() => setIsGSheetModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
@@ -1418,7 +1418,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <button
                 onClick={handleFetchGoogleSheet}
                 disabled={isImporting}
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95"
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95"
               >
                 {isImporting ? '⏳ Mengambil Sheet...' : '⚡ Lanjut Pilih Sheet'}
               </button>
@@ -1433,8 +1433,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <div className={`w-full max-w-2xl max-h-[85vh] rounded-3xl p-6 overflow-y-auto shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
             <div className="flex justify-between items-center mb-4 border-b pb-3 dark:border-neutral-700">
               <div>
-                <h3 className="font-black text-base uppercase">Kelola Foto Desain Toko</h3>
-                <p className="text-xs text-stone-400 font-bold">{editingRowItem.store_name} ({editingRowItem.box_code})</p>
+                <h3 className="font-bold text-base uppercase">Kelola Foto Desain Toko</h3>
+                <p className="text-xs text-stone-400 font-semibold">{editingRowItem.store_name} ({editingRowItem.box_code})</p>
               </div>
               <button
                 onClick={() => setEditingRowItem(null)}
@@ -1448,7 +1448,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               {parseItems(editingRowItem.items_detail).map((itm, i) => (
                 <div key={i} className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${isDarkMode ? 'bg-neutral-700/40 border-neutral-600' : 'bg-stone-50 border-stone-200'}`}>
                   <div className="flex-1">
-                    <div className="font-black text-sm text-red-500">{itm.code}</div>
+                    <div className="font-bold text-sm text-red-500">{itm.code}</div>
                     <div className="text-xs font-semibold">{itm.desc}</div>
                     <div className="text-[11px] text-stone-400 font-mono">Ukuran: {itm.size} | Qty: {itm.qty} Pcs</div>
                   </div>

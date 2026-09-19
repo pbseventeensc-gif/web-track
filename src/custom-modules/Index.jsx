@@ -14,12 +14,12 @@ export default function CustomModulesIndex({ isDarkMode }) {
   };
 
   return (
-    <div className="space-y-8 p-4 md:p-6 max-w-7xl mx-auto">
-      <header className="mb-6">
-        <h1 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
+    <div className="space-y-5 p-4 md:p-5 max-w-7xl mx-auto">
+      <header className="mb-4">
+        <h1 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
           📦 Modul Eksternal & Alokasi PMG
         </h1>
-        <p className={`text-sm opacity-60 ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
+        <p className={`text-xs opacity-70 ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
           Pusat kendali manajemen customer, label kustom, serta alokasi surat jalan PT. PMG Integrasi Komunikasi.
         </p>
       </header>
@@ -30,7 +30,7 @@ export default function CustomModulesIndex({ isDarkMode }) {
       </div>
 
       {/* Bagian Khusus PMG */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" key={refreshKey}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" key={refreshKey}>
         <div className="lg:col-span-1">
           <PmgDestinationManager isDarkMode={isDarkMode} />
         </div>
@@ -39,10 +39,10 @@ export default function CustomModulesIndex({ isDarkMode }) {
         </div>
       </div>
 
-      <hr className="border-stone-300 dark:border-neutral-700 my-6" />
+      <hr className="border-stone-300 dark:border-neutral-700 my-4" />
 
       {/* Bagian Label & Customer Umum Sebelumnya */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CustomerManager isDarkMode={isDarkMode} />
         <CustomLabelGenerator isDarkMode={isDarkMode} />
       </div>

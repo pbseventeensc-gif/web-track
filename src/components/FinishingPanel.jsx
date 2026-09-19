@@ -153,18 +153,18 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
         <div className="flex items-center gap-3">
           <Wrench className="w-5 h-5 text-indigo-600" />
           <div>
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600">Finishing Control Panel</h3>
-            <p className="text-xs text-slate-500 font-medium">Manage Inhouse & Sub-Contract Finishing (Vendor Processing)</p>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-indigo-600">Finishing Control Panel</h3>
+            <p className="text-[11px] text-slate-500 font-medium">Manage Inhouse & Sub-Contract Finishing (Vendor Processing)</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <label className="text-xs font-extrabold text-black">Select SPK:</label>
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-xs font-bold text-black">Select SPK:</label>
           <select
             value={selectedSpkId}
             onChange={(e) => handleSelectSpk(e.target.value)}
             disabled={!hasSpkData}
-            className="text-xs px-3 py-2 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer shadow-2xs max-w-[280px] truncate disabled:opacity-50"
+            className="text-xs px-3 py-1.5 rounded-xl font-semibold border border-slate-300 bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer shadow-2xs max-w-[280px] truncate disabled:opacity-50"
           >
             {hasSpkData ? (
               spkList.map((item) => (
@@ -182,7 +182,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
             <button
               type="button"
               onClick={handleDeleteSelectedSpk}
-              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
               title="Delete currently selected SPK from Finishing list"
             >
               <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Active SPK
@@ -194,7 +194,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
             <button
               type="button"
               onClick={handleDeleteAllSpkData}
-              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-extrabold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
               title="Delete ALL SPK data from Finishing list"
             >
               <Trash2 className="w-3.5 h-3.5" /> Delete All SPKs
@@ -206,22 +206,22 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
       {!hasSpkData ? (
         <div className="p-12 text-center text-slate-400 border border-dashed border-slate-300 rounded-2xl space-y-2 bg-slate-50/50 my-4">
           <Wrench className="w-10 h-10 mx-auto opacity-40 text-slate-400" />
-          <p className="font-extrabold text-sm text-slate-700">No SPK Data Available in Finishing Panel</p>
+          <p className="font-bold text-sm text-slate-700">No SPK Data Available in Finishing Panel</p>
           <p className="text-xs text-slate-400 font-medium">Please import SPK data or create orders to display finishing controls.</p>
         </div>
       ) : (
         <>
-          <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-3 text-xs`}>
-        <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50">
-          <div className="text-slate-500 font-bold text-[10px] uppercase">Order Quantity</div>
-          <div className="text-base font-extrabold text-slate-900 mt-0.5">{activeSpkItem.qty_order?.toLocaleString()} Pcs</div>
+          <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-2.5 text-xs`}>
+        <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
+          <div className="text-slate-500 font-semibold text-[10px] uppercase">Order Quantity</div>
+          <div className="text-sm font-bold text-slate-900 mt-0.5">{activeSpkItem.qty_order?.toLocaleString()} Pcs</div>
         </div>
 
-        <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50">
-          <div className="text-amber-800 font-bold text-[10px] uppercase">
+        <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
+          <div className="text-amber-800 font-semibold text-[10px] uppercase">
             {finishingForm.finishing_type === 'sub' ? 'Remaining (Not Sent Out)' : 'Remaining (Incomplete)'}
           </div>
-          <div className="text-base font-extrabold text-amber-900 mt-0.5">
+          <div className="text-sm font-bold text-amber-900 mt-0.5">
             {finishingForm.finishing_type === 'sub'
               ? Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish_sub_out) || 0)).toLocaleString()
               : Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()}{' '}
@@ -231,39 +231,39 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
         {finishingForm.finishing_type === 'sub' ? (
           <>
-            <div className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50">
-              <div className="text-blue-800 font-bold text-[10px] uppercase">Sent to Vendor (Out)</div>
-              <div className="text-base font-extrabold text-blue-900 mt-0.5">
+            <div className="p-3 rounded-xl border border-blue-200 bg-blue-50">
+              <div className="text-blue-800 font-semibold text-[10px] uppercase">Sent to Vendor (Out)</div>
+              <div className="text-sm font-bold text-blue-900 mt-0.5">
                 {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50">
-              <div className="text-emerald-800 font-bold text-[10px] uppercase">Received Back (In)</div>
-              <div className="text-base font-extrabold text-emerald-900 mt-0.5">
+            <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50">
+              <div className="text-emerald-800 font-semibold text-[10px] uppercase">Received Back (In)</div>
+              <div className="text-sm font-bold text-emerald-900 mt-0.5">
                 {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50">
-              <div className="text-amber-800 font-bold text-[10px] uppercase">Pending Vendor Return</div>
-              <div className="text-base font-extrabold text-amber-900 mt-0.5">
+            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
+              <div className="text-amber-800 font-semibold text-[10px] uppercase">Pending Vendor Return</div>
+              <div className="text-sm font-bold text-amber-900 mt-0.5">
                 {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} Pcs
               </div>
             </div>
           </>
         ) : (
           <>
-            <div className="p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50">
-              <div className="text-emerald-800 font-bold text-[10px] uppercase">Inhouse Completed</div>
-              <div className="text-base font-extrabold text-emerald-900 mt-0.5">
+            <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50">
+              <div className="text-emerald-800 font-semibold text-[10px] uppercase">Inhouse Completed</div>
+              <div className="text-sm font-bold text-emerald-900 mt-0.5">
                 {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
               </div>
             </div>
 
-            <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50">
-              <div className="text-slate-500 font-bold text-[10px] uppercase">Finishing Progress</div>
-              <div className="text-base font-extrabold text-slate-900 mt-0.5">
+            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
+              <div className="text-slate-500 font-semibold text-[10px] uppercase">Finishing Progress</div>
+              <div className="text-sm font-bold text-slate-900 mt-0.5">
                 {getPercent(Number(finishingForm.qty_finish) || 0, activeSpkItem.qty_order || 1)}%
               </div>
             </div>
@@ -271,13 +271,13 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end text-xs pt-2">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-xs pt-2">
         <div>
-          <label className="block font-extrabold mb-1.5 text-black">Finishing Work Type:</label>
+          <label className="block font-bold mb-1 text-black">Finishing Work Type:</label>
           <select
             value={finishingForm.finishing_type}
             onChange={(e) => handleTypeChange(e.target.value)}
-            className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none cursor-pointer"
+            className="w-full p-2.5 rounded-xl font-semibold text-xs border border-slate-300 bg-white text-black focus:outline-none cursor-pointer"
           >
             <option value="inhouse">Inhouse (Internal)</option>
             <option value="sub">Sub-Finishing (Vendor/External)</option>
@@ -286,7 +286,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
         {finishingForm.finishing_type !== 'sub' ? (
           <div>
-            <label className="block font-extrabold mb-1.5 text-black">Completed Quantity (pcs):</label>
+            <label className="block font-bold mb-1 text-black">Completed Quantity (pcs):</label>
             <input
               type="number"
               min="0"
@@ -301,24 +301,24 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                 }
                 setFinishingForm({ ...finishingForm, qty_finish: val });
               }}
-              className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
+              className="w-full p-2.5 rounded-xl font-bold text-xs border border-slate-300 bg-white text-black focus:outline-none"
             />
           </div>
         ) : (
           <>
             <div>
-              <label className="block font-extrabold mb-1.5 text-black">Vendor / Sub-Contractor Name:</label>
+              <label className="block font-bold mb-1 text-black">Vendor / Sub-Contractor Name:</label>
               <input
                 type="text"
                 placeholder="Example: CV Poly Mas"
                 value={finishingForm.sub_vendor_name}
                 onChange={(e) => setFinishingForm({ ...finishingForm, sub_vendor_name: e.target.value })}
-                className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
+                className="w-full p-2.5 rounded-xl font-semibold text-xs border border-slate-300 bg-white text-black focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block font-extrabold mb-1.5 text-black">1. Quantity Sent Out (pcs):</label>
+              <label className="block font-bold mb-1 text-black">1. Quantity Sent Out (pcs):</label>
               <input
                 type="number"
                 min="0"
@@ -335,12 +335,12 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                   const adjustedBack = currentBack > val ? val : currentBack;
                   setFinishingForm({ ...finishingForm, qty_finish_sub_out: val, qty_finish: adjustedBack });
                 }}
-                className="w-full p-2.5 rounded-xl font-extrabold border border-slate-300 bg-white text-black focus:outline-none"
+                className="w-full p-2.5 rounded-xl font-bold text-xs border border-slate-300 bg-white text-black focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block font-extrabold mb-1.5 text-black">2. Quantity Received Back (pcs):</label>
+              <label className="block font-bold mb-1 text-black">2. Quantity Received Back (pcs):</label>
               <input
                 type="number"
                 min="0"
@@ -356,7 +356,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
                   }
                   setFinishingForm({ ...finishingForm, qty_finish: val });
                 }}
-                className={`w-full p-2.5 rounded-xl font-extrabold border ${
+                className={`w-full p-2.5 rounded-xl font-bold text-xs border ${
                   Number(finishingForm.qty_finish_sub_out) <= 0
                     ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-300'
                     : 'bg-white border-slate-300 text-black'
@@ -370,7 +370,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
       <div className="flex justify-end pt-2">
         <button
           type="submit"
-          className="px-5 py-2.5 rounded-xl font-extrabold text-xs shadow-2xs active:scale-95 transition-all text-white bg-indigo-600 hover:bg-indigo-500 cursor-pointer flex items-center gap-1.5"
+          className="px-4 py-2 rounded-xl font-bold text-xs shadow-2xs active:scale-95 transition-all text-white bg-indigo-600 hover:bg-indigo-500 cursor-pointer flex items-center gap-1.5"
         >
           <Save className="w-4 h-4" /> Save Finishing Progress
         </button>

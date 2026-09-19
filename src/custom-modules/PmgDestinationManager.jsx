@@ -39,38 +39,38 @@ export default function PmgDestinationManager({ isDarkMode }) {
   };
 
   return (
-    <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
+    <div className={`p-4 rounded-2xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div>
-        <h3 className="font-extrabold text-sm uppercase text-indigo-600 dark:text-indigo-400 mb-1">
+        <h3 className="font-bold text-xs uppercase text-indigo-600 dark:text-indigo-400 mb-0.5">
           📍 Master Alamat Klien / Tujuan PMG
         </h3>
-        <p className="text-xs opacity-60">Kelola data tujuan pengiriman secara manual atau import massal melalui Excel.</p>
+        <p className="text-[11px] opacity-60">Kelola data tujuan pengiriman secara manual atau import massal melalui Excel.</p>
       </div>
 
       {/* Tombol & Logika Import Excel */}
       <PmgExcelImporter isDarkMode={isDarkMode} onImportSuccess={fetchDestinations} />
 
-      <form onSubmit={handleAddDestination} className="space-y-3 text-xs pt-2">
+      <form onSubmit={handleAddDestination} className="space-y-2.5 text-xs pt-1">
         <input 
           type="text"
           placeholder="Nama Klien / Perusahaan (Cth: HO Nestle)"
           value={form.client_name}
           onChange={e => setForm({ ...form, client_name: e.target.value })}
-          className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
           required
         />
         <textarea 
           placeholder="Alamat Lengkap Tujuan..."
           value={form.address}
           onChange={e => setForm({ ...form, address: e.target.value })}
-          className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
           rows="2"
           required
         />
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all active:scale-95"
+          className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all active:scale-95 cursor-pointer"
         >
           {loading ? 'Menyimpan...' : '➕ Tambah Alamat Tujuan'}
         </button>

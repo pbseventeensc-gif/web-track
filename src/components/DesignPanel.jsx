@@ -142,12 +142,12 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-indigo-600 text-white">
+            <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white">
               Active Promo Campaign
             </span>
             <span className="text-xs font-mono font-medium text-slate-500">Total: {orders.length} Approved Stores</span>
           </div>
-          <h2 className="text-sm font-extrabold mt-1 text-slate-900 flex items-center gap-1.5">
+          <h2 className="text-sm font-bold mt-1 text-slate-900 flex items-center gap-1.5">
             <Megaphone className="w-4 h-4 text-indigo-600" /> {activePromoName}
           </h2>
         </div>
@@ -186,7 +186,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
       {/* ULTRA-CLEAN DATA GRID FOR DESIGN FILE PREPRESS */}
       <div className="max-h-[620px] overflow-y-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
         <table className="w-full text-left text-xs border-collapse bg-white">
-          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
             <tr>
               <th className="p-3.5">PROMO & STORE NAME</th>
               <th className="p-3.5">ORDER PACKAGE ITEMS</th>
@@ -219,7 +219,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         {branchName}
                       </strong>
                       <span className="text-[10px] font-mono text-slate-400 font-medium block mt-0.5">
-                        ID: {order.id.slice(0, 8)} | Total: <strong className="text-black font-extrabold">{totalQty} pcs</strong>
+                        ID: {order.id.slice(0, 8)} | Total: <strong className="text-black font-bold">{totalQty} pcs</strong>
                       </span>
                     </td>
 
@@ -260,7 +260,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
-                          className={`px-3 py-1.5 rounded-xl font-extrabold text-xs shadow-2xs transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                          className={`px-3 py-1.5 rounded-xl font-bold text-xs shadow-2xs transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center gap-1 ${
                             isReady
                               ? 'bg-white hover:bg-slate-100 text-slate-800 border border-slate-300'
                               : 'bg-emerald-600 hover:bg-emerald-500 text-white'
@@ -272,7 +272,7 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         <button
                           onClick={() => handleDeleteOrder(order.id, branchName)}
                           title="Delete Order"
-                          className="w-8 h-8 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold flex items-center justify-center transition-all cursor-pointer"
+                          className="w-8 h-8 rounded-full border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold flex items-center justify-center transition-all cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                         </button>
