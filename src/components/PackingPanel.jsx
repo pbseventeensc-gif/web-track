@@ -59,6 +59,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Row Selection Circle Checklist States
   const [selectedRowIds, setSelectedRowIds] = useState([]);
 
+  // Outbound QR Scan States
+  const [showOutboundScanModal, setShowOutboundScanModal] = useState(false);
+  const [outboundScannedCode, setOutboundScannedCode] = useState('');
+  const [matchedOutboundItem, setMatchedOutboundItem] = useState(null);
+  const [outboundScanMsg, setOutboundScanMsg] = useState('');
+
   const stages = [
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-500' },
     { id: 'status_qc_packing', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-500' },
@@ -715,6 +721,37 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     setUploadingId(null);
   };
 
+  const handleProcessOutboundScan = (codeValue) => {
+    if (!codeValue || !codeValue.trim()) return;
+
+    const rawCode = codeValue.trim();
+    let cleanCode = rawCode;
+    if (rawCode.includes('scan=')) {
+      cleanCode = rawCode.split('scan=')[1]?.split('&')[0] || rawCode;
+    }
+    cleanCode = decodeURIComponent(cleanCode).trim();
+
+    const found = packingList.find((item) => {
+      const boxCode = (item.box_code || '').toLowerCase();
+      const trackingId = (item.tracking_id || '').toLowerCase();
+      const spk = (item.no_spk || '').toLowerCase();
+      const searchTarget = cleanCode.toLowerCase();
+
+      return boxCode === searchTarget || trackingId === searchTarget || spk === searchTarget || (item.store_name || '').toLowerCase().includes(searchTarget);
+    });
+
+    if (!found) {
+      setOutboundScanMsg(`❌ Box / QR "${cleanCode}" tidak ditemukan di data paking!`);
+      setOutboundScannedCode('');
+      setMatchedOutboundItem(null);
+      return;
+    }
+
+    setMatchedOutboundItem(found);
+    setOutboundScanMsg(`✅ Box ditemukan: ${found.box_code || '-'} (${found.store_name}). Silakan ambil foto Outbound!`);
+    setOutboundScannedCode('');
+  };
+
   const handleDownloadPackingReport = async () => {
     try {
       if (packingList.length === 0) return alert('⚠️ Belum ada data paking untuk di-export.');
@@ -983,6 +1020,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
             >
               <Globe className="w-4 h-4 text-white" /> Import Google Sheet
+            </button>
+
+            <button
+              onClick={() => {
+                setShowOutboundScanModal(true);
+                setMatchedOutboundItem(null);
+                setOutboundScanMsg('');
+                setOutboundScannedCode('');
+              }}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Camera className="w-4 h-4 text-white" /> Scan QR Outbound
             </button>
 
             <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
@@ -1495,6 +1544,112 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 {isImporting ? '⏳ Mengambil Sheet...' : '⚡ Lanjut Pilih Sheet'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SCAN QR CODE OUTBOUND */}
+      {showOutboundScanModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div className={`w-full max-w-md p-6 rounded-3xl border shadow-2xl ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
+              <div className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-bold text-sm uppercase">Scan QR Code Outbound</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowOutboundScanModal(false);
+                  setMatchedOutboundItem(null);
+                  setOutboundScanMsg('');
+                  setOutboundScannedCode('');
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-neutral-700 flex items-center justify-center font-bold hover:bg-rose-500 hover:text-white transition-all cursor-pointer text-stone-500"
+              >
+                ✕
+              </button>
+            </div>
+
+            {!matchedOutboundItem ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleProcessOutboundScan(outboundScannedCode);
+                }}
+                className="space-y-4 text-sm"
+              >
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>Arahkan Barcode Scanner / Kamera ke QR Code Label Box untuk mengambil foto Outbound.</span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1 opacity-80">Input / Scan Barcode QR Label Box:</label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={outboundScannedCode}
+                    onChange={(e) => setOutboundScannedCode(e.target.value)}
+                    placeholder="Scan QR Label / Input Box Code..."
+                    className={`w-full p-3 rounded-2xl border font-mono text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <Camera className="w-4 h-4" />
+                  <span>Proses Scan QR Box</span>
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4 text-sm">
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 p-4 rounded-2xl border-2 border-emerald-500 text-slate-900 dark:text-white space-y-1.5">
+                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">📦 Data Box Terdeteksi</div>
+                  <div className="text-base font-extrabold">{matchedOutboundItem.store_name}</div>
+                  <div className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                    BOX: {matchedOutboundItem.box_code || '-'} | SPK: {matchedOutboundItem.no_spk}
+                  </div>
+                </div>
+
+                <label className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2 text-sm active:scale-95">
+                  <Camera className="w-5 h-5" />
+                  <span>Ambil / Upload Foto Outbound Now</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={async (e) => {
+                      await handleOutboundCameraCapture(e, matchedOutboundItem.id, matchedOutboundItem.box_code || matchedOutboundItem.tracking_id);
+                      setMatchedOutboundItem(null);
+                      setShowOutboundScanModal(false);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setMatchedOutboundItem(null)}
+                  className="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs cursor-pointer"
+                >
+                  🔄 Scan QR Box Lain
+                </button>
+              </div>
+            )}
+
+            {outboundScanMsg && (
+              <div className={`mt-4 p-3 text-center text-xs font-bold rounded-2xl border ${
+                outboundScanMsg.includes('✅')
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                  : 'bg-rose-100 text-rose-900 border-rose-300'
+              }`}>
+                {outboundScanMsg}
+              </div>
+            )}
           </div>
         </div>
       )}
