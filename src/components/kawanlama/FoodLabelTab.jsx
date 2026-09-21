@@ -157,8 +157,13 @@ export default function FoodLabelTab({ isDarkMode }) {
     }
   };
 
+  const [showAllScreenPreview, setShowAllScreenPreview] = useState(false);
+
   const handlePrint = () => {
-    window.print();
+    setShowAllScreenPreview(true);
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   // Kelompokkan data label toko menjadi berpasangan (2 label per halaman HVS A4 Landscape)
@@ -170,6 +175,12 @@ export default function FoodLabelTab({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <style>{`
+        @media screen {
+          .screen-hidden-item {
+            display: none !important;
+          }
+        }
+
         @media print {
           body * {
             visibility: hidden;
@@ -191,6 +202,9 @@ export default function FoodLabelTab({ isDarkMode }) {
             break-after: page;
             page-break-inside: avoid;
             break-inside: avoid;
+          }
+          .screen-hidden-item {
+            display: flex !important;
           }
 
           ${activeTab === 'labels' ? `
@@ -378,6 +392,28 @@ export default function FoodLabelTab({ isDarkMode }) {
         </div>
       </div>
 
+      {/* Banner Notifikasi Mode Preview Cepat */}
+      {excelData.length > 0 && labelPairs.length > 6 && (
+        <div className="no-print p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">⚡</span>
+            <div>
+              <span className="font-bold">Mode Preview Cepat:</span> Menampilkan {showAllScreenPreview ? labelPairs.length : 6} dari {labelPairs.length} halaman ({excelData.length} label toko) di layar agar loading super instan.
+              <span className="block text-[11px] opacity-80 mt-0.5">
+                💡 Saat Anda klik <strong>"Print / Export PDF"</strong>, <strong>SELURUH {labelPairs.length} halaman ({excelData.length} label) akan tercetak lengkap!</strong>
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAllScreenPreview(!showAllScreenPreview)}
+            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer whitespace-nowrap active:scale-95 shadow-2xs flex-shrink-0"
+          >
+            {showAllScreenPreview ? '⚡ Aktifkan Mode Cepat (6 Halaman)' : `👁️ Tampilkan Semua ${labelPairs.length} Halaman di Layar`}
+          </button>
+        </div>
+      )}
+
       {/* Printable Area */}
       <div id="printable-area" className="space-y-6">
         {excelData.length === 0 ? (
@@ -390,11 +426,13 @@ export default function FoodLabelTab({ isDarkMode }) {
           </div>
         ) : activeTab === 'labels' ? (
           <div className="space-y-8">
-            {labelPairs.map((pair, pageIdx) => (
-              <div
-                key={pageIdx}
-                className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8"
-              >
+            {labelPairs.map((pair, pageIdx) => {
+              const isHiddenOnScreen = !showAllScreenPreview && pageIdx >= 6;
+              return (
+                <div
+                  key={pageIdx}
+                  className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8 ${isHiddenOnScreen ? 'screen-hidden-item' : ''}`}
+                >
                 {pair.map((store, idx) => {
                   const activeItems = store.itemsData;
                   const globalIndex = pageIdx * 2 + idx + 1;
@@ -470,12 +508,14 @@ export default function FoodLabelTab({ isDarkMode }) {
         ) : (
           /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE (STRICT 1 HALAMAN) */
           <div className="space-y-6">
-            {poolSummaryData.map((pool, idx) => (
-              <div 
-                key={idx} 
-                className="bg-white text-black border-2 border-neutral-900 rounded-xl shadow-sm print-page-break mx-auto delivery-order-doc"
-                style={{ width: '20cm', height: '12.8cm', boxSizing: 'border-box' }}
-              >
+            {poolSummaryData.map((pool, idx) => {
+              const isHiddenOnScreen = !showAllScreenPreview && idx >= 6;
+              return (
+                <div
+                  key={idx}
+                  className={`bg-white text-black border-2 border-neutral-900 rounded-xl shadow-sm print-page-break mx-auto delivery-order-doc ${isHiddenOnScreen ? 'screen-hidden-item' : ''}`}
+                  style={{ width: '20cm', height: '12.8cm', boxSizing: 'border-box' }}
+                >
                 <div>
                   {/* Header */}
                   <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-0.5 mb-1">
