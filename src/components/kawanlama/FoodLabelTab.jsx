@@ -157,13 +157,8 @@ export default function FoodLabelTab({ isDarkMode }) {
     }
   };
 
-  const [showAllScreenPreview, setShowAllScreenPreview] = useState(false);
-
   const handlePrint = () => {
-    setShowAllScreenPreview(true);
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    window.print();
   };
 
   // Kelompokkan data label toko menjadi berpasangan (2 label per halaman HVS A4 Landscape)
@@ -175,12 +170,6 @@ export default function FoodLabelTab({ isDarkMode }) {
   return (
     <div className="space-y-6">
       <style>{`
-        @media screen {
-          .screen-hidden-item {
-            display: none !important;
-          }
-        }
-
         @media print {
           body * {
             visibility: hidden;
@@ -202,9 +191,6 @@ export default function FoodLabelTab({ isDarkMode }) {
             break-after: page;
             page-break-inside: avoid;
             break-inside: avoid;
-          }
-          .screen-hidden-item {
-            display: flex !important;
           }
 
           ${activeTab === 'labels' ? `
@@ -292,11 +278,11 @@ export default function FoodLabelTab({ isDarkMode }) {
         isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
       }`}>
         <div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-orange-600 text-white">
+          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white">
             Custom Food Module
           </span>
           <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
-            <Layers className="text-orange-500" /> Food Label & Pool Delivery Order Generator
+            <Layers className="text-emerald-600" /> Food Label & Pool Delivery Order Generator
           </h2>
           <p className="text-xs opacity-70 mt-0.5">Cetak Label Toko (2 Label per Lembar HVS A4 Landscape) & Surat Jalan Pool (20x13 cm).</p>
         </div>
@@ -308,7 +294,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
           </label>
 
-          <label className="cursor-pointer bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
+          <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
             <FileSpreadsheet size={16} />
             Upload Allocation Excel
             <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
@@ -331,7 +317,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             onClick={() => setActiveTab('labels')}
             className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'labels'
-                ? 'bg-orange-600 text-white shadow'
+                ? 'bg-emerald-600 text-white shadow'
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
@@ -341,7 +327,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             onClick={() => setActiveTab('delivery_orders')}
             className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
               activeTab === 'delivery_orders'
-                ? 'bg-orange-600 text-white shadow'
+                ? 'bg-emerald-600 text-white shadow'
                 : 'bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-200'
             }`}
           >
@@ -389,28 +375,6 @@ export default function FoodLabelTab({ isDarkMode }) {
         </div>
       </div>
 
-      {/* Banner Notifikasi Mode Preview Cepat */}
-      {excelData.length > 0 && labelPairs.length > 6 && (
-        <div className="no-print p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs text-amber-900 dark:text-amber-200 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">⚡</span>
-            <div>
-              <span className="font-bold">Mode Preview Cepat:</span> Menampilkan {showAllScreenPreview ? labelPairs.length : 6} dari {labelPairs.length} halaman ({excelData.length} label toko) di layar agar loading super instan.
-              <span className="block text-[11px] opacity-80 mt-0.5">
-                💡 Saat Anda klik <strong>"Print / Export PDF"</strong>, <strong>SELURUH {labelPairs.length} halaman ({excelData.length} label) akan tercetak lengkap!</strong>
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowAllScreenPreview(!showAllScreenPreview)}
-            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition cursor-pointer whitespace-nowrap active:scale-95 shadow-2xs flex-shrink-0"
-          >
-            {showAllScreenPreview ? '⚡ Aktifkan Mode Cepat (6 Halaman)' : `👁️ Tampilkan Semua ${labelPairs.length} Halaman di Layar`}
-          </button>
-        </div>
-      )}
-
       {/* Printable Area */}
       <div id="printable-area" className="space-y-6">
         {excelData.length === 0 ? (
@@ -426,7 +390,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             {labelPairs.map((pair, pageIdx) => (
               <div
                 key={pageIdx}
-                className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8 ${!showAllScreenPreview && pageIdx >= 6 ? 'screen-hidden-item' : ''}`}
+                className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
               >
                 {pair.map((store, idx) => {
                   const activeItems = store.itemsData;
