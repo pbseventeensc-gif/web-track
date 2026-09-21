@@ -426,13 +426,11 @@ export default function FoodLabelTab({ isDarkMode }) {
           </div>
         ) : activeTab === 'labels' ? (
           <div className="space-y-8">
-            {labelPairs.map((pair, pageIdx) => {
-              const isHiddenOnScreen = !showAllScreenPreview && pageIdx >= 6;
-              return (
-                <div
-                  key={pageIdx}
-                  className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8 ${isHiddenOnScreen ? 'screen-hidden-item' : ''}`}
-                >
+            {labelPairs.map((pair, pageIdx) => (
+              <div
+                key={pageIdx}
+                className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8 ${!showAllScreenPreview && pageIdx >= 6 ? 'screen-hidden-item' : ''}`}
+              >
                 {pair.map((store, idx) => {
                   const activeItems = store.itemsData;
                   const globalIndex = pageIdx * 2 + idx + 1;
@@ -467,7 +465,7 @@ export default function FoodLabelTab({ isDarkMode }) {
                         <div className="flex"><span className="w-16 sm:w-18">STORE</span><span>: {store.storeName}</span></div>
                       </div>
 
-                      {/* Table Fixed Width 100% - Clean Header & Full Item Name (No Wrap / No Ellipsis) */}
+                      {/* Table Fixed Width 100% */}
                       <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-xs">
                         <thead>
                           <tr className="bg-neutral-100 text-center font-bold text-[10.5px] sm:text-xs">
@@ -508,14 +506,12 @@ export default function FoodLabelTab({ isDarkMode }) {
         ) : (
           /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE (STRICT 1 HALAMAN) */
           <div className="space-y-6">
-            {poolSummaryData.map((pool, idx) => {
-              const isHiddenOnScreen = !showAllScreenPreview && idx >= 6;
-              return (
-                <div
-                  key={idx}
-                  className={`bg-white text-black border-2 border-neutral-900 rounded-xl shadow-sm print-page-break mx-auto delivery-order-doc ${isHiddenOnScreen ? 'screen-hidden-item' : ''}`}
-                  style={{ width: '20cm', height: '12.8cm', boxSizing: 'border-box' }}
-                >
+            {poolSummaryData.map((pool, idx) => (
+              <div
+                key={idx}
+                className={`bg-white text-black border-2 border-neutral-900 rounded-xl shadow-sm print-page-break mx-auto delivery-order-doc ${!showAllScreenPreview && idx >= 6 ? 'screen-hidden-item' : ''}`}
+                style={{ width: '20cm', height: '12.8cm', boxSizing: 'border-box' }}
+              >
                 <div>
                   {/* Header */}
                   <div className="flex items-start justify-between border-b-2 border-neutral-900 pb-0.5 mb-1">
