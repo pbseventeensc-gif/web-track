@@ -157,8 +157,263 @@ export default function FoodLabelTab({ isDarkMode }) {
     }
   };
 
+  const [screenLimit, setScreenLimit] = useState(10);
+
   const handlePrint = () => {
-    window.print();
+    if (excelData.length === 0) return;
+
+    if (activeTab === 'labels') {
+      const totalKoli = excelData.length;
+      let labelPagesHTML = '';
+
+      for (let pageIdx = 0; pageIdx < labelPairs.length; pageIdx++) {
+        const pair = labelPairs[pageIdx];
+        let pairCardsHTML = '';
+
+        pair.forEach((store, idx) => {
+          const activeItems = store.itemsData;
+          const globalIndex = pageIdx * 2 + idx + 1;
+
+          let tableRowsHTML = '';
+          activeItems.forEach((item, itemIdx) => {
+            const bahanTd = itemIdx === 0
+              ? `<td style="border: 2px solid #000; padding: 4px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 11px;" rowspan="${activeItems.length}">${paperBahan}</td>`
+              : '';
+
+            tableRowsHTML += `
+              <tr>
+                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">${itemIdx + 1}</td>
+                <td style="border: 2px solid #000; padding: 4px; text-align: left; font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden;">${item.name}</td>
+                ${bahanTd}
+                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.size}</td>
+                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.qty}</td>
+                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">PCS</td>
+              </tr>
+            `;
+          });
+
+          const logoImgHTML = wellenLogo
+            ? `<img src="${wellenLogo}" style="height: 32px; width: auto; object-fit: contain;" />`
+            : '';
+
+          pairCardsHTML += `
+            <div style="width: 48.5%; max-width: 48.5%; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 16px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff;">
+              <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="flex-shrink: 0; min-width: 32px;">${logoImgHTML}</div>
+                <div style="text-align: center; flex: 1; padding: 0 6px;">
+                  <h3 style="margin: 0; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${companyTitle}</h3>
+                  <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: 700; color: #111;">${projectName}</p>
+                </div>
+                <div style="flex-shrink: 0; font-weight: 800; font-size: 11px; background: #f3f4f6; border: 2px solid #000; padding: 2px 8px; border-radius: 8px; white-space: nowrap;">
+                  KOLI ${globalIndex} OF ${totalKoli}
+                </div>
+              </div>
+
+              <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #000;">
+                <div><span style="display: inline-block; width: 60px;">POOL</span>: ${store.pool}</div>
+                <div><span style="display: inline-block; width: 60px;">STORE</span>: ${store.storeName}</div>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 11px;">
+                <thead>
+                  <tr style="background: #f3f4f6; text-align: center; font-weight: 700;">
+                    <th style="border: 2px solid #000; padding: 4px; width: 6%;">NO</th>
+                    <th style="border: 2px solid #000; padding: 4px; text-align: left; width: 49%;">ITEM</th>
+                    <th style="border: 2px solid #000; padding: 4px; width: 19%;">BAHAN</th>
+                    <th style="border: 2px solid #000; padding: 4px; width: 13%;">UKURAN</th>
+                    <th style="border: 2px solid #000; padding: 4px; width: 7%;">QTY</th>
+                    <th style="border: 2px solid #000; padding: 4px; width: 7%;">SAT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRowsHTML}
+                </tbody>
+              </table>
+            </div>
+          `;
+        });
+
+        if (pair.length === 1) {
+          pairCardsHTML += `<div style="width: 48.5%; visibility: hidden;"></div>`;
+        }
+
+        labelPagesHTML += `
+          <div class="page-break" style="width: 280mm; max-width: 280mm; height: 185mm; max-height: 185mm; display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; margin: 0 auto; padding: 0; background: #fff;">
+            ${pairCardsHTML}
+          </div>
+        `;
+      }
+
+      const printWin = window.open('', '_blank', 'width=1100,height=850');
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Cetak Label Toko (${totalKoli} Label)</title>
+            <style>
+              @page {
+                size: A4 landscape;
+                margin: 5mm;
+              }
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                color: #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .page-break {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <div>${labelPagesHTML}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                  window.close();
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    } else {
+      // Print Surat Jalan Delivery Order (20x13 cm Landscape)
+      let doPagesHTML = '';
+      poolSummaryData.forEach((pool) => {
+        let materialsRowsHTML = '';
+        pool.materials.forEach((mat, mIdx) => {
+          let sizeRowsHTML = '';
+          mat.sizes.forEach((sz) => {
+            sizeRowsHTML += `
+              <tr>
+                <td style="border: 1px solid #000; padding: 2px 6px; text-align: left;">${paperBahan} ( UK ${sz.size} )</td>
+                <td style="border: 1px solid #000; padding: 2px; text-align: center; font-weight: bold;">${sz.qty}</td>
+                <td style="border: 1px solid #000; padding: 2px; text-align: center;">PCS</td>
+              </tr>
+            `;
+          });
+
+          materialsRowsHTML += `
+            <tr>
+              <td style="border: 1px solid #000; padding: 2px; text-align: center; font-weight: bold;" rowspan="${mat.sizes.length + 1}">${mIdx + 1}</td>
+              <td colspan="3" style="border: 1px solid #000; padding: 2px; font-weight: bold; background: #f8fafc;">MATERI : ${mat.name}</td>
+            </tr>
+            ${sizeRowsHTML}
+          `;
+        });
+
+        const logoHTML = wellenLogo
+          ? `<img src="${wellenLogo}" style="height: 20px; width: auto; object-fit: contain;" />`
+          : `<div style="font-weight: 900; font-size: 9px; border: 1px solid #000; padding: 1px 4px;">WELLEN</div>`;
+
+        doPagesHTML += `
+          <div class="page-break" style="width: 20cm; height: 12.8cm; max-width: 20cm; max-height: 12.8cm; border: 2px solid #000; border-radius: 12px; padding: 8px; box-sizing: border-box; margin: 0 auto 20px auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; font-family: Arial, sans-serif; overflow: hidden;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 4px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  ${logoHTML}
+                  <div style="font-size: 7.5px; line-height: 1.1;">
+                    <p style="margin: 0; font-weight: 900; text-transform: uppercase;">${companyTitle}</p>
+                    <p style="margin: 0;">Jl. Ps Minggu Raya Kav. 2 No. 49, Duren Tiga, Jakarta Selatan</p>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-weight: 900; font-size: 8px; border: 1px solid #000; padding: 1px 6px; background: #f1f5f9; display: block;">TANDA TERIMA / SURAT JALAN</span>
+                  <span style="font-family: monospace; font-weight: 700; font-size: 8.5px; display: block; margin-top: 2px;">${pool.noSJ}</span>
+                </div>
+              </div>
+
+              <div style="border: 1px solid #000; padding: 4px; font-size: 8.5px; background: #f8fafc; margin-bottom: 4px;">
+                <div style="font-weight: 700;"><span style="display: inline-block; width: 100px;">KEPADA</span>: ${companyTitle}</div>
+                <div style="font-weight: 700; color: #047857;"><span style="display: inline-block; width: 100px;">KIRIM KE (POOL)</span>: ${pool.poolName}</div>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 8px;">
+                <thead>
+                  <tr style="background: #f1f5f9; text-align: center; font-weight: 700;">
+                    <th style="border: 1px solid #000; padding: 2px; width: 24px;">NO</th>
+                    <th style="border: 1px solid #000; padding: 2px; text-align: left;">KETERANGAN / MATERI & BAHAN</th>
+                    <th style="border: 1px solid #000; padding: 2px; width: 48px;">JUMLAH</th>
+                    <th style="border: 1px solid #000; padding: 2px; width: 32px;">SAT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${materialsRowsHTML}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="padding-top: 4px; margin-top: 4px; display: flex; justify-content: space-between; font-size: 8px; font-weight: 600; border-top: 1px solid #cbd5e1;">
+              <div>
+                <p style="margin: 0;">Jakarta, ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</p>
+                <p style="margin: 2px 0 0 0;">Hormat Kami,</p>
+                <div style="height: 20px;"></div>
+                <p style="margin: 0; font-weight: 700; text-decoration: underline;">NINING</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0; visibility: hidden;">Spacer</p>
+                <p style="margin: 2px 0 0 0;">Diterima Oleh,</p>
+                <div style="height: 20px;"></div>
+                <p style="margin: 0; font-weight: 700; text-decoration: underline;">( _________________________ )</p>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      const printWin = window.open('', '_blank', 'width=1000,height=800');
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Cetak Surat Jalan (${poolSummaryData.length} SJ)</title>
+            <style>
+              @page {
+                size: 20cm 13cm landscape;
+                margin: 0mm;
+              }
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                color: #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .page-break {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <div>${doPagesHTML}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                  window.close();
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
   };
 
   // Kelompokkan data label toko menjadi berpasangan (2 label per halaman HVS A4 Landscape)
@@ -387,7 +642,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           </div>
         ) : activeTab === 'labels' ? (
           <div className="space-y-8">
-            {labelPairs.map((pair, pageIdx) => (
+            {labelPairs.slice(0, screenLimit).map((pair, pageIdx) => (
               <div
                 key={pageIdx}
                 className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
@@ -463,6 +718,30 @@ export default function FoodLabelTab({ isDarkMode }) {
                 )}
               </div>
             ))}
+
+            {labelPairs.length > screenLimit && (
+              <div className="no-print p-4 text-center border-t border-slate-200 dark:border-neutral-700 pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <span className="text-xs font-semibold text-slate-600 dark:text-neutral-400">
+                  Menampilkan {screenLimit} dari {labelPairs.length} halaman preview layar.
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScreenLimit(prev => Math.min(labelPairs.length, prev + 10))}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    ➕ Tampilkan 10 Halaman Lagi
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScreenLimit(labelPairs.length)}
+                    className="px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white font-bold text-xs rounded-xl transition cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    👁️ Tampilkan Semua ({labelPairs.length} Halaman)
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* PRATINJAU SURAT JALAN 20x13 CM LANDSCAPE (STRICT 1 HALAMAN) */
