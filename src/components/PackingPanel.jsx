@@ -732,6 +732,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         'Status QC Packing': item.status_qc_packing || 'PENDING',
         'Status QC Checker': item.status_qc_checker || 'PENDING',
         'Status Deliver': item.status_deliver || 'PENDING',
+        'Bukti Paking Foto': item.bukti_paking_url || 'No Foto',
+        'Outbound Foto': item.bukti_outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '-'),
         'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
       }));
 
