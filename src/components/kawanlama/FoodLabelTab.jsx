@@ -210,10 +210,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           ${activeTab === 'labels' ? `
             @page {
               size: A4 landscape;
-              margin-top: 8mm;
-              margin-bottom: 8mm;
-              margin-left: 2mm;
-              margin-right: 12mm;
+              margin: 5mm;
             }
             body {
               margin: 0 !important;
@@ -224,35 +221,35 @@ export default function FoodLabelTab({ isDarkMode }) {
               position: absolute !important;
               left: 0 !important;
               top: 0 !important;
-              width: 285mm !important;
-              margin-left: -30mm !important;
+              width: 100% !important;
+              margin: 0 auto !important;
               padding: 0 !important;
+              display: flex !important;
+              flex-direction: column !important;
+              align-items: center !important;
             }
             .label-pair-page {
-              width: 285mm !important;
-              max-width: 285mm !important;
-              height: 184mm !important;
-              max-height: 184mm !important;
+              width: 280mm !important;
+              max-width: 280mm !important;
+              height: 185mm !important;
+              max-height: 185mm !important;
               display: flex !important;
               flex-direction: row !important;
-              justify-content: flex-start !important;
+              justify-content: space-between !important;
               align-items: stretch !important;
-              gap: 5mm !important;
+              gap: 8mm !important;
               box-sizing: border-box !important;
               page-break-after: always !important;
               break-after: page !important;
               page-break-inside: avoid !important;
-              margin-left: -30mm !important;
-              margin-right: auto !important;
-              margin-top: 0 !important;
-              margin-bottom: 0 !important;
+              margin: 0 auto !important;
               padding: 0 !important;
             }
             .label-card-item {
               width: 48.5% !important;
               max-width: 48.5% !important;
-              height: 184mm !important;
-              max-height: 184mm !important;
+              height: 185mm !important;
+              max-height: 185mm !important;
               box-sizing: border-box !important;
               display: flex !important;
               flex-direction: column !important;
@@ -429,7 +426,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             {labelPairs.map((pair, pageIdx) => (
               <div
                 key={pageIdx}
-                className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-5 justify-between items-stretch w-full max-w-[273mm] min-h-[184mm] mb-8 ${!showAllScreenPreview && pageIdx >= 6 ? 'screen-hidden-item' : ''}`}
+                className={`label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8 ${!showAllScreenPreview && pageIdx >= 6 ? 'screen-hidden-item' : ''}`}
               >
                 {pair.map((store, idx) => {
                   const activeItems = store.itemsData;
