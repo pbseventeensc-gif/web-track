@@ -661,7 +661,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     const file = e.target.files[0];
     if (!file) return;
 
-    setUploadingId(rowId);
+    setUploadingId(`outbound-${rowId}`);
     try {
       const compressedBlob = await compressImage(file);
       const cleanCode = boxCode ? String(boxCode).replace(/[^a-zA-Z0-9-_]/g, '_') : 'box';
@@ -677,11 +677,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       const publicUrl = urlData.publicUrl;
 
       const nowIso = new Date().toISOString();
+      const staffName = 'Staff Outbound';
 
-      // Update di Supabase packing_tracking
+      // Update di Supabase packing_tracking (dukung kolom outbound_url & staff_outbound)
       const { error: updateError } = await supabase
         .from('packing_tracking')
         .update({
+          outbound_url: publicUrl,
+          staff_outbound: staffName,
           bukti_outbound_url: publicUrl,
           outbound_at: nowIso,
           updated_at: nowIso
@@ -689,14 +692,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         .eq('id', rowId);
 
       if (updateError) {
-        // Fallback: Jika kolom bukti_outbound_url belum ada di Supabase schema, simpan ke kolom catatan
-        await supabase
-          .from('packing_tracking')
-          .update({
-            catatan: publicUrl,
-            updated_at: nowIso
-          })
-          .eq('id', rowId);
+        console.error('Update outbound_url error:', updateError);
       }
 
       // Update state lokal secara instan
@@ -705,6 +701,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           item.id === rowId
             ? {
                 ...item,
+                outbound_url: publicUrl,
+                staff_outbound: staffName,
                 bukti_outbound_url: publicUrl,
                 outbound_at: nowIso,
                 catatan: publicUrl
@@ -718,6 +716,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     } catch (err) {
       alert('❌ Gagal upload foto Outbound: ' + err.message);
     }
+    setUploadingId(null);
+  };
     setUploadingId(null);
   };
 
@@ -1340,9 +1340,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         {/* 4. OUTBOUND (FOTO BUKTI OUTBOUND) */}
                         <td className="py-3.5 px-4 text-center">
                           {(() => {
-                            const outboundImgUrl = item.bukti_outbound_url || (item.catatan?.startsWith('http') ? item.catatan : null);
+                            const outboundImgUrl = item.outbound_url || item.bukti_outbound_url || (item.catatan?.startsWith('http') ? item.catatan : null);
+                            const staffName = item.staff_outbound || item.outbound_by || item.scanned_by || 'Outbound';
 
-                            if (uploadingId === item.id) {
+                            if (uploadingId === `outbound-${item.id}`) {
                               return (
                                 <div className="flex items-center justify-center gap-1 text-xs text-emerald-700 font-bold">
                                   <Clock className="w-3.5 h-3.5 animate-spin text-emerald-600" />
@@ -1376,7 +1377,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     </label>
                                   </div>
                                   <div className="text-[10px] font-semibold text-slate-800 leading-tight">
-                                    <span className="block truncate max-w-[110px]">{item.outbound_by || item.scanned_by || 'Outbound'}</span>
+                                    <span className="block truncate max-w-[110px]">{staffName}</span>
                                     <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.outbound_at || item.updated_at) || '-'}</span>
                                   </div>
                                 </div>
