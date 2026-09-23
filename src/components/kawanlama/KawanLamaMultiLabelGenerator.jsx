@@ -417,7 +417,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     <div className="text-right">
                       <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
                       <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
-                      ) : null}
                       <div className="mt-2 text-left text-xs">
                         <span className="font-bold">Kepada Yth, :</span><br />
                         <span className="font-extrabold uppercase">{activeClientName}</span><br />
