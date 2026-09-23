@@ -591,8 +591,8 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             box-sizing: border-box !important;
           }
           .surat-jalan-page:first-child, .surat-jalan-page:first-of-type {
-            margin-top: -2.5mm !important;
-            padding-top: 3.5mm !important;
+            margin-top: -6mm !important;
+            padding-top: 2mm !important;
           }
         }
       `}</style>
