@@ -525,12 +525,16 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           background: white;
           box-sizing: border-box;
           margin-bottom: 20mm;
+          padding: 5mm 7mm;
           border: 1px solid #ccc;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         @media print {
-          @page { size: A4 landscape; margin: 0; }
-          body { background: #fff !important; margin: 0 !important; }
+          @page {
+            size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'};
+            margin: 0mm;
+          }
+          body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
           .print-container { position: absolute; left: 0; top: 0; width: 100%; }
@@ -574,14 +578,16 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             flex-direction: column;
           }
           .surat-jalan-page {
-            width: 210mm;
-            height: 148mm;
-            border: none;
-            box-shadow: none;
-            padding: 8mm;
-            margin: 0;
-            page-break-after: always;
-            break-after: page;
+            width: 210mm !important;
+            height: 140mm !important;
+            max-height: 140mm !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 5mm 7mm !important;
+            margin: 0 !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>
