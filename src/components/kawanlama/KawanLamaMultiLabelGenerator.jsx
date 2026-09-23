@@ -403,30 +403,30 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               return (
                 <div key={storeIdx} className="surat-jalan-page relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto">
                   {/* Header Surat Jalan */}
-                  <div className="flex justify-between items-start border-b-2 border-black pb-4 mb-4">
+                  <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-3">
                     <div className="space-y-1">
                       <div className="h-16 w-48 flex items-center justify-start">
                         {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" alt="Logo" /> : <div className="text-xs border p-2 italic">[Upload Logo]</div>}
                       </div>
-                      <p className="text-[10px] text-stone-700 max-w-xs leading-tight">
+                      <p className="text-[11px] text-stone-700 max-w-xs leading-tight">
                         Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br />
                         Telp. 021 -5506999 &nbsp;&nbsp;|&nbsp;&nbsp; Fax -
                       </p>
                     </div>
 
                     <div className="text-right">
-                      <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
-                      <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
-                      <div className="mt-2 text-left text-xs">
+                      <h1 className="font-extrabold text-2xl tracking-wide uppercase">SURAT JALAN</h1>
+                      <p className="font-extrabold text-lg text-black mt-0.5">{finalDoNumber}</p>
+                      <div className="mt-2 text-left text-xs sm:text-sm">
                         <span className="font-bold">Kepada Yth, :</span><br />
-                        <span className="font-extrabold uppercase">{activeClientName}</span><br />
-                        <span className="font-semibold text-stone-800">STORE : {storeName}</span>
+                        <span className="font-extrabold uppercase text-sm sm:text-base">{activeClientName}</span><br />
+                        <span className="font-extrabold text-black">STORE : {storeName}</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Tabel Item Surat Jalan */}
-                  <table className="w-full border-collapse border border-black text-xs mb-0">
+                  <table className="w-full border-collapse border border-black text-xs sm:text-[13px] mb-0">
                     <thead>
                       <tr className="bg-stone-100 text-black border-b border-black">
                         <th className="border-r border-black p-2 text-center w-12 font-bold">No.</th>
@@ -438,12 +438,12 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     <tbody>
                       {storeItems.map((item, i) => (
                         <tr key={i} className="border-b border-black h-8">
-                          <td className="border-r border-black p-2 text-center font-medium">{i + 1}</td>
-                          <td className="border-r border-black p-2 font-medium uppercase">
+                          <td className="border-r border-black p-2 text-center font-bold">{i + 1}</td>
+                          <td className="border-r border-black p-2 font-bold uppercase">
                             {item.Item} {item.Bahan ? `_ ${item.Bahan}` : ''}
                           </td>
-                          <td className="border-r border-black p-2 text-center font-mono">{item.Ukuran || '-'}</td>
-                          <td className="p-2 text-center font-bold font-mono">{item.Qty}</td>
+                          <td className="border-r border-black p-2 text-center font-bold font-mono">{item.Ukuran || '-'}</td>
+                          <td className="p-2 text-center font-black font-mono">{item.Qty}</td>
                         </tr>
                       ))}
                       {[...Array(Math.max(0, 6 - storeItems.length))].map((_, idx) => (
@@ -458,17 +458,17 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     <tfoot>
                       <tr className="border-t-2 border-black font-extrabold bg-stone-50">
                         <td colSpan="3" className="border-r border-black p-2 text-right uppercase">TOTAL :</td>
-                        <td className="p-2 text-center font-mono text-sm">{totalQty}</td>
+                        <td className="p-2 text-center font-mono text-sm sm:text-base">{totalQty}</td>
                       </tr>
                     </tfoot>
                   </table>
 
                   {/* Footer / Tanda Tangan Surat Jalan dengan Nama Pengirim Dinamis */}
-                  <div className="border border-t-0 border-black grid grid-cols-4 text-[11px]">
+                  <div className="border border-t-0 border-black grid grid-cols-4 text-[12px]">
                     <div className="p-2 border-r border-black space-y-1">
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
                       <p><span className="font-bold">Nama File</span> : {activePromoTitle}</p>
-                      <div className="pt-6">
+                      <div className="pt-5">
                         <p><span className="font-bold">Inv</span> : WPP 0826-301349</p>
                         <p><span className="font-bold">PO</span> : -</p>
                       </div>
@@ -583,8 +583,9 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             max-height: 140mm !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 5mm 7mm !important;
-            margin: 0 !important;
+            padding: 5.1mm 6.5mm 5mm 6.5mm !important;
+            margin-left: -0.5mm !important;
+            margin-top: 0.1mm !important;
             page-break-after: always !important;
             break-after: page !important;
             box-sizing: border-box !important;
