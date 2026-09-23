@@ -33,8 +33,18 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
     ];
   });
 
+  const getTodayFormattedDate = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
+  };
+
   const [activePromoTitle, setActivePromoTitle] = useState('PROMO 17 AGUSTUS ( TES )');
-  const [spkNumber, setSpkNumber] = useState('SJ-0826-01920');
+  const [spkNumber, setSpkNumber] = useState(() => {
+    return `SJ-${getTodayFormattedDate()}-04680`;
+  });
   const [senderName, setSenderName] = useState('Arini Lidya');
   const [printMode, setPrintMode] = useState('labels'); // 'labels' atau 'do'
   
@@ -53,6 +63,14 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Otomatis ekstrak kode SPK/DO dari nama file jika ada
+    const fileName = file.name || '';
+    const matchedCode = fileName.match(/\d{4,5}/);
+    if (matchedCode) {
+      setSpkNumber(`SJ-${getTodayFormattedDate()}-${matchedCode[0]}`);
+    }
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const bstr = evt.target.result;
@@ -374,13 +392,13 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
               const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
               
-              const hasUniqueTag = storeItems.some(item => {
-                const val = String(item['No DO'] || item.NoDO || item['no do'] || '').trim().toLowerCase();
-                return val === 'unik';
-              });
+              // Garansi unik per toko (Format: SJ-YYYYMMDD-04680-001)
+              const storeSeq = String(storeIdx + 1).padStart(3, '0');
+              const customNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'] || item.DO)?.['No DO'];
 
-              const generatedUniqueDo = `${spkNumber}-U${storeIdx + 1}`;
-              const finalDoNumber = hasUniqueTag ? generatedUniqueDo : '';
+              const finalDoNumber = (customNoDo && String(customNoDo).trim().toLowerCase() !== 'unik')
+                ? String(customNoDo).trim()
+                : `${spkNumber}-${storeSeq}`;
 
               return (
                 <div key={storeIdx} className="surat-jalan-page relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto">
@@ -398,8 +416,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
                     <div className="text-right">
                       <h1 className="font-extrabold text-xl tracking-wide uppercase">SURAT JALAN</h1>
-                      {finalDoNumber ? (
-                        <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
+                      <p className="font-extrabold text-base text-black mt-0.5">{finalDoNumber}</p>
                       ) : null}
                       <div className="mt-2 text-left text-xs">
                         <span className="font-bold">Kepada Yth, :</span><br />
