@@ -718,8 +718,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
     setUploadingId(null);
   };
-    setUploadingId(null);
-  };
 
   const handleProcessOutboundScan = (codeValue) => {
     if (!codeValue || !codeValue.trim()) return;
