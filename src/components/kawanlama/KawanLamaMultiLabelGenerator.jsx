@@ -590,6 +590,10 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             break-after: page !important;
             box-sizing: border-box !important;
           }
+          .surat-jalan-page:first-child, .surat-jalan-page:first-of-type {
+            margin-top: -2.5mm !important;
+            padding-top: 3.5mm !important;
+          }
         }
       `}</style>
     </div>
