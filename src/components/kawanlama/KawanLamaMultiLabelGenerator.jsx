@@ -41,8 +41,38 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
     return `${yyyy}${mm}${dd}`;
   };
 
+  // Helper ekstraksi nilai No WPP dari item Excel (pencarian fleksibel)
+  const getWppFromItem = (item) => {
+    if (!item || typeof item !== 'object') return '';
+    for (const key of Object.keys(item)) {
+      const cleanKey = key.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (
+        cleanKey === 'nowpp' ||
+        cleanKey === 'wpp' ||
+        cleanKey.includes('wpp') ||
+        cleanKey === 'spkwpp' ||
+        cleanKey === 'inv' ||
+        cleanKey === 'noinv'
+      ) {
+        const val = item[key];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          return String(val).trim();
+        }
+      }
+    }
+    return '';
+  };
+
+  const formatWppText = (val) => {
+    if (!val) return '';
+    const trimmed = String(val).trim();
+    if (trimmed.toUpperCase().includes('WPP')) return trimmed;
+    return `WPP ${trimmed}`;
+  };
+
   const [activePromoTitle, setActivePromoTitle] = useState('PROMO 17 AGUSTUS ( TES )');
   const [spkNumber, setSpkNumber] = useState('SJ-05031');
+  const [defaultWppNumber, setDefaultWppNumber] = useState('');
   const [senderName, setSenderName] = useState('Arini Lidya');
   const [printMode, setPrintMode] = useState('labels'); // 'labels' atau 'do'
   
@@ -75,6 +105,16 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
       const wb = XLSX.read(bstr, { type: 'binary' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data = XLSX.utils.sheet_to_json(ws);
+
+      // Auto-detect No WPP dari data Excel jika ada
+      const firstWpp = data.reduce((found, curr) => {
+        if (found) return found;
+        return getWppFromItem(curr);
+      }, '');
+      if (firstWpp) {
+        setDefaultWppNumber(formatWppText(firstWpp));
+      }
+
       const grouped = data.reduce((acc, curr) => {
         const store = curr.Store || curr.Region || 'Unknown Region';
         if (!acc[store]) acc[store] = [];
@@ -243,7 +283,21 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             />
           </div>
 
-          {/* 4. Input Nama Pembuat / Pengirim DO */}
+          {/* 4. Input No WPP / Inv No */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-extrabold text-black">
+              No WPP / Inv No:
+            </label>
+            <input
+              type="text"
+              value={defaultWppNumber}
+              onChange={(e) => setDefaultWppNumber(e.target.value)}
+              placeholder="Contoh: WPP 0926-304087"
+              className="text-xs border border-slate-300 p-2.5 rounded-xl font-mono font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            />
+          </div>
+
+          {/* 5. Input Nama Pembuat / Pengirim DO */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-extrabold text-black">
               Creator Name (DO):
@@ -394,12 +448,13 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeSeq = String(storeIdx + 1).padStart(3, '0');
               const customNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'] || item.DO)?.['No DO'];
 
-              // Ekstrak No WPP secara otomatis dari kolom Excel (misal: "NO WPP" / "No WPP" -> "WPP 0926-304087")
-              const storeNoWpp = storeItems.reduce((found, item) => {
+              // Ekstrak No WPP secara otomatis per toko dari data Excel (pencarian fleksibel)
+              const extractedWpp = storeItems.reduce((found, item) => {
                 if (found) return found;
-                const val = item['NO WPP'] || item['No WPP'] || item['no wpp'] || item['No. WPP'] || item['NO. WPP'] || item['WPP'] || item['NO_WPP'] || item['No Wpp'] || item['wpp'];
-                return val ? String(val).trim() : '';
+                return getWppFromItem(item);
               }, '');
+
+              const storeNoWpp = formatWppText(extractedWpp || defaultWppNumber);
 
               const finalDoNumber = (customNoDo && String(customNoDo).trim().toLowerCase() !== 'unik')
                 ? String(customNoDo).trim()
@@ -424,7 +479,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                       <p className="font-extrabold text-lg text-black mt-0.5">{finalDoNumber}</p>
                       {storeNoWpp && (
                         <p className="font-extrabold text-sm text-black mt-0.5">
-                          {storeNoWpp.toUpperCase().includes('WPP') ? storeNoWpp : `NO. WPP : ${storeNoWpp}`}
+                          {storeNoWpp}
                         </p>
                       )}
                       <div className="mt-2 text-left text-xs sm:text-sm">
@@ -479,7 +534,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
                       <p><span className="font-bold">Nama File</span> : {activePromoTitle}</p>
                       <div className="pt-5">
-                        <p><span className="font-bold">Inv</span> : {storeNoWpp || 'WPP 0826-301349'}</p>
+                        <p><span className="font-bold">Inv</span> : {storeNoWpp || '-'}</p>
                         <p><span className="font-bold">PO</span> : -</p>
                       </div>
                     </div>
