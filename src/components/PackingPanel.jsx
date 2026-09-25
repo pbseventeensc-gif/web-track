@@ -37,7 +37,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
+  const [filterProject, setFilterProject] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [printListOverride, setPrintListOverride] = useState(null);
 
   // Google Sheets Modal State
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
@@ -337,6 +339,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             status_qc_packing: 'PENDING',
             status_qc_checker: 'PENDING',
             status_deliver: 'PENDING',
+            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
         }
@@ -505,6 +508,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const handlePrintLabel = (item) => {
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(false);
+    setPrintListOverride(null);
 
     const freshItem = packingList.find((p) => p.id === item.id) || item;
     setSelectedLabelItem({
@@ -535,11 +539,40 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }, 800);
   };
 
-  const handleBatchPrintAll = () => {
-    if (filteredList.length === 0) return alert('⚠️ Tidak ada data label yang dapat dicetak.');
+  const handlePrintProjectLabels = (projectName) => {
+    const projectItems = sourceList.filter(item => item.promo_title === projectName);
+    if (projectItems.length === 0) return alert(`⚠️ Tidak ada data label untuk project "${projectName}".`);
+
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
     setSelectedLabelItem(null);
+    setPrintListOverride(projectItems);
+
+    setTimeout(() => {
+      const images = document.querySelectorAll('.print-area img');
+      const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.onload = resolve;
+          img.onerror = resolve;
+        });
+      });
+      Promise.all(promises).then(() => {
+        window.print();
+      });
+    }, 800);
+  };
+
+  const handleBatchPrintAll = () => {
+    const listToPrint = selectedRowIds.length > 0
+      ? filteredList.filter(item => selectedRowIds.includes(item.id))
+      : filteredList;
+
+    if (listToPrint.length === 0) return alert('⚠️ Tidak ada data label yang dapat dicetak.');
+    setIsSuratJalanPrinting(false);
+    setIsBatchPrinting(true);
+    setSelectedLabelItem(null);
+    setPrintListOverride(listToPrint);
 
     setTimeout(() => {
       const images = document.querySelectorAll('.print-area img');
@@ -559,6 +592,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const handlePrintSuratJalan = (itemsToPrint) => {
     setIsBatchPrinting(false);
     setSelectedLabelItem(null);
+    setPrintListOverride(null);
     setIsSuratJalanPrinting(true);
     setSuratJalanGroup(itemsToPrint);
 
@@ -803,19 +837,26 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
 
+  const uniqueProjects = Array.from(
+    new Set(sourceList.map(item => item.promo_title).filter(Boolean))
+  );
+
   const filteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
 
     const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
 
+    const matchProject = filterProject === 'ALL' || item.promo_title === filterProject;
+
     const matchSearch =
       searchTerm === '' ||
       item.store_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.no_spk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.promo_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.box_code?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchDelivery && matchStatus && matchSearch;
+    return matchDelivery && matchStatus && matchProject && matchSearch;
   });
 
   const totalSpk = sourceList.length;
@@ -1121,6 +1162,24 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 </button>
               ))}
             </div>
+
+            {/* Filter By Project / Batch Dropdown */}
+            {uniqueProjects.length > 0 && (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <select
+                  value={filterProject}
+                  onChange={(e) => setFilterProject(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border-0 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">📦 Filter Project: Semua ({uniqueProjects.length})</option>
+                  {uniqueProjects.map((proj, i) => (
+                    <option key={i} value={proj}>
+                      📂 {proj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="w-full sm:w-80 relative">
@@ -1166,6 +1225,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
                 <th className="py-4 px-4 font-semibold">NAMA STORE / SPK</th>
                 <th className="py-4 px-4 font-semibold">TIPE KIRIM</th>
+                <th className="py-4 px-4 text-center font-semibold">TGL IMPORT</th>
                 <th className="py-4 px-4 text-center font-semibold">LABEL & DESAIN</th>
                 <th className="py-4 px-4 text-center font-semibold">BUKTI FOTO</th>
                 <th className="py-4 px-4 text-center font-semibold">STATUS PACKING</th>
@@ -1176,7 +1236,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             <tbody className="divide-y divide-slate-200 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="p-8 text-center text-slate-500 font-semibold text-xs">
+                  <td colSpan="10" className="p-8 text-center text-slate-500 font-semibold text-xs">
                     Tidak ada data box yang sesuai filter.
                   </td>
                 </tr>
@@ -1194,8 +1254,29 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan="9" className="py-2.5 px-4 text-center font-bold text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
-                            📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---
+                          <td colSpan="10" className="py-2.5 px-4 text-center font-bold text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                              <span>📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---</span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
+                                    setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
+                                  }}
+                                  className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  ☑️ Pilih Project Ini
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handlePrintProjectLabels(item.promo_title)}
+                                  className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                                >
+                                  <Printer className="w-3 h-3" /> Cetak Label Project Ini
+                                </button>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -1244,6 +1325,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               : 'bg-blue-500/15 text-blue-900 border-blue-400'
                           }`}>
                             {item.delivery_type || 'DALAM KOTA'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <span className="font-mono text-xs text-slate-700 font-semibold block">
+                            {formatDateTime(item.created_at || item.updated_at) || '-'}
                           </span>
                         </td>
 
@@ -1797,7 +1884,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             </div>
           </div>
         ) : isBatchPrinting ? (
-          filteredList.map((item) => <React.Fragment key={item.id}>{renderSingleLabelSheet(item)}</React.Fragment>)
+          (printListOverride || (selectedRowIds.length > 0 ? filteredList.filter(item => selectedRowIds.includes(item.id)) : filteredList)).map((item) => <React.Fragment key={item.id}>{renderSingleLabelSheet(item)}</React.Fragment>)
         ) : (
           selectedLabelItem && renderSingleLabelSheet(selectedLabelItem)
         )}
