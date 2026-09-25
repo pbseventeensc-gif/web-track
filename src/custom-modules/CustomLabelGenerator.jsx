@@ -23,13 +23,13 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     phone: '',
     region_city: '',
 
-    transporter_dr: 'WAHANA - N-17779-2608-12',
-    brand_name: 'NESTLÉ / PURINA',
-    item_title: 'SHOPBLIND FRISKIES FELIX - PURINA ( UK 200 X 100 CM )',
+    transporter_dr: '',
+    brand_name: '',
+    item_title: '',
     
     ops: '-',
-    brand_cc: 'COCA - COLA',
-    item_cc: 'AC 260 2MUKA LAM 2MUKA GLOSSY ( UK A4 )',
+    brand_cc: '',
+    item_cc: '',
     qty_powerade: '20',
     qty_sprite: '20',
 
@@ -122,7 +122,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         }
 
         // Ambil Transporter dari file Excel
-        let headerTransporter = 'PT Wahana Prestasi Logistik';
+        let headerTransporter = '';
         for (let r = 0; r < Math.min(5, rawData.length); r++) {
           for (let c = 0; c < rawData[r].length; c++) {
             const cellVal = String(rawData[r][c] || '').trim();
@@ -133,7 +133,9 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           }
         }
 
-        const combinedTransporterDr = `${headerTransporter} - ${headerDrNo}`.trim();
+        const combinedTransporterDr = (headerTransporter && headerDrNo)
+          ? `${headerTransporter} - ${headerDrNo}`
+          : (headerTransporter || headerDrNo || '');
 
         const imported = [];
         rawData.slice(1).forEach((row) => {
@@ -318,14 +320,36 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           </div>
         </div>
 
-        <div className="sm:col-span-3">
-          <label className="block font-bold mb-1 opacity-70">Teks Header Kotak Hitam Bawah (Cth: BANNER / HANGING POSTER)</label>
-          <input 
-            type="text"
-            value={form.po_project}
-            onChange={e => setForm({ ...form, po_project: e.target.value })}
-            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
-          />
+        <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Teks Header / Project (Cth: BANNER)</label>
+            <input
+              type="text"
+              value={form.po_project}
+              onChange={e => setForm({ ...form, po_project: e.target.value })}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Transporter – DR No (Manual)</label>
+            <input
+              type="text"
+              value={form.transporter_dr}
+              onChange={e => setForm({ ...form, transporter_dr: e.target.value })}
+              placeholder="Cth: WAHANA - N-17779-2608-12"
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-70">Nama Barang / Item Title (Manual)</label>
+            <input
+              type="text"
+              value={form.item_title}
+              onChange={e => setForm({ ...form, item_title: e.target.value })}
+              placeholder="Cth: BANNER PROMO A4"
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            />
+          </div>
         </div>
       </div>
 
@@ -527,11 +551,11 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', verticalAlign: 'top' }}>Address</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetAddress}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>PIC / Phone</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetPic} / {targetPhone}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>Region & City</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetRegionCity}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>: {targetTransporterDr}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>: {targetTransporterDr || '-'}</td></tr>
                           <tr>
                             <td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', verticalAlign: 'top' }}>Brand & Item</td>
                             <td style={{ border: '1px solid #000', padding: '9px' }}>
-                              <div>COCA - COLA - {displayItemTitle}</div>
+                              : {displayItemTitle || '-'}
                             </td>
                           </tr>
                           <tr>
