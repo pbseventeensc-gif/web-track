@@ -42,9 +42,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
   };
 
   const [activePromoTitle, setActivePromoTitle] = useState('PROMO 17 AGUSTUS ( TES )');
-  const [spkNumber, setSpkNumber] = useState(() => {
-    return `SJ-${getTodayFormattedDate()}-04680`;
-  });
+  const [spkNumber, setSpkNumber] = useState('SJ-05031');
   const [senderName, setSenderName] = useState('Arini Lidya');
   const [printMode, setPrintMode] = useState('labels'); // 'labels' atau 'do'
   
@@ -64,11 +62,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Otomatis ekstrak kode SPK/DO dari nama file jika ada
+    // Otomatis ekstrak kode SPK/DO dari nama file jika ada (format ringkas biar tidak terlalu panjang)
     const fileName = file.name || '';
     const matchedCode = fileName.match(/\d{4,5}/);
     if (matchedCode) {
-      setSpkNumber(`SJ-${getTodayFormattedDate()}-${matchedCode[0]}`);
+      setSpkNumber(`SJ-${matchedCode[0]}`);
     }
 
     const reader = new FileReader();
@@ -392,9 +390,16 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
               const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
               
-              // Garansi unik per toko (Format: SJ-YYYYMMDD-04680-001)
+              // Garansi unik per toko (Format ringkas: SJ-05031-001)
               const storeSeq = String(storeIdx + 1).padStart(3, '0');
               const customNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'] || item.DO)?.['No DO'];
+
+              // Ekstrak No WPP secara otomatis dari kolom Excel (misal: "NO WPP" / "No WPP" -> "WPP 0926-304087")
+              const storeNoWpp = storeItems.reduce((found, item) => {
+                if (found) return found;
+                const val = item['NO WPP'] || item['No WPP'] || item['no wpp'] || item['No. WPP'] || item['NO. WPP'] || item['WPP'] || item['NO_WPP'] || item['No Wpp'] || item['wpp'];
+                return val ? String(val).trim() : '';
+              }, '');
 
               const finalDoNumber = (customNoDo && String(customNoDo).trim().toLowerCase() !== 'unik')
                 ? String(customNoDo).trim()
@@ -417,6 +422,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     <div className="text-right">
                       <h1 className="font-extrabold text-2xl tracking-wide uppercase">SURAT JALAN</h1>
                       <p className="font-extrabold text-lg text-black mt-0.5">{finalDoNumber}</p>
+                      {storeNoWpp && (
+                        <p className="font-extrabold text-sm text-black mt-0.5">
+                          {storeNoWpp.toUpperCase().includes('WPP') ? storeNoWpp : `NO. WPP : ${storeNoWpp}`}
+                        </p>
+                      )}
                       <div className="mt-2 text-left text-xs sm:text-sm">
                         <span className="font-bold">Kepada Yth, :</span><br />
                         <span className="font-extrabold uppercase text-sm sm:text-base">{activeClientName}</span><br />
@@ -469,7 +479,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
                       <p><span className="font-bold">Nama File</span> : {activePromoTitle}</p>
                       <div className="pt-5">
-                        <p><span className="font-bold">Inv</span> : WPP 0826-301349</p>
+                        <p><span className="font-bold">Inv</span> : {storeNoWpp || 'WPP 0826-301349'}</p>
                         <p><span className="font-bold">PO</span> : -</p>
                       </div>
                     </div>
