@@ -800,9 +800,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
   const handleDownloadPackingReport = async () => {
     try {
-      if (packingList.length === 0) return alert('⚠️ Belum ada data paking untuk di-export.');
+      const dataToExport = filteredList.length > 0 ? filteredList : packingList;
+      if (dataToExport.length === 0) return alert('⚠️ Belum ada data paking untuk di-export.');
 
-      const formattedData = packingList.map((item, index) => ({
+      const formattedData = dataToExport.map((item, index) => ({
         No: index + 1,
         'Tracking ID': item.tracking_id || '-',
         'No. SPK': item.no_spk || '-',
@@ -825,8 +826,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Report_Paking');
 
       const todayStr = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(workbook, `Report_Paking_Wellen_${todayStr}.xlsx`);
-      alert('✅ Report Excel Paking berhasil di-download!');
+      let fileNameStr = `Report_Paking_Semua_${todayStr}.xlsx`;
+
+      if (filterProject !== 'ALL') {
+        const cleanProj = String(filterProject).replace(/[/\\?%*:|"<>]/g, '_').trim();
+        fileNameStr = `Report_Paking_${cleanProj}_${todayStr}.xlsx`;
+      }
+
+      XLSX.writeFile(workbook, fileNameStr);
+      alert(`✅ Report Excel Paking (${fileNameStr}) berhasil di-download!`);
     } catch (err) {
       alert('Gagal download report: ' + err.message);
     }
@@ -851,9 +859,17 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
 
+  // Filter list by status & delivery first so uniqueProjects only shows projects matching current status (e.g. Done)
+  const statusFilteredList = sourceList.filter((item) => {
+    const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
+    const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
+    const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
+    return matchDelivery && matchStatus;
+  });
+
   const uniqueProjects = Array.from(
     new Set(
-      sourceList
+      statusFilteredList
         .map(item => {
           const project = item.promo_title || '-';
           const spk = item.no_spk || '-';
@@ -863,12 +879,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     )
   );
 
-  const filteredList = sourceList.filter((item) => {
-    const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
-
-    const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
-    const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
-
+  const filteredList = statusFilteredList.filter((item) => {
     const projectKey = `${item.promo_title || '-'}_${item.no_spk || '-'}`;
     const matchProject = filterProject === 'ALL' || projectKey === filterProject;
 
@@ -879,7 +890,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       item.promo_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.box_code?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchDelivery && matchStatus && matchProject && matchSearch;
+    return matchProject && matchSearch;
   });
 
   const totalSpk = sourceList.length;
