@@ -1235,21 +1235,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setIsGSheetModalOpen(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
+              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
-              <Globe className="w-4 h-4 text-white" /> Import Google Sheet
-            </button>
-
-            <button
-              onClick={() => {
-                setShowOutboundScanModal(true);
-                setMatchedOutboundItem(null);
-                setOutboundScanMsg('');
-                setOutboundScannedCode('');
-              }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
-            >
-              <Camera className="w-4 h-4 text-white" /> Scan QR Outbound
+              <Globe className="w-3.5 h-3.5 text-slate-700" /> Import Google Sheet
             </button>
 
             <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
