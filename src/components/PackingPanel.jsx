@@ -16,7 +16,8 @@ import {
   Edit3,
   Image as ImageIcon,
   X,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 
 // Global memory cache untuk link gambar aktif di browser
@@ -114,27 +115,66 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       .order('id', { ascending: true });
 
     if (!error && data) {
-      const normalizedData = data.map(item => {
-        const details = parseItems(item.items_detail).map((sub, idx) => {
-          const itemCode = sub.code || '';
-          const itemCore = extractCoreCode(itemCode);
+      if (data.length > 0) {
+        const normalizedData = data.map(item => {
+          const details = parseItems(item.items_detail).map((sub, idx) => {
+            const itemCode = sub.code || '';
+            const itemCore = extractCoreCode(itemCode);
 
-          // RECOVERY LOGIC: Cari link gambar di memory berdasarkan berbagai kemungkinan kunci
-          // Gunakan fallback ke string kosong jika undefined untuk menghindari "undefined" string
-          const activeUrl = sub.image_url ||
-                           window.__ACTIVE_DESIGN_URLS__[itemCode] ||
-                           window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
-                           (itemCore ? window.__ACTIVE_DESIGN_URLS__[itemCore] : '') ||
-                           '';
+            const activeUrl = sub.image_url ||
+                             window.__ACTIVE_DESIGN_URLS__[itemCode] ||
+                             window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
+                             (itemCore ? window.__ACTIVE_DESIGN_URLS__[itemCore] : '') ||
+                             '';
 
-          return { ...sub, image_url: activeUrl };
+            return { ...sub, image_url: activeUrl };
+          });
+          return {
+            ...item,
+            items_detail: details
+          };
         });
-        return {
-          ...item,
-          items_detail: details
-        };
-      });
-      setPackingList(normalizedData);
+        setPackingList(normalizedData);
+      } else {
+        // Auto-Recovery: Jika packing_tracking kosong, coba pulihkan dari spk_data
+        const { data: spkRows } = await supabase.from('spk_data').select('*').order('id', { ascending: true });
+        if (spkRows && spkRows.length > 0) {
+          const payloads = spkRows.map((spk) => {
+            const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now()}`;
+            return {
+              tracking_id: trackingCode,
+              no_spk: spk.no_spk || `SPK-${spk.id}`,
+              client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
+              promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
+              store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
+              recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+              total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
+              box_code: spk.box_code || 'WL-01',
+              delivery_type: spk.delivery_type || 'DALAM KOTA',
+              status_qc_label: spk.status_qc_label || 'PENDING',
+              status_qc_packing: spk.status_qc_packing || 'PENDING',
+              status_qc_checker: spk.status_qc_checker || 'PENDING',
+              status_deliver: spk.status_deliver || 'PENDING',
+              items_detail: spk.items_detail || [{
+                code: spk.no_spk || 'ITEM-01',
+                desc: spk.promo_title || spk.project_name || 'Item Pesanan',
+                qty: Number(spk.qty_order || spk.total_qty || 100)
+              }],
+              updated_at: new Date().toISOString()
+            };
+          });
+
+          await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+          const { data: refetched } = await supabase.from('packing_tracking').select('*').order('id', { ascending: true });
+          if (refetched && refetched.length > 0) {
+            setPackingList(refetched.map(item => ({ ...item, items_detail: parseItems(item.items_detail) })));
+          } else {
+            setPackingList([]);
+          }
+        } else {
+          setPackingList([]);
+        }
+      }
     }
   };
 
@@ -898,6 +938,53 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
+  const handleSyncFromSpkData = async () => {
+    try {
+      let rowsToSync = [];
+      const { data: spkRows, error } = await supabase.from('spk_data').select('*').order('id', { ascending: true });
+      if (!error && spkRows && spkRows.length > 0) {
+        rowsToSync = spkRows;
+      } else if (spkList && spkList.length > 0) {
+        rowsToSync = spkList;
+      }
+
+      if (rowsToSync.length === 0) {
+        return alert('⚠️ Tidak ditemukan data SPK di database. Silakan import file Excel di tab "Cetak Label & SJ" terlebih dahulu.');
+      }
+
+      const payloads = rowsToSync.map((spk) => {
+        const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now()}`;
+        return {
+          tracking_id: trackingCode,
+          no_spk: spk.no_spk || `SPK-${spk.id}`,
+          client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
+          promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
+          store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
+          recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+          total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
+          box_code: spk.box_code || 'WL-01',
+          delivery_type: spk.delivery_type || 'DALAM KOTA',
+          status_qc_label: spk.status_qc_label || 'PENDING',
+          status_qc_packing: spk.status_qc_packing || 'PENDING',
+          status_qc_checker: spk.status_qc_checker || 'PENDING',
+          status_deliver: spk.status_deliver || 'PENDING',
+          items_detail: spk.items_detail || [{
+            code: spk.no_spk || 'ITEM-01',
+            desc: spk.promo_title || spk.project_name || 'Item Pesanan',
+            qty: Number(spk.qty_order || spk.total_qty || 100)
+          }],
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+      await fetchPackingData();
+      alert(`✅ Berhasil memulihkan & menyinkronkan ${payloads.length} data paking!`);
+    } catch (err) {
+      alert('❌ Gagal sinkronisasi data: ' + err.message);
+    }
+  };
+
   const sourceList = packingList;
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
@@ -1176,6 +1263,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
               <Download className="w-3.5 h-3.5 text-slate-700" /> Export Excel
+            </button>
+
+            <button
+              onClick={handleSyncFromSpkData}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              title="Pulihkan dan sinkronkan data dari SPK utama"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-white animate-spin-hover" /> Pulihkan / Sync Data SPK
             </button>
 
             <button
