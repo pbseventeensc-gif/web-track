@@ -1350,12 +1350,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   onChange={(e) => setFilterProject(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border-0 focus:outline-none cursor-pointer"
                 >
-                  <option value="ALL">📦 Filter Project: Semua ({uniqueProjects.length})</option>
-                  {uniqueProjects.map((proj, i) => (
-                    <option key={i} value={proj}>
-                      📂 {proj}
-                    </option>
-                  ))}
+                  <option value="ALL">📦 Filter Project: Semua ({statusFilteredList.length})</option>
+                  {uniqueProjects.map((projKey, i) => {
+                    const parts = projKey.split('_');
+                    const projName = parts[0] || '-';
+                    const spkNo = parts.slice(1).join('_') || '-';
+                    const projBoxCount = statusFilteredList.filter(item => `${item.promo_title || '-'}_${item.no_spk || '-'}` === projKey).length;
+                    return (
+                      <option key={i} value={projKey}>
+                        📂 {projName} {spkNo !== '-' ? `(${spkNo})` : ''} - {projBoxCount} Box
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
@@ -1437,16 +1443,29 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                               <span>📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---</span>
                               <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
-                                    setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
-                                  }}
-                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
-                                >
-                                  ☑️ Pilih
-                                </button>
+                                {(() => {
+                                  const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
+                                  const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
+
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (isAllProjSelected) {
+                                          setSelectedRowIds(prev => prev.filter(id => !projRowIds.includes(id)));
+                                        } else {
+                                          setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
+                                        }
+                                      }}
+                                      className={`px-2.5 py-1 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 ${
+                                        isAllProjSelected ? 'bg-amber-700 hover:bg-amber-800' : 'bg-emerald-600 hover:bg-emerald-500'
+                                      }`}
+                                      title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
+                                    >
+                                      {isAllProjSelected ? '☒ Batal Pilih' : '☑️ Pilih'}
+                                    </button>
+                                  );
+                                })()}
                                 <button
                                   type="button"
                                   onClick={() => handlePrintProjectLabels(item.promo_title)}
