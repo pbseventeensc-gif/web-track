@@ -111,8 +111,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
   const saveItemsToSupabase = async (itemsToSave) => {
     if (!itemsToSave || itemsToSave.length === 0) return;
+
+    // Preservasi status & foto jika tracking_id sudah ada di database Supabase
+    const { data: existingRows } = await supabase.from('packing_tracking').select('tracking_id, status_qc_packing, status_qc_checker, status_qc_label, status_deliver, bukti_paking_url, bukti_outbound_url, outbound_url, foto_by, foto_at, packing_by, packing_at, checker_by, checker_at, staff_outbound');
+    const existingMap = {};
+    if (existingRows) {
+      existingRows.forEach(r => { existingMap[r.tracking_id] = r; });
+    }
+
     const payloads = itemsToSave.map((item) => {
       const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
+      const existing = existingMap[trackingCode] || {};
       const qrAddress = `${item.NO_SPK || ''}_${trackingCode}_${item.CLIENT || ''}_${item.DELIVERY_ADDRESS || ''}`;
 
       return {
@@ -145,10 +154,20 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           visual_image: item.VISUAL_IMAGE || '',
           visual_image_2: item.VISUAL_IMAGE_2 || ''
         }],
-        status_qc_label: 'PENDING',
-        status_qc_packing: 'PENDING',
-        status_qc_checker: 'PENDING',
-        status_deliver: 'PENDING',
+        status_qc_label: existing.status_qc_label || 'PENDING',
+        status_qc_packing: existing.status_qc_packing || 'PENDING',
+        status_qc_checker: existing.status_qc_checker || 'PENDING',
+        status_deliver: existing.status_deliver || 'PENDING',
+        bukti_paking_url: existing.bukti_paking_url || null,
+        bukti_outbound_url: existing.bukti_outbound_url || null,
+        outbound_url: existing.outbound_url || null,
+        foto_by: existing.foto_by || null,
+        foto_at: existing.foto_at || null,
+        packing_by: existing.packing_by || null,
+        packing_at: existing.packing_at || null,
+        checker_by: existing.checker_by || null,
+        checker_at: existing.checker_at || null,
+        staff_outbound: existing.staff_outbound || null,
         updated_at: new Date().toISOString()
       };
     });
@@ -441,10 +460,6 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         store_name: item.DELIVERY_ADDRESS || 'Store Utama',
         recipient_name: item.RECIPIENT_NAME || '-',
         total_qty: item.totalCombinedQty,
-        status_qc_label: 'PENDING',
-        status_qc_packing: 'PENDING',
-        status_qc_checker: 'PENDING',
-        status_deliver: 'PENDING',
         updated_at: new Date().toISOString()
       };
       await supabase.from('packing_tracking').upsert(payload, { onConflict: 'tracking_id' });
