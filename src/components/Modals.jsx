@@ -158,13 +158,13 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/92 backdrop-blur-md flex items-center justify-center z-[100] p-3 sm:p-6 animate-fade-in overflow-y-auto"
+      className="fixed inset-0 bg-stone-100/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center justify-center z-[100] p-3 sm:p-6 animate-fade-in overflow-y-auto"
       onClick={onClose}
     >
-      {/* High-Contrast Floating Close Button Top Right */}
+      {/* Floating Close Button Top Right */}
       <button
         onClick={onClose}
-        className="fixed top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black flex items-center justify-center text-xl transition-all cursor-pointer z-[110] shadow-2xl border-2 border-white active:scale-95"
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-800 dark:text-white font-bold flex items-center justify-center text-lg transition-all cursor-pointer z-[110] shadow-md border border-slate-300 dark:border-neutral-700 active:scale-95"
         title="Tutup Modal"
       >
         ✕
@@ -174,57 +174,57 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
         className="relative flex flex-col items-center justify-center space-y-3 my-auto max-w-[96vw]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Photo Display - Clean Full Image Without Black Box Frame */}
+        {/* Photo Display - Clean Image */}
         <div className="flex items-center justify-center">
           <img
             src={modalImageInfo.url}
             alt="Preview High Res"
             style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
-            className="h-[74vh] max-h-[78vh] min-h-[450px] w-auto max-w-[92vw] object-contain rounded-2xl shadow-2xl block mx-auto border border-white/10"
+            className="h-[74vh] max-h-[78vh] min-h-[420px] w-auto max-w-[92vw] object-contain rounded-2xl shadow-xl block mx-auto border border-stone-200 dark:border-neutral-700"
           />
         </div>
 
-        {/* High-Contrast Card Description Box Below Photo */}
-        <div className="flex flex-col items-center justify-center text-center space-y-2 bg-neutral-900/95 border border-white/20 rounded-2xl px-6 py-3.5 max-w-[92vw] shadow-2xl backdrop-blur-xl my-1">
+        {/* Clean Thin Black Text Below Photo (No Black Box) */}
+        <div className="flex flex-col items-center justify-center text-center space-y-1 text-slate-900 dark:text-slate-100 max-w-[92vw] pt-1">
           {modalImageInfo.storeName && (
-            <div className="text-white font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-amber-400 font-extrabold flex items-center gap-1">🏪 Store:</span>
-              <span className="text-amber-300 bg-amber-950/90 px-3 py-1 rounded-xl border border-amber-500/50 font-black shadow-inner">
-                {modalImageInfo.storeName}
-              </span>
+            <div className="text-slate-900 dark:text-slate-100 font-medium text-xs sm:text-sm tracking-wide flex items-center justify-center gap-1 flex-wrap">
+              <span>🏪</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-200">Store:</span>
+              <span className="font-medium text-slate-900 dark:text-white">{modalImageInfo.storeName}</span>
             </div>
           )}
 
           {(modalImageInfo.projectName || modalImageInfo.spkNo || modalImageInfo.title) && (
-            <div className="flex items-center justify-center gap-2.5 flex-wrap text-xs sm:text-sm font-semibold text-slate-200 pt-0.5">
+            <div className="flex items-center justify-center gap-2 flex-wrap text-xs sm:text-sm font-normal text-slate-800 dark:text-slate-200">
               {modalImageInfo.projectName && (
-                <span className="flex items-center gap-1.5 bg-neutral-800/90 px-3 py-1.5 rounded-xl border border-neutral-700/80 shadow-xs">
+                <span className="flex items-center gap-1">
                   <span>📦</span>
-                  <strong className="text-emerald-400">Project:</strong>
-                  <span className="text-white font-extrabold">{modalImageInfo.projectName}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">Project:</span>
+                  <span className="font-normal text-slate-900 dark:text-white">{modalImageInfo.projectName}</span>
                 </span>
               )}
+              {modalImageInfo.projectName && modalImageInfo.spkNo && (
+                <span className="text-slate-400">•</span>
+              )}
               {modalImageInfo.spkNo && (
-                <span className="flex items-center gap-1.5 bg-neutral-800/90 px-3 py-1.5 rounded-xl border border-neutral-700/80 font-mono shadow-xs">
+                <span className="flex items-center gap-1 font-mono">
                   <span>📄</span>
-                  <strong className="text-indigo-400">SPK:</strong>
-                  <span className="text-white font-extrabold">{modalImageInfo.spkNo}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-300">SPK:</span>
+                  <span className="font-normal text-slate-900 dark:text-white">{modalImageInfo.spkNo}</span>
                 </span>
               )}
               {!modalImageInfo.storeName && !modalImageInfo.projectName && !modalImageInfo.spkNo && modalImageInfo.title && (
-                <span className="text-white font-extrabold text-xs sm:text-sm px-3 py-1.5 bg-neutral-800/90 rounded-xl border border-neutral-700/80 shadow-xs">
-                  {modalImageInfo.title}
-                </span>
+                <span className="font-normal text-slate-900 dark:text-white">{modalImageInfo.title}</span>
               )}
             </div>
           )}
         </div>
 
         {/* Download Button */}
-        <div className="pt-0.5">
+        <div className="pt-1">
           <button
             onClick={handleDownloadHD}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-2xl transition-all cursor-pointer active:scale-95 border border-emerald-400/40"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95 border border-emerald-400/30"
             title="Download Foto File Asli Kamera (Ultra HD)"
           >
             📥 Download Foto HD
