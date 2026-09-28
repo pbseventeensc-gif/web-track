@@ -198,6 +198,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     return match ? match[1] : lastPart.toLowerCase();
   };
 
+  const getCleanStoreName = (rawStore) => {
+    if (!rawStore || rawStore === '-') return '-';
+    const str = String(rawStore).trim();
+    const commaParts = str.split(',');
+    if (commaParts.length > 1 && commaParts[0].trim().length > 0) {
+      return commaParts[0].trim();
+    }
+    const jlIdx = str.search(/\b(jl\.|jalan)\b/i);
+    if (jlIdx > 0) {
+      return str.slice(0, jlIdx).replace(/[,.\s]+$/, '').trim();
+    }
+    return str;
+  };
+
   // Convert File ke Base64 (Lebih stabil untuk Print di Mac/Safari)
   const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -1479,16 +1493,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           <span className="font-bold text-slate-900">{item.box_code || '-'}</span>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
-                            {item.store_name || '-'}
+                        <td className="py-3.5 px-4 max-w-[280px]">
+                          <div className="font-extrabold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                            <span>{getCleanStoreName(item.store_name)}</span>
                             {isRowComplete && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-xs font-semibold border border-emerald-400">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[11px] font-semibold border border-emerald-400">
                                 ✅ Done
                               </span>
                             )}
                           </div>
-                          <div className="text-xs font-mono text-slate-500 font-medium mt-0.5">{item.no_spk} | {item.promo_title}</div>
+                          {item.no_spk && (
+                            <div className="text-xs font-mono text-slate-500 font-bold mt-0.5">{item.no_spk}</div>
+                          )}
                         </td>
 
                         <td className="py-4 px-4 whitespace-nowrap">
