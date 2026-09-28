@@ -887,7 +887,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
               <th className="p-3.5 text-center w-10">
                 <input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600 w-4 h-4" />
               </th>
-              <th className="p-3.5">SPK NO. / TRACKING ID</th>
+              <th className="p-3.5">NOMOR SPK</th>
               <th className="p-3.5">CLIENT & BRAND</th>
               <th className="p-3.5">RECIPIENT & ADDRESS</th>
               <th className="p-3.5">SPECIFICATION / MEDIA / SIZE</th>
@@ -909,7 +909,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 return (
                   <tr key={idx} className={`transition-colors hover:bg-slate-50/80 bg-white ${isChecked ? 'bg-indigo-50/60' : 'bg-white'}`}>
                     <td className="p-3.5 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600 w-4 h-4" /></td>
-                    <td className="p-3.5"><div className="font-mono text-slate-600 font-bold text-xs">{row.NO_SPK || '-'}</div><div className="text-[10px] font-mono text-slate-400 font-medium">PO: {row.PO_NUMBER || '-'}</div><div className="font-mono text-[10px] text-emerald-600 font-bold">ID: {row.TRACKING_ID}</div></td>
+                    <td className="p-3.5"><div className="font-mono text-slate-900 font-extrabold text-xs sm:text-sm">{row.NO_SPK || '-'}</div></td>
                     <td className="p-3.5"><div className="font-bold text-slate-900 text-xs sm:text-sm">{row.CLIENT || '-'}</div><div className="text-[10px] font-mono text-slate-400 font-medium">{row.BRAND || '-'}</div></td>
                     <td className="p-3.5"><div className="font-bold text-slate-900 text-xs">{row.RECIPIENT_NAME || '-'} ({row.RECIPIENT_PHONE || '-'})</div><div className="text-[11px] font-medium text-slate-500">{row.DELIVERY_ADDRESS || '-'}</div></td>
                     <td className="p-3.5"><div className="font-medium text-slate-700 text-xs">{row.ITEM_DESCRIPTION || '-'}</div><div className="text-[10px] text-slate-400 font-medium">{row.MEDIA || '-'} ({row.UKURAN || '-'})</div></td>
