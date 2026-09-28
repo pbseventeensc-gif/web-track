@@ -1048,13 +1048,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
   const sourceList = packingList;
 
-  const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE').length;
+  const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto')).length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
 
   // Filter list by status & delivery first so uniqueProjects only shows projects matching current status (e.g. Done)
   const statusFilteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
-    const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
+    const isDone = item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
     return matchDelivery && matchStatus;
   });
@@ -1462,9 +1462,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 </tr>
               ) : (
                 filteredList.map((item, idx) => {
-                  const isPackingDone = item.status_qc_packing === 'DONE';
+                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
                   const isCheckerDone = item.status_qc_checker === 'DONE';
-                  const isRowComplete = isPackingDone && isCheckerDone;
+                  const isRowComplete = isPackingDone || isCheckerDone;
                   const isSelected = selectedRowIds.includes(item.id);
 
                   // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch
