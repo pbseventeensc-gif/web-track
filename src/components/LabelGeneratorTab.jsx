@@ -15,7 +15,9 @@ import {
   Tag,
   RefreshCw,
   Check,
-  Clock
+  Clock,
+  Search,
+  X
 } from 'lucide-react';
 
 export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
@@ -23,6 +25,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const generateNumericTrackingId = (spk, address) => {
     const rawKey = `${spk}_${address}`;
@@ -812,6 +815,27 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     openPrintWindow(fullSjHtml);
   };
 
+  const filteredData = labelData
+    .map((item, originalIndex) => ({ ...item, _origIdx: originalIndex }))
+    .filter((row) => {
+      if (!searchTerm.trim()) return true;
+      const q = searchTerm.toLowerCase().trim();
+      return (
+        (row.NO_SPK && String(row.NO_SPK).toLowerCase().includes(q)) ||
+        (row.CLIENT && String(row.CLIENT).toLowerCase().includes(q)) ||
+        (row.BRAND && String(row.BRAND).toLowerCase().includes(q)) ||
+        (row.RECIPIENT_NAME && String(row.RECIPIENT_NAME).toLowerCase().includes(q)) ||
+        (row.DELIVERY_ADDRESS && String(row.DELIVERY_ADDRESS).toLowerCase().includes(q)) ||
+        (row.ITEM_DESCRIPTION && String(row.ITEM_DESCRIPTION).toLowerCase().includes(q)) ||
+        (row.PROJECT && String(row.PROJECT).toLowerCase().includes(q)) ||
+        (row.NO_SJ && String(row.NO_SJ).toLowerCase().includes(q)) ||
+        (row.PO_NUMBER && String(row.PO_NUMBER).toLowerCase().includes(q)) ||
+        (row.NO_WPP && String(row.NO_WPP).toLowerCase().includes(q)) ||
+        (row.MEDIA && String(row.MEDIA).toLowerCase().includes(q)) ||
+        (row.UKURAN && String(row.UKURAN).toLowerCase().includes(q))
+      );
+    });
+
   return (
     <div className="space-y-4">
       {/* Header Logo Card */}
@@ -879,13 +903,62 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
+      {/* Search Input Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Cari Nomor SPK, Client, Brand, Penerima, Alamat, Deskripsi, PO/SJ..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="text-xs text-slate-500 font-semibold whitespace-nowrap px-1 flex items-center gap-2">
+          {searchTerm ? (
+            <span>Hasil Pencarian: <strong className="text-indigo-600 font-bold">{filteredData.length}</strong> dari {labelData.length} SPK</span>
+          ) : (
+            <span>Total: <strong className="text-slate-900 font-bold">{labelData.length}</strong> SPK</span>
+          )}
+          {selectedRows.length > 0 && (
+            <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200 font-extrabold">
+              {selectedRows.length} Terpilih
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* ULTRA-CLEAN ENTERPRISE GRID TABLE */}
       <div className="max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
         <table className="w-full text-left text-xs border-collapse bg-white">
           <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
             <tr>
               <th className="p-3.5 text-center w-10">
-                <input type="checkbox" checked={labelData.length > 0 && selectedRows.length === labelData.length} onChange={() => setSelectedRows(selectedRows.length === labelData.length ? [] : labelData.map((_, idx) => idx))} className="cursor-pointer accent-indigo-600 w-4 h-4" />
+                <input
+                  type="checkbox"
+                  checked={filteredData.length > 0 && filteredData.every(r => selectedRows.includes(r._origIdx))}
+                  onChange={() => {
+                    const allFilteredSelected = filteredData.length > 0 && filteredData.every(r => selectedRows.includes(r._origIdx));
+                    if (allFilteredSelected) {
+                      const filteredSet = new Set(filteredData.map(r => r._origIdx));
+                      setSelectedRows(prev => prev.filter(i => !filteredSet.has(i)));
+                    } else {
+                      const filteredIndices = filteredData.map(r => r._origIdx);
+                      setSelectedRows(prev => Array.from(new Set([...prev, ...filteredIndices])));
+                    }
+                  }}
+                  className="cursor-pointer accent-indigo-600 w-4 h-4"
+                />
               </th>
               <th className="p-3.5">NOMOR SPK</th>
               <th className="p-3.5">CLIENT & BRAND</th>
@@ -897,10 +970,19 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
-            {labelData.length === 0 ? (
-              <tr><td colSpan="8" className="p-8 text-center text-slate-400 font-medium">Table is empty. Please click <strong>"Download Excel Template"</strong> above or import data.</td></tr>
+            {filteredData.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">
+                  {searchTerm ? (
+                    <span>Tidak ditemukan data yang cocok dengan pencarian "<strong>{searchTerm}</strong>".</span>
+                  ) : (
+                    <span>Table is empty. Please click <strong>"Download Excel Template"</strong> above or import data.</span>
+                  )}
+                </td>
+              </tr>
             ) : (
-              labelData.map((row, idx) => {
+              filteredData.map((row) => {
+                const idx = row._origIdx;
                 const total = Number(row.QTY_TOTAL || 0); 
                 const koli = Number(row.QTY_PER_KOLI || 50); 
                 const totalKoliCalc = Math.max(1, Math.ceil(total / koli));
