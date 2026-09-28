@@ -508,41 +508,41 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         return `
           <div class="label-box">
             <table class="header-table"><tr>
-              <td style="width: 26%; vertical-align: middle; padding: 4px 6px;">${renderHeaderLogoHtmlLabel()}</td>
-              <td style="width: 54%; text-align:center; font-size:9px; line-height: 1.3; vertical-align: middle; padding: 4px 6px;">
-                <strong style="font-size:12px;">WELLEN PRINT</strong><br>
+              <td style="width: 25%; vertical-align: middle; padding: 5px 8px;">${renderHeaderLogoHtmlLabel()}</td>
+              <td style="width: 53%; text-align:center; font-size:10px; line-height: 1.35; vertical-align: middle; padding: 5px 6px;">
+                <strong style="font-size:14px; letter-spacing: 0.3px;">WELLEN PRINT</strong><br>
                 Green Sedayu Bizpark. Jl. Daan Mogot KM.18 blok DM3 No.18, Kalideres, RT.11/RW.6, Kalideres, Jakarta Barat, 11840
               </td>
-              <td style="width: 20%; text-align:center; vertical-align: middle; padding: 4px 6px;">
-                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:65px; height:65px; display:block; margin:auto;">` : ''}
-                <div style="font-size: 8.5px; font-weight: bold; margin-top: 2px;">${item.displayTrackingId}</div>
+              <td style="width: 22%; text-align:center; vertical-align: middle; padding: 5px 8px;">
+                ${item.qrDataUrl ? `<img src="${item.qrDataUrl}" style="width:70px; height:72px; display:block; margin:auto;">` : ''}
+                <div style="font-size: 9.5px; font-weight: 800; margin-top: 2px;">${item.displayTrackingId}</div>
               </td>
             </tr></table>
             
             <div class="content-grid">
               <div class="grid-box">
                 <table class="align-table">
-                  <tr><td class="label-col">SENDER</td><td class="sep-col">:</td><td class="val-col"><strong>${item.SENDER || 'WELLEN PRINT'}</strong></td></tr>
-                  <tr><td class="label-col">NO. TELP</td><td class="sep-col">:</td><td class="val-col">${item.SENDER_TELP || '021-5506999'}</td></tr>
+                  <tr><td class="label-col">SENDER</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:12.5px; color:#000;">${item.SENDER || 'WELLEN PRINT'}</strong></td></tr>
+                  <tr><td class="label-col">NO. TELP</td><td class="sep-col">:</td><td class="val-col" style="font-size:12px; font-weight:700;">${item.SENDER_TELP || '021-5506999'}</td></tr>
                 </table>
               </div>
               <div class="grid-box">
                 <table class="align-table">
-                  <tr><td class="label-col">CLIENT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.CLIENT || '-'}</strong></td></tr>
-                  <tr><td class="label-col">Delivery Address</td><td class="sep-col">:</td><td class="val-col">${item.DELIVERY_ADDRESS || '-'}</td></tr>
-                  <tr><td class="label-col">Recipient Name</td><td class="sep-col">:</td><td class="val-col"><strong>${item.RECIPIENT_NAME || '-'}</strong></td></tr>
-                  <tr><td class="label-col">Recipient Phone</td><td class="sep-col">:</td><td class="val-col">${item.RECIPIENT_PHONE || '-'}</td></tr>
+                  <tr><td class="label-col">CLIENT</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:12.5px; color:#000;">${item.CLIENT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Delivery Address</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:600; line-height:1.35;">${item.DELIVERY_ADDRESS || '-'}</td></tr>
+                  <tr><td class="label-col">Recipient Name</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:12.5px; color:#000;">${item.RECIPIENT_NAME || '-'}</strong></td></tr>
+                  <tr><td class="label-col">Recipient Phone</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:600;">${item.RECIPIENT_PHONE || '-'}</td></tr>
                 </table>
               </div>
               <div class="grid-box">
                 <table class="align-table">
-                  <tr><td class="label-col">PROJECT</td><td class="sep-col">:</td><td class="val-col"><strong>${item.PROJECT || '-'}</strong></td></tr>
-                  <tr><td class="label-col">PO NUMBER</td><td class="sep-col">:</td><td class="val-col">${item.PO_NUMBER || '-'}</td></tr>
-                  <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col">${item.NO_WPP || '-'}</td></tr>
-                  <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col">${item.NO_SPK || '-'}</td></tr>
-                  <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col">${itemsHtml}</td></tr>
-                  <tr><td class="label-col">QTY KOLI INI</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:11px; color:#2563EB;">${item.currentQty} PCS (Koli ${item.currentKoli}/${item.totalKoli})</strong></td></tr>
-                  <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col">${item.DATE_PRODUCTION || '-'}</td></tr>
+                  <tr><td class="label-col">PROJECT</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:12.5px; color:#000;">${item.PROJECT || '-'}</strong></td></tr>
+                  <tr><td class="label-col">PO NUMBER</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.PO_NUMBER || '-'}</td></tr>
+                  <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.NO_WPP || '-'}</td></tr>
+                  <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col" style="font-size:12px; font-weight:800; color:#000;">${item.NO_SPK || '-'}</td></tr>
+                  <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col" style="font-size:11px; line-height:1.35; font-weight:600;">${itemsHtml}</td></tr>
+                  <tr><td class="label-col">QTY KOLI INI</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:13.5px; font-weight:900; color:#1d4ed8;">${item.currentQty} PCS (Koli ${item.currentKoli}/${item.totalKoli})</strong></td></tr>
+                  <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.DATE_PRODUCTION || '-'}</td></tr>
                 </table>
               </div>
               
@@ -577,19 +577,19 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
-      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 6px; font-size: 9.5px; line-height: 1.25; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; } 
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 8px 10px; font-size: 11.5px; line-height: 1.35; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
       .grid-box:nth-child(2n) { border-right: none; } 
       .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
       .align-table { width: 100%; border-collapse: collapse; }
-      .align-table td { border: none; padding: 1px 0; vertical-align: middle; font-size: 9px; }
-      .label-col { width: 38%; font-weight: bold; }
-      .sep-col { width: 4%; text-align: center; }
-      .val-col { width: 58%; }
-      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 4px !important; } 
-      .visual-title { font-size: 9.5px; font-weight: bold; width: 100%; text-align: center; margin-bottom: 1px; }
-      .koli-title { font-size: 12px; font-weight: bold; margin: 1px 0; } 
-      .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; overflow: hidden; }
-      .preview-img { max-width: 95%; max-height: 105px; object-fit: contain; display: block; } 
+      .align-table td { border: none; padding: 2.5px 0; vertical-align: middle; font-size: 11.5px; }
+      .label-col { width: 34%; font-weight: 800; color: #000; }
+      .sep-col { width: 4%; text-align: center; font-weight: 800; }
+      .val-col { width: 62%; color: #000; word-break: break-word; }
+      .visual-box { display: flex; flex-direction: column; justify-content: space-between; align-items: center; text-align: center; padding: 6px !important; }
+      .visual-title { font-size: 11.5px; font-weight: 800; width: 100%; text-align: center; margin-bottom: 2px; letter-spacing: 0.3px; }
+      .koli-title { font-size: 15px; font-weight: 900; margin: 2px 0; color: #000; }
+      .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden; }
+      .preview-img { max-width: 98%; max-height: 130px; object-fit: contain; display: block; border-radius: 4px; }
       @media print { 
         body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
