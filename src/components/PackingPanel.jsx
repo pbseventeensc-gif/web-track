@@ -1476,7 +1476,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
                           <td colSpan="10" className="py-2.5 px-4 text-center font-bold text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                              <span>📦 --- PEMBATAS BATCH / PROJECT: {item.promo_title} ---</span>
+                              <span>📦 {item.promo_title}{item.no_spk ? ` _ ${item.no_spk}` : ''}</span>
                               <div className="flex items-center gap-2">
                                 {(() => {
                                   const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
