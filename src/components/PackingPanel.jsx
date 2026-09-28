@@ -803,25 +803,54 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       const dataToExport = filteredList.length > 0 ? filteredList : packingList;
       if (dataToExport.length === 0) return alert('⚠️ Belum ada data paking untuk di-export.');
 
-      const formattedData = dataToExport.map((item, index) => ({
-        No: index + 1,
-        'Tracking ID': item.tracking_id || '-',
-        'No. SPK': item.no_spk || '-',
-        'Client / PT': item.client_pt || '-',
-        'Promo / Project': item.promo_title || '-',
-        'Nama Toko / Alamat': item.store_name || '-',
-        Penerima: item.recipient_name || '-',
-        'Total Qty': item.total_qty || '-',
-        'Status QC Label': item.status_qc_label || 'PENDING',
-        'Status QC Packing': item.status_qc_packing || 'PENDING',
-        'Status QC Checker': item.status_qc_checker || 'PENDING',
-        'Status Deliver': item.status_deliver || 'PENDING',
-        'Bukti Paking Foto': item.bukti_paking_url || 'No Foto',
-        'Outbound Foto': item.bukti_outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '-'),
-        'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
-      }));
+      const formattedData = dataToExport.map((item, index) => {
+        const details = parseItems(item.items_detail);
+        const designUrls = details
+          .map(sub => sub.image_url || sub.visual_image)
+          .filter(url => url && typeof url === 'string' && url.trim() !== '');
+        const designUrlStr = Array.from(new Set(designUrls)).join(' , ') || '-';
+
+        const pakingUrlStr = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '-';
+        const outboundUrlStr = item.bukti_outbound_url || item.outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '-');
+
+        return {
+          No: index + 1,
+          'Box Code': item.box_code || '-',
+          'Tracking ID': item.tracking_id || '-',
+          'No. SPK': item.no_spk || '-',
+          'Client / PT': item.client_pt || '-',
+          'Promo / Project': item.promo_title || '-',
+          'Nama Toko / Alamat': item.store_name || '-',
+          Penerima: item.recipient_name || '-',
+          'Total Qty': item.total_qty || 0,
+          'Tipe Pengiriman': item.delivery_type || '-',
+          'Status QC Label': item.status_qc_label || 'PENDING',
+          'Status QC Packing': item.status_qc_packing || 'PENDING',
+          'Status QC Checker': item.status_qc_checker || 'PENDING',
+          'Status Deliver': item.status_deliver || 'PENDING',
+          '📸 Link Foto Bukti Paking': pakingUrlStr,
+          '🚚 Link Foto Outbound': outboundUrlStr,
+          '🎨 Link Foto Desain / Visual': designUrlStr,
+          'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
+        };
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
+
+      // Otomatis ubah sel berisi link HTTP/HTTPS menjadi hyperlink interaktif di Excel / Google Sheets
+      if (worksheet['!ref']) {
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+            const cell = worksheet[cellAddress];
+            if (cell && typeof cell.v === 'string' && cell.v.startsWith('http')) {
+              cell.l = { Target: cell.v, Tooltip: 'Klik untuk Buka / Lihat Foto' };
+            }
+          }
+        }
+      }
+
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Report_Paking');
 
