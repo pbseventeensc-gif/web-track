@@ -601,10 +601,10 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => setPrintData(p)} className="px-3 py-1.5 border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-700 dark:text-neutral-200 font-bold rounded-xl text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer flex items-center gap-1">
+                <button onClick={() => setPrintData(p)} className="px-3.5 py-1.5 border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 font-bold rounded-full text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs">
                   Cetak POD dan DO
                 </button>
-                <button onClick={() => handleDeleteSingle(p.id, p.project_name)} className="px-2.5 py-1.5 border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-600 hover:text-rose-600 font-bold rounded-xl text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer flex items-center gap-1" title="Hapus">
+                <button onClick={() => handleDeleteSingle(p.id, p.project_name)} className="px-2.5 py-1.5 border border-stone-300 bg-white hover:bg-rose-50 text-stone-700 hover:text-rose-600 font-bold rounded-full text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs" title="Hapus">
                   🗑️
                 </button>
               </div>
