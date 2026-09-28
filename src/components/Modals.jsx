@@ -140,16 +140,8 @@ export function ScanQCModal({ isOpen, onClose, isDarkMode, scanTargetColumn, set
   );
 }
 
-/* 4. MODAL IMAGE PREVIEW (3X LARGER HD DISPLAY + STORE & PROJECT OVERLAY + NATIVE ZOOM) */
+/* 4. MODAL IMAGE PREVIEW (CLEAN FULL-SCREEN HD DISPLAY + NEAT TEXT BELOW PHOTO) */
 export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
-  const [isZoomed, setIsZoomed] = React.useState(false);
-
-  React.useEffect(() => {
-    if (isOpen) {
-      setIsZoomed(false);
-    }
-  }, [isOpen]);
-
   if (!isOpen) return null;
 
   const handleDownloadHD = (e) => {
@@ -166,91 +158,58 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/92 backdrop-blur-md flex items-center justify-center z-[100] p-2 sm:p-4 animate-fade-in overflow-y-auto"
+      className="fixed inset-0 bg-black/92 backdrop-blur-md flex items-center justify-center z-[100] p-3 sm:p-6 animate-fade-in overflow-y-auto"
       onClick={onClose}
     >
+      {/* High-Contrast Floating Close Button Top Right */}
+      <button
+        onClick={onClose}
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black flex items-center justify-center text-xl transition-all cursor-pointer z-[110] shadow-2xl border-2 border-white active:scale-95"
+        title="Tutup Modal"
+      >
+        ✕
+      </button>
+
       <div
-        className="relative flex flex-col items-center justify-center space-y-2.5 my-auto max-w-[98vw] w-full"
+        className="relative flex flex-col items-center justify-center space-y-3 my-auto max-w-[96vw]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Action Bar with Store, Project & SPK Badge */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 w-full max-w-[96vw] px-3 py-2 bg-neutral-900/90 rounded-2xl border border-white/20 shadow-2xl">
-          <div className="flex flex-col gap-1 w-full sm:w-auto text-left">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-indigo-600 text-white font-black text-xs px-2.5 py-0.5 rounded-lg shadow-sm">
-                🖼️ {modalImageInfo.title || 'Bukti Paking'}
-              </span>
-              {modalImageInfo.spkNo && (
-                <span className="bg-slate-800 text-slate-200 font-mono font-bold text-xs px-2.5 py-0.5 rounded-lg border border-slate-700">
-                  📄 SPK: {modalImageInfo.spkNo}
-                </span>
-              )}
-              {modalImageInfo.projectName && (
-                <span className="bg-emerald-950 text-emerald-300 font-bold text-xs px-2.5 py-0.5 rounded-lg border border-emerald-800/60 truncate max-w-[320px]">
-                  📦 Project: {modalImageInfo.projectName}
-                </span>
-              )}
-            </div>
+        {/* Photo Display - Clean Full Image Without Black Box Frame */}
+        <div className="flex items-center justify-center">
+          <img
+            src={modalImageInfo.url}
+            alt="Preview High Res"
+            style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
+            className="h-[74vh] max-h-[78vh] min-h-[450px] w-auto max-w-[92vw] object-contain rounded-2xl shadow-2xl block mx-auto border border-white/10"
+          />
+        </div>
 
-            {modalImageInfo.storeName && (
-              <div className="text-white font-extrabold text-xs sm:text-sm tracking-wide flex items-center gap-1.5 mt-0.5">
-                <span className="text-amber-400 font-bold">🏪 Store / Tujuan:</span>
-                <span className="text-white drop-shadow-sm">{modalImageInfo.storeName}</span>
-              </div>
+        {/* Clean Neat Description Text Below Photo */}
+        <div className="flex flex-col items-center justify-center text-center space-y-1 text-white max-w-[90vw] pt-1">
+          {modalImageInfo.storeName && (
+            <div className="text-white font-extrabold text-sm sm:text-base tracking-wide drop-shadow-md">
+              <span className="text-amber-400">🏪 Store:</span> {modalImageInfo.storeName}
+            </div>
+          )}
+
+          <div className="flex items-center justify-center gap-2 flex-wrap text-xs sm:text-sm font-medium text-slate-300 drop-shadow-sm">
+            {modalImageInfo.projectName && (
+              <span>📦 <strong className="text-white">Project:</strong> {modalImageInfo.projectName}</span>
+            )}
+            {modalImageInfo.projectName && modalImageInfo.spkNo && (
+              <span className="text-slate-500">•</span>
+            )}
+            {modalImageInfo.spkNo && (
+              <span className="font-mono">📄 <strong className="text-white">SPK:</strong> {modalImageInfo.spkNo}</span>
             )}
           </div>
-
-          <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-            <button
-              onClick={() => setIsZoomed(!isZoomed)}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
-              title={isZoomed ? "Kembali ke Tampilan Pas Layar" : "Perbesar ke Piksel Asli 100%"}
-            >
-              {isZoomed ? '🔍 Mode Pas Layar' : '🔍 Mode Full Piksel Asli'}
-            </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 hover:bg-rose-600 text-white font-black flex items-center justify-center text-lg transition-all cursor-pointer"
-              title="Tutup Modal"
-            >
-              ✕
-            </button>
-          </div>
         </div>
 
-        {/* Centered 3x Larger Image Frame */}
-        <div
-          onClick={() => setIsZoomed(!isZoomed)}
-          className={`inline-flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-950/90 p-2 shadow-2xl transition-all mx-auto ${
-            isZoomed
-              ? 'cursor-zoom-out overflow-auto max-h-[86vh] max-w-[98vw] block text-center'
-              : 'cursor-zoom-in max-h-[80vh] max-w-[96vw] min-w-[320px] sm:min-w-[650px] md:min-w-[850px] lg:min-w-[1050px]'
-          }`}
-          title={isZoomed ? "Klik untuk kembali ke tampilan pas layar" : "Klik untuk melihat piksel 100% asli"}
-        >
-          {isZoomed ? (
-            <div className="inline-block p-2 min-w-full">
-              <img
-                src={modalImageInfo.url}
-                alt="Preview Raw Native HD"
-                className="max-w-none max-h-none w-auto h-auto rounded-xl shadow-2xl block mx-auto cursor-zoom-out"
-              />
-            </div>
-          ) : (
-            <img
-              src={modalImageInfo.url}
-              alt="Preview High Res"
-              style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
-              className="h-[76vh] max-h-[80vh] min-h-[500px] w-auto max-w-[94vw] object-contain rounded-xl shadow-2xl block cursor-zoom-in mx-auto"
-            />
-          )}
-        </div>
-
-        {/* Bottom Action Bar */}
-        <div className="flex items-center justify-center w-full pt-0.5">
+        {/* Download Button */}
+        <div className="pt-1">
           <button
             onClick={handleDownloadHD}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer active:scale-95"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer active:scale-95 border border-emerald-400/30"
             title="Download Foto File Asli Kamera (Ultra HD)"
           >
             📥 Download Foto HD

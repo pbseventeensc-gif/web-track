@@ -908,14 +908,44 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
                 return (
                   <tr key={idx} className={`transition-colors hover:bg-slate-50/80 bg-white ${isChecked ? 'bg-indigo-50/60' : 'bg-white'}`}>
-                    <td className="p-3.5 text-center"><input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600 w-4 h-4" /></td>
-                    <td className="p-3.5"><div className="font-mono text-slate-900 font-extrabold text-xs sm:text-sm">{row.NO_SPK || '-'}</div></td>
-                    <td className="p-3.5"><div className="font-bold text-slate-900 text-xs sm:text-sm">{row.CLIENT || '-'}</div><div className="text-[10px] font-mono text-slate-400 font-medium">{row.BRAND || '-'}</div></td>
-                    <td className="p-3.5"><div className="font-bold text-slate-900 text-xs">{row.RECIPIENT_NAME || '-'} ({row.RECIPIENT_PHONE || '-'})</div><div className="text-[11px] font-medium text-slate-500">{row.DELIVERY_ADDRESS || '-'}</div></td>
-                    <td className="p-3.5"><div className="font-medium text-slate-700 text-xs">{row.ITEM_DESCRIPTION || '-'}</div><div className="text-[10px] text-slate-400 font-medium">{row.MEDIA || '-'} ({row.UKURAN || '-'})</div></td>
-                    <td className="p-3.5 text-center font-extrabold text-slate-900 text-sm">{total.toLocaleString()} Pcs</td>
-                    <td className="p-3.5 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="p-3 align-middle text-center">
+                      <input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600 w-4 h-4" />
+                    </td>
+                    <td className="p-3 align-middle min-w-[150px]">
+                      {(() => {
+                        const raw = String(row.NO_SPK || '-').trim();
+                        const parts = raw.split('/');
+                        const mainSpk = parts[0]?.trim() || '-';
+                        const subSpk = parts.slice(1).join('/').trim();
+                        return (
+                          <div className="flex flex-col">
+                            <span className="font-mono text-slate-900 font-extrabold text-xs sm:text-sm whitespace-nowrap">
+                              {mainSpk}
+                            </span>
+                            {subSpk && (
+                              <span className="font-mono text-slate-400 font-bold text-[10px] whitespace-nowrap">
+                                {subSpk}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="p-3 align-middle max-w-[220px]">
+                      <div className="font-bold text-slate-900 text-xs truncate" title={row.CLIENT}>{row.CLIENT || '-'}</div>
+                      <div className="text-[10px] font-mono text-slate-400 font-medium truncate" title={row.BRAND}>{row.BRAND || '-'}</div>
+                    </td>
+                    <td className="p-3 align-middle max-w-[260px]">
+                      <div className="font-bold text-slate-900 text-xs truncate">{row.RECIPIENT_NAME || '-'} {row.RECIPIENT_PHONE ? `(${row.RECIPIENT_PHONE})` : ''}</div>
+                      <div className="text-[11px] font-medium text-slate-500 truncate" title={row.DELIVERY_ADDRESS}>{row.DELIVERY_ADDRESS || '-'}</div>
+                    </td>
+                    <td className="p-3 align-middle max-w-[200px]">
+                      <div className="font-medium text-slate-700 text-xs truncate" title={row.ITEM_DESCRIPTION}>{row.ITEM_DESCRIPTION || '-'}</div>
+                      <div className="text-[10px] text-slate-400 font-medium truncate">{row.MEDIA || '-'} {row.UKURAN ? `(${row.UKURAN})` : ''}</div>
+                    </td>
+                    <td className="p-3 align-middle text-center font-extrabold text-slate-900 text-sm whitespace-nowrap">{total.toLocaleString()} Pcs</td>
+                    <td className="p-3 align-middle text-center">
+                      <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                         <input 
                           type="number" 
                           value={row.QTY_PER_KOLI || 50} 
@@ -925,19 +955,19 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         <span className="text-[10px] text-slate-500 font-semibold">Pcs (<strong className="text-black">{totalKoliCalc} Koli</strong>)</span>
                       </div>
                     </td>
-                    <td className="p-3.5 text-center">
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="flex items-center gap-2">
+                    <td className="p-3 align-middle text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-[10px] font-bold text-slate-400">Img 1:</span>
-                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`)} className="w-10 h-7 object-contain border border-slate-300 rounded-lg bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
-                          <label className="cursor-pointer px-2 py-1 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-lg text-[10px] font-bold transition-all shadow-2xs">
+                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-1.5 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-md text-[10px] font-bold transition-all shadow-2xs">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
                           </label>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className="text-[10px] font-bold text-slate-400">Img 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`)} className="w-10 h-7 object-contain border border-slate-300 rounded-lg bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
-                          <label className="cursor-pointer px-2 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-lg text-[10px] font-bold transition-all shadow-2xs">
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-1.5 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-md text-[10px] font-bold transition-all shadow-2xs">
                             Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
                         </div>
