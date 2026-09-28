@@ -1451,16 +1451,16 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
                                     setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
                                   }}
-                                  className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-950 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1"
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
                                 >
-                                  ☑️ Pilih Project Ini
+                                  ☑️ Pilih
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                  className="px-2.5 py-1 bg-amber-800 hover:bg-amber-900 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                                  className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
                                 >
-                                  <Printer className="w-3 h-3" /> Cetak Label Project Ini
+                                  <Printer className="w-3 h-3 text-white" /> Cetak Label
                                 </button>
                               </div>
                             </div>
