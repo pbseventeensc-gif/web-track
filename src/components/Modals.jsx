@@ -184,32 +184,47 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
           />
         </div>
 
-        {/* Clean Neat Description Text Below Photo */}
-        <div className="flex flex-col items-center justify-center text-center space-y-1 text-white max-w-[90vw] pt-1">
+        {/* High-Contrast Card Description Box Below Photo */}
+        <div className="flex flex-col items-center justify-center text-center space-y-2 bg-neutral-900/95 border border-white/20 rounded-2xl px-6 py-3.5 max-w-[92vw] shadow-2xl backdrop-blur-xl my-1">
           {modalImageInfo.storeName && (
-            <div className="text-white font-extrabold text-sm sm:text-base tracking-wide drop-shadow-md">
-              <span className="text-amber-400">🏪 Store:</span> {modalImageInfo.storeName}
+            <div className="text-white font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-amber-400 font-extrabold flex items-center gap-1">🏪 Store:</span>
+              <span className="text-amber-300 bg-amber-950/90 px-3 py-1 rounded-xl border border-amber-500/50 font-black shadow-inner">
+                {modalImageInfo.storeName}
+              </span>
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-2 flex-wrap text-xs sm:text-sm font-medium text-slate-300 drop-shadow-sm">
-            {modalImageInfo.projectName && (
-              <span>📦 <strong className="text-white">Project:</strong> {modalImageInfo.projectName}</span>
-            )}
-            {modalImageInfo.projectName && modalImageInfo.spkNo && (
-              <span className="text-slate-500">•</span>
-            )}
-            {modalImageInfo.spkNo && (
-              <span className="font-mono">📄 <strong className="text-white">SPK:</strong> {modalImageInfo.spkNo}</span>
-            )}
-          </div>
+          {(modalImageInfo.projectName || modalImageInfo.spkNo || modalImageInfo.title) && (
+            <div className="flex items-center justify-center gap-2.5 flex-wrap text-xs sm:text-sm font-semibold text-slate-200 pt-0.5">
+              {modalImageInfo.projectName && (
+                <span className="flex items-center gap-1.5 bg-neutral-800/90 px-3 py-1.5 rounded-xl border border-neutral-700/80 shadow-xs">
+                  <span>📦</span>
+                  <strong className="text-emerald-400">Project:</strong>
+                  <span className="text-white font-extrabold">{modalImageInfo.projectName}</span>
+                </span>
+              )}
+              {modalImageInfo.spkNo && (
+                <span className="flex items-center gap-1.5 bg-neutral-800/90 px-3 py-1.5 rounded-xl border border-neutral-700/80 font-mono shadow-xs">
+                  <span>📄</span>
+                  <strong className="text-indigo-400">SPK:</strong>
+                  <span className="text-white font-extrabold">{modalImageInfo.spkNo}</span>
+                </span>
+              )}
+              {!modalImageInfo.storeName && !modalImageInfo.projectName && !modalImageInfo.spkNo && modalImageInfo.title && (
+                <span className="text-white font-extrabold text-xs sm:text-sm px-3 py-1.5 bg-neutral-800/90 rounded-xl border border-neutral-700/80 shadow-xs">
+                  {modalImageInfo.title}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Download Button */}
-        <div className="pt-1">
+        <div className="pt-0.5">
           <button
             onClick={handleDownloadHD}
-            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer active:scale-95 border border-emerald-400/30"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-2xl transition-all cursor-pointer active:scale-95 border border-emerald-400/40"
             title="Download Foto File Asli Kamera (Ultra HD)"
           >
             📥 Download Foto HD

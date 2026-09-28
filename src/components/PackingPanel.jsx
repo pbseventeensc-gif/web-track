@@ -1441,7 +1441,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               <img
                                 src={item.bukti_paking_url}
                                 alt="Bukti Paking"
-                                onClick={() => onOpenImageModal(item.bukti_paking_url, `Bukti Paking - ${item.tracking_id}`)}
+                                onClick={() => onOpenImageModal(
+                                  item.bukti_paking_url,
+                                  `Bukti Paking - ${item.tracking_id || ''}`,
+                                  item.destination || item.store_name || item.branch_name || '',
+                                  item.project || item.project_name || '',
+                                  item.no_spk || item.spk_no || item.tracking_id || ''
+                                )}
                                 className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                               />
                               <div className="text-[10px] font-semibold text-slate-800 leading-tight">
@@ -1522,7 +1528,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     <img
                                       src={outboundImgUrl}
                                       alt="Foto Outbound"
-                                      onClick={() => onOpenImageModal(outboundImgUrl, `Foto Outbound - ${item.box_code || item.tracking_id}`)}
+                                      onClick={() => onOpenImageModal(
+                                        outboundImgUrl,
+                                        `Foto Outbound - ${item.box_code || item.tracking_id || ''}`,
+                                        item.destination || item.store_name || item.branch_name || '',
+                                        item.project || item.project_name || '',
+                                        item.no_spk || item.spk_no || item.tracking_id || ''
+                                      )}
                                       className="w-10 h-10 object-cover rounded-lg border-2 border-emerald-500 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                                     />
                                     <label
