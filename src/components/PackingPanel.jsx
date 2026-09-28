@@ -130,13 +130,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             return { ...sub, image_url: activeUrl };
           });
 
-          // Otomatis set status_qc_packing ke DONE jika bukti_paking_url sudah ada
+          // Otomatis set status_qc_packing & status_qc_checker ke DONE untuk data SPK aktif
           const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
-          const statusPacking = hasPhoto ? 'DONE' : (item.status_qc_packing || 'PENDING');
+          const statusPacking = item.status_qc_packing || (hasPhoto ? 'DONE' : 'DONE');
+          const statusChecker = item.status_qc_checker || 'DONE';
 
           return {
             ...item,
             status_qc_packing: statusPacking,
+            status_qc_checker: statusChecker,
             items_detail: details
           };
         });
@@ -148,7 +150,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           const payloads = spkRows.map((spk) => {
             const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now()}`;
             const pakingUrl = spk.bukti_paking_url || spk.image_url || null;
-            const isPackingDone = spk.status_qc_packing === 'DONE' || (pakingUrl && pakingUrl !== 'No Foto');
 
             return {
               tracking_id: trackingCode,
@@ -160,10 +161,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
               box_code: spk.box_code || 'WL-01',
               delivery_type: spk.delivery_type || 'DALAM KOTA',
-              status_qc_label: spk.status_qc_label || 'PENDING',
-              status_qc_packing: isPackingDone ? 'DONE' : 'PENDING',
-              status_qc_checker: spk.status_qc_checker || 'PENDING',
-              status_deliver: spk.status_deliver || 'PENDING',
+              status_qc_label: 'DONE',
+              status_qc_packing: 'DONE',
+              status_qc_checker: 'DONE',
+              status_deliver: 'DONE',
               bukti_paking_url: pakingUrl,
               bukti_outbound_url: spk.bukti_outbound_url || spk.outbound_url || null,
               outbound_url: spk.outbound_url || spk.bukti_outbound_url || null,
@@ -186,14 +187,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
           const { data: refetched } = await supabase.from('packing_tracking').select('*').order('id', { ascending: true });
           if (refetched && refetched.length > 0) {
-            setPackingList(refetched.map(item => {
-              const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
-              return {
-                ...item,
-                status_qc_packing: hasPhoto ? 'DONE' : (item.status_qc_packing || 'PENDING'),
-                items_detail: parseItems(item.items_detail)
-              };
-            }));
+            setPackingList(refetched.map(item => ({
+              ...item,
+              status_qc_packing: item.status_qc_packing || 'DONE',
+              status_qc_checker: item.status_qc_checker || 'DONE',
+              items_detail: parseItems(item.items_detail)
+            })));
           } else {
             setPackingList([]);
           }
