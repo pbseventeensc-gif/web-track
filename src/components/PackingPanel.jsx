@@ -798,6 +798,21 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     setOutboundScannedCode('');
   };
 
+  const generateViewerUrl = (rawUrl, title, item) => {
+    if (!rawUrl || rawUrl === 'No Foto' || rawUrl === '-') return '-';
+    if (rawUrl.includes('viewImg=')) return rawUrl;
+
+    const baseUrl = 'https://web-track-phi-gilt.vercel.app/';
+    const params = new URLSearchParams({
+      viewImg: rawUrl,
+      title: title,
+      store: item.store_name || '-',
+      project: item.promo_title || '-',
+      spk: item.no_spk || '-'
+    });
+    return `${baseUrl}?${params.toString()}`;
+  };
+
   const handleDownloadPackingReport = async () => {
     try {
       const dataToExport = filteredList.length > 0 ? filteredList : packingList;
@@ -808,10 +823,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         const designUrls = details
           .map(sub => sub.image_url || sub.visual_image)
           .filter(url => url && typeof url === 'string' && url.trim() !== '');
-        const designUrlStr = Array.from(new Set(designUrls)).join(' , ') || '-';
+        const rawDesignUrl = Array.from(new Set(designUrls))[0] || '';
 
-        const pakingUrlStr = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '-';
-        const outboundUrlStr = item.bukti_outbound_url || item.outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '-');
+        const rawPakingUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '';
+        const rawOutboundUrl = item.bukti_outbound_url || item.outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '');
 
         return {
           No: index + 1,
@@ -828,9 +843,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           'Status QC Packing': item.status_qc_packing || 'PENDING',
           'Status QC Checker': item.status_qc_checker || 'PENDING',
           'Status Deliver': item.status_deliver || 'PENDING',
-          '📸 Link Foto Bukti Paking': pakingUrlStr,
-          '🚚 Link Foto Outbound': outboundUrlStr,
-          '🎨 Link Foto Desain / Visual': designUrlStr,
+          '📸 Link Foto Bukti Paking': generateViewerUrl(rawPakingUrl, 'Foto Bukti Paking', item),
+          '🚚 Link Foto Outbound': generateViewerUrl(rawOutboundUrl, 'Foto Outbound', item),
+          '🎨 Link Foto Desain / Visual': generateViewerUrl(rawDesignUrl, 'Foto Desain Visual', item),
           'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
         };
       });

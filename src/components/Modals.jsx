@@ -140,7 +140,7 @@ export function ScanQCModal({ isOpen, onClose, isDarkMode, scanTargetColumn, set
   );
 }
 
-/* 4. MODAL IMAGE PREVIEW (3X LARGER HD DISPLAY + NATIVE PIXEL ZOOM) */
+/* 4. MODAL IMAGE PREVIEW (3X LARGER HD DISPLAY + STORE & PROJECT OVERLAY + NATIVE ZOOM) */
 export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
   const [isZoomed, setIsZoomed] = React.useState(false);
 
@@ -166,29 +166,51 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-2 sm:p-4 animate-fade-in overflow-y-auto"
+      className="fixed inset-0 bg-black/92 backdrop-blur-md flex items-center justify-center z-[100] p-2 sm:p-4 animate-fade-in overflow-y-auto"
       onClick={onClose}
     >
       <div
         className="relative flex flex-col items-center justify-center space-y-2.5 my-auto max-w-[98vw] w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Action Bar */}
-        <div className="flex items-center justify-between gap-3 w-full max-w-[96vw] px-2">
-          <h3 className="text-white font-black text-sm sm:text-base tracking-wide truncate max-w-[300px] sm:max-w-xl flex items-center gap-2">
-            🖼️ {modalImageInfo.title || 'Bukti Paking'}
-          </h3>
-          <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Header Action Bar with Store, Project & SPK Badge */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 w-full max-w-[96vw] px-3 py-2 bg-neutral-900/90 rounded-2xl border border-white/20 shadow-2xl">
+          <div className="flex flex-col gap-1 w-full sm:w-auto text-left">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-indigo-600 text-white font-black text-xs px-2.5 py-0.5 rounded-lg shadow-sm">
+                🖼️ {modalImageInfo.title || 'Bukti Paking'}
+              </span>
+              {modalImageInfo.spkNo && (
+                <span className="bg-slate-800 text-slate-200 font-mono font-bold text-xs px-2.5 py-0.5 rounded-lg border border-slate-700">
+                  📄 SPK: {modalImageInfo.spkNo}
+                </span>
+              )}
+              {modalImageInfo.projectName && (
+                <span className="bg-emerald-950 text-emerald-300 font-bold text-xs px-2.5 py-0.5 rounded-lg border border-emerald-800/60 truncate max-w-[320px]">
+                  📦 Project: {modalImageInfo.projectName}
+                </span>
+              )}
+            </div>
+
+            {modalImageInfo.storeName && (
+              <div className="text-white font-extrabold text-xs sm:text-sm tracking-wide flex items-center gap-1.5 mt-0.5">
+                <span className="text-amber-400 font-bold">🏪 Store / Tujuan:</span>
+                <span className="text-white drop-shadow-sm">{modalImageInfo.storeName}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
             <button
               onClick={() => setIsZoomed(!isZoomed)}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
               title={isZoomed ? "Kembali ke Tampilan Pas Layar" : "Perbesar ke Piksel Asli 100%"}
             >
               {isZoomed ? '🔍 Mode Pas Layar' : '🔍 Mode Full Piksel Asli'}
             </button>
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-white/20 hover:bg-rose-600 text-white font-black flex items-center justify-center text-lg transition-all cursor-pointer"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 hover:bg-rose-600 text-white font-black flex items-center justify-center text-lg transition-all cursor-pointer"
               title="Tutup Modal"
             >
               ✕
@@ -196,13 +218,13 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
           </div>
         </div>
 
-        {/* 3x Larger Image Frame */}
+        {/* Centered 3x Larger Image Frame */}
         <div
           onClick={() => setIsZoomed(!isZoomed)}
-          className={`inline-flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-950/90 p-2 shadow-2xl transition-all ${
+          className={`inline-flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-950/90 p-2 shadow-2xl transition-all mx-auto ${
             isZoomed
-              ? 'cursor-zoom-out overflow-auto max-h-[88vh] max-w-[98vw] block text-center'
-              : 'cursor-zoom-in max-h-[86vh] max-w-[96vw] min-w-[320px] sm:min-w-[650px] md:min-w-[850px] lg:min-w-[1050px]'
+              ? 'cursor-zoom-out overflow-auto max-h-[86vh] max-w-[98vw] block text-center'
+              : 'cursor-zoom-in max-h-[80vh] max-w-[96vw] min-w-[320px] sm:min-w-[650px] md:min-w-[850px] lg:min-w-[1050px]'
           }`}
           title={isZoomed ? "Klik untuk kembali ke tampilan pas layar" : "Klik untuk melihat piksel 100% asli"}
         >
@@ -219,7 +241,7 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
               src={modalImageInfo.url}
               alt="Preview High Res"
               style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
-              className="h-[84vh] max-h-[86vh] min-h-[550px] w-auto max-w-[94vw] object-contain rounded-xl shadow-2xl block cursor-zoom-in mx-auto"
+              className="h-[76vh] max-h-[80vh] min-h-[500px] w-auto max-w-[94vw] object-contain rounded-xl shadow-2xl block cursor-zoom-in mx-auto"
             />
           )}
         </div>

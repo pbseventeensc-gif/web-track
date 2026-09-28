@@ -214,6 +214,17 @@ export default function App() {
     }
   }, [scanParam]);
 
+  useEffect(() => {
+    const viewImgParam = searchParams.get('viewImg');
+    if (viewImgParam) {
+      const title = searchParams.get('title') || 'Bukti Paking';
+      const storeName = searchParams.get('store') || '';
+      const projectName = searchParams.get('project') || '';
+      const spkNo = searchParams.get('spk') || '';
+      openImageModal(viewImgParam, title, storeName, projectName, spkNo);
+    }
+  }, []);
+
   useEffect(() => { 
     if (isBranchMode && !currentBranch) {
       setShowBranchLoginModal(true); 
@@ -239,8 +250,10 @@ export default function App() {
     };
   }, []);
 
-  const openImageModal = (url, title) => { if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview' }); };
-  const closeImageModal = () => setModalImageModalInfo({ isOpen: false, url: '', title: '' });
+  const openImageModal = (url, title, storeName = '', projectName = '', spkNo = '') => {
+    if (url) setModalImageModalInfo({ isOpen: true, url, title: title || 'Preview', storeName, projectName, spkNo });
+  };
+  const closeImageModal = () => setModalImageModalInfo({ isOpen: false, url: '', title: '', storeName: '', projectName: '', spkNo: '' });
   const toggleTheme = () => setIsDarkMode(prev => { localStorage.setItem('theme', !prev ? 'dark' : 'light'); return !prev; });
 
   const fetchSpkData = async () => {
