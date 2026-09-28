@@ -624,34 +624,46 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 2048;
-          const MAX_HEIGHT = 2048;
+          // Ultra HD High-Resolution Mode (Max 2560px for crystal-clear text & barcode readability)
+          const MAX_DIM = 2560;
           let width = img.width;
           let height = img.height;
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
-              height = MAX_HEIGHT;
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
             }
           }
 
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+
+          // Smooth High Quality Interpolation Filter
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
           ctx.drawImage(img, 0, 0, width, height);
 
           canvas.toBlob((blob) => {
             resolve(blob);
-          }, 'image/jpeg', 0.9);
+          }, 'image/jpeg', 0.98);
         };
       };
     });
+  };
+
+  const processImageForUpload = async (file) => {
+    // Jika file <= 15MB, gunakan FILE ASLI LANGSUNG (RAW ORIGINAL) tanpa kompresi canvas.
+    // Menjamin 100% ketajaman piksel kamera sensor tanpa penurunan kualitas sedikitpun.
+    if (file.size <= 15 * 1024 * 1024) {
+      return file;
+    }
+    return await compressImage(file);
   };
 
   const handleCameraCapture = async (e, rowId, trackingId) => {
@@ -660,13 +672,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
     setUploadingId(rowId);
     try {
-      const compressedBlob = await compressImage(file);
+      const uploadBlob = await processImageForUpload(file);
       const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
-      const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.jpg`;
+      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
+      const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('surat-jalan')
-        .upload(fileName, compressedBlob, { contentType: 'image/jpeg', upsert: true });
+        .upload(fileName, uploadBlob, { contentType: file.type || 'image/jpeg', upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -683,7 +696,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
       if (updateError) throw updateError;
 
-      alert('✅ Bukti paking berhasil diunggah!');
+      alert('✅ Bukti paking Ultra HD berhasil diunggah!');
       fetchPackingData();
     } catch (err) {
       alert('❌ Gagal upload foto: ' + err.message);
@@ -697,13 +710,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
     setUploadingId(`outbound-${rowId}`);
     try {
-      const compressedBlob = await compressImage(file);
+      const uploadBlob = await processImageForUpload(file);
       const cleanCode = boxCode ? String(boxCode).replace(/[^a-zA-Z0-9-_]/g, '_') : 'box';
-      const fileName = `outbound_${cleanCode}_${Date.now()}.jpg`;
+      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
+      const fileName = `outbound_${cleanCode}_${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('surat-jalan')
-        .upload(fileName, compressedBlob, { contentType: 'image/jpeg', upsert: true });
+        .upload(fileName, uploadBlob, { contentType: file.type || 'image/jpeg', upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -838,7 +852,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const pendingBoxCount = sourceList.length - completedBoxCount;
 
   const uniqueProjects = Array.from(
-    new Set(sourceList.map(item => item.promo_title).filter(Boolean))
+    new Set(
+      sourceList
+        .map(item => {
+          const project = item.promo_title || '-';
+          const spk = item.no_spk || '-';
+          return `${project}_${spk}`;
+        })
+        .filter(str => str !== '-_-')
+    )
   );
 
   const filteredList = sourceList.filter((item) => {
@@ -847,7 +869,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     const isDone = item.status_qc_packing === 'DONE' && item.status_qc_checker === 'DONE';
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
 
-    const matchProject = filterProject === 'ALL' || item.promo_title === filterProject;
+    const projectKey = `${item.promo_title || '-'}_${item.no_spk || '-'}`;
+    const matchProject = filterProject === 'ALL' || projectKey === filterProject;
 
     const matchSearch =
       searchTerm === '' ||

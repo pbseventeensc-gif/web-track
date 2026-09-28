@@ -140,7 +140,7 @@ export function ScanQCModal({ isOpen, onClose, isDarkMode, scanTargetColumn, set
   );
 }
 
-/* 4. MODAL IMAGE PREVIEW (VERTICAL PORTRAIT + TIGHT-FIT FRAME + ZOOM + BOTTOM DOWNLOAD) */
+/* 4. MODAL IMAGE PREVIEW (LARGE VIEWPORT FIT + ZOOM + BOTTOM DOWNLOAD) */
 export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
   const [isZoomed, setIsZoomed] = React.useState(false);
 
@@ -170,25 +170,25 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
       onClick={onClose}
     >
       <div
-        className="relative flex flex-col items-center justify-center space-y-2.5 my-auto max-w-[96vw]"
+        className="relative flex flex-col items-center justify-center space-y-3 my-auto w-full max-w-[96vw]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Action Bar */}
-        <div className="flex items-center justify-between gap-3 w-full px-1">
-          <h3 className="text-white font-bold text-xs sm:text-sm tracking-wide truncate max-w-[260px] sm:max-w-md flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-3 w-full max-w-[95vw] px-2">
+          <h3 className="text-white font-black text-sm sm:text-base tracking-wide truncate flex items-center gap-2">
             🖼️ {modalImageInfo.title || 'Bukti Paking'}
           </h3>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setIsZoomed(!isZoomed)}
-              className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer"
+              className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer"
               title="Perbesar / Kecilkan Gambar"
             >
               {isZoomed ? '🔍 Zoom Out' : '🔍 Zoom In'}
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/20 hover:bg-rose-600 text-white font-bold flex items-center justify-center text-base transition-all cursor-pointer"
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-rose-600 text-white font-black flex items-center justify-center text-lg transition-all cursor-pointer"
               title="Tutup Modal"
             >
               ✕
@@ -196,30 +196,39 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
           </div>
         </div>
 
-        {/* Tight-Fit Image Frame - 100% Filled Without Black Side Wings */}
+        {/* Big Image Frame - RAW Native Pixel Resolution Container */}
         <div
           onClick={() => setIsZoomed(!isZoomed)}
-          className={`inline-flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-neutral-900/90 p-1 transition-all ${
-            isZoomed ? 'cursor-zoom-out overflow-auto max-h-[90vh] max-w-[96vw]' : 'cursor-zoom-in max-h-[84vh]'
+          className={`relative flex items-center justify-center rounded-2xl border border-white/20 bg-neutral-900/90 p-2 transition-all flex-grow w-full overflow-hidden ${
+            isZoomed
+              ? 'cursor-zoom-out overflow-auto block text-center'
+              : 'cursor-zoom-in flex items-center justify-center'
           }`}
-          title={isZoomed ? "Klik untuk memperkecil" : "Klik untuk memperbesar gambar"}
+          title={isZoomed ? "Klik untuk kembali sesuai layar" : "Klik untuk melihat ketajaman piksel 100% asli"}
         >
-          <img
-            src={modalImageInfo.url}
-            alt="Preview High Res"
-            className={`object-contain rounded-xl shadow-2xl transition-all duration-300 ${
-              isZoomed
-                ? 'scale-150 my-20 mx-20 max-h-[130vh] w-auto'
-                : 'max-h-[80vh] w-auto max-w-[88vw] block'
-            }`}
-          />
+          {isZoomed ? (
+            <div className="inline-block p-4 min-w-full">
+              <img
+                src={modalImageInfo.url}
+                alt="Preview Raw Native HD"
+                className="max-w-none max-h-none w-auto h-auto rounded-xl shadow-2xl block mx-auto cursor-zoom-out"
+              />
+            </div>
+          ) : (
+            <img
+              src={modalImageInfo.url}
+              alt="Preview High Res"
+              style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
+              className="h-[80vh] max-h-[84vh] w-auto max-w-[94vw] object-contain rounded-xl shadow-2xl block cursor-zoom-in"
+            />
+          )}
         </div>
 
         {/* Bottom Action Bar (Download HD Button Below) */}
         <div className="flex items-center justify-center w-full pt-1">
           <button
             onClick={handleDownloadHD}
-            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all cursor-pointer active:scale-95"
+            className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer active:scale-95"
             title="Download Foto Resolusi Tinggi (HD)"
           >
             📥 Download Foto HD

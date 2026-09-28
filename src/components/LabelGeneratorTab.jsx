@@ -41,6 +41,121 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     return `${yy}${mm}${dd}-${randomSuffix}`;
   };
 
+  useEffect(() => {
+    fetchPackingData();
+
+    const channel = supabase
+      .channel('label_generator_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'packing_tracking' },
+        () => {
+          fetchPackingData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchPackingData = async () => {
+    const { data, error } = await supabase
+      .from('packing_tracking')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (!error && data) {
+      const formatted = data.map((item) => {
+        let details = [];
+        if (Array.isArray(item.items_detail)) {
+          details = item.items_detail;
+        } else if (typeof item.items_detail === 'string') {
+          try { details = JSON.parse(item.items_detail); } catch (e) { details = []; }
+        }
+        const d0 = details[0] || {};
+
+        return {
+          NO_SPK: item.no_spk || '',
+          PO_NUMBER: d0.po_number || item.promo_title || '',
+          NO_SJ: d0.no_sj || item.box_code || '',
+          CLIENT: item.client_pt || '',
+          PROJECT: item.promo_title || d0.desc || '',
+          NO_WPP: d0.no_wpp || item.no_spk || '',
+          BRAND: d0.brand || d0.code || '',
+          RECIPIENT_NAME: item.recipient_name || '',
+          RECIPIENT_PHONE: d0.recipient_phone || '',
+          DELIVERY_ADDRESS: item.store_name || '',
+          ITEM_DESCRIPTION: d0.desc || item.promo_title || '',
+          MEDIA: d0.material || '',
+          UKURAN: d0.size || '',
+          QTY_TOTAL: Number(item.total_qty) || 0,
+          QTY_PER_KOLI: Number(d0.qty_per_koli) || 50,
+          DATE_PRODUCTION: d0.date_production || '-',
+          SENDER: d0.sender || 'WELLEN PRINT',
+          SENDER_TELP: d0.sender_telp || '021-5506999',
+          VISUAL_IMAGE: d0.visual_image || d0.image_url || '',
+          VISUAL_IMAGE_2: d0.visual_image_2 || '',
+          TRACKING_ID: item.tracking_id
+        };
+      });
+
+      setLabelData(formatted);
+      setSelectedRows(prev => prev.length === 0 ? formatted.map((_, i) => i) : prev);
+    }
+  };
+
+  const saveItemsToSupabase = async (itemsToSave) => {
+    if (!itemsToSave || itemsToSave.length === 0) return;
+    const payloads = itemsToSave.map((item) => {
+      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
+      const qrAddress = `${item.NO_SPK || ''}_${trackingCode}_${item.CLIENT || ''}_${item.DELIVERY_ADDRESS || ''}`;
+
+      return {
+        tracking_id: trackingCode,
+        no_spk: item.NO_SPK || '-',
+        client_pt: item.CLIENT || '-',
+        promo_title: item.PROJECT || item.ITEM_DESCRIPTION || '-',
+        store_name: item.DELIVERY_ADDRESS || 'Store Utama',
+        recipient_name: item.RECIPIENT_NAME || '-',
+        total_qty: Number(item.QTY_TOTAL) || 0,
+        box_code: item.NO_SJ || 'WL-01',
+        delivery_type: 'DALAM KOTA',
+        qr_address: qrAddress,
+        items_detail: [{
+          code: item.BRAND || item.NO_SPK || 'ITEM',
+          desc: item.ITEM_DESCRIPTION || item.PROJECT || '-',
+          material: item.MEDIA || '-',
+          size: item.UKURAN || '-',
+          qty: Number(item.QTY_TOTAL) || 0,
+          unit: 'Pcs',
+          po_number: item.PO_NUMBER || '',
+          no_sj: item.NO_SJ || '',
+          no_wpp: item.NO_WPP || '',
+          brand: item.BRAND || '',
+          recipient_phone: item.RECIPIENT_PHONE || '',
+          qty_per_koli: Number(item.QTY_PER_KOLI) || 50,
+          date_production: item.DATE_PRODUCTION || '-',
+          sender: item.SENDER || 'WELLEN PRINT',
+          sender_telp: item.SENDER_TELP || '021-5506999',
+          visual_image: item.VISUAL_IMAGE || '',
+          visual_image_2: item.VISUAL_IMAGE_2 || ''
+        }],
+        status_qc_label: 'PENDING',
+        status_qc_packing: 'PENDING',
+        status_qc_checker: 'PENDING',
+        status_deliver: 'PENDING',
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    const { error } = await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+    if (error) {
+      console.error('Error saving to Supabase packing_tracking:', error);
+    }
+  };
+
   const handleUploadHeaderLogo = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -99,7 +214,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const data = new Uint8Array(evt.target.result);
         const wb = XLSX.read(data, { type: 'array' });
@@ -143,7 +258,11 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
         setLabelData(cleanedData); 
         setSelectedRows(cleanedData.map((_, i) => i));
-        alert(`✅ Sukses Validasi! ${cleanedData.length} baris data berhasil di-import.`);
+
+        // Auto Save Online to Supabase
+        await saveItemsToSupabase(cleanedData);
+
+        alert(`✅ Sukses Validasi & Simpan Online! ${cleanedData.length} baris data berhasil di-import dan tersimpan ke database.`);
       } catch (err) { 
         alert('Gagal membaca file Excel: ' + err.message); 
       }
@@ -152,9 +271,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     e.target.value = '';
   };
 
-  const handleUpdateKoliRow = (index, newKoliVal) => {
+  const handleUpdateKoliRow = async (index, newKoliVal) => {
     const val = Math.max(1, Number(newKoliVal) || 1);
-    setLabelData(prev => prev.map((item, idx) => idx === index ? { ...item, QTY_PER_KOLI: val } : item));
+    const updated = labelData.map((item, idx) => idx === index ? { ...item, QTY_PER_KOLI: val } : item);
+    setLabelData(updated);
+    if (updated[index]) {
+      await saveItemsToSupabase([updated[index]]);
+    }
   };
 
   const handleBatchUploadGlobal = async (e, field) => {
@@ -201,18 +324,36 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     }
 
     setLabelData(newLabelData);
-    alert(`✅ Sukses! ${successCount} gambar berhasil diunggah dan dipetakan ke tabel.`);
+    await saveItemsToSupabase(newLabelData);
+    alert(`✅ Sukses! ${successCount} gambar berhasil diunggah dan tersimpan ke database.`);
     e.target.value = '';
   };
 
   const handleImageUploadRow = (e, index, field = 'VISUAL_IMAGE') => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const base64Url = evt.target.result;
-      setLabelData(prev => prev.map((item, i) => (i === index ? { ...item, [field]: base64Url } : item)));
+      const updated = labelData.map((item, i) => (i === index ? { ...item, [field]: base64Url } : item));
+      setLabelData(updated);
+      if (updated[index]) {
+        await saveItemsToSupabase([updated[index]]);
+      }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleClearAllData = async () => {
+    if (confirm('Clear & hapus seluruh data tersimpan di database?')) {
+      const { error } = await supabase.from('packing_tracking').delete().gt('id', 0);
+      if (!error) {
+        setLabelData([]);
+        setSelectedRows([]);
+        alert('✅ Seluruh data berhasil dibersihkan.');
+      } else {
+        alert('Gagal membersihkan data: ' + error.message);
+      }
+    }
   };
 
   const renderHeaderLogoHtmlLabel = () => {
@@ -721,7 +862,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
             <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 2 (Right) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
           </label>
           {labelData.length > 0 && (
-            <button onClick={() => { if(confirm('Clear data?')) { setLabelData([]); setSelectedRows([]); } }} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
+            <button onClick={handleClearAllData} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
               <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
             </button>
           )}
