@@ -130,10 +130,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             return { ...sub, image_url: activeUrl };
           });
 
-          // Otomatis set status_qc_packing & status_qc_checker ke DONE untuk data SPK aktif
+          // Set status sesuai data DB, default ke PENDING jika belum di-scan/proses
           const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
-          const statusPacking = item.status_qc_packing || (hasPhoto ? 'DONE' : 'DONE');
-          const statusChecker = item.status_qc_checker || 'DONE';
+          const statusPacking = item.status_qc_packing || (hasPhoto ? 'DONE' : 'PENDING');
+          const statusChecker = item.status_qc_checker || 'PENDING';
 
           return {
             ...item,
@@ -976,9 +976,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             qty_order: 100,
             box_code: 'WL-01',
             delivery_type: 'DALAM KOTA',
-            status_qc_label: 'DONE',
-            status_qc_packing: 'DONE',
-            status_qc_checker: 'DONE',
+            status_qc_label: 'PENDING',
+            status_qc_packing: 'PENDING',
+            status_qc_checker: 'PENDING',
             status_deliver: 'PENDING',
             items_detail: [{ code: 'ITM-01', desc: 'Hanging Mobile POSM SMAX', qty: 100 }]
           },
@@ -992,9 +992,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             qty_order: 50,
             box_code: 'WL-02',
             delivery_type: 'LUAR KOTA',
-            status_qc_label: 'DONE',
-            status_qc_packing: 'DONE',
-            status_qc_checker: 'DONE',
+            status_qc_label: 'PENDING',
+            status_qc_packing: 'PENDING',
+            status_qc_checker: 'PENDING',
             status_deliver: 'PENDING',
             items_detail: [{ code: 'ITM-02', desc: 'Nescafe Ice Roast Standee', qty: 50 }]
           },
@@ -1008,9 +1008,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             qty_order: 75,
             box_code: 'WL-03',
             delivery_type: 'DALAM KOTA',
-            status_qc_label: 'DONE',
-            status_qc_packing: 'DONE',
-            status_qc_checker: 'DONE',
+            status_qc_label: 'PENDING',
+            status_qc_packing: 'PENDING',
+            status_qc_checker: 'PENDING',
             status_deliver: 'PENDING',
             items_detail: [{ code: 'ITM-03', desc: 'Acrylic Display Rack', qty: 75 }]
           }
