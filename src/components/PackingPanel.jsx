@@ -130,10 +130,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             return { ...sub, image_url: activeUrl };
           });
 
-          // Set status sesuai data DB, pastikan jika belum ada foto bukti paking, status wajib PENDING
+          // Set status sesuai data DB, hormati nilai DONE jika di database sudah DONE (hasil scan)
           const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
-          const statusPacking = hasPhoto ? 'DONE' : 'PENDING';
-          const statusChecker = 'PENDING';
+          const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
+          const statusChecker = item.status_qc_checker === 'DONE' ? 'DONE' : 'PENDING';
 
           return {
             ...item,
