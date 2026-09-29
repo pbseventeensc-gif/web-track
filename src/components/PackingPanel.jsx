@@ -774,8 +774,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       const nowIso = new Date().toISOString();
       const staffName = 'Staff Outbound';
 
-      // Update di Supabase packing_tracking (dukung kolom outbound_url & staff_outbound)
-      const { error: updateError } = await supabase
+      // Update di Supabase packing_tracking (dukung kolom outbound_url & staff_outbound dengan fallback)
+      let { error: updateError } = await supabase
         .from('packing_tracking')
         .update({
           outbound_url: publicUrl,
@@ -787,7 +787,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         .eq('id', rowId);
 
       if (updateError) {
-        console.error('Update outbound_url error:', updateError);
+        console.warn('Extended outbound columns missing in Supabase, using fallback update:', updateError);
+        const { error: fallbackError } = await supabase
+          .from('packing_tracking')
+          .update({
+            catatan: publicUrl,
+            updated_at: nowIso
+          })
+          .eq('id', rowId);
+        if (fallbackError) console.error('Fallback update error:', fallbackError);
       }
 
       // Update state lokal secara instan
@@ -1546,11 +1554,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         <td className="py-3.5 px-4 max-w-[280px]">
                           <div className="font-extrabold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
                             <span>{getCleanStoreName(item.store_name)}</span>
-                            {isRowComplete && (
-                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-400 text-xs" title="Done">
-                                ✅
-                              </span>
-                            )}
                           </div>
                           {item.no_spk && (
                             <div className="text-xs font-mono text-slate-500 font-bold mt-0.5">{item.no_spk}</div>
