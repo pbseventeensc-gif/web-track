@@ -1119,7 +1119,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     {item.box_code || 'B1'}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px' }}>
-                    <QRCodeSVG value={item.qr_address || item.tracking_id} size={95} />
+                    <QRCodeSVG value={`https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={95} />
                   </div>
                 </div>
 
