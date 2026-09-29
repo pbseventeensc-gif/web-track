@@ -178,35 +178,35 @@ export default function AdminPromoManager({ isDarkMode }) {
       )}
 
       {/* Form Buat Promo (REMOVED STICKY OVERLAY BUG) */}
-      <div className="p-6 rounded-3xl border border-slate-200 bg-slate-50 text-black shadow-2xs space-y-4">
+      <div className="p-6 rounded-3xl border border-slate-200 bg-slate-50/80 text-slate-900 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-200">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-indigo-600 flex items-center gap-2">
-            <Megaphone className="w-4 h-4 text-indigo-600" /> Broadcast & Create New Promo Campaign
+          <h3 className="font-bold text-sm uppercase tracking-wider text-slate-800">
+            Broadcast & Create New Promo Campaign
           </h3>
 
           {/* FIX GAMBAR 2: CLEAN WHITE BUTTON FOR EDIT BUDGET NAMES */}
           <button 
             type="button"
             onClick={() => setIsEditingBudgetNames(!isEditingBudgetNames)}
-            className="text-xs font-extrabold px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-black border border-slate-300 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+            className="text-xs font-semibold px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200/80 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             {isEditingBudgetNames ? (
-              <><Save className="w-3.5 h-3.5 text-indigo-600" /> Save Budget Names & Tiers</>
+              <><Save className="w-3.5 h-3.5 text-slate-900" /> Save Budget Names & Tiers</>
             ) : (
-              <><Pencil className="w-3.5 h-3.5 text-indigo-600" /> Edit Budget Names & Tiers</>
+              <><Pencil className="w-3.5 h-3.5 text-slate-900" /> Edit Budget Names & Tiers</>
             )}
           </button>
         </div>
 
         <form onSubmit={handleCreatePromo} className="space-y-4 text-xs">
           <div>
-            <label className="block font-extrabold mb-1.5 text-black">Promo / Campaign Title</label>
+            <label className="block font-semibold mb-1.5 text-slate-800">Promo / Campaign Title</label>
             <input 
               type="text" 
               placeholder="Example: Eid Promotion 2026"
               value={form.title} 
               onChange={e => setForm({...form, title: e.target.value})} 
-              className="w-full p-3 border border-slate-300 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="w-full p-3 border border-slate-200/90 rounded-xl font-semibold bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
           </div>
 
@@ -240,20 +240,20 @@ export default function AdminPromoManager({ isDarkMode }) {
           )}
 
           <div>
-            <label className="block font-extrabold mb-1.5 text-black">Select Budget Category</label>
+            <label className="block font-semibold mb-1.5 text-slate-800">Select Budget Category</label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               {budgets.map((b) => (
                 <button
                   type="button"
                   key={b.key}
                   onClick={() => handleSelectBudget(b)}
-                  className={`py-3 px-3 rounded-xl font-extrabold border transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                  className={`py-3 px-3 rounded-xl transition-all text-center flex flex-col items-center justify-center gap-1 cursor-pointer ${
                     form.budget_type === b.name 
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-extrabold'
-                      : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
+                      ? 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold shadow-2xs'
+                      : 'bg-white border border-slate-200/90 text-slate-700 hover:bg-slate-100/80 font-medium'
                   }`}
                 >
-                  <span className="font-extrabold text-xs">{b.name}</span>
+                  <span className="font-semibold text-xs">{b.name}</span>
                   <span className="text-[10px] opacity-90 font-mono">
                     {formatRupiah(b.nominal)}
                   </span>
@@ -263,8 +263,8 @@ export default function AdminPromoManager({ isDarkMode }) {
           </div>
 
           <div>
-            <label className="block font-extrabold mb-1.5 text-black">
-              Selected Budget ({form.budget_type}) — Rupiah Format: <span className="text-emerald-700 font-mono font-extrabold">{formatRupiah(form.budget_nominal)}</span>
+            <label className="block font-semibold mb-1.5 text-slate-800">
+              Selected Budget ({form.budget_type}) — Rupiah Format: <span className="text-emerald-700 font-mono font-bold">{formatRupiah(form.budget_nominal)}</span>
             </label>
             <input 
               type="text" 
@@ -273,40 +273,40 @@ export default function AdminPromoManager({ isDarkMode }) {
                 const raw = e.target.value.replace(/[^0-9]/g, '');
                 setForm({...form, budget_nominal: Number(raw) || 0});
               }}
-              className="w-full p-3 border border-slate-300 rounded-xl font-mono font-extrabold bg-white text-emerald-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="w-full p-3 border border-slate-200/90 rounded-xl font-mono font-bold bg-white text-emerald-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <label className="block font-extrabold text-black">
-                Select Special Items for This Promo <span className="text-indigo-600 font-bold">({selectedItemIds.length} selected from {masterItems.length} items)</span>
+              <label className="block font-semibold text-slate-800">
+                Select Special Items for This Promo <span className="text-slate-900 font-bold">({selectedItemIds.length} selected from {masterItems.length} items)</span>
               </label>
               <button
                 type="button"
                 onClick={handleSelectAllItems}
-                className="text-xs font-extrabold text-indigo-600 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-slate-900 hover:underline cursor-pointer"
               >
                 {selectedItemIds.length === masterItems.length ? 'Deselect All' : 'Select All Items'}
               </button>
             </div>
             
-            <div className="max-h-48 overflow-y-auto border border-slate-300 p-3 rounded-xl space-y-2 bg-white custom-scrollbar">
+            <div className="max-h-48 overflow-y-auto border border-slate-200/90 p-3 rounded-xl space-y-2 bg-white custom-scrollbar">
               {masterItems.length === 0 ? (
-                <p className="text-xs text-slate-400 font-medium text-center py-2">No master items available yet.</p>
+                <p className="text-xs text-slate-500 font-medium text-center py-2">No master items available yet.</p>
               ) : (
                 masterItems.map(item => (
-                  <label key={item.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${selectedItemIds.includes(item.id) ? 'bg-indigo-50 border border-indigo-200' : 'hover:bg-slate-50'}`}>
+                  <label key={item.id} className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${selectedItemIds.includes(item.id) ? 'bg-slate-100 border border-slate-300' : 'hover:bg-slate-50'}`}>
                     <div className="flex items-center gap-2">
                       <input 
                         type="checkbox" 
                         checked={selectedItemIds.includes(item.id)}
                         onChange={() => handleCheckboxChange(item.id)}
-                        className="rounded accent-indigo-600 w-4 h-4 cursor-pointer"
+                        className="rounded accent-slate-900 w-4 h-4 cursor-pointer"
                       />
-                      <span className="font-extrabold text-slate-900">{item.item_name}</span>
+                      <span className="font-semibold text-slate-900">{item.item_name}</span>
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono font-bold">
+                    <div className="text-[10px] text-slate-500 font-mono font-medium">
                       {item.material} • {item.size} • {formatRupiah(item.price)}
                     </div>
                   </label>
@@ -316,26 +316,26 @@ export default function AdminPromoManager({ isDarkMode }) {
           </div>
 
           <div>
-            <label className="block font-extrabold mb-1.5 text-black">Promo Description / Branch Instructions</label>
+            <label className="block font-semibold mb-1.5 text-slate-800">Promo Description / Branch Instructions</label>
             <textarea 
               placeholder="Enter special instructions or notes for branches..."
               value={form.description} 
               onChange={e => setForm({...form, description: e.target.value})} 
-              className="w-full p-3 border border-slate-300 rounded-xl bg-white text-black font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="w-full p-3 border border-slate-200/90 rounded-xl bg-white text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
               rows="3" 
             />
           </div>
 
-          <button type="submit" className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-2xl shadow-2xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
-            <Send className="w-4 h-4" /> Broadcast Promo to All Branches
+          <button type="submit" className="w-full py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-semibold rounded-2xl shadow-2xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+            Broadcast Promo to All Branches
           </button>
         </form>
       </div>
 
       {/* Riwayat Promo Terkirim */}
-      <div className="p-6 rounded-3xl border border-slate-200 bg-white text-black shadow-2xs">
-        <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 mb-4 flex items-center gap-2">
-          <Tag className="w-4 h-4 text-indigo-600" /> Broadcast Promo History & Status ({promos.length})
+      <div className="p-6 rounded-3xl border border-slate-200 bg-white text-slate-900 shadow-2xs">
+        <h3 className="font-bold text-sm tracking-wide uppercase text-slate-800 mb-4 flex items-center gap-2">
+          <Tag className="w-4 h-4 text-slate-900" /> Broadcast Promo History & Status ({promos.length})
         </h3>
 
         {promos.length === 0 ? (
@@ -374,15 +374,16 @@ export default function AdminPromoManager({ isDarkMode }) {
                           : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
                       }`}
                     >
-                      {p.is_active ? <><Pause className="w-3 h-3" /> Mark Completed</> : <><Play className="w-3 h-3" /> Activate</>}
+                      {p.is_active ? <><Check className="w-3.5 h-3.5" /> Complete</> : <><Play className="w-3.5 h-3.5" /> Activate</>}
                     </button>
                     
                     <button
                       type="button"
                       onClick={() => handleDeletePromo(p.id, p.title)}
-                      className="px-3 py-1.5 rounded-xl font-extrabold text-[10px] bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                      title="Delete Promo"
+                      className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                     >
-                      <Trash2 className="w-3 h-3 text-rose-700" /> Delete
+                      <Trash2 className="w-3.5 h-3.5 text-rose-700" />
                     </button>
                   </div>
                 </div>

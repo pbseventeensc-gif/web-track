@@ -9,27 +9,27 @@ export default function CustomModulesIndex({ isDarkMode }) {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleImportSuccess = () => {
-    // Memicu refresh komponen turunan jika data berhasil diimpor
+    // Trigger child component refresh upon successful import
     setRefreshKey(prev => prev + 1);
   };
 
   return (
     <div className="space-y-5 p-4 md:p-5 max-w-7xl mx-auto">
       <header className="mb-4">
-        <h1 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>
-          📦 Modul Eksternal & Alokasi PMG
+        <h1 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+          External & PMG Allocation Module
         </h1>
-        <p className={`text-xs opacity-70 ${isDarkMode ? 'text-neutral-300' : 'text-stone-600'}`}>
-          Pusat kendali manajemen customer, label kustom, serta alokasi surat jalan PT. PMG Integrasi Komunikasi.
+        <p className={`text-xs opacity-70 ${isDarkMode ? 'text-neutral-300' : 'text-slate-600'}`}>
+          Bulk allocation control center, custom labels, and delivery order allocation for PT. PMG Integrasi Komunikasi.
         </p>
       </header>
 
-      {/* 🚀 Widget Import Excel Alokasi CCOD ke Supabase */}
+      {/* CCOD Allocation Import Widget */}
       <div className="w-full">
         <PmgExcelImporter isDarkMode={isDarkMode} onImportSuccess={handleImportSuccess} />
       </div>
 
-      {/* Bagian Khusus PMG */}
+      {/* PMG Allocation Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" key={refreshKey}>
         <div className="lg:col-span-1">
           <PmgDestinationManager isDarkMode={isDarkMode} />
@@ -41,7 +41,7 @@ export default function CustomModulesIndex({ isDarkMode }) {
 
       <hr className="border-stone-300 dark:border-neutral-700 my-4" />
 
-      {/* Bagian Label & Customer Umum Sebelumnya */}
+      {/* Bulk Allocation & Custom Label Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <CustomerManager isDarkMode={isDarkMode} />
         <CustomLabelGenerator isDarkMode={isDarkMode} />

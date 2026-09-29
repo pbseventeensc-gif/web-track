@@ -360,15 +360,15 @@ export default function AdminMasterData({ isDarkMode }) {
         {/* Bagian Import Excel Master Barang */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-slate-200">
           <div>
-            <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-indigo-600" /> Import Master Items via Excel
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-slate-900 flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-slate-900" /> Master Items
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Upload <code className="font-mono text-indigo-600 font-bold">.xlsx</code> or <code className="font-mono text-indigo-600 font-bold">.xls</code> file with columns: <code className="font-mono text-slate-700 font-bold">item_name, material, size, price</code></p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Upload <code className="font-mono text-slate-900 font-bold">.xlsx</code> or <code className="font-mono text-slate-900 font-bold">.xls</code> file with columns: <code className="font-mono text-slate-700 font-bold">item_name, material, size, price</code></p>
           </div>
 
           <label className={`cursor-pointer px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all active:scale-95 flex items-center gap-2 shadow-2xs ${loadingImport ? 'bg-slate-300 cursor-not-allowed text-slate-600' : 'bg-white hover:bg-slate-50 text-black border border-slate-300'}`}>
             <Upload className="w-3.5 h-3.5 text-slate-700" />
-            <span>{loadingImport ? 'Importing...' : 'Import Master Items'}</span>
+            <span>{loadingImport ? 'Importing...' : 'Master Items'}</span>
             <input 
               type="file" 
               accept=".xlsx, .xls" 
@@ -379,18 +379,18 @@ export default function AdminMasterData({ isDarkMode }) {
           </label>
         </div>
 
-        {/* Bagian Import Budget Cabang (2 Kolom) */}
+        {/* Bagian Import Budget Cabang */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-slate-200">
           <div>
-            <h3 className="font-extrabold text-sm tracking-wide uppercase text-amber-600 flex items-center gap-2">
-              <Upload className="w-4 h-4 text-amber-600" /> Import Store Budgets (2 Columns)
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-slate-900 flex items-center gap-2">
+              <Upload className="w-4 h-4 text-slate-900" /> Store Budgets
             </h3>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">Excel format must contain columns: <code className="font-mono text-amber-700 font-bold">branch_name</code> and <code className="font-mono text-amber-700 font-bold">budget</code></p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Excel format must contain columns: <code className="font-mono text-slate-900 font-bold">branch_name</code> and <code className="font-mono text-slate-900 font-bold">budget</code></p>
           </div>
 
           <label className={`cursor-pointer px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all active:scale-95 flex items-center gap-2 shadow-2xs ${loadingImport ? 'bg-slate-300 cursor-not-allowed text-slate-600' : 'bg-white hover:bg-slate-50 text-black border border-slate-300'}`}>
             <Upload className="w-3.5 h-3.5 text-slate-700" />
-            <span>{loadingImport ? 'Processing...' : 'Import Budget File'}</span>
+            <span>{loadingImport ? 'Processing...' : 'Budget File'}</span>
             <input 
               type="file" 
               accept=".xlsx, .xls" 
@@ -403,8 +403,8 @@ export default function AdminMasterData({ isDarkMode }) {
 
         {/* Form Tambah Master Manual */}
         <div className="pt-2">
-          <h3 className="font-extrabold text-sm mb-3 tracking-wide uppercase text-indigo-600 flex items-center gap-2">
-            <PlusCircle className="w-4 h-4 text-indigo-600" /> Add New Master Item (Manual)
+          <h3 className="font-extrabold text-sm mb-3 tracking-wide uppercase text-slate-900 flex items-center gap-2">
+            <PlusCircle className="w-4 h-4 text-slate-900" /> Add New Master Item
           </h3>
           <form onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
             <input 
@@ -412,7 +412,7 @@ export default function AdminMasterData({ isDarkMode }) {
               placeholder="Item Name *"
               value={form.item_name} 
               onChange={e => setForm({...form, item_name: e.target.value})} 
-              className="p-3 border border-slate-300 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              className="p-3 border border-slate-300 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
               required
             />
             <input 
@@ -437,7 +437,7 @@ export default function AdminMasterData({ isDarkMode }) {
               onChange={e => setForm({...form, price: e.target.value})} 
               className="p-3 border border-slate-300 rounded-xl font-mono font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
-            <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl py-3 transition-all active:scale-95 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5">
+            <button type="submit" className="bg-transparent hover:bg-slate-100 text-slate-900 border border-slate-300 font-extrabold rounded-xl py-3 transition-all active:scale-95 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5">
               <PlusCircle className="w-4 h-4" /> Save Item
             </button>
           </form>
@@ -450,8 +450,8 @@ export default function AdminMasterData({ isDarkMode }) {
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-indigo-600" /> Master Items List (A-Z)
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-slate-900 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-slate-900" /> Master Items List
             </h3>
             <p className="text-xs text-slate-500 font-medium">Click <strong>"Edit"</strong> to modify item details directly in the table.</p>
           </div>
@@ -463,7 +463,7 @@ export default function AdminMasterData({ isDarkMode }) {
               placeholder="Search Item / Material / Size..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-2xs"
+              className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-2xs"
             />
           </div>
         </div>
@@ -491,7 +491,7 @@ export default function AdminMasterData({ isDarkMode }) {
 
                   return (
                     <tr key={i.id} className={`transition-colors ${
-                      isEditing ? 'bg-indigo-50/70' : 'hover:bg-slate-50/80 bg-white'
+                      isEditing ? 'bg-slate-100' : 'hover:bg-slate-50/80 bg-white'
                     }`}>
                       <td className="p-3.5 align-middle">
                         {isEditing ? (
@@ -499,11 +499,11 @@ export default function AdminMasterData({ isDarkMode }) {
                             type="text"
                             value={editForm.item_name}
                             onChange={e => setEditForm({ ...editForm, item_name: e.target.value })}
-                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-bold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-bold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
                             placeholder="Item Name"
                           />
                         ) : (
-                          <div className="font-bold text-slate-900 text-xs sm:text-sm">{i.item_name}</div>
+                          <div className="font-medium text-slate-900 text-xs sm:text-sm">{i.item_name}</div>
                         )}
                       </td>
 
@@ -513,7 +513,7 @@ export default function AdminMasterData({ isDarkMode }) {
                             type="text"
                             value={editForm.material}
                             onChange={e => setEditForm({ ...editForm, material: e.target.value })}
-                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
                             placeholder="Material"
                           />
                         ) : (
@@ -527,7 +527,7 @@ export default function AdminMasterData({ isDarkMode }) {
                             type="text"
                             value={editForm.size}
                             onChange={e => setEditForm({ ...editForm, size: e.target.value })}
-                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-mono font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            className="w-full p-2 rounded-xl border border-slate-300 text-xs font-mono font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
                             placeholder="Size"
                           />
                         ) : (
@@ -542,10 +542,10 @@ export default function AdminMasterData({ isDarkMode }) {
                             min="0"
                             value={editForm.price}
                             onChange={e => setEditForm({ ...editForm, price: Number(e.target.value) || 0 })}
-                            className="w-28 p-2 rounded-xl border border-slate-300 text-xs text-right font-mono font-bold bg-white text-emerald-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            className="w-28 p-2 rounded-xl border border-slate-300 text-xs text-right font-mono font-bold bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400"
                           />
                         ) : (
-                          <span className="font-extrabold text-emerald-700 text-xs sm:text-sm">
+                          <span className="font-medium text-slate-900 text-xs sm:text-sm">
                             {formatRupiah(i.price)}
                           </span>
                         )}
@@ -574,9 +574,10 @@ export default function AdminMasterData({ isDarkMode }) {
                             <button
                               type="button"
                               onClick={() => handleStartEdit(i)}
-                              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 rounded-xl font-extrabold text-[11px] transition-all active:scale-95 flex items-center gap-1 shadow-2xs cursor-pointer"
+                              className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-all cursor-pointer"
+                              title="Edit Item"
                             >
-                              <Pencil className="w-3.5 h-3.5 text-indigo-600" /> Edit
+                              <Pencil className="w-3.5 h-3.5 text-slate-700" />
                             </button>
                             <button
                               type="button"
@@ -601,8 +602,8 @@ export default function AdminMasterData({ isDarkMode }) {
       {/* Bagian Baru: Form Tambah Cabang / Toko Baru */}
       <div className="p-6 rounded-3xl border border-slate-200 bg-white text-black shadow-2xs space-y-4">
         <div>
-          <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-indigo-600" /> Add New Store / Branch
+          <h3 className="font-extrabold text-sm tracking-wide uppercase text-slate-900 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-slate-900" /> Add New Store / Branch
           </h3>
           <p className="text-xs text-slate-500 font-medium">Register a new store to the system for immediate login and logistics ordering.</p>
         </div>
@@ -613,7 +614,7 @@ export default function AdminMasterData({ isDarkMode }) {
             placeholder="Store / Branch Name *"
             value={newBranchForm.branch_name}
             onChange={e => setNewBranchForm({...newBranchForm, branch_name: e.target.value})}
-            className="p-3 border border-slate-300 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            className="p-3 border border-slate-300 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
             required
           />
           <input 
@@ -621,7 +622,7 @@ export default function AdminMasterData({ isDarkMode }) {
             placeholder="Access Code (e.g. KL0104) *"
             value={newBranchForm.access_code}
             onChange={e => setNewBranchForm({...newBranchForm, access_code: e.target.value})}
-            className="p-3 border border-slate-300 rounded-xl font-mono uppercase font-bold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            className="p-3 border border-slate-300 rounded-xl font-mono uppercase font-bold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
             required
           />
           <input 
@@ -629,11 +630,11 @@ export default function AdminMasterData({ isDarkMode }) {
             placeholder="Region (e.g. JABODETABEK)"
             value={newBranchForm.region}
             onChange={e => setNewBranchForm({...newBranchForm, region: e.target.value})}
-            className="p-3 border border-slate-300 rounded-xl uppercase font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            className="p-3 border border-slate-300 rounded-xl uppercase font-semibold bg-white text-black focus:outline-none focus:ring-2 focus:ring-slate-400"
           />
           <button 
             type="submit"
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl py-3 transition-all active:scale-95 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
+            className="bg-transparent hover:bg-slate-100 text-slate-900 border border-slate-300 font-extrabold rounded-xl py-3 transition-all active:scale-95 shadow-2xs cursor-pointer flex items-center justify-center gap-1.5"
           >
             <PlusCircle className="w-4 h-4" /> Add Store
           </button>
@@ -645,8 +646,8 @@ export default function AdminMasterData({ isDarkMode }) {
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h3 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 flex items-center gap-2">
-              <Key className="w-4 h-4 text-indigo-600" /> Emergency Store PIN Reset
+            <h3 className="font-extrabold text-sm tracking-wide uppercase text-slate-900 flex items-center gap-2">
+              <Key className="w-4 h-4 text-slate-900" /> Reset PIN
             </h3>
             <p className="text-xs text-slate-500 font-medium">Use this feature if a store forgets their PIN access.</p>
           </div>
@@ -681,8 +682,8 @@ export default function AdminMasterData({ isDarkMode }) {
               ) : (
                 filteredBranches.map(b => (
                   <tr key={b.id} className="hover:bg-slate-50/80 transition-colors bg-white">
-                    <td className="p-3.5 font-bold text-slate-900 text-xs sm:text-sm">{b.id} - {b.branch_name}</td>
-                    <td className="p-3.5 font-mono text-slate-600 font-bold text-xs">{b.access_code}</td>
+                    <td className="p-3.5 font-medium text-slate-900 text-xs sm:text-sm">{b.id} - {b.branch_name}</td>
+                    <td className="p-3.5 font-mono text-slate-900 font-medium text-xs">{b.access_code}</td>
                     <td className="p-3.5 text-[10px] font-mono text-slate-400 font-medium uppercase">{b.region}</td>
 
                     {/* GAMBAR 2 FIX: SLEEK CONCISE PIN BUTTONS */}
@@ -690,15 +691,15 @@ export default function AdminMasterData({ isDarkMode }) {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleAutoGenerateAndReset(b)}
-                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 rounded-lg font-extrabold text-xs shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 inline-flex"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 rounded-lg font-medium text-xs shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 inline-flex"
                         >
                           <Dices className="w-3.5 h-3.5 text-slate-700" /> Auto PIN
                         </button>
                         <button
                           onClick={() => handleOpenResetPinModal(b)}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-extrabold text-xs shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 inline-flex"
+                          className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 rounded-lg font-medium text-xs shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 inline-flex"
                         >
-                          <Pencil className="w-3.5 h-3.5" /> Manual PIN
+                          <Pencil className="w-3.5 h-3.5 text-slate-700" /> PIN
                         </button>
                       </div>
                     </td>

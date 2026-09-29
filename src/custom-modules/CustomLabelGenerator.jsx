@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
+import { Upload } from 'lucide-react';
 
 export default function CustomLabelGenerator({ isDarkMode }) {
   const [destinations, setDestinations] = useState([]);
@@ -104,7 +105,6 @@ export default function CustomLabelGenerator({ isDarkMode }) {
         const sheetName = wb.SheetNames[0];
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1 });
 
-        // Ambil DR Number dari sel header atas (misal baris 0 kolom 1 -> rawData[0][1])
         let headerDrNo = '';
         for (let r = 0; r < Math.min(5, rawData.length); r++) {
           for (let c = 0; c < rawData[r].length; c++) {
@@ -116,12 +116,10 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           }
           if (headerDrNo) break;
         }
-        // Fallback jika tidak ketemu label 'dr', coba ambil baris 0 kolom 1
         if (!headerDrNo && rawData[0] && rawData[0][1]) {
           headerDrNo = String(rawData[0][1]).trim();
         }
 
-        // Ambil Transporter dari file Excel
         let headerTransporter = '';
         for (let r = 0; r < Math.min(5, rawData.length); r++) {
           for (let c = 0; c < rawData[r].length; c++) {
@@ -152,7 +150,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer')) {
             imported.push({
               deliver_to: clientName,
-              kota_region: address || 'Alamat menyusul',
+              kota_region: address || 'Address pending',
               pic_name: picName,
               phone: phone,
               region_city: `${region} - ${city}`.trim() !== '-' ? `${region} - ${city}` : '-',
@@ -165,12 +163,12 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
         if (imported.length > 0) {
           setBatchLabels(imported);
-          alert(`✅ Berhasil memuat ${imported.length} tujuan & DR No (${headerDrNo}) dari Excel!`);
+          alert(`Successfully loaded ${imported.length} destinations & DR No (${headerDrNo})!`);
         } else {
-          alert('⚠️ Format baris Excel tidak dikenali.');
+          alert('Row format not recognized.');
         }
       } catch (err) {
-        alert('Gagal membaca file Excel: ' + err.message);
+        alert('Failed to read file: ' + err.message);
       } finally {
         e.target.value = '';
       }
@@ -191,7 +189,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Cetak Label Koli PMG</title>
+          <title>Print PMG Box Label</title>
           <style>
             @page {
               size: A4 portrait;
@@ -249,85 +247,86 @@ export default function CustomLabelGenerator({ isDarkMode }) {
     <div className={`p-4 rounded-2xl border shadow-sm space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
-          <h2 className="font-bold text-xs uppercase text-indigo-600 dark:text-indigo-400">🏷️ Generator Label Koli PMG</h2>
-          <p className="text-[11px] opacity-60">Atur manual atau import file Excel untuk cetak label koli.</p>
+          <h2 className="font-bold text-xs uppercase text-black dark:text-white">PMG Box Label Generator</h2>
+          <p className="text-[11px] opacity-60">Set manually or import file to print box labels.</p>
         </div>
-        <label className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs">
-          📂 Import Excel Alokasi Label Massal
+        <label className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer shadow-xs transition-all active:scale-95 flex items-center gap-1.5">
+          <Upload className="w-3.5 h-3.5" />
+          Bulk Allocation & Label
           <input type="file" accept=".xlsx, .xls" onChange={handleBatchExcelImport} className="hidden" />
         </label>
       </div>
 
       {batchLabels.length > 0 && (
         <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl flex justify-between items-center text-xs text-emerald-700 dark:text-emerald-300 font-bold">
-          <span>✨ Mode Massal Aktif: {batchLabels.length} Label termuat dari file Excel.</span>
-          <button onClick={() => setBatchLabels([])} className="px-2 py-0.5 bg-rose-600 text-white rounded-lg text-[10px] cursor-pointer">Reset ke Manual</button>
+          <span>Bulk Mode Active: {batchLabels.length} Labels loaded.</span>
+          <button onClick={() => setBatchLabels([])} className="px-2 py-0.5 bg-rose-600 text-white rounded-lg text-[10px] cursor-pointer">Reset to Manual</button>
         </div>
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs">
         <div>
-          <label className="block font-bold mb-1 opacity-70">Pilih Tujuan Klien (Database)</label>
+          <label className="block font-bold mb-1 opacity-70">Select Client Destination (Database)</label>
           <select 
-            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
             value={selectedDest}
             onChange={handleDestChange}
             disabled={batchLabels.length > 0}
           >
-            <option value="">-- Pilih Tujuan Klien --</option>
+            <option value="">-- Select Client Destination --</option>
             {destinations.map(d => <option key={d.id} value={d.id}>{d.client_name}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="block font-bold mb-1 opacity-70">Pilih Template Label</label>
+          <label className="block font-bold mb-1 opacity-70">Select Label Template</label>
           <select 
-            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
             value={templateType}
             onChange={(e) => setTemplateType(e.target.value)}
           >
-            <option value="product_identity">Product Identity (Gaya Nestlé / 1-2 Gambar)</option>
-            <option value="hanging_poster">Hanging Poster (Gaya Coca-Cola)</option>
+            <option value="product_identity">Product Identity (Nestlé Style / 1-2 Images)</option>
+            <option value="hanging_poster">Hanging Poster (Coca-Cola Style)</option>
           </select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
         <div className="sm:col-span-1">
-          <label className="block font-bold mb-1 text-indigo-500 truncate">Total Qty Keseluruhan (Manual)</label>
+          <label className="block font-bold mb-1 text-black dark:text-white truncate">Total Qty (Manual)</label>
           <input 
             type="text"
             inputMode="numeric"
             value={form.qty_total}
             onChange={e => setForm({ ...form, qty_total: e.target.value.replace(/\D/g, '') })}
-            className={`w-full p-2.5 border-2 border-indigo-500 rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
+            className={`w-full p-2.5 border-2 border-slate-400 dark:border-stone-600 rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-stone-50 text-stone-900'}`}
           />
         </div>
         <div className="sm:col-span-1">
-          <label className="block font-bold mb-1 opacity-70 truncate">Isi Per Koli (Pcs) (Manual)</label>
+          <label className="block font-bold mb-1 opacity-70 truncate">Qty Per Box (Pcs) (Manual)</label>
           <input 
             type="text"
             inputMode="numeric"
             value={form.pcs_per_koli}
             onChange={e => setForm({ ...form, pcs_per_koli: e.target.value.replace(/\D/g, '') })}
-            className={`w-full p-2.5 border rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-2.5 border rounded-xl font-bold text-center text-xs h-[38px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
           />
         </div>
         <div className="sm:col-span-1">
-          <label className="block font-bold mb-1 text-transparent select-none">Total Halaman</label>
-          <div className="w-full p-2.5 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-center font-bold text-xs text-indigo-600 dark:text-indigo-400 h-[38px] flex items-center justify-center">
-            📦 Total Halaman: {totalKoli} Label
+          <label className="block font-bold mb-1 opacity-70 truncate">Total Pages</label>
+          <div className="w-full p-2.5 border border-slate-300 dark:border-neutral-700 bg-slate-100 dark:bg-neutral-800 rounded-xl text-center font-bold text-xs text-black dark:text-white h-[38px] flex items-center justify-center">
+            Total Pages: {totalKoli} Labels
           </div>
         </div>
 
         <div className="sm:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div>
-            <label className="block font-bold mb-1 opacity-70">Teks Header / Project (Cth: BANNER)</label>
+            <label className="block font-bold mb-1 opacity-70">Header / Project Text (e.g. BANNER)</label>
             <input
               type="text"
               value={form.po_project}
               onChange={e => setForm({ ...form, po_project: e.target.value })}
-              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
             />
           </div>
           <div>
@@ -336,57 +335,85 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               type="text"
               value={form.transporter_dr}
               onChange={e => setForm({ ...form, transporter_dr: e.target.value })}
-              placeholder="Cth: WAHANA - N-17779-2608-12"
-              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              placeholder="e.g. WAHANA - N-17779-2608-12"
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
             />
           </div>
           <div>
-            <label className="block font-bold mb-1 opacity-70">Nama Barang / Item Title (Manual)</label>
+            <label className="block font-bold mb-1 opacity-70">Item Name / Title (Manual)</label>
             <input
               type="text"
               value={form.item_title}
               onChange={e => setForm({ ...form, item_title: e.target.value })}
-              placeholder="Cth: BANNER PROMO A4"
-              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+              placeholder="e.g. PROMO BANNER A4"
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
             />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs pt-1">
-        <div>
-          <label className="block font-bold mb-1 opacity-70 truncate" title="Logo Kiri (Opsional)">Logo Kiri (Opsional)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoLeftUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs pt-2">
+        <div className="flex flex-col gap-1">
+          <label className="block font-bold text-xs text-black dark:text-white truncate" title="Left Logo (Optional)">
+            Left Logo (Optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => handleImageUpload(e, 'logoLeftUrl')}
+            className={`w-full p-2 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+          />
         </div>
-        <div>
-          <label className="block font-bold mb-1 opacity-70 truncate" title="Logo Kanan (Brand)">Logo Kanan (Brand)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'logoRightUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        <div className="flex flex-col gap-1">
+          <label className="block font-bold text-xs text-black dark:text-white truncate" title="Right Logo (Brand)">
+            Right Logo (Brand)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => handleImageUpload(e, 'logoRightUrl')}
+            className={`w-full p-2 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+          />
         </div>
-        <div>
-          <label className="block font-bold mb-1 opacity-70 truncate" title="Foto Produk 1 (Kiri)">Foto Produk 1 (Kiri)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        <div className="flex flex-col gap-1">
+          <label className="block font-bold text-xs text-black dark:text-white truncate" title="Product Photo 1 (Left)">
+            Product Photo 1 (Left)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => handleImageUpload(e, 'imageUrl')}
+            className={`w-full p-2 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+          />
         </div>
-        <div>
-          <label className="block font-bold mb-1 opacity-70 truncate" title="Foto Produk 2 (Kanan)">Foto Produk 2 (Kanan)</label>
-          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl2')} className={`w-full p-2 border rounded-xl text-[11px] ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`} />
+        <div className="flex flex-col gap-1">
+          <label className="block font-bold text-xs text-black dark:text-white truncate" title="Product Photo 2 (Right)">
+            Product Photo 2 (Right)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => handleImageUpload(e, 'imageUrl2')}
+            className={`w-full p-2 border rounded-xl text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+          />
         </div>
       </div>
 
       <button 
         onClick={() => setPrintDataModal(true)}
-        className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md cursor-pointer"
+        className="w-full py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md cursor-pointer"
       >
-        👁️ Pratinjau & Cetak Semua Label Koli ({totalKoli} Halaman)
+        Preview & Print All Box Labels ({totalKoli} Pages)
       </button>
 
       {printDataModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-5xl w-full p-6 space-y-6 shadow-2xl relative max-h-[95vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3 no-print">
-              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Koli Label (Total: {totalKoli} Halaman A4 Full)</h3>
+              <h3 className="font-bold text-sm uppercase text-black">Box Label Preview (Total: {totalKoli} Full A4 Pages)</h3>
               <div className="flex gap-2">
-                <button onClick={handleDirectPrint} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak / Buka Pengaturan Printer</button>
-                <button onClick={() => setPrintDataModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
+                <button onClick={handleDirectPrint} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs">Print / Open Printer Settings</button>
+                <button onClick={() => setPrintDataModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">Close</button>
               </div>
             </div>
 
@@ -394,8 +421,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
               {Array.from({ length: totalKoli }).map((_, koliIdx) => {
                 const currentKoliNumber = koliIdx + 1;
                 
-                const targetDeliverTo = batchLabels.length > 0 ? batchLabels[koliIdx]?.deliver_to : (form.deliver_to || 'Belum diisi');
-                const targetAddress = batchLabels.length > 0 ? batchLabels[koliIdx]?.kota_region : (form.kota_region || 'Alamat belum diisi');
+                const targetDeliverTo = batchLabels.length > 0 ? batchLabels[koliIdx]?.deliver_to : (form.deliver_to || 'Not set');
+                const targetAddress = batchLabels.length > 0 ? batchLabels[koliIdx]?.kota_region : (form.kota_region || 'Address not set');
                 const targetPic = batchLabels.length > 0 ? batchLabels[koliIdx]?.pic_name : (form.pic_name || '-');
                 const targetPhone = batchLabels.length > 0 ? batchLabels[koliIdx]?.phone : (form.phone || '-');
                 const targetRegionCity = batchLabels.length > 0 ? batchLabels[koliIdx]?.region_city : (form.region_city || '-');
@@ -417,8 +444,8 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
                 return (
                   <div key={koliIdx} className="print-page-full p-8 bg-white text-black font-sans text-sm border-2 border-dashed border-stone-400 rounded-2xl space-y-4 relative">
-                    <div className="absolute top-3 right-4 font-bold text-indigo-600 text-xs bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200 no-print">
-                      Label Koli: {currentKoliNumber} of {totalKoli}
+                    <div className="absolute top-3 right-4 font-bold text-black text-xs bg-stone-100 px-3 py-1.5 rounded-lg border border-stone-300 no-print">
+                      Box Label: {currentKoliNumber} of {totalKoli}
                     </div>
 
                     {templateType === 'product_identity' ? (
@@ -436,53 +463,53 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           </tr>
                         </table>
 
-                        {/* Tabel Informasi Utama (Diperbesar font dan paddingnya) */}
+                        {/* Info Table */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', width: '32%' }}>Deliver to</td><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', fontSize: '14px' }}>: {targetDeliverTo}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', verticalAlign: 'top' }}>Alamat</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetAddress}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', verticalAlign: 'top' }}>Address</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetAddress}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>PIC / Phone No.</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetPic} / {targetPhone}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>Region & City</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {targetRegionCity}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>PO NO, NAMA PROJECT</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {form.po_project}</td></tr>
-                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>PERIODE PEMASANGAN</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {form.periode}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>PO NO, PROJECT NAME</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {form.po_project}</td></tr>
+                          <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>INSTALLATION PERIOD</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {form.periode}</td></tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>CHANNEL</td><td style={{ border: '1px solid #000', padding: '9px' }}>: {form.channel}</td></tr>
                           <tr>
-                            <td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', background: '#eef2f7' }}>JUMLAH QTY & KOLI</td>
+                            <td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', background: '#eef2f7' }}>TOTAL QTY & BOX</td>
                             <td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold', fontSize: '16px', background: '#eef2f7' }}>
-                              : {displayPcs} {form.unit} (Koli {currentKoliNumber} of {totalKoli})
+                              : {displayPcs} {form.unit} (Box {currentKoliNumber} of {totalKoli})
                             </td>
                           </tr>
                           <tr><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>TRANSPORTER – DR No</td><td style={{ border: '1px solid #000', padding: '9px', fontWeight: 'bold' }}>: {targetTransporterDr}</td></tr>
                         </table>
 
-                        {/* Foto Produk */}
+                        {/* Product Photo */}
                         <table style={{ width: '100%', border: '1px solid #000', marginTop: '14px', background: '#fafafa' }}>
                           <tr>
                             {isSingleImage ? (
                               <td style={{ textAlign: 'center', padding: '16px', width: '100%' }}>
-                                <img src={activeImg} alt="Produk" style={{ maxHeight: '220px', margin: 'auto', display: 'block' }} />
+                                <img src={activeImg} alt="Product" style={{ maxHeight: '220px', margin: 'auto', display: 'block' }} />
                               </td>
                             ) : (
                               <>
                                 <td style={{ textAlign: 'center', padding: '12px', width: '50%', borderRight: '1px solid #000' }}>
-                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 1 ]</span>}
+                                  {form.imageUrl ? <img src={form.imageUrl} alt="Product 1" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Product Photo 1 ]</span>}
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '12px', width: '50%' }}>
-                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto Produk 2 ]</span>}
+                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Product 2" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Product Photo 2 ]</span>}
                                 </td>
                               </>
                             )}
                           </tr>
                         </table>
 
-                        {/* Kotak Bawah Pemecah Koli */}
+                        {/* Box info banner */}
                         <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '14px', background: '#f2f2f2', padding: '10px', border: '1px solid #000', fontWeight: 'bold' }}>
-                          <div>Koli {currentKoliNumber} of {totalKoli}</div>
+                          <div>Box {currentKoliNumber} of {totalKoli}</div>
                           <div style={{ fontSize: '13px', color: '#333', marginTop: '3px', fontWeight: 'normal' }}>
                             QTY : {displayPcs} {form.unit}
                           </div>
                         </div>
 
-                        {/* Grand Total & Tanda Tangan */}
+                        {/* Grand Total & Signatures */}
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '10px', fontSize: '11px' }}>
                           <tbody>
                             <tr>
@@ -499,32 +526,32 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '5px', fontSize: '10px' }}>
                           <tbody>
                             <tr>
-                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
-                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Sender</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Recipient</td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Nama Lengkap Pengirim</td>
+                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Sender Full Name</td>
                               <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>NINING</td>
-                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Nama Lengkap Penerima</td>
+                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Recipient Full Name</td>
                               <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Signature and Stamp</td>
                               <td style={{ border: '1px solid #000', padding: '18px 5px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Signature and Stamp</td>
                               <td style={{ border: '1px solid #000', padding: '18px 5px' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '5px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '5px' }}>Date</td>
                               <td style={{ border: '1px solid #000', padding: '5px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '5px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '5px' }}>Date</td>
                               <td style={{ border: '1px solid #000', padding: '5px' }}></td>
                             </tr>
                           </tbody>
                         </table>
 
                         <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '4px' }}>
-                          - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
+                          - Claim period for missing or damaged items is strictly 7 days from receipt.
                         </div>
 
                       </div>
@@ -570,15 +597,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                           <tr>
                             {isSingleImage ? (
                               <td style={{ textAlign: 'center', padding: '16px', width: '100%' }}>
-                                <img src={activeImg} alt="Produk" style={{ maxHeight: '220px', margin: 'auto', display: 'block' }} />
+                                <img src={activeImg} alt="Product" style={{ maxHeight: '220px', margin: 'auto', display: 'block' }} />
                               </td>
                             ) : (
                               <>
                                 <td style={{ textAlign: 'center', padding: '12px', width: '50%', borderRight: '1px solid #000' }}>
-                                  {form.imageUrl ? <img src={form.imageUrl} alt="Produk 1" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 1 ]</span>}
+                                  {form.imageUrl ? <img src={form.imageUrl} alt="Product 1" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Product Photo 1 ]</span>}
                                 </td>
                                 <td style={{ textAlign: 'center', padding: '12px', width: '50%' }}>
-                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Produk 2" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Foto 2 ]</span>}
+                                  {form.imageUrl2 ? <img src={form.imageUrl2} alt="Product 2" style={{ maxHeight: '200px', margin: 'auto', display: 'block' }} /> : <span style={{ color: '#666', fontStyle: 'italic' }}>[ Product Photo 2 ]</span>}
                                 </td>
                               </>
                             )}
@@ -587,7 +614,7 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
                         {!isSingleImage && (
                           <div style={{ border: '1px solid #000', marginTop: '14px', background: '#ffffcc' }}>
-                            <div style={{ background: '#000', color: '#fff', padding: '6px 12px', fontWeight: 'bold', fontSize: '13px' }}>TOTAL QTY (Koli {currentKoliNumber} of {totalKoli})</div>
+                            <div style={{ background: '#000', color: '#fff', padding: '6px 12px', fontWeight: 'bold', fontSize: '13px' }}>TOTAL QTY (Box {currentKoliNumber} of {totalKoli})</div>
                             <table style={{ width: '100%', fontWeight: 'bold', fontSize: '14px', padding: '10px' }}>
                               <tr><td style={{ padding: '6px' }}>POWERADE</td><td style={{ textAlign: 'center' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_powerade} PCS</td></tr>
                               <tr><td style={{ padding: '6px', borderTop: '1px dashed #ccc' }}>SPRITE NIPIS MINT</td><td style={{ textAlign: 'center', borderTop: '1px dashed #ccc' }}>=</td><td style={{ textAlign: 'right' }}>{form.qty_sprite} PCS</td></tr>
@@ -611,32 +638,32 @@ export default function CustomLabelGenerator({ isDarkMode }) {
                         <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '5px', fontSize: '10px' }}>
                           <tbody>
                             <tr>
-                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
-                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Sender</td>
+                              <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Recipient</td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Nama Lengkap Pengirim</td>
+                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Sender Full Name</td>
                               <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>NINING</td>
-                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Nama Lengkap Penerima</td>
+                              <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}>Recipient Full Name</td>
                               <td style={{ border: '1px solid #000', padding: '5px', width: '25%' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Signature and Stamp</td>
                               <td style={{ border: '1px solid #000', padding: '18px 5px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Tanda Tangan dan Stempel</td>
+                              <td style={{ border: '1px solid #000', padding: '18px 5px' }}>Signature and Stamp</td>
                               <td style={{ border: '1px solid #000', padding: '18px 5px' }}></td>
                             </tr>
                             <tr>
-                              <td style={{ border: '1px solid #000', padding: '5px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '5px' }}>Date</td>
                               <td style={{ border: '1px solid #000', padding: '5px' }}></td>
-                              <td style={{ border: '1px solid #000', padding: '5px' }}>Tanggal</td>
+                              <td style={{ border: '1px solid #000', padding: '5px' }}>Date</td>
                               <td style={{ border: '1px solid #000', padding: '5px' }}></td>
                             </tr>
                           </tbody>
                         </table>
 
                         <div style={{ fontSize: '9px', fontStyle: 'italic', marginTop: '4px' }}>
-                          - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
+                          - Claim period for missing or damaged items is strictly 7 days from receipt.
                         </div>
 
                       </div>

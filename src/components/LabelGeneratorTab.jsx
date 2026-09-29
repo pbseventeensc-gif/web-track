@@ -890,8 +890,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           
           <div className="flex items-center gap-1.5 ml-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-slate-800">
             <span className="text-[11px] font-extrabold px-1 text-slate-500">DO Format:</span>
-            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'modern' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-700 hover:text-black'}`}>Modern</button>
-            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'classic' ? 'bg-indigo-600 text-white shadow-2xs' : 'text-slate-700 hover:text-black'}`}>Classic</button>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'modern' ? 'bg-white text-indigo-600 border border-indigo-200/80 shadow-2xs font-extrabold' : 'text-slate-700 hover:text-black'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'classic' ? 'bg-white text-indigo-600 border border-indigo-200/80 shadow-2xs font-extrabold' : 'text-slate-700 hover:text-black'}`}>Classic</button>
           </div>
 
           <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">

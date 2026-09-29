@@ -204,7 +204,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       {/* Selector Role & Wilayah (Gambar 3: Zone Filter) */}
       <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex items-center justify-between">
         <div className="font-extrabold text-xs sm:text-sm flex items-center gap-2 text-black">
-          <Globe className="w-4 h-4 text-indigo-600" /> Zone Filter:
+          <Globe className="w-4 h-4 text-slate-900" /> Zone Filter:
         </div>
         <select 
           value={adminRole} 
@@ -220,17 +220,17 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
       {/* Pengaturan Reminder */}
       <div className="p-6 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs space-y-4">
-        <h3 className="font-extrabold text-xs uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
-          <Bell className="w-4 h-4 text-indigo-600" /> REMINDER SETTINGS
+        <h3 className="font-extrabold text-xs uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+          <Bell className="w-4 h-4 text-slate-900" /> REMINDER SETTINGS
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
           <div>
             <label className="block font-bold mb-1.5 text-xs text-black">Time Limit (Hours)</label>
-            <input type="number" value={reminderHours} onChange={e => setReminderHours(Number(e.target.value))} className="w-full p-2.5 border border-slate-300 rounded-xl font-extrabold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/50 bg-white text-black" />
+            <input type="number" value={reminderHours} onChange={e => setReminderHours(Number(e.target.value))} className="w-full p-2.5 border border-slate-300 rounded-xl font-extrabold font-mono focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-black" />
           </div>
           <div>
             <label className="block font-bold mb-1.5 text-xs text-black">Custom Message</label>
-            <input type="text" value={customMessage} onChange={e => setCustomMessage(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/50 bg-white text-black" />
+            <input type="text" value={customMessage} onChange={e => setCustomMessage(e.target.value)} className="w-full p-2.5 border border-slate-300 rounded-xl font-semibold focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-black" />
           </div>
         </div>
       </div>
@@ -240,8 +240,8 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
         <div className="p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 bg-white">
           
           <div className="flex flex-col">
-            <h3 className="font-extrabold text-sm uppercase tracking-wide text-indigo-600 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-indigo-600" /> FOLLOW-UP TASKS <span className="text-slate-500 font-bold">({displayedBranches.length} STORES)</span>
+            <h3 className="font-extrabold text-sm uppercase tracking-wide text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-slate-900" /> FOLLOW-UP TASKS <span className="text-slate-500 font-bold">({displayedBranches.length} STORES)</span>
             </h3>
             {hiddenBranchIds.length > 0 && (
               <button onClick={handleShowAllHidden} className="text-[10px] text-amber-600 font-bold mt-1 text-left hover:underline">

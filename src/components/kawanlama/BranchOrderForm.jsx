@@ -379,10 +379,10 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
                 className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${
                   !activePromo || isDeadlineLocked 
                     ? 'bg-stone-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-500'
+                    : 'bg-sky-500 hover:bg-sky-600'
                 }`}
               >
-                {loading ? 'Memproses...' : (isDeadlineLocked ? '🔒 Lempar Pusat Dikunci (H-3 Deadline)' : (existingOrder?.lock_status === 'UNLOCKED' ? '🔄 Resubmit / Perbarui Order' : '🚀 Submit Order Cabang'))}
+                {loading ? 'Memproses...' : (isDeadlineLocked ? 'Lempar Pusat Dikunci (H-3 Deadline)' : (existingOrder?.lock_status === 'UNLOCKED' ? 'Resubmit / Perbarui Order' : 'Submit Order Cabang'))}
               </button>
               {isDeadlineLocked && (
                 <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold text-center">

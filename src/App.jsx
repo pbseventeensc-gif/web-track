@@ -24,7 +24,13 @@ import {
   ShieldCheck,
   ChevronRight,
   Menu,
-  X
+  X,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Shield,
+  Building,
+  Key
 } from 'lucide-react';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
@@ -48,106 +54,540 @@ const PACKING_USERS = [
   { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
 ];
 
-function DonutStatCard({
-  centerValue,
-  centerLabel,
-  percent = 0,
-  items = [],
-  description,
-  isDarkMode
+function GaugeArchCard({
+  pillTitle,
+  centerPercent = 0,
+  headline,
+  subHeadline,
+  buttonLabel,
+  isDarkMode,
+  arcColor = "#EA580C"
 }) {
-  const radius = 36;
+  const radius = 42;
   const strokeWidth = 9;
-  const circumference = 2 * Math.PI * radius;
-  const safePercent = Math.max(0, Math.min(100, percent));
-  const strokeDashoffset = circumference - (safePercent / 100) * circumference;
+  const circumference = Math.PI * radius; // ~131.95 for 180 deg semi-circle
+  const safePercent = Math.max(0, Math.min(100, centerPercent));
+  const strokeOffset = circumference - (safePercent / 100) * circumference;
+
+  // Calculate tip handle node position along semi-circle arc (from 180 deg left to 0 deg right)
+  const angleRad = Math.PI - (safePercent / 100) * Math.PI;
+  const nodeX = 60 + radius * Math.cos(angleRad);
+  const nodeY = 55 - radius * Math.sin(angleRad);
 
   return (
-    <div className={`p-6 rounded-2xl border shadow-sm transition-all flex flex-col sm:flex-row items-center gap-6 ${
-      isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-slate-200'
+    <div className={`p-6 sm:p-7 rounded-[28px] border shadow-xs transition-all duration-200 hover:shadow-md flex flex-col justify-between items-center text-center space-y-4 ${
+      isDarkMode ? 'bg-neutral-800 border-neutral-700/80 text-white' : 'bg-white border-slate-200/80 text-black'
     }`}>
-      {/* Left Donut Ring Chart */}
-      <div className="relative w-36 h-36 flex-shrink-0 flex items-center justify-center">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+      {/* Top Oval Pill Badge (Image 1 Style) */}
+      <div>
+        <span className="px-5 py-1.5 rounded-full border border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900 text-black dark:text-white font-extrabold text-xs shadow-2xs inline-block">
+          {pillTitle}
+        </span>
+      </div>
+
+      {/* Speedo Arch Meter Gauge Chart */}
+      <div className="relative w-48 h-32 flex items-center justify-center my-1">
+        <svg viewBox="0 0 120 68" className="w-full h-full overflow-visible">
+          {/* Outer Dashed Tick Marks (Image 1 Style) */}
           <circle
-            cx="50"
-            cy="50"
-            r={radius}
+            cx="60"
+            cy="55"
+            r={radius + 8}
+            stroke={isDarkMode ? '#475569' : '#94A3B8'}
+            strokeWidth="1.5"
+            strokeDasharray="1.5 5"
+            className="fill-none opacity-60"
+          />
+
+          {/* Background Arch Track */}
+          <path
+            d="M 18 55 A 42 42 0 0 1 102 55"
             stroke={isDarkMode ? '#374151' : '#E2E8F0'}
             strokeWidth={strokeWidth}
+            strokeLinecap="round"
             className="fill-none"
           />
+
+          {/* Filled Progress Arch */}
           {safePercent > 0 && (
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              stroke="#EA580C"
+            <path
+              d="M 18 55 A 42 42 0 0 1 102 55"
+              stroke={arcColor}
               strokeWidth={strokeWidth}
               strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              strokeDashoffset={strokeOffset}
               strokeLinecap="round"
               className="fill-none transition-all duration-700 ease-out"
             />
           )}
+
+          {/* Floating Handle Node Indicator */}
+          <circle
+            cx={nodeX}
+            cy={nodeY}
+            r="6"
+            fill="#FFFFFF"
+            stroke={arcColor}
+            strokeWidth="3"
+            className="shadow-md"
+          />
         </svg>
 
-        <div className="absolute flex flex-col items-center justify-center text-center px-2">
-          <span
-            className="text-2xl font-black tracking-tight"
-            style={{ color: isDarkMode ? '#FFFFFF' : '#0F172A' }}
-          >
-            {centerValue}
+        {/* Big Percentage Number in Center */}
+        <div className="absolute bottom-2 flex flex-col items-center justify-center">
+          <span className="text-3xl sm:text-4xl font-black text-black dark:text-white tracking-tight leading-none">
+            {safePercent}%
           </span>
-          {centerLabel && (
-            <span
-              className="text-xs font-bold leading-tight mt-1"
-              style={{ color: isDarkMode ? '#E2E8F0' : '#334155' }}
-            >
-              {centerLabel}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Right Breakdown List */}
-      <div className="flex-1 w-full space-y-3">
-        <div className="space-y-3">
-          {items.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between text-xs sm:text-sm">
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: item.active ? '#EA580C' : '#94A3B8' }}
-                />
-                <span
-                  className="font-bold text-sm"
-                  style={{ color: isDarkMode ? '#F8FAFC' : '#0F172A' }}
-                >
-                  {item.label}
-                </span>
-              </div>
-              <span
-                className="font-extrabold text-sm"
-                style={{ color: isDarkMode ? '#FFFFFF' : '#000000' }}
-              >
-                {item.value} {item.percent !== undefined && `· ${item.percent}%`}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {description && (
-          <p
-            className="text-xs font-semibold pt-3 border-t leading-relaxed"
-            style={{
-              color: isDarkMode ? '#CBD5E1' : '#475569',
-              borderColor: isDarkMode ? '#374151' : '#E2E8F0'
-            }}
-          >
-            {description}
+      {/* Bottom Headline & Subtitle Text (Solid Black Text) */}
+      <div className="space-y-1 w-full pt-1">
+        <h3 className="text-base sm:text-lg font-black text-black dark:text-white tracking-tight leading-snug">
+          {headline}
+        </h3>
+        {subHeadline && (
+          <p className="text-xs font-bold text-black dark:text-slate-200 leading-relaxed max-w-xs mx-auto">
+            {subHeadline}
           </p>
         )}
+      </div>
+
+      {/* Bottom Button Action / Pill Tag */}
+      {buttonLabel && (
+        <div className="pt-2">
+          <span className="px-5 py-2 bg-[#EA580C] hover:bg-orange-500 text-white font-extrabold rounded-xl text-xs shadow-sm shadow-orange-600/20 inline-flex items-center gap-1.5 transition-all">
+            {buttonLabel}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GlassmorphismLoginView({
+  isBranchMode,
+  scanParam,
+  PACKING_USERS,
+  selectedPackingUser,
+  setSelectedPackingUser,
+  packingPin,
+  setPackingPin,
+  handlePackingLoginSubmit,
+  onAdminLogin,
+  onKawanLamaLogin,
+  onBranchLogin
+}) {
+  const [activeTab, setActiveTab] = useState(isBranchMode ? 'branch' : 'admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [accessCode, setAccessCode] = useState('');
+  const [pinCode, setPinCode] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setErrorMsg('');
+  }, [activeTab]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setIsLoading(true);
+
+    try {
+      if (activeTab === 'admin') {
+        if (username.toUpperCase() === 'ADMIN' && password === '123456') {
+          onAdminLogin({ role: 'admin', name: 'Administrator' });
+        } else {
+          setErrorMsg('Username atau Password Admin Pusat salah!');
+        }
+      } else if (activeTab === 'kawan_lama') {
+        if (username === 'admin_kl' && password === 'kawanlama2026') {
+          onKawanLamaLogin({ role: 'admin_kl', name: 'Admin Kawan Lama' });
+        } else {
+          setErrorMsg('Username atau Password Admin Kawan Lama salah!');
+        }
+      } else if (activeTab === 'branch') {
+        const { data } = await supabase
+          .from('kl_branch_access')
+          .select('*, kl_branches(branch_name)')
+          .eq('access_code', accessCode.toUpperCase())
+          .eq('pin_code', pinCode)
+          .maybeSingle();
+
+        if (data) {
+          onBranchLogin({ role: 'branch', branch_id: data.branch_id, branch_name: data.kl_branches.branch_name });
+        } else {
+          setErrorMsg('Kode Cabang atau PIN Salah!');
+        }
+      }
+    } catch (err) {
+      setErrorMsg('Terjadi kesalahan sistem!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen relative overflow-hidden bg-slate-950 flex items-center justify-center p-4 sm:p-6 select-none font-sans">
+      {/* Colorful Gradient Ambient Light Orbs (Matching Image 2 Liquid Background) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[520px] h-[520px] rounded-full bg-gradient-to-tr from-rose-600 via-orange-500 to-amber-500 opacity-60 blur-[130px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[520px] h-[520px] rounded-full bg-gradient-to-bl from-indigo-600 via-purple-600 to-pink-600 opacity-60 blur-[130px] pointer-events-none animate-pulse" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] rounded-full bg-gradient-to-r from-orange-500/25 via-rose-500/25 to-indigo-500/25 blur-[150px] pointer-events-none" />
+
+      {/* Glassmorphism Main Card */}
+      <div className="relative z-10 w-full max-w-md p-8 sm:p-10 rounded-[32px] bg-white/10 dark:bg-slate-900/40 backdrop-blur-2xl border border-white/20 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] text-white space-y-6">
+
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">Sign in</h1>
+          <p className="text-sm text-white/80 font-normal">
+            {scanParam ? 'Good to see you again. (Paking Mode)' : 'Good to see you again.'}
+          </p>
+        </div>
+
+        {scanParam ? (
+          /* Packing Staff Form */
+          <form onSubmit={handlePackingLoginSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-white/90 block mb-1.5">Pilih Staf Paking</label>
+              <select
+                value={selectedPackingUser}
+                onChange={(e) => setSelectedPackingUser(e.target.value)}
+                className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white focus:outline-none transition-all text-sm font-medium cursor-pointer"
+              >
+                {PACKING_USERS.map(u => (
+                  <option key={u.id} value={u.id} className="bg-slate-900 text-white">{u.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-white/90 block mb-1.5">PIN Keamanan</label>
+              <div className="relative flex items-center">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={packingPin}
+                  onChange={(e) => setPackingPin(e.target.value)}
+                  placeholder="Masukkan 4 digit PIN"
+                  maxLength={4}
+                  required
+                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm tracking-widest text-center font-bold pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-white text-slate-900 hover:bg-slate-100 font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
+            >
+              Sign in <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+        ) : (
+          /* Portal Login Form (Admin / Kawan Lama / Branch) */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {activeTab !== 'branch' ? (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-white/90 block mb-1.5">
+                    {activeTab === 'admin' ? 'Username' : 'Email address'}
+                  </label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={activeTab === 'admin' ? 'ADMIN' : 'admin_kl'}
+                    required
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-white/90 block mb-1.5">Password</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
+                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-xs font-semibold text-white/90 block mb-1.5">Kode Cabang</label>
+                  <input
+                    type="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="AZKO-001"
+                    required
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium uppercase"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-white/90 block mb-1.5">PIN 6 Digit</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={pinCode}
+                      onChange={(e) => setPinCode(e.target.value)}
+                      placeholder="••••••"
+                      maxLength={6}
+                      required
+                      className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium tracking-widest text-center pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Remember me & Forgot Password */}
+            <div className="flex items-center justify-between text-xs text-white/80 pt-1">
+              <label className="flex items-center gap-2 cursor-pointer hover:text-white">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="rounded border-white/30 bg-white/10 text-orange-500 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                />
+                <span>Remember me</span>
+              </label>
+              <span className="hover:underline cursor-pointer opacity-80 hover:opacity-100">Forgot password?</span>
+            </div>
+
+            {errorMsg && (
+              <div className="p-3 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-xs text-center font-medium">
+                {errorMsg}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-white text-slate-900 hover:bg-slate-100 font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+            >
+              {isLoading ? 'Processing...' : 'Sign in'} <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
+        )}
+
+        {/* Divider & Role Pills */}
+        {!scanParam && (
+          <div className="space-y-4 pt-2">
+            <div className="relative flex items-center justify-center">
+              <div className="border-t border-white/20 w-full" />
+              <span className="bg-slate-900/30 backdrop-blur-md px-3 text-[11px] text-white/70 uppercase tracking-wider font-medium shrink-0">
+                or continue with
+              </span>
+              <div className="border-t border-white/20 w-full" />
+            </div>
+
+            {/* Role Pills matching bottom icons in Image 2 */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('admin')}
+                className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'admin'
+                    ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
+                    : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
+                }`}
+              >
+                <Key className="w-4 h-4 text-amber-300" />
+                <span>Admin Pusat</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('kawan_lama')}
+                className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'kawan_lama'
+                    ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
+                    : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
+                }`}
+              >
+                <Shield className="w-4 h-4 text-emerald-300" />
+                <span>Admin KL</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('branch')}
+                className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === 'branch'
+                    ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
+                    : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
+                }`}
+              >
+                <Building className="w-4 h-4 text-sky-300" />
+                <span>Cabang</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Subtitle / Demo text matching Image 2 */}
+        <div className="text-center pt-1">
+          <p className="text-[11px] text-white/50 tracking-wide font-normal">
+            Demo — Web-Track Monitoring Portal
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+function ComingSoonDashboardView({ title = 'PRODUCTION DASHBOARD' }) {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const seconds = time.getSeconds();
+  const minutes = time.getMinutes();
+  const hours = time.getHours() % 12;
+
+  const secondDeg = seconds * 6; // 360 / 60
+  const minuteDeg = minutes * 6 + seconds * 0.1;
+  const hourDeg = hours * 30 + minutes * 0.5;
+
+  return (
+    <div className="relative w-full min-h-[580px] rounded-[32px] overflow-hidden bg-slate-950 text-white flex flex-col items-center justify-center p-8 sm:p-12 shadow-2xl border border-white/10 select-none">
+
+      {/* Dark Cinematic Background Overlay with Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-20 filter grayscale contrast-150 scale-105 pointer-events-none"
+        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=1600&auto=format&fit=crop')` }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/60 pointer-events-none" />
+
+      {/* Clock Face Dial & Ticks Overlay */}
+      <div className="relative z-10 w-[360px] h-[360px] sm:w-[420px] sm:h-[420px] flex items-center justify-center">
+
+        {/* SVG Clock Ticks & Live Hands */}
+        <svg viewBox="0 0 300 300" className="absolute inset-0 w-full h-full overflow-visible pointer-events-none">
+          {/* 12 Radial Ticks */}
+          {[...Array(12)].map((_, i) => {
+            const angle = i * 30 * (Math.PI / 180);
+            const x1 = 150 + 120 * Math.sin(angle);
+            const y1 = 150 - 120 * Math.cos(angle);
+            const x2 = 150 + 135 * Math.sin(angle);
+            const y2 = 150 - 135 * Math.cos(angle);
+            return (
+              <line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="#FFFFFF"
+                strokeWidth={i % 3 === 0 ? "3" : "1.5"}
+                strokeLinecap="round"
+                className="opacity-80"
+              />
+            );
+          })}
+
+          {/* Hour Hand (Thick White) */}
+          <line
+            x1="150"
+            y1="150"
+            x2="150"
+            y2="85"
+            stroke="#FFFFFF"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            style={{
+              transformOrigin: '150px 150px',
+              transform: `rotate(${hourDeg}deg)`
+            }}
+          />
+
+          {/* Minute Hand (Medium White) */}
+          <line
+            x1="150"
+            y1="150"
+            x2="150"
+            y2="60"
+            stroke="#FFFFFF"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            style={{
+              transformOrigin: '150px 150px',
+              transform: `rotate(${minuteDeg}deg)`
+            }}
+          />
+
+          {/* Red Second Hand (Thin Red Line Extending Through Center) */}
+          <line
+            x1="150"
+            y1="200"
+            x2="150"
+            y2="30"
+            stroke="#E51B24"
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={{
+              transformOrigin: '150px 150px',
+              transform: `rotate(${secondDeg}deg)`
+            }}
+          />
+
+          {/* Center Red Pivot Dot */}
+          <circle cx="150" cy="150" r="4.5" fill="#E51B24" stroke="#FFFFFF" strokeWidth="1.5" />
+        </svg>
+
+        {/* Center Typography Overlay */}
+        <div className="relative z-20 flex flex-col items-center justify-center text-center px-4 pointer-events-auto space-y-2">
+
+          <p className="text-xs sm:text-sm font-extrabold tracking-[0.35em] text-white/80 uppercase">
+            {title} IS
+          </p>
+
+          <h1 className="text-5xl sm:text-7xl font-black tracking-[0.2em] text-white uppercase leading-none py-1 drop-shadow-2xl">
+            COMING<br />SOON
+          </h1>
+
+          <p className="text-xs sm:text-sm font-extrabold tracking-[0.35em] text-white/90 uppercase pt-2">
+            STAY TUNED!
+          </p>
+        </div>
+
       </div>
     </div>
   );
@@ -206,6 +646,10 @@ export default function App() {
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showBranchLoginModal, setShowBranchLoginModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (scanParam) {
@@ -528,105 +972,30 @@ export default function App() {
       ? currentBranch 
       : (currentAdmin || currentKawanLamaAdmin);
 
-  if (!isAuthenticated && scanParam) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
-        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-          <div className="text-5xl">📦</div>
-          <div>
-            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Login Staf Paking</h1>
-            <p className="text-xs opacity-60 mt-1">Pilih nama Anda dan masukkan PIN untuk verifikasi paking.</p>
-          </div>
-          
-          <form onSubmit={handlePackingLoginSubmit} className="space-y-4 text-left">
-            <div>
-              <label className="text-xs font-bold block mb-1">Pilih Staf Paking:</label>
-              <select 
-                value={selectedPackingUser} 
-                onChange={(e) => setSelectedPackingUser(e.target.value)} 
-                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 cursor-pointer font-bold"
-              >
-                {PACKING_USERS.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold block mb-1">PIN Keamanan:</label>
-              <input 
-                type="password" 
-                value={packingPin} 
-                onChange={(e) => setPackingPin(e.target.value)} 
-                placeholder="Masukkan 4 digit PIN" 
-                maxLength={4}
-                required 
-                className="w-full px-4 py-3 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700 tracking-widest text-center font-bold text-lg" 
-              />
-            </div>
-            <button type="submit" className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-              🚀 MASUK KE PANEL PAKING
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   if (!isAuthenticated) {
     return (
-      <div className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-slate-100 text-stone-800'}`}>
-        <div className={`max-w-md w-full p-8 rounded-3xl border shadow-2xl text-center space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-stone-200'}`}>
-          <div className="text-5xl">🔐</div>
-          <div>
-            <h1 className="text-xl font-black uppercase text-indigo-600 dark:text-indigo-400">Web-Track Monitoring</h1>
-            <p className="text-xs opacity-60 mt-1">Sistem Terpadu Manajemen SPK & Kawan Lama</p>
-          </div>
-          
-          <div className="space-y-3 pt-2">
-            {isBranchMode ? (
-              <button onClick={() => setShowBranchLoginModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                🏢 LOGIN CABANG KAWAN LAMA
-              </button>
-            ) : (
-              <>
-                <button onClick={() => setShowAdminLoginModal(true)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                  🔑 LOGIN ADMIN PUSAT
-                </button>
-                <button onClick={() => setShowKawanLamaAdminModal(true)} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer">
-                  🏢 LOGIN ADMIN KAWAN LAMA (3 Tab)
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {showKawanLamaAdminModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className={`max-w-sm w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-              <h3 className="text-sm font-black uppercase text-emerald-600">Login Admin Kawan Lama</h3>
-              <p className="text-[11px] opacity-70">Akses khusus: Cetak Label & SJ, Project Kawan Lama, dan Customer & Label Custom.</p>
-              
-              <form onSubmit={handleKawanLamaAdminLogin} className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold block mb-1">Username:</label>
-                  <input type="text" value={klAdminUser} onChange={(e) => setKlAdminUser(e.target.value)} placeholder="admin_kl" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
-                </div>
-                <div>
-                  <label className="text-xs font-bold block mb-1">Password:</label>
-                  <input type="password" value={klAdminPass} onChange={(e) => setKlAdminPass(e.target.value)} placeholder="kawanlama2026" required className="w-full px-3 py-2.5 rounded-xl border text-xs bg-stone-50 dark:bg-neutral-900 dark:border-neutral-700" />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button type="button" onClick={() => setShowKawanLamaAdminModal(false)} className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-stone-300 dark:bg-neutral-700">Batal</button>
-                  <button type="submit" className="w-1/2 py-2.5 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white">Masuk</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
-        <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
-      </div>
+      <GlassmorphismLoginView
+        isBranchMode={isBranchMode}
+        scanParam={scanParam}
+        PACKING_USERS={PACKING_USERS}
+        selectedPackingUser={selectedPackingUser}
+        setSelectedPackingUser={setSelectedPackingUser}
+        packingPin={packingPin}
+        setPackingPin={setPackingPin}
+        handlePackingLoginSubmit={handlePackingLoginSubmit}
+        onAdminLogin={(admin) => {
+          localStorage.setItem('kl_admin_session', JSON.stringify(admin));
+          setCurrentAdmin(admin);
+        }}
+        onKawanLamaLogin={(klAdmin) => {
+          localStorage.setItem('kl_special_admin_session', JSON.stringify(klAdmin));
+          setCurrentKawanLamaAdmin(klAdmin);
+        }}
+        onBranchLogin={(branch) => {
+          localStorage.setItem('kl_branch_session', JSON.stringify(branch));
+          setCurrentBranch(branch);
+        }}
+      />
     );
   }
 
@@ -636,44 +1005,68 @@ export default function App() {
         
         {/* HEADER BAR */}
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-              <Layers className="w-5 h-5" />
+          <div className="flex items-center gap-3.5">
+            {/* Official 3 Curved Bars Wellen Logo */}
+            <div className="flex items-end gap-1 h-9 shrink-0">
+              <div className="w-2.5 h-5 bg-[#FFE600] rounded-t-full shadow-2xs" />
+              <div className="w-2.5 h-7 bg-[#FF7A00] rounded-t-full shadow-2xs" />
+              <div className="w-2.5 h-9 bg-[#E51B24] rounded-t-full shadow-2xs" />
             </div>
             <div>
-              <h1 className={`text-lg font-extrabold tracking-tight ${isDarkMode ? 'text-neutral-100' : 'text-stone-800'}`}>
-                {scanParam ? 'PANEL STAF PAKING (QR SCAN MODE)' : (isBranchMode ? 'FORM CABANG KAWAN LAMA' : (currentKawanLamaAdmin ? 'PORTAL ADMIN KAWAN LAMA' : 'WEB-TRACK MONITORING'))}
+              <h1 className={`text-base font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                Web Tracking Monitoring
               </h1>
-              <p className={`text-xs font-medium ${isDarkMode ? 'text-neutral-400' : 'text-stone-500'}`}>
-                {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: ${currentAdmin?.username || 'Aktif'}`))}
+              <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
-            <button onClick={toggleTheme} className={`px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all border shadow-sm cursor-pointer ${isDarkMode ? 'bg-neutral-700 hover:bg-neutral-600 text-amber-300 border-neutral-600' : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'}`}>
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-stone-600" />}
+          <div className="flex items-center gap-2.5 flex-wrap mt-3 sm:mt-0">
+            {/* Theme Toggle Pill Button Matching Reference */}
+            <button
+              onClick={toggleTheme}
+              className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-2 transition-all border shadow-2xs cursor-pointer ${
+                isDarkMode
+                  ? 'bg-neutral-800 hover:bg-neutral-700 text-amber-300 border-neutral-700'
+                  : 'bg-slate-100/80 hover:bg-slate-200 text-slate-800 border-slate-200'
+              }`}
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
               <span>{isDarkMode ? 'Tema Terang' : 'Tema Gelap'}</span>
             </button>
 
+            {/* Logout Red Pill Button Matching Reference */}
             {scanParam && (
-              <button onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <LogOut className="w-3.5 h-3.5" /> Logout Staf Paking
+              <button
+                onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }}
+                className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" /> Logout Staf Paking
               </button>
             )}
             {isBranchMode && (
-              <button onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <LogOut className="w-3.5 h-3.5" /> Logout Cabang
+              <button
+                onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }}
+                className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" /> Logout Cabang
               </button>
             )}
             {currentKawanLamaAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <LogOut className="w-3.5 h-3.5" /> Logout Admin KL
+              <button
+                onClick={() => { localStorage.removeItem('kl_special_admin_session'); setCurrentKawanLamaAdmin(null); window.location.reload(); }}
+                className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" /> Logout Admin KL
               </button>
             )}
             {currentAdmin && (
-              <button onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }} className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl text-xs font-bold shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer">
-                <LogOut className="w-3.5 h-3.5" /> Logout Admin
+              <button
+                onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }}
+                className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" /> Logout Admin
               </button>
             )}
           </div>
@@ -689,12 +1082,16 @@ export default function App() {
             ) : (
               <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-                {/* MODERN SIDEBAR NAVIGATION (COMPACT LEFT) */}
-                <div className={`w-full lg:w-60 flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-stone-200/80 text-stone-800'}`}>
+                {/* MODERN SIDEBAR NAVIGATION MATCHING REFERENCE IMAGE */}
+                <div className={`w-full lg:w-64 flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 transition-colors ${
+                  isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-slate-200/80 text-slate-900'
+                }`}>
 
                   {currentKawanLamaAdmin ? (
                     <div>
-                      <h3 className="text-[11px] font-extrabold uppercase tracking-wider px-3 mb-2" style={{ color: isDarkMode ? '#a3a3a3' : '#111827' }}>
+                      <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                        isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                      }`}>
                         Portal Admin Kawan Lama
                       </h3>
                       <div className="space-y-1">
@@ -705,23 +1102,25 @@ export default function App() {
                         ].map(item => {
                           const isActive = activeTab === item.id;
                           const ItemIcon = item.icon;
-                          const fontColor = isActive ? '#ffffff' : (isDarkMode ? '#ffffff' : '#000000');
                           return (
                             <button
                               key={item.id}
                               onClick={() => setActiveTab(item.id)}
-                              style={{ color: fontColor }}
-                              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                              className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                 isActive
-                                  ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                  : 'hover:bg-slate-100 dark:hover:bg-neutral-700/60 font-medium'
+                                  ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
+                                  : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
                               }`}
                             >
-                              <div className="flex items-center gap-2.5">
-                                <ItemIcon className="w-4 h-4 flex-shrink-0" style={{ color: fontColor }} />
-                                <span className="font-medium" style={{ color: fontColor }}>{item.label}</span>
+                              <div className="flex items-center gap-3">
+                                <ItemIcon className={`w-4 h-4 flex-shrink-0 ${
+                                  isActive
+                                    ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
+                                    : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
+                                }`} />
+                                <span>{item.label}</span>
                               </div>
-                              {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+                              {isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
                             </button>
                           );
                         })}
@@ -731,13 +1130,15 @@ export default function App() {
                     <>
                       {/* GROUP 1: PRODUKSI & MONITORING */}
                       <div>
-                        <h3 className="text-[11px] font-extrabold uppercase tracking-wider px-3 mb-2" style={{ color: isDarkMode ? '#a3a3a3' : '#111827' }}>
-                          Produksi & Monitoring
+                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                        }`}>
+                          PRODUKSI & MONITORING
                         </h3>
                         <div className="space-y-1">
                           {[
                             { id: 'dashboard', label: 'Production Dashboard', icon: LayoutDashboard },
-                            { id: 'design', label: 'Desain & Pra-Cetak', icon: Palette },
+                            { id: 'design', label: 'Desk Print', icon: Palette },
                             { id: 'produksi', label: 'Produksi Cetak', icon: Printer },
                             { id: 'finishing', label: 'Finishing Panel', icon: Scissors },
                             { id: 'paking', label: 'Paking Station', icon: Package },
@@ -745,23 +1146,25 @@ export default function App() {
                           ].map(item => {
                             const isActive = activeTab === item.id;
                             const ItemIcon = item.icon;
-                            const fontColor = isActive ? '#ffffff' : (isDarkMode ? '#ffffff' : '#000000');
                             return (
                               <button
                                 key={item.id}
                                 onClick={() => setActiveTab(item.id)}
-                                style={{ color: fontColor }}
-                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                                className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                   isActive
-                                    ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                    : 'hover:bg-slate-100 dark:hover:bg-neutral-700/60 font-medium'
+                                    ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
+                                    : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5">
-                                  <ItemIcon className="w-4 h-4 flex-shrink-0" style={{ color: fontColor }} />
-                                  <span className="font-medium" style={{ color: fontColor }}>{item.label}</span>
+                                <div className="flex items-center gap-3">
+                                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${
+                                    isActive
+                                      ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
+                                      : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
+                                  }`} />
+                                  <span>{item.label}</span>
                                 </div>
-                                {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+                                {isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
                               </button>
                             );
                           })}
@@ -770,8 +1173,10 @@ export default function App() {
 
                       {/* GROUP 2: PROJECT & CUSTOM MODUL */}
                       <div>
-                        <h3 className="text-[11px] font-extrabold uppercase tracking-wider px-3 mb-2" style={{ color: isDarkMode ? '#a3a3a3' : '#111827' }}>
-                          Project & Custom Modul
+                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                        }`}>
+                          PROJECT & CUSTOM MODUL
                         </h3>
                         <div className="space-y-1">
                           {[
@@ -782,30 +1187,34 @@ export default function App() {
                             const isLocked = item.id === 'kawan_lama' && !currentAdmin;
                             const isActive = activeTab === item.id;
                             const ItemIcon = item.icon;
-                            const fontColor = isLocked ? '#9ca3af' : (isActive ? '#ffffff' : (isDarkMode ? '#ffffff' : '#000000'));
                             return (
                               <button
                                 key={item.id}
                                 onClick={() => !isLocked && setActiveTab(item.id)}
                                 disabled={isLocked}
                                 title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
-                                style={{ color: fontColor }}
-                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                                className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                   isLocked
-                                    ? 'cursor-not-allowed bg-stone-50/50 dark:bg-neutral-900/40 font-medium'
+                                    ? 'cursor-not-allowed bg-stone-50/50 dark:bg-neutral-900/40 text-slate-400 font-medium'
                                     : isActive
-                                      ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/20'
-                                      : 'hover:bg-slate-100 dark:hover:bg-neutral-700/60 font-medium'
+                                      ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
+                                      : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
                                 }`}
                               >
-                                <div className="flex items-center gap-2.5">
-                                  <ItemIcon className="w-4 h-4 flex-shrink-0" style={{ color: fontColor }} />
-                                  <span className="font-medium" style={{ color: fontColor }}>{item.label}</span>
+                                <div className="flex items-center gap-3">
+                                  <ItemIcon className={`w-4 h-4 flex-shrink-0 ${
+                                    isLocked
+                                      ? 'text-slate-400'
+                                      : isActive
+                                        ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
+                                        : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
+                                  }`} />
+                                  <span>{item.label}</span>
                                 </div>
                                 {isLocked ? (
                                   <Lock className="w-3.5 h-3.5 text-amber-500/80" />
                                 ) : (
-                                  isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />
+                                  isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />
                                 )}
                               </button>
                             );
@@ -819,80 +1228,24 @@ export default function App() {
 
                 {/* MAIN PANEL CONTENT (MAXIMIZED RIGHT AREA) */}
                 <div className="flex-1 min-w-0 space-y-6">
-                  {activeTab === 'dashboard' && (() => {
-                    const printDone = spkList.filter(s => Number(s.qty_print) > 0 && Number(s.qty_print) >= Number(s.qty_order || 1)).length;
-                    const finishDone = spkList.filter(s => Number(s.qty_finish) > 0 && Number(s.qty_finish) >= Number(s.qty_order || 1)).length;
-                    const packDone = spkList.filter(s => Number(s.qty_pack) > 0 && Number(s.qty_pack) >= Number(s.qty_order || 1)).length;
-                    const shipDone = spkList.filter(s => Number(s.qty_ship) > 0 && Number(s.qty_ship) >= Number(s.qty_order || 1)).length;
-
-                    const shipPercent = totalSpk > 0 ? Math.round((shipDone / totalSpk) * 100) : 0;
-                    const finishPercent = totalSpk > 0 ? Math.round((finishDone / totalSpk) * 100) : 0;
-                    const packPercent = totalSpk > 0 ? Math.round((packDone / totalSpk) * 100) : 0;
-                    const printPercent = totalSpk > 0 ? Math.round((printDone / totalSpk) * 100) : 0;
-
-                    return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <DonutStatCard
-                          isDarkMode={isDarkMode}
-                          centerValue={`${shipPercent}%`}
-                          centerLabel={`${shipDone} dari ${totalSpk} SPK`}
-                          percent={shipPercent}
-                          items={[
-                            { label: 'Selesai Terkirim (Shipped)', value: `${shipDone} SPK`, percent: shipPercent, active: true },
-                            { label: 'Belum Terkirim / Dalam Proses', value: `${totalSpk - shipDone} SPK`, percent: 100 - shipPercent, active: false }
-                          ]}
-                          description={`Dari total ${totalSpk} SPK aktif, ${shipDone} SPK telah menyelesaikan seluruh tahapan pengiriman.`}
-                        />
-
-                        <DonutStatCard
-                          isDarkMode={isDarkMode}
-                          centerValue={`${finishPercent}%`}
-                          centerLabel={`${finishDone} dari ${totalSpk} SPK`}
-                          percent={finishPercent}
-                          items={[
-                            { label: 'Selesai Finishing', value: `${finishDone} SPK`, percent: finishPercent, active: true },
-                            { label: 'Proses Cetak & Pra-Cetak', value: `${totalSpk - finishDone} SPK`, percent: 100 - finishPercent, active: false }
-                          ]}
-                          description={`Total ${finishDone} SPK telah menyelesaikan pengerjaan finishing dan siap paking.`}
-                        />
-
-                        <DonutStatCard
-                          isDarkMode={isDarkMode}
-                          centerValue={`${packPercent}%`}
-                          centerLabel={`${packDone} dari ${totalSpk} SPK`}
-                          percent={packPercent}
-                          items={[
-                            { label: 'Selesai Paking Station', value: `${packDone} SPK`, percent: packPercent, active: true },
-                            { label: 'Proses Paking / Antrean', value: `${totalSpk - packDone} SPK`, percent: 100 - packPercent, active: false }
-                          ]}
-                          description={`Sebanyak ${packDone} SPK telah dibungkus dan ditempeli stiker pengiriman.`}
-                        />
-
-                        <DonutStatCard
-                          isDarkMode={isDarkMode}
-                          centerValue={`${printPercent}%`}
-                          centerLabel={`${printDone} dari ${totalSpk} SPK`}
-                          percent={printPercent}
-                          items={[
-                            { label: 'Selesai Cetak (Printed)', value: `${printDone} SPK`, percent: printPercent, active: true },
-                            { label: 'Belum Dicetak', value: `${totalSpk - printDone} SPK`, percent: 100 - printPercent, active: false }
-                          ]}
-                          description={`Pencatatan kuantitas produksi cetak SPK aktif di sistem.`}
-                        />
-                      </div>
-                    );
-                  })()}
+                  {activeTab === 'dashboard' && (
+                    <ComingSoonDashboardView title="PRODUCTION DASHBOARD" />
+                  )}
 
                   {activeTab === 'design' && (
                     <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
                   )}
 
                   {activeTab === 'finishing' && (
-                    <FinishingPanel isDarkMode={isDarkMode} spkList={spkList} fetchSpkData={fetchSpkData} />
+                    <ComingSoonDashboardView title="FINISHING PANEL" />
                   )}
 
                   {activeTab === 'paking' && (
                     <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab === 'pengiriman' && (
+                    <ComingSoonDashboardView title="PENGIRIMAN & SURAT JALAN" />
                   )}
 
                   {activeTab === 'kawan_lama' && (
@@ -907,7 +1260,7 @@ export default function App() {
                     <CustomModulesIndex isDarkMode={isDarkMode} />
                   )}
 
-                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && (
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
                     <MainTrackingTable
                       isDarkMode={isDarkMode}
                       activeTab={activeTab}

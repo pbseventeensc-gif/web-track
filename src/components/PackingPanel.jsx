@@ -1795,7 +1795,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     key={sheetName}
                     className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors border ${
                       isChecked
-                        ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-bold'
+                        ? 'bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400 font-bold'
                         : 'hover:bg-stone-100 dark:hover:bg-neutral-800 border-transparent text-stone-600 dark:text-stone-300'
                     }`}
                   >
@@ -1809,7 +1809,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           setSelectedSheets((prev) => prev.filter((s) => s !== sheetName));
                         }
                       }}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      className="w-4 h-4 rounded accent-orange-600 focus:ring-orange-500 cursor-pointer"
                     />
                     <span className="text-xs flex-1">{sheetName}</span>
                   </label>
@@ -1827,9 +1827,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <button
                 onClick={handleExecuteSelectedSheetsImport}
                 disabled={isImporting || selectedSheets.length === 0}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                className="px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               >
-                {isImporting ? '⏳ Mengimport...' : `⚡ Import ${selectedSheets.length} Sheet`}
+                {isImporting ? 'Mengimport...' : `Import ${selectedSheets.length} Sheet`}
               </button>
             </div>
           </div>
@@ -2018,7 +2018,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     ) : (
                       <div className="w-16 h-10 rounded-lg bg-stone-200 dark:bg-neutral-600 flex items-center justify-center text-[9px] text-stone-400 italic">No Foto</div>
                     )}
-                    <label className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95">
+                    <label className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95">
                       Ganti Foto
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSingleImageOverride(editingRowItem.id, i, e.target.files[0])} />
                     </label>

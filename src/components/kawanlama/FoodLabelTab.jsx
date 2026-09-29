@@ -530,37 +530,37 @@ export default function FoodLabelTab({ isDarkMode }) {
 
       {/* Header & Controls Panel */}
       <div className={`no-print p-6 rounded-3xl border shadow-sm flex flex-wrap items-center justify-between gap-4 ${
-        isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'
+        isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         <div>
-          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white">
+          <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
             Custom Food Module
           </span>
-          <h2 className="text-lg font-black tracking-wide uppercase mt-2 flex items-center gap-2">
-            <Layers className="text-emerald-600" /> Food Label & Pool Delivery Order Generator
+          <h2 className={`text-lg font-bold tracking-wide mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+            Label Food & Delivery Order
           </h2>
-          <p className="text-xs opacity-70 mt-0.5">Cetak Label Toko (2 Label per Lembar HVS A4 Landscape) & Surat Jalan Pool (20x13 cm).</p>
         </div>
         
         <div className="flex items-center gap-3 flex-wrap">
-          <label className="cursor-pointer bg-stone-700 hover:bg-stone-800 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
-            <FileSpreadsheet size={16} />
-            {wellenLogo ? 'Change Wellen Logo' : 'Upload Wellen Logo'}
+          <label className={`cursor-pointer bg-transparent hover:bg-slate-100/80 ${isDarkMode ? 'text-white border-neutral-700 hover:bg-neutral-800/80' : 'text-slate-900 border-slate-300'} border px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition`}>
+            <FileSpreadsheet size={16} className={isDarkMode ? 'text-neutral-300' : 'text-slate-600'} />
+            {wellenLogo ? 'Ganti Logo' : 'Upload Logo'}
             <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
           </label>
 
-          <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow transition">
-            <FileSpreadsheet size={16} />
-            Upload Allocation Excel
+          <label className={`cursor-pointer bg-transparent hover:bg-slate-100/80 ${isDarkMode ? 'text-white border-neutral-700 hover:bg-neutral-800/80' : 'text-slate-900 border-slate-300'} border px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition`}>
+            <FileSpreadsheet size={16} className={isDarkMode ? 'text-neutral-300' : 'text-slate-600'} />
+            Upload Excel
             <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} className="hidden" />
           </label>
           
           <button 
             onClick={handlePrint}
             disabled={excelData.length === 0}
-            className="bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-700 dark:hover:bg-neutral-600 px-4 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow disabled:opacity-50 transition cursor-pointer"
+            className={`cursor-pointer bg-transparent hover:bg-slate-100/80 ${isDarkMode ? 'text-white border-neutral-700 hover:bg-neutral-800/80' : 'text-slate-900 border-slate-300'} border px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed`}
           >
-            <Printer size={16} /> Print / Export PDF
+            <Printer size={16} className={isDarkMode ? 'text-neutral-300' : 'text-slate-600'} />
+            Cetak PDF
           </button>
         </div>
       </div>

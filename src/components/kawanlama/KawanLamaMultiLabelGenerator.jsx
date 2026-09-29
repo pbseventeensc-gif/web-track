@@ -178,179 +178,210 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
     <div className="p-6 rounded-3xl shadow-xs space-y-6 border bg-white border-slate-200 text-black">
       
       {/* Kontrol Atas / Panel Kontrol */}
-      <div className="flex flex-col border-b border-slate-200 pb-5 gap-5 print:hidden">
+      <div className="flex flex-col border-b border-slate-200/80 pb-5 gap-5 print:hidden">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="font-extrabold text-base tracking-wide text-black flex items-center gap-2">
-              <Tag className="w-5 h-5 text-indigo-600" /> Kawan Lama Group - Multi Label & Delivery Order Generator
-            </h2>
-            <p className="text-xs mt-0.5 text-slate-500 font-medium">
-              Set company, promo name, SPK number, creator, locked Wellen logo, and upload allocation Excel.
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-slate-100 rounded-xl text-slate-700 border border-slate-200">
+              <Tag className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm tracking-wide text-slate-900">
+                Label & Delivery Order
+              </h2>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Set company details, promo title, SPK/DO number, and upload allocation Excel.
+              </p>
+            </div>
           </div>
 
           {/* Tombol Switch Mode Cetak */}
-          <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
             <button
               onClick={() => setPrintMode('labels')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                 printMode === 'labels' 
-                  ? 'bg-indigo-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                  ? 'bg-white text-slate-900 border border-slate-300 shadow-2xs font-semibold'
+                  : 'text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <Tag className="w-3.5 h-3.5" /> Print 2-in-1 Labels
+              <Tag className="w-3.5 h-3.5" /> Labels
             </button>
             <button
               onClick={() => setPrintMode('do')}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
                 printMode === 'do' 
-                  ? 'bg-indigo-600 text-white shadow-xs font-extrabold'
-                  : 'text-slate-700 hover:text-black hover:bg-slate-200'
+                  ? 'bg-white text-slate-900 border border-slate-300 shadow-2xs font-semibold'
+                  : 'text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <FileText className="w-3.5 h-3.5" /> Print Delivery Order (DO)
+              <FileText className="w-3.5 h-3.5" /> Delivery Order
             </button>
           </div>
         </div>
 
-        {/* 3-COLUMN ENTERPRISE FORM GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-start bg-slate-50 p-5 rounded-2xl border border-slate-200">
+        {/* ENTERPRISE FORM GRID (STYLED LIKE IMAGE 1) */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
 
-          {/* 1. Pilihan PT / Perusahaan */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-extrabold text-black">
-                Select Company / PT:
-              </label>
-              <button onClick={() => setShowAddCompanyModal(true)} className="text-[11px] text-indigo-600 font-black hover:underline flex items-center gap-1 cursor-pointer">
-                <PlusCircle className="w-3 h-3" /> Add Company
-              </button>
-            </div>
-            {isManualCompany ? (
-              <div className="flex gap-1.5">
+          {/* SECTION 1: COMPANY & PROJECT INFORMATION */}
+          <div className="space-y-3">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase block">
+              COMPANY & PROJECT INFORMATION
+            </span>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+
+              {/* 1. Pilihan PT / Perusahaan */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Select Company / PT <span className="text-rose-500 font-bold ml-0.5">*</span>
+                  </label>
+                  <button onClick={() => setShowAddCompanyModal(true)} className="text-[11px] text-slate-700 font-semibold hover:underline flex items-center gap-1 cursor-pointer">
+                    <PlusCircle className="w-3 h-3" /> Add Company
+                  </button>
+                </div>
+                {isManualCompany ? (
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={manualCompanyName}
+                      onChange={e => setManualCompanyName(e.target.value)}
+                      placeholder="Type company name..."
+                      className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium w-full bg-white text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 transition-all shadow-2xs"
+                    />
+                    <button onClick={() => setIsManualCompany(false)} className="h-10 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer" title="Back to dropdown">✕</button>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedPt}
+                    onChange={(e) => {
+                      if (e.target.value === 'MANUAL_INPUT') {
+                        setIsManualCompany(true);
+                      } else {
+                        setSelectedPt(e.target.value);
+                      }
+                    }}
+                    className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium bg-white text-slate-800 focus:outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 transition-all cursor-pointer shadow-2xs"
+                  >
+                    {companyList.map((c, i) => <option key={i} value={c}>{c}</option>)}
+                    <option value="MANUAL_INPUT" className="font-semibold text-slate-800">✏️ Type Manually...</option>
+                  </select>
+                )}
+              </div>
+
+              {/* 2. Input Nama Promo / Judul Project */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Promo / Project Title <span className="text-slate-400 font-normal text-xs ml-0.5">(optional)</span>
+                </label>
                 <input 
                   type="text" 
-                  value={manualCompanyName} 
-                  onChange={e => setManualCompanyName(e.target.value)} 
-                  placeholder="Type company name..."
-                  className="text-xs border border-slate-300 p-2.5 rounded-xl font-bold w-full bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  value={activePromoTitle}
+                  onChange={(e) => setActivePromoTitle(e.target.value)}
+                  placeholder="e.g. PROMO 17 AGUSTUS"
+                  className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium bg-white text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all shadow-2xs"
                 />
-                <button onClick={() => setIsManualCompany(false)} className="px-3 bg-slate-200 hover:bg-slate-300 text-black rounded-xl text-xs font-bold cursor-pointer" title="Back to dropdown">✕</button>
               </div>
-            ) : (
-              <select 
-                value={selectedPt} 
-                onChange={(e) => {
-                  if (e.target.value === 'MANUAL_INPUT') {
-                    setIsManualCompany(true);
-                  } else {
-                    setSelectedPt(e.target.value);
-                  }
-                }}
-                className="text-xs border border-slate-300 p-2.5 rounded-xl font-black bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
-              >
-                {companyList.map((c, i) => <option key={i} value={c}>{c}</option>)}
-                <option value="MANUAL_INPUT" className="font-bold text-indigo-600">✏️ Type Manually...</option>
-              </select>
-            )}
+
+              {/* 3. Input No SPK / No Surat Jalan */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  SPK / Delivery Order No <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={spkNumber}
+                  onChange={(e) => setSpkNumber(e.target.value)}
+                  placeholder="e.g. SJ-05031"
+                  className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium bg-white text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all shadow-2xs"
+                />
+              </div>
+
+            </div>
           </div>
 
-          {/* 2. Input Nama Promo / Judul Project */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black">
-              Promo / Project Title:
-            </label>
-            <input 
-              type="text" 
-              value={activePromoTitle} 
-              onChange={(e) => setActivePromoTitle(e.target.value)} 
-              placeholder="Example: PROMO 17 AGUSTUS"
-              className="text-xs border border-slate-300 p-2.5 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            />
+          <div className="border-t border-slate-100" />
+
+          {/* SECTION 2: DELIVERY ORDER & FILE ATTACHMENTS */}
+          <div className="space-y-3">
+            <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase block">
+              DELIVERY ORDER & FILE ATTACHMENTS
+            </span>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start">
+
+              {/* 4. Input No WPP / Inv No */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  No WPP / Inv No <span className="text-slate-400 font-normal text-xs ml-0.5">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={defaultWppNumber}
+                  onChange={(e) => setDefaultWppNumber(e.target.value)}
+                  placeholder="e.g. WPP 0926-304087"
+                  className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium bg-white text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* 5. Input Nama Pembuat / Pengirim DO */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Creator Name (DO) <span className="text-slate-400 font-normal text-xs ml-0.5">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="e.g. Arini Lidya"
+                  className="h-10 text-xs border border-slate-200 px-3.5 rounded-xl font-medium bg-white text-slate-800 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* 6. Upload File Excel */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Upload Allocation Excel <span className="text-rose-500 font-bold ml-0.5">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  onChange={handleFileUpload}
+                  className="h-10 text-xs border border-slate-200 px-2 py-1.5 rounded-xl cursor-pointer bg-white text-slate-700 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 focus:outline-none focus:border-indigo-500 transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* 7. Logo Wellen Terkunci */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Wellen Logo {wellenPrintLogo ? <span className="text-emerald-600 font-semibold text-xs ml-0.5">(Locked)</span> : <span className="text-slate-400 font-normal text-xs ml-0.5">(optional)</span>}
+                </label>
+                {wellenPrintLogo ? (
+                  <button onClick={handleResetLogo} className="h-10 w-full px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs">
+                    🔓 Reset / Replace Logo
+                  </button>
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="h-10 text-xs border border-slate-200 px-2 py-1.5 rounded-xl cursor-pointer bg-white text-slate-700 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 focus:outline-none focus:border-indigo-500 transition-all shadow-2xs"
+                  />
+                )}
+              </div>
+
+            </div>
           </div>
 
-          {/* 3. Input No SPK / No Surat Jalan */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black">
-              SPK / Delivery Order No:
-            </label>
-            <input 
-              type="text" 
-              value={spkNumber} 
-              onChange={(e) => setSpkNumber(e.target.value)} 
-              className="text-xs border border-slate-300 p-2.5 rounded-xl font-mono font-black bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            />
-          </div>
-
-          {/* 4. Input No WPP / Inv No */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black">
-              No WPP / Inv No:
-            </label>
-            <input
-              type="text"
-              value={defaultWppNumber}
-              onChange={(e) => setDefaultWppNumber(e.target.value)}
-              placeholder="Contoh: WPP 0926-304087"
-              className="text-xs border border-slate-300 p-2.5 rounded-xl font-mono font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            />
-          </div>
-
-          {/* 5. Input Nama Pembuat / Pengirim DO */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black">
-              Creator Name (DO):
-            </label>
-            <input 
-              type="text" 
-              value={senderName} 
-              onChange={(e) => setSenderName(e.target.value)} 
-              placeholder="Example: Arini Lidya"
-              className="text-xs border border-slate-300 p-2.5 rounded-xl font-extrabold bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            />
-          </div>
-
-          {/* 5. Upload File Excel */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black flex items-center gap-1">
-              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" /> Upload Allocation Excel:
-            </label>
-            <input 
-              type="file" 
-              accept=".xlsx" 
-              onChange={handleFileUpload} 
-              className="text-xs border border-slate-300 p-2 rounded-xl cursor-pointer bg-white text-black file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-            />
-          </div>
-
-          {/* 6. Logo Wellen Terkunci */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-extrabold text-black flex items-center gap-1">
-              <Upload className="w-3.5 h-3.5 text-indigo-600" /> Wellen Logo {wellenPrintLogo ? '(Locked)' : '(Optional)'}:
-            </label>
-            {wellenPrintLogo ? (
-              <button onClick={handleResetLogo} className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-extrabold rounded-xl text-xs transition-all cursor-pointer">
-                🔓 Reset / Replace Logo
-              </button>
-            ) : (
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleLogoUpload} 
-                className="text-xs border border-slate-300 p-2 rounded-xl cursor-pointer bg-white text-black file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-slate-100 file:text-black hover:file:bg-slate-200"
-              />
-            )}
-          </div>
         </div>
 
         {/* Tombol Cetak Utama */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-1">
           <button 
             onClick={() => window.print()} 
-            className="py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            className="py-2.5 px-6 bg-transparent hover:bg-slate-100 text-slate-800 border border-slate-300 font-semibold rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
           >
-            <Printer className="w-4 h-4" /> {printMode === 'labels' ? 'Print 2-in-1 Labels' : 'Print Delivery Order (DO)'}
+            <Printer className="w-4 h-4" /> Print
           </button>
         </div>
       </div>
@@ -371,7 +402,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowAddCompanyModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 text-stone-800 rounded-xl text-xs font-bold">Batal</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold">Simpan PT</button>
+                <button type="submit" className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold">Simpan PT</button>
               </div>
             </form>
           </div>

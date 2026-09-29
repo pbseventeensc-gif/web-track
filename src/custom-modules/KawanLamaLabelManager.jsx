@@ -6,7 +6,7 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState('');
   
-  // Daftar pilihan PT default & state input PT baru
+  // Default company options & new company state
   const [ptList, setPtList] = useState([
     'PT KRISBOW INDONESIA',
     'PT KAWAN LAMA SEJAHTERA',
@@ -38,8 +38,8 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
 
   const handleAddNewPt = (e) => {
     e.preventDefault();
-    if (!newPtInput.trim()) return alert('Nama PT baru wajib diisi!');
-    if (ptList.includes(newPtInput.trim())) return alert('Nama PT tersebut sudah ada dalam daftar!');
+    if (!newPtInput.trim()) return alert('New company name is required!');
+    if (ptList.includes(newPtInput.trim().toUpperCase())) return alert('This company name already exists in the list!');
 
     const updatedList = [...ptList, newPtInput.trim().toUpperCase()];
     setPtList(updatedList);
@@ -97,12 +97,12 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
 
         if (imported.length > 0) {
           setItems(imported);
-          alert(`✅ Berhasil mengimpor ${imported.length} item dari Excel!`);
+          alert(`Successfully imported ${imported.length} items!`);
         } else {
-          alert('⚠️ Format baris Excel tidak sesuai.');
+          alert('Row format not matching.');
         }
       } catch (err) {
-        alert('Gagal membaca file Excel: ' + err.message);
+        alert('Failed to read file: ' + err.message);
       } finally {
         e.target.value = '';
       }
@@ -111,38 +111,38 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
   };
 
   const selectedStoreObj = branches.find(b => String(b.id) === String(selectedBranch));
-  const storeName = selectedStoreObj ? selectedStoreObj.client_name : 'Azko Kota Wisata (Pilih Cabang)';
+  const storeName = selectedStoreObj ? selectedStoreObj.client_name : 'Azko Kota Wisata (Select Branch)';
 
   return (
     <div className={`p-6 rounded-3xl border shadow-sm space-y-6 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h2 className="font-black text-lg text-indigo-600 dark:text-indigo-400">🏷️ Generator Label Kawan Lama Group</h2>
-          <p className="text-xs opacity-60">Pilih atau tambah nama PT baru, pilih cabang tujuan, dan kelola rincian item label.</p>
+          <h2 className="font-black text-lg text-black dark:text-white">Kawan Lama Group Label Generator</h2>
+          <p className="text-xs opacity-60">Select or add new company name, choose destination branch, and manage label item details.</p>
         </div>
-        <label className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
-          📂 Import Item Label via Excel
+        <label className="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs cursor-pointer shadow-sm">
+          Import Label Items
           <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
         </label>
       </div>
 
-      {/* PENGATURAN HEADER PT & PROJECT */}
+      {/* HEADER COMPANY & PROJECT SETTINGS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
         <div>
           <div className="flex justify-between items-center mb-1">
-            <label className="font-bold opacity-70">Pilih / Tambah Nama PT (Header)</label>
+            <label className="font-bold opacity-70">Select / Add Company Name (Header)</label>
             <button 
               type="button" 
               onClick={() => setShowAddPtModal(true)}
-              className="text-indigo-500 hover:underline font-bold text-[11px]"
+              className="text-black dark:text-white hover:underline font-bold text-[11px]"
             >
-              ➕ Tambah PT Baru
+              Add New Company
             </button>
           </div>
           <select 
             value={selectedPt}
             onChange={e => setSelectedPt(e.target.value)}
-            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
           >
             {ptList.map((pt, idx) => (
               <option key={idx} value={pt}>{pt}</option>
@@ -151,37 +151,37 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
         </div>
 
         <div>
-          <label className="block font-bold mb-1 opacity-70">Nama Project / SPK</label>
+          <label className="block font-bold mb-1 opacity-70">Project Name / SPK</label>
           <input 
             type="text" 
             value={projectName}
             onChange={e => setProjectName(e.target.value)}
-            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+            className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
           />
         </div>
       </div>
 
-      {/* PILIH CABANG / STORE */}
+      {/* SELECT BRANCH / STORE */}
       <div className="text-xs">
-        <label className="block font-bold mb-1 opacity-70">Pilih Store / Cabang Tujuan (Master Cabang)</label>
+        <label className="block font-bold mb-1 opacity-70">Select Destination Store / Branch (Master Branch)</label>
         <select 
           value={selectedBranch}
           onChange={e => setSelectedBranch(e.target.value)}
-          className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50 border-stone-300'}`}
+          className={`w-full p-3 border rounded-xl font-semibold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
         >
-          <option value="">-- Pilih Store Tujuan --</option>
+          <option value="">-- Select Destination Store --</option>
           {branches.map(b => (
             <option key={b.id} value={b.id}>{b.client_name} - {b.address}</option>
           ))}
         </select>
       </div>
 
-      {/* TABEL ITEM DINAMIS */}
+      {/* DYNAMIC ITEM TABLE */}
       <div className="border rounded-2xl p-4 space-y-3 dark:border-neutral-700 text-xs">
         <div className="flex justify-between items-center">
-          <h4 className="font-bold uppercase text-indigo-500">Daftar Item Barang Label</h4>
-          <button type="button" onClick={handleAddItem} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-[11px]">
-            ➕ Tambah Baris Item
+          <h4 className="font-bold uppercase text-black dark:text-white">Label Item List</h4>
+          <button type="button" onClick={handleAddItem} className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-black dark:hover:bg-slate-200 font-bold rounded-lg text-[11px]">
+            Add Item Row
           </button>
         </div>
 
@@ -191,40 +191,40 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
               <div className="sm:col-span-1 text-center font-bold">{it.no}</div>
               <div className="sm:col-span-4">
                 <input 
-                  type="text" placeholder="Nama Item" value={it.item}
+                  type="text" placeholder="Item Name" value={it.item}
                   onChange={e => handleItemChange(idx, 'item', e.target.value)}
-                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50'}`}
+                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 text-black'}`}
                 />
               </div>
               <div className="sm:col-span-3">
                 <input 
-                  type="text" placeholder="Bahan" value={it.bahan}
+                  type="text" placeholder="Material" value={it.bahan}
                   onChange={e => handleItemChange(idx, 'bahan', e.target.value)}
-                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50'}`}
+                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 text-black'}`}
                 />
               </div>
               <div className="sm:col-span-2">
                 <input 
-                  type="text" placeholder="Ukuran" value={it.ukuran}
+                  type="text" placeholder="Size" value={it.ukuran}
                   onChange={e => handleItemChange(idx, 'ukuran', e.target.value)}
-                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50'}`}
+                  className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 text-black'}`}
                 />
               </div>
               <div className="sm:col-span-1">
                 <input 
                   type="text" placeholder="Qty" value={it.qty}
                   onChange={e => handleItemChange(idx, 'qty', e.target.value)}
-                  className={`w-full p-2 border rounded-lg text-center font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50'}`}
+                  className={`w-full p-2 border rounded-lg text-center font-bold ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 text-black'}`}
                 />
               </div>
               <div className="sm:col-span-1 flex items-center justify-between">
                 <input 
-                  type="text" placeholder="Satuan" value={it.satuan}
+                  type="text" placeholder="Unit" value={it.satuan}
                   onChange={e => handleItemChange(idx, 'satuan', e.target.value)}
-                  className={`w-12 p-2 border rounded-lg text-center ${isDarkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-stone-50'}`}
+                  className={`w-12 p-2 border rounded-lg text-center ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 text-black'}`}
                 />
                 {items.length > 1 && (
-                  <button type="button" onClick={() => handleRemoveItem(idx)} className="text-rose-500 font-bold px-1">✕</button>
+                  <button type="button" onClick={() => handleRemoveItem(idx)} className="text-rose-500 font-bold px-1">Delete</button>
                 )}
               </div>
             </div>
@@ -234,43 +234,43 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
 
       <button 
         onClick={() => setPrintModal(true)}
-        className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md"
+        className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-black dark:hover:bg-slate-200 font-bold rounded-xl active:scale-95 transition-all text-xs shadow-md"
       >
-        👁️ Pratinjau & Cetak Label Kawan Lama (Anti-Blank Lokal)
+        Preview & Print Kawan Lama Labels
       </button>
 
-      {/* MODAL TAMBAH PT BARU */}
+      {/* MODAL ADD NEW PT */}
       {showAddPtModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="bg-white text-stone-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="font-bold text-sm uppercase text-indigo-600">Tambah Nama PT / Perusahaan Baru</h3>
+            <h3 className="font-bold text-sm uppercase text-black">Add New Company / PT Name</h3>
             <form onSubmit={handleAddNewPt} className="space-y-3 text-xs">
               <input 
                 type="text"
-                placeholder="Cth: PT INDO KAWAN LAMA"
+                placeholder="e.g. PT INDO KAWAN LAMA"
                 value={newPtInput}
                 onChange={e => setNewPtInput(e.target.value)}
                 className="w-full p-3 border rounded-xl font-semibold bg-stone-50"
                 required
               />
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowAddPtModal(false)} className="px-4 py-2 bg-stone-300 font-bold rounded-xl">Batal</button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl">Simpan PT</button>
+                <button type="button" onClick={() => setShowAddPtModal(false)} className="px-4 py-2 bg-stone-300 font-bold rounded-xl">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl">Save Company</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL PREVIEW CETAK */}
+      {/* MODAL PRINT PREVIEW */}
       {printModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white text-stone-900 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="font-bold text-sm uppercase text-blue-900">Pratinjau Label Pengiriman</h3>
+              <h3 className="font-bold text-sm uppercase text-black">Shipping Label Preview</h3>
               <div className="flex gap-2">
-                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">🖨️ Cetak Label</button>
-                <button onClick={() => setPrintModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">✕ Tutup</button>
+                <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs">Print Label</button>
+                <button onClick={() => setPrintModal(false)} className="px-3 py-2 bg-stone-300 hover:bg-stone-400 font-bold rounded-xl text-xs">Close</button>
               </div>
             </div>
 
@@ -295,8 +295,8 @@ export default function KawanLamaLabelManager({ isDarkMode }) {
                   <tr style={{ background: '#f9f9f9', fontWeight: 'bold' }}>
                     <th style={{ border: '1px solid black', padding: '8px', width: '8%' }}>NO</th>
                     <th style={{ border: '1px solid black', padding: '8px', width: '37%' }}>ITEM</th>
-                    <th style={{ border: '1px solid black', padding: '8px', width: '30%' }}>BAHAN</th>
-                    <th style={{ border: '1px solid black', padding: '8px', width: '15%' }}>UKURAN</th>
+                    <th style={{ border: '1px solid black', padding: '8px', width: '30%' }}>MATERIAL</th>
+                    <th style={{ border: '1px solid black', padding: '8px', width: '15%' }}>SIZE</th>
                     <th colSpan="2" style={{ border: '1px solid black', padding: '8px', width: '10%' }}>QTY</th>
                   </tr>
                 </thead>

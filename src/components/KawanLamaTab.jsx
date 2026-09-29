@@ -86,13 +86,13 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
               isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-stone-200/80 text-stone-800'
             }`}>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   Portal Resmi Kantor Cabang
                 </span>
-                <h2 className="text-lg font-black tracking-wide uppercase mt-2 text-indigo-600 dark:text-indigo-400">
+                <h2 className={`text-lg font-black tracking-wide uppercase mt-1 ${isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
                   FORM CABANG: {branchName || currentUser?.branch_name || 'KANTOR CABANG'}
                 </h2>
-                <p className="text-xs opacity-70 mt-0.5">Sistem Terpadu Portal Logistik & Pengadaan Kawan Lama</p>
+                <p className={`text-xs font-medium mt-0.5 ${isDarkMode ? 'text-neutral-300' : 'text-slate-600'}`}>Sistem Terpadu Portal Logistik & Pengadaan Kawan Lama</p>
               </div>
 
               {/* Tombol Order Baru, Tracking Order, & Ganti PIN Berderet dalam Satu Baris di Header Cabang */}
@@ -102,7 +102,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
                     onClick={() => setActiveSubTab('order_baru')}
                     className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
                       activeSubTab === 'order_baru' 
-                        ? 'bg-indigo-600 text-white shadow-md' 
+                        ? (isDarkMode ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-700 font-extrabold' : 'bg-white text-indigo-600 border border-indigo-200 shadow-2xs font-extrabold')
                         : isDarkMode ? 'bg-neutral-900 text-neutral-300 border border-neutral-700 hover:bg-neutral-800' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -112,7 +112,7 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
                     onClick={() => setActiveSubTab('riwayat')}
                     className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
                       activeSubTab === 'riwayat' 
-                        ? 'bg-indigo-600 text-white shadow-md'
+                        ? (isDarkMode ? 'bg-indigo-950/80 text-indigo-300 border border-indigo-700 font-extrabold' : 'bg-white text-indigo-600 border border-indigo-200 shadow-2xs font-extrabold')
                         : isDarkMode ? 'bg-neutral-900 text-neutral-300 border border-neutral-700 hover:bg-neutral-800' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -133,88 +133,48 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
           {/* Header Info Khusus Admin */}
           {isAdmin && (
             <div className={`p-4 rounded-2xl border shadow-xs flex justify-between items-center ${
-              isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'
+              isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
             }`}>
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-lg bg-indigo-600 text-white">
+                <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                   {currentUser?.role === 'admin_wilayah' ? `Regional Coordinator (${currentUser?.region?.toUpperCase()})` : 'Kawan Lama Central Admin'}
                 </span>
-                <h3 className="text-xs font-bold mt-1 text-slate-800 dark:text-neutral-200">
+                <h3 className={`text-xs font-semibold mt-1 ${isDarkMode ? 'text-neutral-200' : 'text-slate-700'}`}>
                   Promo Management, Order Approval, Branch Monitoring, & Label Generator
                 </h3>
               </div>
-              <span className="text-xs font-mono opacity-60">User: {currentUser?.username || 'Admin'}</span>
+              <span className={`text-xs font-mono font-medium ${isDarkMode ? 'text-neutral-300' : 'text-slate-700'}`}>User: {currentUser?.username || 'Admin'}</span>
             </div>
           )}
 
           {/* Tab Navigasi Sub-Menu khusus Admin */}
           {isAdmin && (
             <div className="flex gap-2.5 overflow-x-auto custom-scrollbar pb-1">
-              <button 
-                onClick={() => setActiveSubTab('master')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'master' 
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <Database className="w-3.5 h-3.5" /> Master Data
-              </button>
-              
-              <button 
-                onClick={() => setActiveSubTab('promo')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'promo' 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <Megaphone className="w-3.5 h-3.5" /> Manage Promo
-              </button>
-
-              <button 
-                onClick={() => setActiveSubTab('approval')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'approval' 
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5" /> Approval & Grouping Order
-              </button>
-
-              <button 
-                onClick={() => setActiveSubTab('monitoring')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'monitoring' 
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <BarChart3 className="w-3.5 h-3.5" /> Branch Submission Status
-              </button>
-
-              <button 
-                onClick={() => setActiveSubTab('labels')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'labels' 
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                <Tag className="w-3.5 h-3.5" /> Multi-Label Generator
-              </button>
-
-              <button
-                onClick={() => setActiveSubTab('food_labels')}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap shadow-xs flex items-center gap-1.5 cursor-pointer ${
-                  activeSubTab === 'food_labels' 
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700' : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                Food Label (Custom)
-              </button>
+              {[
+                { id: 'master', label: 'Master Data', icon: Database },
+                { id: 'promo', label: 'Manage Promo', icon: Megaphone },
+                { id: 'approval', label: 'Approval & Grouping Order', icon: Lock },
+                { id: 'monitoring', label: 'Branch Submission Status', icon: BarChart3 },
+                { id: 'labels', label: 'Multi-Label Generator', icon: Tag },
+                { id: 'food_labels', label: 'Label Food & Delivery Order', icon: null }
+              ].map(subItem => {
+                const isActive = activeSubTab === subItem.id;
+                const SubIcon = subItem.icon;
+                return (
+                  <button
+                    key={subItem.id}
+                    onClick={() => setActiveSubTab(subItem.id)}
+                    className={`px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                      isActive
+                        ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold shadow-xs')
+                        : (isDarkMode ? 'bg-neutral-800 text-neutral-300 border border-neutral-700 hover:bg-neutral-700 font-medium' : 'bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-100/80 font-medium')
+                    }`}
+                  >
+                    {SubIcon && <SubIcon className={`w-3.5 h-3.5 ${isActive ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]') : 'text-slate-500 dark:text-neutral-400'}`} />}
+                    <span>{subItem.label}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

@@ -75,20 +75,20 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
     if (finishing_type === 'sub') {
       if (outQty > maxFinishingAllowed) {
-        alert(`❌ Failed: Outgoing quantity to vendor (${outQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
+        alert(`Outgoing quantity to vendor (${outQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
         return;
       }
       if (outQty === 0 && backQty > 0) {
-        alert(`❌ Failed: Items have not been sent to vendor (Out = 0 pcs). Cannot enter Received Back quantity!`);
+        alert(`Items have not been sent to vendor (Out = 0 pcs). Cannot enter Received Back quantity!`);
         return;
       }
       if (backQty > outQty) {
-        alert(`❌ Failed: Received back quantity (${backQty} pcs) exceeds quantity sent to vendor (${outQty} pcs)!`);
+        alert(`Received back quantity (${backQty} pcs) exceeds quantity sent to vendor (${outQty} pcs)!`);
         return;
       }
     } else {
       if (backQty > maxFinishingAllowed) {
-        alert(`❌ Failed: Completed Finishing Quantity (${backQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
+        alert(`Completed Finishing Quantity (${backQty} pcs) cannot exceed Print Qty (${maxFinishingAllowed} pcs)!`);
         backQty = maxFinishingAllowed;
       }
     }
@@ -104,7 +104,7 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
     if (error) {
       alert('Failed to save finishing data: ' + error.message);
     } else {
-      alert(`✅ Finishing data for SPK ${activeItem.no_spk} (${activeItem.client}) saved successfully! Total Completed: ${backQty} pcs.`);
+      alert(`Finishing data for SPK ${activeItem.no_spk} (${activeItem.client}) saved successfully! Total Completed: ${backQty} pcs.`);
       if (fetchSpkData) fetchSpkData();
     }
   };
@@ -112,10 +112,10 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
   // TOMBOL HAPUS SPK YANG TERPILIH
   const handleDeleteSelectedSpk = async () => {
     if (!activeSpkItem) return;
-    if (window.confirm(`⚠️ Are you sure you want to delete SPK "${activeSpkItem.no_spk}" (${activeSpkItem.client}) from the Finishing list?`)) {
+    if (window.confirm(`Are you sure you want to delete SPK "${activeSpkItem.no_spk}" (${activeSpkItem.client}) from the Finishing list?`)) {
       const { error } = await supabase.from('spk_data').delete().eq('id', activeSpkItem.id);
       if (!error) {
-        alert(`✅ SPK "${activeSpkItem.no_spk}" deleted successfully!`);
+        alert(`SPK "${activeSpkItem.no_spk}" deleted successfully!`);
         if (fetchSpkData) fetchSpkData();
         setSelectedSpkId('');
       } else {
@@ -126,10 +126,10 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
 
   // TOMBOL HAPUS SEMUA DATA SPK DI FINISHING
   const handleDeleteAllSpkData = async () => {
-    if (window.confirm(`⚠️ WARNING: Are you sure you want to PERMANENTLY DELETE ALL ${spkList.length} SPK items from the Finishing panel list?`)) {
+    if (window.confirm(`WARNING: Are you sure you want to PERMANENTLY DELETE ALL ${spkList.length} SPK items from the Finishing panel list?`)) {
       const { error } = await supabase.from('spk_data').delete().gt('id', 0);
       if (!error) {
-        alert('✅ All SPK data in Finishing list has been permanently deleted!');
+        alert('All SPK data in Finishing list has been permanently deleted!');
         if (fetchSpkData) fetchSpkData();
         setSelectedSpkId('');
       } else {
@@ -146,25 +146,31 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
   return (
     <form
       onSubmit={handleSubmitFinishing}
-      className="p-6 rounded-3xl border border-slate-200 bg-white text-black shadow-2xs transition-colors space-y-5 max-h-[80vh] overflow-y-auto relative custom-scrollbar"
+      className={`p-6 rounded-3xl border shadow-xs transition-colors space-y-5 max-h-[80vh] overflow-y-auto relative custom-scrollbar ${
+        isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+      }`}
     >
       {/* HEADER MENU ALWAYS VISIBLE */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-3">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between border-b pb-4 gap-3 ${
+        isDarkMode ? 'border-neutral-800' : 'border-slate-200'
+      }`}>
         <div className="flex items-center gap-3">
-          <Wrench className="w-5 h-5 text-indigo-600" />
+          <Wrench className="w-5 h-5 text-orange-600 dark:text-orange-400" />
           <div>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-indigo-600">Finishing Control Panel</h3>
-            <p className="text-[11px] text-slate-500 font-medium">Manage Inhouse & Sub-Contract Finishing (Vendor Processing)</p>
+            <h3 className="font-bold text-xs uppercase tracking-wider text-orange-600 dark:text-orange-400">Finishing Control Panel</h3>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Manage Inhouse & Sub-Contract Finishing (Vendor Processing)</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="text-xs font-bold text-black">Select SPK:</label>
+          <label className="text-xs font-bold text-slate-900 dark:text-white">Select SPK:</label>
           <select
             value={selectedSpkId}
             onChange={(e) => handleSelectSpk(e.target.value)}
             disabled={!hasSpkData}
-            className="text-xs px-3 py-1.5 rounded-xl font-semibold border border-slate-300 bg-white text-black focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer shadow-2xs max-w-[280px] truncate disabled:opacity-50"
+            className={`text-xs px-3 py-1.5 rounded-xl font-medium border focus:outline-none focus:ring-2 focus:ring-orange-500/50 cursor-pointer shadow-2xs max-w-[280px] truncate disabled:opacity-50 ${
+              isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
           >
             {hasSpkData ? (
               spkList.map((item) => (
@@ -182,10 +188,10 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
             <button
               type="button"
               onClick={handleDeleteSelectedSpk}
-              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 font-bold rounded-xl text-xs transition-all shadow-2xs active:scale-95 flex items-center gap-1.5 cursor-pointer"
               title="Delete currently selected SPK from Finishing list"
             >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Active SPK
+              <Trash2 className="w-3.5 h-3.5" /> Delete Active SPK
             </button>
           )}
 
@@ -204,177 +210,187 @@ export default function FinishingPanel({ isDarkMode, spkList, fetchSpkData }) {
       </div>
 
       {!hasSpkData ? (
-        <div className="p-12 text-center text-slate-400 border border-dashed border-slate-300 rounded-2xl space-y-2 bg-slate-50/50 my-4">
+        <div className={`p-12 text-center text-slate-400 border border-dashed rounded-2xl space-y-2 my-4 ${
+          isDarkMode ? 'border-neutral-800 bg-neutral-900/50' : 'border-slate-200 bg-slate-50/50'
+        }`}>
           <Wrench className="w-10 h-10 mx-auto opacity-40 text-slate-400" />
-          <p className="font-bold text-sm text-slate-700">No SPK Data Available in Finishing Panel</p>
+          <p className="font-bold text-sm text-slate-700 dark:text-slate-300">No SPK Data Available in Finishing Panel</p>
           <p className="text-xs text-slate-400 font-medium">Please import SPK data or create orders to display finishing controls.</p>
         </div>
       ) : (
         <>
           <div className={`grid grid-cols-2 ${finishingForm.finishing_type === 'sub' ? 'md:grid-cols-5' : 'md:grid-cols-4'} gap-2.5 text-xs`}>
-        <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-          <div className="text-slate-500 font-semibold text-[10px] uppercase">Order Quantity</div>
-          <div className="text-sm font-bold text-slate-900 mt-0.5">{activeSpkItem.qty_order?.toLocaleString()} Pcs</div>
-        </div>
+            <div className={`p-3 rounded-xl border ${isDarkMode ? 'border-neutral-800 bg-neutral-800/60' : 'border-slate-200 bg-slate-50'}`}>
+              <div className="text-slate-500 dark:text-slate-400 font-semibold text-[10px] uppercase">Order Quantity</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{activeSpkItem.qty_order?.toLocaleString()} Pcs</div>
+            </div>
 
-        <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
-          <div className="text-amber-800 font-semibold text-[10px] uppercase">
-            {finishingForm.finishing_type === 'sub' ? 'Remaining (Not Sent Out)' : 'Remaining (Incomplete)'}
+            <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40">
+              <div className="text-amber-800 dark:text-amber-300 font-semibold text-[10px] uppercase">
+                {finishingForm.finishing_type === 'sub' ? 'Remaining (Not Sent Out)' : 'Remaining (Incomplete)'}
+              </div>
+              <div className="text-sm font-bold text-amber-900 dark:text-amber-200 mt-0.5">
+                {finishingForm.finishing_type === 'sub'
+                  ? Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish_sub_out) || 0)).toLocaleString()
+                  : Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()}{' '}
+                Pcs
+              </div>
+            </div>
+
+            {finishingForm.finishing_type === 'sub' ? (
+              <>
+                <div className="p-3 rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/40">
+                  <div className="text-sky-800 dark:text-sky-300 font-semibold text-[10px] uppercase">Sent to Vendor (Out)</div>
+                  <div className="text-sm font-bold text-sky-900 dark:text-sky-200 mt-0.5">
+                    {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} Pcs
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40">
+                  <div className="text-emerald-800 dark:text-emerald-300 font-semibold text-[10px] uppercase">Received Back (In)</div>
+                  <div className="text-sm font-bold text-emerald-900 dark:text-emerald-200 mt-0.5">
+                    {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40">
+                  <div className="text-amber-800 dark:text-amber-300 font-semibold text-[10px] uppercase">Pending Vendor Return</div>
+                  <div className="text-sm font-bold text-amber-900 dark:text-amber-200 mt-0.5">
+                    {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} Pcs
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="p-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40">
+                  <div className="text-emerald-800 dark:text-emerald-300 font-semibold text-[10px] uppercase">Inhouse Completed</div>
+                  <div className="text-sm font-bold text-emerald-900 dark:text-emerald-200 mt-0.5">
+                    {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-xl border ${isDarkMode ? 'border-neutral-800 bg-neutral-800/60' : 'border-slate-200 bg-slate-50'}`}>
+                  <div className="text-slate-500 dark:text-slate-400 font-semibold text-[10px] uppercase">Finishing Progress</div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">
+                    {getPercent(Number(finishingForm.qty_finish) || 0, activeSpkItem.qty_order || 1)}%
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <div className="text-sm font-bold text-amber-900 mt-0.5">
-            {finishingForm.finishing_type === 'sub'
-              ? Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish_sub_out) || 0)).toLocaleString()
-              : Math.max(0, (activeSpkItem.qty_order || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()}{' '}
-            Pcs
-          </div>
-        </div>
 
-        {finishingForm.finishing_type === 'sub' ? (
-          <>
-            <div className="p-3 rounded-xl border border-blue-200 bg-blue-50">
-              <div className="text-blue-800 font-semibold text-[10px] uppercase">Sent to Vendor (Out)</div>
-              <div className="text-sm font-bold text-blue-900 mt-0.5">
-                {(Number(finishingForm.qty_finish_sub_out) || 0).toLocaleString()} Pcs
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50">
-              <div className="text-emerald-800 font-semibold text-[10px] uppercase">Received Back (In)</div>
-              <div className="text-sm font-bold text-emerald-900 mt-0.5">
-                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
-              <div className="text-amber-800 font-semibold text-[10px] uppercase">Pending Vendor Return</div>
-              <div className="text-sm font-bold text-amber-900 mt-0.5">
-                {Math.max(0, (Number(finishingForm.qty_finish_sub_out) || 0) - (Number(finishingForm.qty_finish) || 0)).toLocaleString()} Pcs
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50">
-              <div className="text-emerald-800 font-semibold text-[10px] uppercase">Inhouse Completed</div>
-              <div className="text-sm font-bold text-emerald-900 mt-0.5">
-                {(Number(finishingForm.qty_finish) || 0).toLocaleString()} Pcs
-              </div>
-            </div>
-
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <div className="text-slate-500 font-semibold text-[10px] uppercase">Finishing Progress</div>
-              <div className="text-sm font-bold text-slate-900 mt-0.5">
-                {getPercent(Number(finishingForm.qty_finish) || 0, activeSpkItem.qty_order || 1)}%
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-xs pt-2">
-        <div>
-          <label className="block font-bold mb-1 text-black">Finishing Work Type:</label>
-          <select
-            value={finishingForm.finishing_type}
-            onChange={(e) => handleTypeChange(e.target.value)}
-            className="w-full p-2.5 rounded-xl font-semibold text-xs border border-slate-300 bg-white text-black focus:outline-none cursor-pointer"
-          >
-            <option value="inhouse">Inhouse (Internal)</option>
-            <option value="sub">Sub-Finishing (Vendor/External)</option>
-          </select>
-        </div>
-
-        {finishingForm.finishing_type !== 'sub' ? (
-          <div>
-            <label className="block font-bold mb-1 text-black">Completed Quantity (pcs):</label>
-            <input
-              type="number"
-              min="0"
-              max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
-              value={finishingForm.qty_finish}
-              onChange={(e) => {
-                let val = Number(e.target.value) || 0;
-                const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
-                if (val > maxAllowed) {
-                  alert(`❌ Failed: Finishing quantity (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
-                  val = maxAllowed;
-                }
-                setFinishingForm({ ...finishingForm, qty_finish: val });
-              }}
-              className="w-full p-2.5 rounded-xl font-bold text-xs border border-slate-300 bg-white text-black focus:outline-none"
-            />
-          </div>
-        ) : (
-          <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-xs pt-2">
             <div>
-              <label className="block font-bold mb-1 text-black">Vendor / Sub-Contractor Name:</label>
-              <input
-                type="text"
-                placeholder="Example: CV Poly Mas"
-                value={finishingForm.sub_vendor_name}
-                onChange={(e) => setFinishingForm({ ...finishingForm, sub_vendor_name: e.target.value })}
-                className="w-full p-2.5 rounded-xl font-semibold text-xs border border-slate-300 bg-white text-black focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold mb-1 text-black">1. Quantity Sent Out (pcs):</label>
-              <input
-                type="number"
-                min="0"
-                max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
-                value={finishingForm.qty_finish_sub_out}
-                onChange={(e) => {
-                  let val = Number(e.target.value) || 0;
-                  const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
-                  if (val > maxAllowed) {
-                    alert(`❌ Failed: Outgoing quantity to vendor (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
-                    val = maxAllowed;
-                  }
-                  const currentBack = Number(finishingForm.qty_finish) || 0;
-                  const adjustedBack = currentBack > val ? val : currentBack;
-                  setFinishingForm({ ...finishingForm, qty_finish_sub_out: val, qty_finish: adjustedBack });
-                }}
-                className="w-full p-2.5 rounded-xl font-bold text-xs border border-slate-300 bg-white text-black focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold mb-1 text-black">2. Quantity Received Back (pcs):</label>
-              <input
-                type="number"
-                min="0"
-                disabled={Number(finishingForm.qty_finish_sub_out) <= 0}
-                max={finishingForm.qty_finish_sub_out}
-                value={finishingForm.qty_finish}
-                onChange={(e) => {
-                  let val = Number(e.target.value) || 0;
-                  const maxBack = Number(finishingForm.qty_finish_sub_out) || 0;
-                  if (val > maxBack) {
-                    alert(`❌ Received back quantity cannot exceed quantity sent to vendor (${maxBack} pcs)!`);
-                    val = maxBack;
-                  }
-                  setFinishingForm({ ...finishingForm, qty_finish: val });
-                }}
-                className={`w-full p-2.5 rounded-xl font-bold text-xs border ${
-                  Number(finishingForm.qty_finish_sub_out) <= 0
-                    ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-300'
-                    : 'bg-white border-slate-300 text-black'
+              <label className="block font-bold mb-1 text-slate-900 dark:text-white">Finishing Work Type:</label>
+              <select
+                value={finishingForm.finishing_type}
+                onChange={(e) => handleTypeChange(e.target.value)}
+                className={`w-full p-2.5 rounded-xl font-medium text-xs border focus:outline-none cursor-pointer ${
+                  isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
                 }`}
-              />
+              >
+                <option value="inhouse">Inhouse (Internal)</option>
+                <option value="sub">Sub-Finishing (Vendor/External)</option>
+              </select>
             </div>
-          </>
-        )}
-      </div>
 
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          className="px-4 py-2 rounded-xl font-bold text-xs shadow-2xs active:scale-95 transition-all text-white bg-indigo-600 hover:bg-indigo-500 cursor-pointer flex items-center gap-1.5"
-        >
-          <Save className="w-4 h-4" /> Save Finishing Progress
-        </button>
-      </div>
+            {finishingForm.finishing_type !== 'sub' ? (
+              <div>
+                <label className="block font-bold mb-1 text-slate-900 dark:text-white">Completed Quantity (pcs):</label>
+                <input
+                  type="number"
+                  min="0"
+                  max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
+                  value={finishingForm.qty_finish}
+                  onChange={(e) => {
+                    let val = Number(e.target.value) || 0;
+                    const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
+                    if (val > maxAllowed) {
+                      alert(`Finishing quantity (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
+                      val = maxAllowed;
+                    }
+                    setFinishingForm({ ...finishingForm, qty_finish: val });
+                  }}
+                  className={`w-full p-2.5 rounded-xl font-bold text-xs border focus:outline-none ${
+                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+                  }`}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block font-bold mb-1 text-slate-900 dark:text-white">Vendor / Sub-Contractor Name:</label>
+                  <input
+                    type="text"
+                    placeholder="Example: CV Poly Mas"
+                    value={finishingForm.sub_vendor_name}
+                    onChange={(e) => setFinishingForm({ ...finishingForm, sub_vendor_name: e.target.value })}
+                    className={`w-full p-2.5 rounded-xl font-medium text-xs border focus:outline-none ${
+                      isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-slate-900 dark:text-white">1. Quantity Sent Out (pcs):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order}
+                    value={finishingForm.qty_finish_sub_out}
+                    onChange={(e) => {
+                      let val = Number(e.target.value) || 0;
+                      const maxAllowed = Number(activeSpkItem.qty_print > 0 ? activeSpkItem.qty_print : activeSpkItem.qty_order || 0);
+                      if (val > maxAllowed) {
+                        alert(`Outgoing quantity to vendor (${val} pcs) cannot exceed Print Qty (${maxAllowed} pcs)!`);
+                        val = maxAllowed;
+                      }
+                      const currentBack = Number(finishingForm.qty_finish) || 0;
+                      const adjustedBack = currentBack > val ? val : currentBack;
+                      setFinishingForm({ ...finishingForm, qty_finish_sub_out: val, qty_finish: adjustedBack });
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs border focus:outline-none ${
+                      isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold mb-1 text-slate-900 dark:text-white">2. Quantity Received Back (pcs):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={Number(finishingForm.qty_finish_sub_out) <= 0}
+                    max={finishingForm.qty_finish_sub_out}
+                    value={finishingForm.qty_finish}
+                    onChange={(e) => {
+                      let val = Number(e.target.value) || 0;
+                      const maxBack = Number(finishingForm.qty_finish_sub_out) || 0;
+                      if (val > maxBack) {
+                        alert(`Received back quantity cannot exceed quantity sent to vendor (${maxBack} pcs)!`);
+                        val = maxBack;
+                      }
+                      setFinishingForm({ ...finishingForm, qty_finish: val });
+                    }}
+                    className={`w-full p-2.5 rounded-xl font-bold text-xs border ${
+                      Number(finishingForm.qty_finish_sub_out) <= 0
+                        ? 'opacity-50 cursor-not-allowed bg-slate-100 border-slate-200 dark:bg-neutral-800 dark:border-neutral-700'
+                        : (isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-900')
+                    }`}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs active:scale-95 transition-all text-white bg-orange-600 hover:bg-orange-500 cursor-pointer flex items-center gap-1.5"
+            >
+              <Save className="w-4 h-4" /> Save Finishing Progress
+            </button>
+          </div>
         </>
       )}
     </form>

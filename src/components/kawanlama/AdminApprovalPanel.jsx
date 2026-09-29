@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import * as XLSX from 'xlsx';
+import { Bell } from 'lucide-react';
 
 export default function AdminApprovalPanel({ isDarkMode }) {
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -321,8 +322,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       {/* Header Utama Panel */}
       <div className={`p-5 rounded-3xl border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isDarkMode ? 'bg-neutral-800/80 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
         <div>
-          <h2 className="font-extrabold text-base mb-1 tracking-wide">🔒 Panel Approval & Rekapitulasi Order Cabang</h2>
-          <p className="text-xs opacity-70">Review kuantiti pesanan masuk, setujui order, atau pantau rekapitulasi toko yang sudah di-approve.</p>
+          <h2 className="font-extrabold text-base mb-1 tracking-wide">Branch Order Approvals</h2>
+          <p className="text-xs opacity-70">Review and approve incoming store orders.</p>
         </div>
 
         {/* Grup Tombol Header: Log Audit & Notifikasi */}
@@ -333,23 +334,23 @@ export default function AdminApprovalPanel({ isDarkMode }) {
               setSearchAudit(''); // Reset pencarian setiap kali modal dibuka
               setShowAuditModal(true);
             }}
-            className={`px-4 py-3 rounded-2xl border transition-all flex justify-center items-center gap-2 font-bold text-xs shadow-sm w-full sm:w-auto ${
+            className={`px-4 py-2.5 rounded-2xl border transition-all flex justify-center items-center gap-2 font-bold text-xs shadow-sm w-full sm:w-auto ${
               isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-indigo-400' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-indigo-700'
             }`}
           >
-            <span>📜</span> Lihat Log Audit
+            Audit Log
           </button>
 
           {/* Lonceng Notifikasi */}
           <div className="relative w-full sm:w-auto" ref={dropdownRef}>
             <button 
               onClick={handleOpenNotifications}
-              className={`relative p-3 w-full sm:w-auto justify-center rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs shadow-sm ${
+              className={`relative p-2.5 w-full sm:w-auto justify-center rounded-2xl border transition-all flex items-center gap-2 font-bold text-xs shadow-sm ${
                 isDarkMode ? 'bg-neutral-900 border-neutral-700 hover:bg-neutral-700 text-white' : 'bg-stone-50 border-stone-200 hover:bg-stone-100 text-stone-700'
               }`}
             >
-              <span className="text-lg">🔔</span>
-              <span className="sm:hidden">Notifikasi</span>
+              <Bell className="w-4 h-4" />
+              <span className="sm:hidden">Notifications</span>
               {unreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-bounce shadow-md">
                   {unreadCount}
@@ -385,7 +386,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                         }`}
                       >
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-indigo-600 dark:text-indigo-400">Order / Request Cabang</span>
+                          <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Order / Request Cabang</span>
                           <span className="text-[10px] font-mono opacity-60">{notif.time}</span>
                         </div>
                         <p className="font-medium opacity-90">{notif.message}</p>
@@ -401,13 +402,13 @@ export default function AdminApprovalPanel({ isDarkMode }) {
 
       {/* SEKSI 1: ORDER MASUK YANG PERLU APPROVAL */}
       <div className="space-y-4">
-        <h3 className="font-extrabold text-sm uppercase tracking-wider px-1 text-indigo-600 dark:text-indigo-400">
-          ⏳ Menunggu Approval / Request Unlock ({pendingOrders.length})
+        <h3 className={`font-extrabold text-sm uppercase tracking-wider px-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+          Pending Approvals / Unlock Requests ({pendingOrders.length})
         </h3>
 
         {pendingOrders.length === 0 ? (
           <div className={`p-6 text-center rounded-3xl border text-xs opacity-60 ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
-            📭 Tidak ada order baru atau permintaan buka kunci dari cabang saat ini.
+            No new orders or unlock requests from branches.
           </div>
         ) : (
           pendingOrders.map(order => {
@@ -503,7 +504,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                                 className={`w-20 p-1.5 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-neutral-900 border-neutral-600 text-white' : 'bg-white border-stone-300 text-black'}`}
                               />
                             </td>
-                            <td className="p-3.5 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400">
+                            <td className={`p-3.5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                               {formatRupiah(subtotal)}
                             </td>
                           </tr>
@@ -531,8 +532,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           isDarkMode ? 'bg-neutral-900/95 border-neutral-800' : 'bg-white/95 border-stone-200'
         }`}>
           <div className="flex items-center gap-3 flex-wrap">
-            <h3 className="font-extrabold text-sm uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-              <span>✅</span> Rekapitulasi Toko Approved ({approvedOrders.length} Toko)
+            <h3 className={`font-extrabold text-sm uppercase tracking-wider flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              Approved Store Summary ({approvedOrders.length} Stores)
             </h3>
 
             {/* Checkbox PILIH SEMUA */}
@@ -548,7 +549,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                   onChange={handleToggleSelectAllApproved}
                   className="cursor-pointer accent-indigo-600 w-4 h-4 rounded"
                 />
-                <span>Pilih Semua ({filteredApprovedOrders.length})</span>
+                <span>Select All ({filteredApprovedOrders.length})</span>
               </label>
             )}
 
@@ -559,7 +560,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 onClick={handleBatchDeleteApproved}
                 className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1.5 animate-pulse"
               >
-                <span>🗑️</span> Hapus Terpilih ({selectedApprovedIds.length})
+                <span>🗑️</span> Delete Selected ({selectedApprovedIds.length})
               </button>
             )}
 
@@ -570,7 +571,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 onClick={handleDeleteAllApproved}
                 className="px-3 py-1.5 bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-bold transition-all active:scale-95"
               >
-                🗑️ Bersihkan Semua Rekap
+                🗑️ Clear All Summary
               </button>
             )}
           </div>
@@ -578,7 +579,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
           <div className="flex gap-2 w-full md:w-auto">
             <input 
               type="text"
-              placeholder="🔍 Cari Nama Toko..."
+              placeholder="Search Store Name..."
               value={searchApproved}
               onChange={(e) => setSearchApproved(e.target.value)}
               className={`px-4 py-2 rounded-xl text-xs font-bold border focus:outline-none focus:ring-2 focus:ring-emerald-500/40 w-full sm:w-60 shadow-sm transition-all ${
@@ -605,9 +606,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                 XLSX.utils.book_append_sheet(wb, ws, "Rekap Order");
                 XLSX.writeFile(wb, `Rekap_Order_Approved_${new Date().toLocaleDateString()}.xlsx`);
               }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+              title="Export Excel"
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center cursor-pointer"
             >
-              📥 Excel
+              📥
             </button>
           </div>
         </div>
@@ -647,10 +649,10 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                             prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
                           );
                         }}
-                        className="cursor-pointer accent-indigo-600 w-4 h-4 rounded"
+                        className="cursor-pointer accent-slate-900 w-4 h-4 rounded"
                       />
                       <div onClick={() => setExpandedApprovedId(isExpanded ? null : order.id)} className="cursor-pointer">
-                        <h4 className="font-extrabold text-xs uppercase text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                        <h4 className={`font-extrabold text-xs uppercase flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                           <span>🏢</span> {storeName}
                         </h4>
                         <span className="text-[10px] opacity-60 font-mono">Total Item: {order.kl_order_items?.length || 0} Jenis</span>
@@ -663,7 +665,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                         className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
                           isExpanded 
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' 
-                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                            : 'bg-slate-200 text-slate-800 dark:bg-neutral-800 dark:text-neutral-200'
                         }`}
                       >
                         {isExpanded ? 'Tutup ▲' : 'Detail ▼'}
@@ -712,7 +714,7 @@ export default function AdminApprovalPanel({ isDarkMode }) {
                                   <td className="p-3 opacity-80 uppercase font-mono">{item.kl_master_items?.size || '-'}</td>
                                   <td className="p-3 text-right font-mono">{formatRupiah(unitPrice)}</td>
                                   <td className="p-3 text-center font-bold font-mono">{item.qty}</td>
-                                  <td className="p-3 text-right font-bold font-mono text-indigo-600 dark:text-indigo-400">{formatRupiah(subtotal)}</td>
+                                  <td className={`p-3 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{formatRupiah(subtotal)}</td>
                                 </tr>
                               );
                             })}
