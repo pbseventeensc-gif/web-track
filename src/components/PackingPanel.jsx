@@ -1547,8 +1547,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           <div className="font-extrabold text-slate-900 text-sm flex items-center gap-2 flex-wrap tracking-tight">
                             <span>{getCleanStoreName(item.store_name)}</span>
                             {isRowComplete && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[11px] font-semibold border border-emerald-400">
-                                ✅ Done
+                              <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-400 text-xs" title="Done">
+                                ✅
                               </span>
                             )}
                           </div>
