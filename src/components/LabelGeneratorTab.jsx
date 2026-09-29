@@ -120,7 +120,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     }
 
     const payloads = itemsToSave.map((item) => {
-      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
+      const trackingCode = item.NO_SPK || item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
       const existing = existingMap[trackingCode] || {};
       const qrAddress = `${item.NO_SPK || ''}_${trackingCode}_${item.CLIENT || ''}_${item.DELIVERY_ADDRESS || ''}`;
 
@@ -453,8 +453,9 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
   const syncToPackingDatabase = async (groupedItems) => {
     for (const item of groupedItems) {
+      const trackingCode = item.NO_SPK || item.TRACKING_ID;
       const payload = {
-        tracking_id: item.TRACKING_ID,
+        tracking_id: trackingCode,
         no_spk: item.NO_SPK,
         client_pt: item.CLIENT || '-',
         promo_title: item.PROJECT || '-',
@@ -475,7 +476,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     
     let allLabelBoxes = [];
     for (const group of groupedItems) {
-      const trackingCode = group.TRACKING_ID;
+      const trackingCode = group.NO_SPK || group.TRACKING_ID;
       const qrText = `https://web-track-phi-gilt.vercel.app/?scan=${trackingCode}`;
 
       let qrDataUrl = ''; 
