@@ -135,6 +135,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         box_code: item.NO_SJ || 'WL-01',
         delivery_type: 'DALAM KOTA',
         qr_address: qrAddress,
+        source: 'label_sj',
         items_detail: [{
           code: item.BRAND || item.NO_SPK || 'ITEM',
           desc: item.ITEM_DESCRIPTION || item.PROJECT || '-',
@@ -460,6 +461,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         store_name: item.DELIVERY_ADDRESS || 'Store Utama',
         recipient_name: item.RECIPIENT_NAME || '-',
         total_qty: item.totalCombinedQty,
+        source: 'label_sj',
         updated_at: new Date().toISOString()
       };
       await supabase.from('packing_tracking').upsert(payload, { onConflict: 'tracking_id' });

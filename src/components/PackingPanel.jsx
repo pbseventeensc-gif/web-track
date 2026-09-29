@@ -369,6 +369,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             area_code: 'Q1',
             delivery_type: deliveryType,
             qr_address: qrAddress,
+            source: 'google_sheet',
             items_detail: storeItems,
             status_qc_label: 'DONE',
             status_qc_packing: 'PENDING',
@@ -1119,7 +1120,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     {item.box_code || 'B1'}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px' }}>
-                    <QRCodeSVG value={`https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={95} />
+                    <QRCodeSVG value={item.source === 'google_sheet' ? (item.qr_address || item.tracking_id) : `https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={95} />
                   </div>
                 </div>
 
