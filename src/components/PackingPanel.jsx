@@ -1495,21 +1495,22 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                           setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
                                         }
                                       }}
-                                      className={`px-2.5 py-1 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 ${
+                                      className={`p-1.5 text-white rounded-lg transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
                                         isAllProjSelected ? 'bg-amber-700 hover:bg-amber-800' : 'bg-emerald-600 hover:bg-emerald-500'
                                       }`}
                                       title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
                                     >
-                                      {isAllProjSelected ? '☒ Batal Pilih' : '☑️ Pilih'}
+                                      <Check className="w-4 h-4 text-white" />
                                     </button>
                                   );
                                 })()}
                                 <button
                                   type="button"
                                   onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                  className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-[11px] font-extrabold transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                                  className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  title="Cetak Label"
                                 >
-                                  <Printer className="w-3 h-3 text-white" /> Cetak Label
+                                  <Printer className="w-4 h-4 text-white" />
                                 </button>
                               </div>
                             </div>
