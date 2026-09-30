@@ -352,7 +352,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
       ) : (
         <div className="rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
                 <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
                   <th className="py-4 pl-4 pr-1 text-center w-8">
@@ -377,12 +377,14 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                   <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
                   <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
                   <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
+                  <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
                   <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
                 {filteredList.map((item) => {
                   const details = parseItems(item.items_detail);
+                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
                   const isCheckerDone = item.status_qc_checker === 'DONE';
                   const isSelected = selectedRowIds.includes(item.id);
 
@@ -499,7 +501,29 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                         )}
                       </td>
 
-                      {/* 8. CHECKER STATUS */}
+                      {/* 8. PACKING STATUS (DIPASANGKAN UNTUK USER CHECKER) */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                              isPackingDone
+                                ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                                : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                            {isPackingDone ? 'Done' : 'Pending'}
+                          </span>
+                          {isPackingDone && (
+                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
+                              <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 9. CHECKER STATUS */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex flex-col items-center justify-center gap-1">
                           <button
