@@ -1016,8 +1016,8 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen p-4 sm:p-6 font-sans antialiased transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
-      <div className="max-w-[1700px] w-full mx-auto space-y-6">
+    <div className={`min-h-screen p-2 sm:p-6 font-sans antialiased transition-colors duration-300 overflow-x-hidden w-full max-w-full ${isDarkMode ? 'bg-neutral-900 text-neutral-100' : 'bg-[#F4F5F7] text-stone-800'}`}>
+      <div className="max-w-[1700px] w-full max-w-full mx-auto space-y-4 sm:space-y-6 min-w-0">
         
         {/* HEADER BAR */}
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
@@ -1096,10 +1096,12 @@ export default function App() {
             {isBranchMode ? (
               <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
             ) : (
-              <div className="flex flex-col lg:flex-row gap-6 items-start">
+              <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start w-full max-w-full min-w-0">
 
                 {/* MODERN SIDEBAR NAVIGATION MATCHING REFERENCE IMAGE */}
                 <div className={`transition-all duration-300 ease-in-out flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 ${
+                  (currentAdmin?.role === 'packing_role' || currentAdmin?.role === 'checker_role') ? 'hidden lg:block' : ''
+                } ${
                   isSidebarCollapsed ? 'w-full lg:w-20' : 'w-full lg:w-64'
                 } ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-slate-200/80 text-slate-900'}`}>
 
@@ -1344,7 +1346,7 @@ export default function App() {
                 </div>
 
                 {/* MAIN PANEL CONTENT (MAXIMIZED RIGHT AREA) */}
-                <div className="flex-1 min-w-0 space-y-6">
+                <div className="flex-1 min-w-0 max-w-full space-y-4 sm:space-y-6 w-full">
                   {activeTab === 'dashboard' && (
                     <ComingSoonDashboardView title="PRODUCTION DASHBOARD" />
                   )}
