@@ -39,6 +39,7 @@ import MainTrackingTable from './components/MainTrackingTable';
 import FinishingPanel from './components/FinishingPanel';
 import DesignPanel from './components/DesignPanel';
 import PackingPanel from './components/PackingPanel';
+import CheckerView from './components/checker/CheckerView';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
 
@@ -202,6 +203,8 @@ function GlassmorphismLoginView({
       if (activeTab === 'admin') {
         if (username.trim().toLowerCase() === 'packing' && password === 'Paking1') {
           onAdminLogin({ role: 'packing_role', name: 'Packing' });
+        } else if (username.trim().toLowerCase() === 'checker' && password === 'Check3') {
+          onAdminLogin({ role: 'checker_role', name: 'Checker' });
         } else if (username.toUpperCase() === 'ADMIN' && password === '123456') {
           onAdminLogin({ role: 'admin', name: 'Administrator' });
         } else {
@@ -624,13 +627,15 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState(
-    scanParam ? 'paking' : (currentAdmin?.role === 'packing_role' ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard')))
+    scanParam ? 'paking' : (currentAdmin?.role === 'checker_role' ? 'checker' : (currentAdmin?.role === 'packing_role' ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))))
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (currentAdmin?.role === 'packing_role') {
       setActiveTab('paking');
+    } else if (currentAdmin?.role === 'checker_role') {
+      setActiveTab('checker');
     }
   }, [currentAdmin]);
 
@@ -1028,7 +1033,7 @@ export default function App() {
                 Web Tracking Monitoring
               </h1>
               <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {scanParam || packingStaffSession || currentAdmin?.role === 'packing_role' ? `Staff Packing Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))}
+                {currentAdmin?.role === 'checker_role' ? 'Staff Checker Login: Aktif' : (scanParam || packingStaffSession || currentAdmin?.role === 'packing_role' ? `Staff Packing Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`)))}
               </p>
             </div>
           </div>
@@ -1077,7 +1082,7 @@ export default function App() {
                 onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }}
                 className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
               >
-                <LogOut className="w-4 h-4" /> {currentAdmin?.role === 'packing_role' ? 'Logout Staff Packing' : 'Logout Admin'}
+                <LogOut className="w-4 h-4" /> {currentAdmin?.role === 'checker_role' ? 'Logout Staff Checker' : (currentAdmin?.role === 'packing_role' ? 'Logout Staff Packing' : 'Logout Admin')}
               </button>
             )}
           </div>
@@ -1111,7 +1116,47 @@ export default function App() {
                     </button>
                   </div>
 
-                  {currentAdmin?.role === 'packing_role' ? (
+                  {currentAdmin?.role === 'checker_role' ? (
+                    <div>
+                      {!isSidebarCollapsed && (
+                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                        }`}>
+                          Menu Checker
+                        </h3>
+                      )}
+                      <div className="space-y-1">
+                        {[
+                          { id: 'checker', label: 'Checker Station', icon: ShieldCheck }
+                        ].map(item => {
+                          const isActive = activeTab === item.id;
+                          const ItemIcon = item.icon;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setActiveTab(item.id)}
+                              title={isSidebarCollapsed ? item.label : ""}
+                              className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
+                                isActive
+                                  ? (isDarkMode ? 'bg-amber-950/70 text-amber-400 border border-amber-800/80 font-semibold' : 'bg-amber-50 text-amber-700 border border-amber-200 font-semibold')
+                                  : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <ItemIcon className={`w-4 h-4 flex-shrink-0 ${
+                                  isActive
+                                    ? (isDarkMode ? 'text-amber-400' : 'text-amber-600')
+                                    : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
+                                }`} />
+                                {!isSidebarCollapsed && <span>{item.label}</span>}
+                              </div>
+                              {!isSidebarCollapsed && isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : currentAdmin?.role === 'packing_role' ? (
                     <div>
                       {!isSidebarCollapsed && (
                         <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
@@ -1332,7 +1377,11 @@ export default function App() {
                     <CustomModulesIndex isDarkMode={isDarkMode} />
                   )}
 
-                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
+                  {activeTab === 'checker' && (
+                    <CheckerView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'checker' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
                     <MainTrackingTable
                       isDarkMode={isDarkMode}
                       activeTab={activeTab}
