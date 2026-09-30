@@ -38,6 +38,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
+  const [filterStage, setFilterStage] = useState('ALL'); // 'ALL', 'status_qc_label', 'status_qc_packing', 'status_qc_checker', 'status_deliver'
   const [filterProject, setFilterProject] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [printListOverride, setPrintListOverride] = useState(null);
@@ -1071,7 +1072,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
     const isDone = item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
-    return matchDelivery && matchStatus;
+
+    let matchStage = true;
+    if (filterStage !== 'ALL') {
+      const val = item[filterStage];
+      const isStageDone = val === 'DONE' || val === 'CHECKED' || (filterStage === 'status_qc_packing' && (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto'));
+      matchStage = isStageDone;
+    }
+
+    return matchDelivery && matchStatus && matchStage;
   });
 
   const uniqueProjects = Array.from(
@@ -1247,15 +1256,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             const completedCount = packingList.filter((s) => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
             const is100Percent = percent === 100 && totalSpk > 0;
+            const isActive = filterStage === stage.id;
 
             return (
               <div
                 key={stage.id}
-                className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
-                  is100Percent
-                    ? 'bg-emerald-50/80 border-emerald-400 shadow-xs'
-                    : 'bg-white border-slate-200 shadow-2xs'
+                onClick={() => setFilterStage(isActive ? 'ALL' : stage.id)}
+                className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
+                  isActive
+                    ? 'ring-2 ring-indigo-600 bg-indigo-50/70 border-indigo-400 shadow-sm'
+                    : is100Percent
+                    ? 'bg-emerald-50/80 border-emerald-400 shadow-xs hover:border-emerald-500'
+                    : 'bg-white border-slate-200 shadow-2xs hover:border-slate-400'
                 }`}
+                title="Klik untuk filter tabel berdasarkan tahap ini"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -1288,6 +1302,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             );
           })}
         </div>
+
+        {filterStage !== 'ALL' && (
+          <div className="mt-4 mb-2 flex items-center justify-between bg-indigo-50 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-900 shadow-2xs">
+            <span>🔍 Filter Tabel Berdasarkan Tahap: <strong>{stages.find(s => s.id === filterStage)?.label}</strong> (Menampilkan yang sudah Selesai)</span>
+            <button
+              onClick={() => setFilterStage('ALL')}
+              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            >
+              Reset Filter Tahap
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-2xs">
