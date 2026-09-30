@@ -25,7 +25,7 @@ if (!window.__ACTIVE_DESIGN_URLS__) {
   window.__ACTIVE_DESIGN_URLS__ = {};
 }
 
-export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateField, onOpenImageModal }) {
+export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateField, onOpenImageModal, isPackingRole }) {
   const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -1319,57 +1319,59 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-2xs">
 
         {/* ENTERPRISE ACTION TOOLBAR */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setIsGSheetModalOpen(true)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-            >
-              <Globe className="w-3.5 h-3.5 text-slate-700" /> Import Google Sheet
-            </button>
+        {!isPackingRole && (
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setIsGSheetModalOpen(true)}
+                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Globe className="w-3.5 h-3.5 text-slate-700" /> Import Google Sheet
+              </button>
 
-            <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
-              <Upload className="w-3.5 h-3.5 text-slate-700" />
-              {isUploadingImages ? 'Memasang Foto...' : 'Upload Desain'}
-              <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
-            </label>
+              <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                <Upload className="w-3.5 h-3.5 text-slate-700" />
+                {isUploadingImages ? 'Memasang Foto...' : 'Upload Desain'}
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
+              </label>
 
-            <button
-              onClick={handleBatchPrintAll}
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
-            </button>
+              <button
+                onClick={handleBatchPrintAll}
+                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
+              </button>
 
-            <button
-              onClick={() => handlePrintSuratJalan(filteredList)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-            >
-              <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
-            </button>
+              <button
+                onClick={() => handlePrintSuratJalan(filteredList)}
+                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              >
+                <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
+              </button>
 
-            <button
-              onClick={handleDownloadPackingReport}
-              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-700" /> Export Excel
-            </button>
+              <button
+                onClick={handleDownloadPackingReport}
+                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-700" /> Export Excel
+              </button>
 
-            <button
-              onClick={handleSyncFromSpkData}
-              className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-emerald-700" /> Pulihkan Data
-            </button>
+              <button
+                onClick={handleSyncFromSpkData}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-700" /> Pulihkan Data
+              </button>
 
-            <button
-              onClick={handleClearAllPackingData}
-              className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
-            </button>
+              <button
+                onClick={handleClearAllPackingData}
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* SUB-HEADER SEGMENTED CONTROL & SEARCH */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pt-4 border-t border-slate-200">

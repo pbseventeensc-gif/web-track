@@ -200,10 +200,12 @@ function GlassmorphismLoginView({
 
     try {
       if (activeTab === 'admin') {
-        if (username.toUpperCase() === 'ADMIN' && password === '123456') {
+        if (username.trim().toLowerCase() === 'packing' && password === 'Paking1') {
+          onAdminLogin({ role: 'packing_role', name: 'Packing' });
+        } else if (username.toUpperCase() === 'ADMIN' && password === '123456') {
           onAdminLogin({ role: 'admin', name: 'Administrator' });
         } else {
-          setErrorMsg('Username atau Password Admin Pusat salah!');
+          setErrorMsg('Username atau Password salah!');
         }
       } else if (activeTab === 'kawan_lama') {
         if (username === 'admin_kl' && password === 'kawanlama2026') {
@@ -610,6 +612,12 @@ export default function App() {
     scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (currentAdmin?.role === 'packing_role') {
+      setActiveTab('paking');
+    }
+  }, [currentAdmin]);
 
   const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
@@ -1076,7 +1084,7 @@ export default function App() {
 
         {/* MAIN BODY AREA */}
         {scanParam ? (
-          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
         ) : (
           <>
             {isBranchMode ? (
@@ -1102,7 +1110,47 @@ export default function App() {
                     </button>
                   </div>
 
-                  {currentKawanLamaAdmin ? (
+                  {currentAdmin?.role === 'packing_role' ? (
+                    <div>
+                      {!isSidebarCollapsed && (
+                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                        }`}>
+                          Menu Paking
+                        </h3>
+                      )}
+                      <div className="space-y-1">
+                        {[
+                          { id: 'paking', label: 'Paking Station', icon: Package }
+                        ].map(item => {
+                          const isActive = activeTab === item.id;
+                          const ItemIcon = item.icon;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => setActiveTab(item.id)}
+                              title={isSidebarCollapsed ? item.label : ""}
+                              className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
+                                isActive
+                                  ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
+                                  : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <ItemIcon className={`w-4 h-4 flex-shrink-0 ${
+                                  isActive
+                                    ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
+                                    : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
+                                }`} />
+                                {!isSidebarCollapsed && <span>{item.label}</span>}
+                              </div>
+                              {!isSidebarCollapsed && isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : currentKawanLamaAdmin ? (
                     <div>
                       {!isSidebarCollapsed && (
                         <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
@@ -1264,7 +1312,7 @@ export default function App() {
                   )}
 
                   {activeTab === 'paking' && (
-                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} />
+                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
                   )}
 
                   {activeTab === 'pengiriman' && (
