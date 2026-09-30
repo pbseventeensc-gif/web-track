@@ -608,7 +608,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(
     scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
   );
-  
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
@@ -1083,17 +1084,32 @@ export default function App() {
               <div className="flex flex-col lg:flex-row gap-6 items-start">
 
                 {/* MODERN SIDEBAR NAVIGATION MATCHING REFERENCE IMAGE */}
-                <div className={`w-full lg:w-64 flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 transition-colors ${
-                  isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-slate-200/80 text-slate-900'
-                }`}>
+                <div className={`transition-all duration-300 ease-in-out flex-shrink-0 rounded-3xl p-4 border shadow-sm space-y-5 sticky top-6 ${
+                  isSidebarCollapsed ? 'w-full lg:w-20' : 'w-full lg:w-64'
+                } ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80 text-white' : 'bg-white border-slate-200/80 text-slate-900'}`}>
+
+                  <div className="flex items-center justify-between px-2 pb-3 border-b border-slate-200/60 dark:border-neutral-700/60">
+                    {!isSidebarCollapsed && (
+                      <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">NAVIGASI</span>
+                    )}
+                    <button
+                      onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                      className="p-1.5 rounded-xl bg-slate-100 dark:bg-neutral-700 hover:bg-slate-200 dark:hover:bg-neutral-600 text-slate-700 dark:text-slate-200 transition-all cursor-pointer shadow-2xs mx-auto lg:mx-0 flex items-center justify-center"
+                      title={isSidebarCollapsed ? "Buka Sidebar" : "Tutup Sidebar"}
+                    >
+                      {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    </button>
+                  </div>
 
                   {currentKawanLamaAdmin ? (
                     <div>
-                      <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
-                        isDarkMode ? 'text-neutral-400' : 'text-slate-400'
-                      }`}>
-                        Portal Admin Kawan Lama
-                      </h3>
+                      {!isSidebarCollapsed && (
+                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                        }`}>
+                          Portal Admin Kawan Lama
+                        </h3>
+                      )}
                       <div className="space-y-1">
                         {[
                           { id: 'label', label: 'Cetak Label & SJ', icon: Tag },
@@ -1106,7 +1122,8 @@ export default function App() {
                             <button
                               key={item.id}
                               onClick={() => setActiveTab(item.id)}
-                              className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
+                              title={isSidebarCollapsed ? item.label : ""}
+                              className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                 isActive
                                   ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
                                   : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
@@ -1118,9 +1135,9 @@ export default function App() {
                                     ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
                                     : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
                                 }`} />
-                                <span>{item.label}</span>
+                                {!isSidebarCollapsed && <span>{item.label}</span>}
                               </div>
-                              {isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
+                              {!isSidebarCollapsed && isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
                             </button>
                           );
                         })}
@@ -1130,11 +1147,13 @@ export default function App() {
                     <>
                       {/* GROUP 1: PRODUKSI & MONITORING */}
                       <div>
-                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
-                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
-                        }`}>
-                          PRODUKSI & MONITORING
-                        </h3>
+                        {!isSidebarCollapsed && (
+                          <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                            isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                          }`}>
+                            PRODUKSI & MONITORING
+                          </h3>
+                        )}
                         <div className="space-y-1">
                           {[
                             { id: 'dashboard', label: 'Production Dashboard', icon: LayoutDashboard },
@@ -1150,7 +1169,8 @@ export default function App() {
                               <button
                                 key={item.id}
                                 onClick={() => setActiveTab(item.id)}
-                                className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
+                                title={isSidebarCollapsed ? item.label : ""}
+                                className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                   isActive
                                     ? (isDarkMode ? 'bg-blue-950/70 text-blue-400 border border-blue-800/80 font-semibold' : 'bg-[#ebf3fe] text-[#2563eb] border border-[#d2e3fc] font-semibold')
                                     : (isDarkMode ? 'text-neutral-300 hover:text-white hover:bg-neutral-700/50 font-medium' : 'text-[#374151] hover:text-[#111827] hover:bg-slate-100/80 font-medium')
@@ -1162,9 +1182,9 @@ export default function App() {
                                       ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
                                       : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
                                   }`} />
-                                  <span>{item.label}</span>
+                                  {!isSidebarCollapsed && <span>{item.label}</span>}
                                 </div>
-                                {isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
+                                {!isSidebarCollapsed && isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />}
                               </button>
                             );
                           })}
@@ -1173,11 +1193,13 @@ export default function App() {
 
                       {/* GROUP 2: PROJECT & CUSTOM MODUL */}
                       <div>
-                        <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
-                          isDarkMode ? 'text-neutral-400' : 'text-slate-400'
-                        }`}>
-                          PROJECT & CUSTOM MODUL
-                        </h3>
+                        {!isSidebarCollapsed && (
+                          <h3 className={`text-[11px] font-bold uppercase tracking-wider px-3 mb-2 ${
+                            isDarkMode ? 'text-neutral-400' : 'text-slate-400'
+                          }`}>
+                            PROJECT & CUSTOM MODUL
+                          </h3>
+                        )}
                         <div className="space-y-1">
                           {[
                             { id: 'label', label: 'Cetak Label & SJ', icon: Tag },
@@ -1192,8 +1214,8 @@ export default function App() {
                                 key={item.id}
                                 onClick={() => !isLocked && setActiveTab(item.id)}
                                 disabled={isLocked}
-                                title={isLocked ? "Silakan Login Admin terlebih dahulu" : ""}
-                                className={`group w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
+                                title={isLocked ? "Silakan Login Admin terlebih dahulu" : (isSidebarCollapsed ? item.label : "")}
+                                className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'} rounded-2xl text-xs sm:text-[13px] transition-all cursor-pointer ${
                                   isLocked
                                     ? 'cursor-not-allowed bg-stone-50/50 dark:bg-neutral-900/40 text-slate-400 font-medium'
                                     : isActive
@@ -1209,12 +1231,12 @@ export default function App() {
                                         ? (isDarkMode ? 'text-blue-400' : 'text-[#2563eb]')
                                         : (isDarkMode ? 'text-neutral-400 group-hover:text-neutral-200' : 'text-[#6b7280] group-hover:text-[#374151]')
                                   }`} />
-                                  <span>{item.label}</span>
+                                  {!isSidebarCollapsed && <span>{item.label}</span>}
                                 </div>
                                 {isLocked ? (
-                                  <Lock className="w-3.5 h-3.5 text-amber-500/80" />
+                                  !isSidebarCollapsed && <Lock className="w-3.5 h-3.5 text-amber-500/80" />
                                 ) : (
-                                  isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />
+                                  !isSidebarCollapsed && isActive && <ChevronRight className={`w-4 h-4 ml-auto ${isDarkMode ? 'text-blue-400' : 'text-[#2563eb]'}`} />
                                 )}
                               </button>
                             );
