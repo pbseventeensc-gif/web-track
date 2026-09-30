@@ -1540,30 +1540,30 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                           setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
                                         }
                                       }}
-                                      className={`p-1 text-white rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
-                                        isAllProjSelected ? 'bg-amber-700 hover:bg-amber-800' : 'bg-emerald-600 hover:bg-emerald-500'
+                                      className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
+                                        isAllProjSelected ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-transparent text-emerald-700 border border-emerald-700/40 hover:bg-emerald-100/60'
                                       }`}
                                       title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
                                     >
-                                      <Check className="w-3.5 h-3.5 text-white" />
+                                      <Check className="w-3.5 h-3.5" />
                                     </button>
                                   );
                                 })()}
                                 <button
                                   type="button"
                                   onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                  className="p-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                   title="Cetak Label"
                                 >
-                                  <Printer className="w-3.5 h-3.5 text-white" />
+                                  <Printer className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteProject(item.promo_title)}
-                                  className="p-1 bg-rose-600 hover:bg-rose-500 text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  className="p-1 bg-transparent text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                   title="Hapus Project Ini"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5 text-white" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
