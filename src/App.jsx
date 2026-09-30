@@ -601,6 +601,21 @@ export default function App() {
   const isBranchMode = searchParams.get('mode') === 'cabang';
   const scanParam = searchParams.get('scan'); 
 
+  const [currentAdmin, setCurrentAdmin] = useState(() => {
+    const s = localStorage.getItem('kl_admin_session');
+    return s ? JSON.parse(s) : null;
+  });
+
+  const [currentBranch, setCurrentBranch] = useState(() => {
+    const s = localStorage.getItem('kl_branch_session');
+    return s ? JSON.parse(s) : null;
+  });
+
+  const [packingStaffSession, setPackingStaffSession] = useState(() => {
+    const s = localStorage.getItem('packing_staff_session');
+    return s ? JSON.parse(s) : null;
+  });
+
   const [spkList, setSpkList] = useState([]);
   
   const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
@@ -609,7 +624,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState(
-    scanParam ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))
+    scanParam ? 'paking' : (currentAdmin?.role === 'packing_role' ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard')))
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -632,20 +647,6 @@ export default function App() {
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
   const [isImporting, setIsImporting] = useState(false);
 
-  const [currentAdmin, setCurrentAdmin] = useState(() => { 
-    const s = localStorage.getItem('kl_admin_session'); 
-    return s ? JSON.parse(s) : null; 
-  });
-  
-  const [currentBranch, setCurrentBranch] = useState(() => { 
-    const s = localStorage.getItem('kl_branch_session'); 
-    return s ? JSON.parse(s) : null; 
-  });
-
-  const [packingStaffSession, setPackingStaffSession] = useState(() => {
-    const s = localStorage.getItem('packing_staff_session');
-    return s ? JSON.parse(s) : null;
-  });
   const [selectedPackingUser, setSelectedPackingUser] = useState(PACKING_USERS[0].id);
   const [packingPin, setPackingPin] = useState('');
 
