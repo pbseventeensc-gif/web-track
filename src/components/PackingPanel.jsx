@@ -1549,14 +1549,23 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     </button>
                                   );
                                 })()}
-                                <button
-                                  type="button"
-                                  onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                  className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                  title="Cetak Label"
-                                >
-                                  <Printer className="w-3.5 h-3.5" />
-                                </button>
+                                {(() => {
+                                  const projectItems = sourceList.filter(p => p.promo_title === item.promo_title);
+                                  const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source === 'label_sj');
+                                  if (!isLabelSjProject) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePrintProjectLabels(item.promo_title)}
+                                        className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                        title="Cetak Label"
+                                      >
+                                        <Printer className="w-3.5 h-3.5" />
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteProject(item.promo_title)}
@@ -1622,25 +1631,33 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handlePrintLabel(item)}
-                              title="Cetak Label"
-                              className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingRowItem(item)}
-                              title="Foto Desain"
-                              className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <div className="text-[10px] mt-1 text-slate-500 font-medium">
-                            {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
-                          </div>
+                          {item.source === 'label_sj' ? (
+                            <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold">
+                              Label SJ (Tab Label)
+                            </span>
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={() => handlePrintLabel(item)}
+                                  title="Cetak Label"
+                                  className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
+                                >
+                                  <Printer className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingRowItem(item)}
+                                  title="Foto Desain"
+                                  className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 text-slate-900 flex items-center justify-center transition-all shadow-2xs active:scale-95 cursor-pointer border border-slate-300"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                              <div className="text-[10px] mt-1 text-slate-500 font-medium">
+                                {parseItems(item.items_detail).filter(i => i.image_url).length} / {parseItems(item.items_detail).length} Desain
+                              </div>
+                            </>
+                          )}
                         </td>
 
                         {/* 1. BUKTI FOTO (Layout: Foto -> User ID -> Timestamp) */}
