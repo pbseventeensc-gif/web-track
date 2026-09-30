@@ -598,6 +598,17 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }, 800);
   };
 
+  const handleDeleteProject = async (projectName) => {
+    if (!confirm(`Hapus seluruh data untuk project "${projectName}" dari database?`)) return;
+    const { error } = await supabase.from('packing_tracking').delete().eq('promo_title', projectName);
+    if (!error) {
+      await fetchPackingData();
+      alert(`✅ Project "${projectName}" berhasil dihapus.`);
+    } else {
+      alert('Gagal menghapus project: ' + error.message);
+    }
+  };
+
   const handleBatchPrintAll = () => {
     const listToPrint = selectedRowIds.length > 0
       ? filteredList.filter(item => selectedRowIds.includes(item.id))
@@ -1478,8 +1489,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   const isRowComplete = isPackingDone || isCheckerDone;
                   const isSelected = selectedRowIds.includes(item.id);
 
-                  // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch
-                  const showProjectDivider = idx > 0 && item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title;
+                  // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch atau baris pertama
+                  const showProjectDivider = idx === 0 || (item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title);
 
                   return (
                     <React.Fragment key={item.id}>
@@ -1519,6 +1530,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                   title="Cetak Label"
                                 >
                                   <Printer className="w-4 h-4 text-white" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteProject(item.promo_title)}
+                                  className="p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  title="Hapus Project Ini"
+                                >
+                                  <Trash2 className="w-4 h-4 text-white" />
                                 </button>
                               </div>
                             </div>
