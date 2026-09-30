@@ -1522,10 +1522,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan="10" className="py-2.5 px-4 text-center font-bold text-amber-950 text-xs tracking-wider uppercase shadow-2xs">
+                          <td colSpan="10" className="py-1.5 px-3 text-center font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                              <span>📦 {item.promo_title}{item.no_spk ? ` _ ${item.no_spk}` : ''}</span>
-                              <div className="flex items-center gap-2">
+                              <span>{item.promo_title}{item.no_spk ? ` _ ${item.no_spk}` : ''}</span>
+                              <div className="flex items-center gap-1.5">
                                 {(() => {
                                   const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
                                   const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
@@ -1540,30 +1540,30 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                           setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
                                         }
                                       }}
-                                      className={`p-1.5 text-white rounded-lg transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
+                                      className={`p-1 text-white rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
                                         isAllProjSelected ? 'bg-amber-700 hover:bg-amber-800' : 'bg-emerald-600 hover:bg-emerald-500'
                                       }`}
                                       title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
                                     >
-                                      <Check className="w-4 h-4 text-white" />
+                                      <Check className="w-3.5 h-3.5 text-white" />
                                     </button>
                                   );
                                 })()}
                                 <button
                                   type="button"
                                   onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                  className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  className="p-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                   title="Cetak Label"
                                 >
-                                  <Printer className="w-4 h-4 text-white" />
+                                  <Printer className="w-3.5 h-3.5 text-white" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteProject(item.promo_title)}
-                                  className="p-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                  className="p-1 bg-rose-600 hover:bg-rose-500 text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                   title="Hapus Project Ini"
                                 >
-                                  <Trash2 className="w-4 h-4 text-white" />
+                                  <Trash2 className="w-3.5 h-3.5 text-white" />
                                 </button>
                               </div>
                             </div>
