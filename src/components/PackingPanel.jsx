@@ -1244,10 +1244,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
           <h2 className="text-base font-bold uppercase tracking-wider text-black">
-            Panel Kontrol Paking
+            Packing Control Panel
           </h2>
           <span className="text-xs font-semibold px-2.5 py-0.5 bg-amber-500/10 text-amber-800 rounded-lg">
-            Total Box Koli: {totalSpk}
+            Total Boxes: {totalSpk}
           </span>
         </div>
 
@@ -1269,7 +1269,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     ? 'bg-emerald-50/80 border-emerald-400 shadow-xs hover:border-emerald-500'
                     : 'bg-white border-slate-200 shadow-2xs hover:border-slate-400'
                 }`}
-                title="Klik untuk filter tabel berdasarkan tahap ini"
+                title="Click to filter table by this stage"
               >
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -1288,14 +1288,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <span className="text-xl font-extrabold tracking-tight block text-black">
                       {completedCount} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
                     </span>
-                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block">Box Selesai</span>
+                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block">Boxes Completed</span>
                   </div>
                 </div>
 
                 <div className="mt-2 pt-2 border-t border-slate-200/80 text-[10px] font-semibold flex justify-between items-center text-slate-700">
                   <span>Status:</span>
                   <span className={is100Percent ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
-                    {is100Percent ? '🟢 100% Selesai 🎉' : '🟡 In Progress'}
+                    {is100Percent ? '🟢 100% Completed 🎉' : '🟡 In Progress'}
                   </span>
                 </div>
               </div>
@@ -1305,12 +1305,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
         {filterStage !== 'ALL' && (
           <div className="mt-4 mb-2 flex items-center justify-between bg-indigo-50 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-900 shadow-2xs">
-            <span>🔍 Filter Tabel Berdasarkan Tahap: <strong>{stages.find(s => s.id === filterStage)?.label}</strong> (Menampilkan yang sudah Selesai)</span>
+            <span>🔍 Filter Table by Stage: <strong>{stages.find(s => s.id === filterStage)?.label}</strong> (Showing Completed)</span>
             <button
               onClick={() => setFilterStage('ALL')}
               className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
             >
-              Reset Filter Tahap
+              Reset Stage Filter
             </button>
           </div>
         )}
@@ -1420,7 +1420,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                       : 'text-slate-700 hover:text-black font-semibold'
                   }`}
                 >
-                  {type === 'ALL' ? 'Semua Rute' : type}
+                  {type === 'ALL' ? 'All Routes' : type}
                 </button>
               ))}
             </div>
@@ -1433,7 +1433,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   onChange={(e) => setFilterProject(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border-0 focus:outline-none cursor-pointer"
                 >
-                  <option value="ALL">📦 Filter Project: Semua ({statusFilteredList.length})</option>
+                  <option value="ALL">Project: All ({statusFilteredList.length})</option>
                   {uniqueProjects.map((projKey, i) => {
                     const parts = projKey.split('_');
                     const projName = parts[0] || '-';
@@ -1441,7 +1441,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     const projBoxCount = statusFilteredList.filter(item => `${item.promo_title || '-'}_${item.no_spk || '-'}` === projKey).length;
                     return (
                       <option key={i} value={projKey}>
-                        📂 {projName} {spkNo !== '-' ? `(${spkNo})` : ''} - {projBoxCount} Box
+                        {projName} {spkNo !== '-' ? `(${spkNo})` : ''} - {projBoxCount} Boxes
                       </option>
                     );
                   })}
@@ -1454,7 +1454,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari Store, SPK, atau Box..."
+              placeholder="Search Store, SPK, or Box..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs bg-white text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-semibold"
@@ -1483,7 +1483,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
                         : 'border-slate-400 bg-white hover:border-emerald-600'
                     }`}
-                    title="Pilih Semua Baris"
+                    title="Select All Rows"
                   >
                     {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
                       <Check className="w-2.5 h-2.5 stroke-[3]" />
@@ -1491,13 +1491,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   </button>
                 </th>
                 <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
-                <th className="py-4 px-4 font-semibold">NAMA STORE / SPK</th>
-                <th className="py-4 px-4 font-semibold">TIPE KIRIM</th>
-                <th className="py-4 px-4 text-center font-semibold">TGL IMPORT</th>
-                <th className="py-4 px-4 text-center font-semibold">LABEL & DESAIN</th>
-                <th className="py-4 px-4 text-center font-semibold">BUKTI FOTO</th>
-                <th className="py-4 px-4 text-center font-semibold">STATUS PACKING</th>
-                <th className="py-4 px-4 text-center font-semibold">STATUS CHECKER</th>
+                <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
+                <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
+                <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
+                <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
+                <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
+                <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
+                <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
                 <th className="py-4 px-4 text-center font-semibold">OUTBOUND</th>
               </tr>
             </thead>
@@ -1505,7 +1505,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               {filteredList.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="p-8 text-center text-slate-500 font-semibold text-xs">
-                    Tidak ada data box yang sesuai filter.
+                    No matching box data found.
                   </td>
                 </tr>
               ) : (
