@@ -1172,8 +1172,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                       <div style={{ textAlign: 'center', fontSize: '18px', padding: '0 5px' }}>{sub.size ? `Ukuran : ${sub.size}` : ''}</div>
                     </div>
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '80mm 35mm 1fr', alignItems: 'stretch', minHeight: '37mm' }}>
-                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                        <div style={{ fontSize: '40px', fontWeight: '900', color: '#dc2626', letterSpacing: '-1px', lineHeight: 1 }}>
+                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', wordBreak: 'break-word', overflow: 'hidden' }}>
+                        <div style={{ fontSize: (sub.code || '').length > 15 ? '16px' : ((sub.code || '').length > 8 ? '22px' : '40px'), fontWeight: '900', color: '#dc2626', letterSpacing: '-1px', lineHeight: 1.1 }}>
                           {sub.code || ''}
                         </div>
                         <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '2px' }}>
