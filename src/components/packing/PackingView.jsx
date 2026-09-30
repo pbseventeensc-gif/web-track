@@ -589,7 +589,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
             })}
           </div>
 
-          {/* TAMPILAN TABLE DESKTOP (AKURASI & PRESISI 100% PERSIS DENGAN USER ADMIN) */}
+          {/* TAMPILAN TABLE DESKTOP (KHUSUS USER PACKING: TANPA KOLOM CHECKER) */}
           <div className="hidden sm:block rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -618,14 +618,12 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                     <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
                     <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
                     <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
-                    <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
                   {filteredList.map((item) => {
                     const details = parseItems(item.items_detail);
                     const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
-                    const isCheckerDone = item.status_qc_checker === 'DONE';
                     const isUploadingThis = uploadingId === item.id;
                     const isSelected = selectedRowIds.includes(item.id);
 
@@ -756,7 +754,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                           )}
                         </td>
 
-                        {/* 8. PACKING STATUS (KEMBALIKAN BADGE SLATE/GRAY & TEKS 'Pending' SAMA PERSIS SEPERTI ADMIN) */}
+                        {/* 8. PACKING STATUS */}
                         <td className="py-3.5 px-4 text-center">
                           <div className="flex flex-col items-center justify-center gap-1">
                             <button
@@ -774,29 +772,6 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                               <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
                                 <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
                                 <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* 9. CHECKER STATUS (KEMBALIKAN BADGE SLATE/GRAY & TEKS 'Pending' SAMA PERSIS SEPERTI ADMIN) */}
-                        <td className="py-3.5 px-4 text-center">
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <button
-                              onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
-                                isCheckerDone
-                                  ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
-                              }`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
-                              {isCheckerDone ? 'Checked' : 'Pending'}
-                            </button>
-                            {isCheckerDone && (
-                              <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
-                                <span className="block truncate max-w-[110px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
-                                <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
                               </div>
                             )}
                           </div>
