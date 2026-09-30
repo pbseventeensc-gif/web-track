@@ -17,11 +17,13 @@ import {
   Check,
   Clock,
   Search,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 
 export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const [labelData, setLabelData] = useState([]);
+  const [previousLabelData, setPreviousLabelData] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [headerLogoUrl, setHeaderLogoUrl] = useState(() => localStorage.getItem('wellen_header_logo') || '');
   const [sjFormatType, setSjFormatType] = useState('modern');
@@ -67,41 +69,69 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const { data, error } = await supabase
       .from('packing_tracking')
       .select('*')
-      .order('id', { ascending: true });
+      .order('id', { ascending: false });
 
     if (!error && data) {
-      const formatted = data.map((item) => {
+      const formatted = [];
+      data.forEach((item) => {
         let details = [];
         if (Array.isArray(item.items_detail)) {
           details = item.items_detail;
         } else if (typeof item.items_detail === 'string') {
           try { details = JSON.parse(item.items_detail); } catch (e) { details = []; }
         }
-        const d0 = details[0] || {};
 
-        return {
-          NO_SPK: item.no_spk || '',
-          PO_NUMBER: d0.po_number || item.promo_title || '',
-          NO_SJ: d0.no_sj || item.box_code || '',
-          CLIENT: item.client_pt || '',
-          PROJECT: item.promo_title || d0.desc || '',
-          NO_WPP: d0.no_wpp || item.no_spk || '',
-          BRAND: d0.brand || d0.code || '',
-          RECIPIENT_NAME: item.recipient_name || '',
-          RECIPIENT_PHONE: d0.recipient_phone || '',
-          DELIVERY_ADDRESS: item.store_name || '',
-          ITEM_DESCRIPTION: d0.desc || item.promo_title || '',
-          MEDIA: d0.material || '',
-          UKURAN: d0.size || '',
-          QTY_TOTAL: Number(item.total_qty) || 0,
-          QTY_PER_KOLI: Number(d0.qty_per_koli) || 50,
-          DATE_PRODUCTION: d0.date_production || '-',
-          SENDER: d0.sender || 'WELLEN PRINT',
-          SENDER_TELP: d0.sender_telp || '021-5506999',
-          VISUAL_IMAGE: d0.visual_image || d0.image_url || '',
-          VISUAL_IMAGE_2: d0.visual_image_2 || '',
-          TRACKING_ID: item.tracking_id
-        };
+        if (details.length === 0) {
+          formatted.push({
+            NO_SPK: item.no_spk || '',
+            PO_NUMBER: item.promo_title || '',
+            NO_SJ: item.box_code || '',
+            CLIENT: item.client_pt || '',
+            PROJECT: item.promo_title || '',
+            NO_WPP: item.no_spk || '',
+            BRAND: '',
+            RECIPIENT_NAME: item.recipient_name || '',
+            RECIPIENT_PHONE: '',
+            DELIVERY_ADDRESS: item.store_name || '',
+            ITEM_DESCRIPTION: item.promo_title || '',
+            MEDIA: '',
+            UKURAN: '',
+            QTY_TOTAL: Number(item.total_qty) || 0,
+            QTY_PER_KOLI: 50,
+            DATE_PRODUCTION: '-',
+            SENDER: 'WELLEN PRINT',
+            SENDER_TELP: '021-5506999',
+            VISUAL_IMAGE: '',
+            VISUAL_IMAGE_2: '',
+            TRACKING_ID: item.tracking_id
+          });
+        } else {
+          details.forEach((d) => {
+            formatted.push({
+              NO_SPK: item.no_spk || '',
+              PO_NUMBER: d.po_number || item.promo_title || '',
+              NO_SJ: d.no_sj || item.box_code || '',
+              CLIENT: item.client_pt || '',
+              PROJECT: d.desc || item.promo_title || '',
+              NO_WPP: d.no_wpp || item.no_spk || '',
+              BRAND: d.brand || d.code || '',
+              RECIPIENT_NAME: item.recipient_name || '',
+              RECIPIENT_PHONE: d.recipient_phone || '',
+              DELIVERY_ADDRESS: item.store_name || '',
+              ITEM_DESCRIPTION: d.desc || '',
+              MEDIA: d.material || '',
+              UKURAN: d.size || '',
+              QTY_TOTAL: Number(d.qty) || Number(item.total_qty) || 0,
+              QTY_PER_KOLI: Number(d.qty_per_koli) || 50,
+              DATE_PRODUCTION: d.date_production || '-',
+              SENDER: d.sender || 'WELLEN PRINT',
+              SENDER_TELP: d.sender_telp || '021-5506999',
+              VISUAL_IMAGE: d.visual_image || '',
+              VISUAL_IMAGE_2: d.visual_image_2 || '',
+              TRACKING_ID: item.tracking_id
+            });
+          });
+        }
       });
 
       setLabelData(formatted);
@@ -112,63 +142,87 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const saveItemsToSupabase = async (itemsToSave) => {
     if (!itemsToSave || itemsToSave.length === 0) return;
 
-    // Preservasi status & foto jika tracking_id sudah ada di database Supabase
-    const { data: existingRows } = await supabase.from('packing_tracking').select('tracking_id, status_qc_packing, status_qc_checker, status_qc_label, status_deliver, bukti_paking_url, bukti_outbound_url, outbound_url, foto_by, foto_at, packing_by, packing_at, checker_by, checker_at, staff_outbound');
+    // Preservasi status jika tracking_id sudah ada di database Supabase
+    const { data: existingRows } = await supabase.from('packing_tracking').select('tracking_id, status_qc_packing, status_qc_checker, status_qc_label, status_deliver, items_detail');
     const existingMap = {};
     if (existingRows) {
       existingRows.forEach(r => { existingMap[r.tracking_id] = r; });
     }
 
-    const payloads = itemsToSave.map((item) => {
-      const trackingCode = item.NO_SPK || item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
-      const existing = existingMap[trackingCode] || {};
-      const qrAddress = `${item.NO_SPK || ''}_${trackingCode}_${item.CLIENT || ''}_${item.DELIVERY_ADDRESS || ''}`;
+    // Group itemsToSave by SPK + Delivery Address
+    const groupedMap = {};
+    itemsToSave.forEach(item => {
+      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
+      const groupKey = `${item.NO_SPK || 'SPK'}_${item.DELIVERY_ADDRESS || 'ADDRESS'}`;
+
+      if (!groupedMap[groupKey]) {
+        groupedMap[groupKey] = {
+          tracking_id: trackingCode,
+          no_spk: item.NO_SPK || '-',
+          client_pt: item.CLIENT || '-',
+          promo_title: item.PROJECT || item.ITEM_DESCRIPTION || '-',
+          store_name: item.DELIVERY_ADDRESS || 'Store Utama',
+          recipient_name: item.RECIPIENT_NAME || '-',
+          box_code: item.NO_SJ || 'WL-01',
+          itemsList: [],
+          totalCombinedQty: 0
+        };
+      }
+      groupedMap[groupKey].itemsList.push({
+        code: item.BRAND || item.NO_SPK || 'ITEM',
+        desc: item.ITEM_DESCRIPTION || item.PROJECT || '-',
+        material: item.MEDIA || '-',
+        size: item.UKURAN || '-',
+        qty: Number(item.QTY_TOTAL) || 0,
+        unit: 'Pcs',
+        po_number: item.PO_NUMBER || '',
+        no_sj: item.NO_SJ || '',
+        no_wpp: item.NO_WPP || '',
+        brand: item.BRAND || '',
+        recipient_phone: item.RECIPIENT_PHONE || '',
+        qty_per_koli: Number(item.QTY_PER_KOLI) || 50,
+        date_production: item.DATE_PRODUCTION || '-',
+        sender: item.SENDER || 'WELLEN PRINT',
+        sender_telp: item.SENDER_TELP || '021-5506999',
+        visual_image: item.VISUAL_IMAGE || '',
+        visual_image_2: item.VISUAL_IMAGE_2 || ''
+      });
+      groupedMap[groupKey].totalCombinedQty += Number(item.QTY_TOTAL) || 0;
+    });
+
+    const payloads = Object.values(groupedMap).map((group) => {
+      const existing = existingMap[group.tracking_id] || {};
+      const qrAddress = `${group.no_spk}_${group.tracking_id}_${group.client_pt}_${group.store_name}`;
+
+      let combinedDetails = group.itemsList;
+      if (existing.items_detail) {
+        let prevDetails = [];
+        if (Array.isArray(existing.items_detail)) prevDetails = existing.items_detail;
+        else if (typeof existing.items_detail === 'string') {
+          try { prevDetails = JSON.parse(existing.items_detail); } catch (e) { prevDetails = []; }
+        }
+        combinedDetails = [...prevDetails, ...group.itemsList];
+      }
+
+      const totalQtySum = combinedDetails.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
 
       return {
-        tracking_id: trackingCode,
-        no_spk: item.NO_SPK || '-',
-        client_pt: item.CLIENT || '-',
-        promo_title: item.PROJECT || item.ITEM_DESCRIPTION || '-',
-        store_name: item.DELIVERY_ADDRESS || 'Store Utama',
-        recipient_name: item.RECIPIENT_NAME || '-',
-        total_qty: Number(item.QTY_TOTAL) || 0,
-        box_code: item.NO_SJ || 'WL-01',
+        tracking_id: group.tracking_id,
+        no_spk: group.no_spk,
+        client_pt: group.client_pt,
+        promo_title: group.promo_title,
+        store_name: group.store_name,
+        recipient_name: group.recipient_name,
+        total_qty: totalQtySum,
+        box_code: group.box_code,
         delivery_type: 'DALAM KOTA',
         qr_address: qrAddress,
         source: 'label_sj',
-        items_detail: [{
-          code: item.BRAND || item.NO_SPK || 'ITEM',
-          desc: item.ITEM_DESCRIPTION || item.PROJECT || '-',
-          material: item.MEDIA || '-',
-          size: item.UKURAN || '-',
-          qty: Number(item.QTY_TOTAL) || 0,
-          unit: 'Pcs',
-          po_number: item.PO_NUMBER || '',
-          no_sj: item.NO_SJ || '',
-          no_wpp: item.NO_WPP || '',
-          brand: item.BRAND || '',
-          recipient_phone: item.RECIPIENT_PHONE || '',
-          qty_per_koli: Number(item.QTY_PER_KOLI) || 50,
-          date_production: item.DATE_PRODUCTION || '-',
-          sender: item.SENDER || 'WELLEN PRINT',
-          sender_telp: item.SENDER_TELP || '021-5506999',
-          visual_image: item.VISUAL_IMAGE || '',
-          visual_image_2: item.VISUAL_IMAGE_2 || ''
-        }],
+        items_detail: combinedDetails,
         status_qc_label: existing.status_qc_label || 'PENDING',
         status_qc_packing: existing.status_qc_packing || 'PENDING',
         status_qc_checker: existing.status_qc_checker || 'PENDING',
         status_deliver: existing.status_deliver || 'PENDING',
-        bukti_paking_url: existing.bukti_paking_url || null,
-        bukti_outbound_url: existing.bukti_outbound_url || null,
-        outbound_url: existing.outbound_url || null,
-        foto_by: existing.foto_by || null,
-        foto_at: existing.foto_at || null,
-        packing_by: existing.packing_by || null,
-        packing_at: existing.packing_at || null,
-        checker_by: existing.checker_by || null,
-        checker_at: existing.checker_at || null,
-        staff_outbound: existing.staff_outbound || null,
         updated_at: new Date().toISOString()
       };
     });
@@ -176,6 +230,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const { error } = await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
     if (error) {
       console.error('Error saving to Supabase packing_tracking:', error);
+      alert('⚠️ Gagal menyimpan ke database Supabase: ' + error.message);
     }
   };
 
@@ -279,19 +334,31 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           };
         }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
 
-        setLabelData(cleanedData); 
-        setSelectedRows(cleanedData.map((_, i) => i));
+        setPreviousLabelData(labelData);
+        const combinedData = [...cleanedData, ...labelData];
+        setLabelData(combinedData);
+        setSelectedRows(combinedData.map((_, i) => i));
 
         // Auto Save Online to Supabase
         await saveItemsToSupabase(cleanedData);
 
-        alert(`✅ Sukses Validasi & Simpan Online! ${cleanedData.length} baris data berhasil di-import dan tersimpan ke database.`);
+        alert(`✅ Sukses Validasi & Simpan Online! ${cleanedData.length} baris data baru ditambahkan (Total: ${combinedData.length} data).`);
       } catch (err) { 
         alert('Gagal membaca file Excel: ' + err.message); 
       }
     };
     reader.readAsArrayBuffer(file); 
     e.target.value = '';
+  };
+
+  const handleUndoImport = () => {
+    if (!previousLabelData) return alert('⚠️ Tidak ada riwayat import sebelumnya untuk dipulihkan.');
+    if (confirm('Pulihkan data ke kondisi sebelum import terakhir?')) {
+      setLabelData(previousLabelData);
+      setSelectedRows(previousLabelData.map((_, i) => i));
+      setPreviousLabelData(null);
+      alert('✅ Data berhasil dipulihkan ke kondisi sebelum import.');
+    }
   };
 
   const handleUpdateKoliRow = async (index, newKoliVal) => {
@@ -520,7 +587,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
 
         const itemsHtml = item.itemsList.map(it => 
-          `• ${it.PROJECT || it.ITEM_DESCRIPTION || '-'} (${it.MEDIA || ''} - ${it.UKURAN || ''}) [<strong>${it.QTY_TOTAL} Pcs</strong>]`
+          `• ${it.ITEM_DESCRIPTION || it.BRAND || it.PROJECT || '-'} (${it.MEDIA || ''} ${it.UKURAN ? '- ' + it.UKURAN : ''}) [<strong>${it.QTY_TOTAL || 0} Pcs</strong>]`
         ).join('<br>');
 
         return `
@@ -558,7 +625,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                   <tr><td class="label-col">PO NUMBER</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.PO_NUMBER || '-'}</td></tr>
                   <tr><td class="label-col">NO. WPP</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.NO_WPP || '-'}</td></tr>
                   <tr><td class="label-col">NO. SPK</td><td class="sep-col">:</td><td class="val-col" style="font-size:12px; font-weight:800; color:#000;">${item.NO_SPK || '-'}</td></tr>
-                  <tr><td class="label-col" style="vertical-align:top;">ITEM LIST</td><td class="sep-col" style="vertical-align:top;">:</td><td class="val-col" style="font-size:11px; line-height:1.35; font-weight:600;">${itemsHtml}</td></tr>
+                  <tr><td class="label-col" style="vertical-align:top; padding: 2px 0;">ITEM LIST</td><td class="sep-col" style="vertical-align:top; padding: 2px 0;">:</td><td class="val-col" style="font-size:10px; line-height:1.25; font-weight:600; padding: 2px 0;">${itemsHtml}</td></tr>
                   <tr><td class="label-col">QTY KOLI INI</td><td class="sep-col">:</td><td class="val-col"><strong style="font-size:13.5px; font-weight:900; color:#1d4ed8;">${item.currentQty} PCS (Koli ${item.currentKoli}/${item.totalKoli})</strong></td></tr>
                   <tr><td class="label-col">DATE PRODUCTION</td><td class="sep-col">:</td><td class="val-col" style="font-size:11.5px; font-weight:700;">${item.DATE_PRODUCTION || '-'}</td></tr>
                 </table>
@@ -590,16 +657,17 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .action-bar button:hover { background: #4338CA; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
       .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
-      .label-box { border: 2px solid #000; width: 100%; height: 131mm; max-height: 131mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; } 
+      .label-box { border: 2px solid #000; width: 100%; height: 143mm; max-height: 143mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; }
       .cut-guide { width: 100%; border-top: 1px dashed #444; margin: 0.5mm 0; }
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
       .header-table td { border: none; vertical-align: middle; } 
       .content-grid { display: grid; grid-template-columns: 1fr 1fr; flex-grow: 1; } 
-      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 8px 10px; font-size: 11.5px; line-height: 1.35; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
+      .grid-box { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 5px 8px; font-size: 11.5px; line-height: 1.35; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; }
       .grid-box:nth-child(2n) { border-right: none; } 
       .grid-box:nth-child(3), .grid-box:nth-child(4) { border-bottom: none; } 
+      .grid-box:nth-child(3) { justify-content: flex-start; padding-top: 6px; padding-bottom: 6px; }
       .align-table { width: 100%; border-collapse: collapse; }
-      .align-table td { border: none; padding: 2.5px 0; vertical-align: middle; font-size: 11.5px; }
+      .align-table td { border: none; padding: 1.5px 0; vertical-align: middle; font-size: 11.5px; }
       .label-col { width: 34%; font-weight: 800; color: #000; }
       .sep-col { width: 4%; text-align: center; font-weight: 800; }
       .val-col { width: 62%; color: #000; word-break: break-word; }
@@ -607,7 +675,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       .visual-title { font-size: 11.5px; font-weight: 800; width: 100%; text-align: center; margin-bottom: 2px; letter-spacing: 0.3px; }
       .koli-title { font-size: 15px; font-weight: 900; margin: 2px 0; color: #000; }
       .visual-img-container { width: 100%; flex-grow: 1; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; overflow: hidden; }
-      .preview-img { max-width: 98%; max-height: 130px; object-fit: contain; display: block; border-radius: 4px; }
+      .preview-img { max-width: 98%; max-height: 95px; object-fit: contain; display: block; border-radius: 4px; }
       @media print { 
         body { background: #fff; margin: 0; padding: 0; }
         .action-bar { display: none; }
@@ -903,6 +971,11 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
             <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 2 (Right) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
           </label>
+          {previousLabelData && (
+            <button onClick={handleUndoImport} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
+              <RotateCcw className="w-3.5 h-3.5 text-amber-700" /> Batalkan Import Terakhir
+            </button>
+          )}
           {labelData.length > 0 && (
             <button onClick={handleClearAllData} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
               <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data

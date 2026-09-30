@@ -112,7 +112,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     const { data, error } = await supabase
       .from('packing_tracking')
       .select('*')
-      .order('id', { ascending: true });
+      .order('id', { ascending: false });
 
     if (!error && data) {
       if (data.length > 0) {
