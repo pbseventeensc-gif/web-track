@@ -5,10 +5,7 @@ import {
   Check,
   Clock,
   RefreshCw,
-  Image as ImageIcon,
-  MapPin,
-  Building2,
-  Tag
+  Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -343,7 +340,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* FILTER BAR & SEARCH (STICKY ON MOBILE) */}
+      {/* FILTER BAR & SEARCH */}
       <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row gap-2.5 justify-between">
 
@@ -438,353 +435,206 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* DATA CONTENT AREA */}
+      {/* DATA CONTENT AREA (TABLE TAMPIL KONSISTEN SAMA PERSIS DENGAN GB 2 DI SEMUA UKURAN LAYAR) */}
       {filteredList.length === 0 ? (
         <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs">
           No matching packing box data found.
         </div>
       ) : (
-        <>
-          {/* TAMPILAN MOBILE CARD (HANYA MUNCUL DI HP: < sm) */}
-          <div className="block sm:hidden space-y-3">
-            {filteredList.map((item) => {
-              const details = parseItems(item.items_detail);
-              const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
-              const isUploadingThis = uploadingId === item.id;
-
-              return (
-                <div
-                  key={item.id}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    isPackingDone
-                      ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/60'
-                      : 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 shadow-2xs'
-                  }`}
-                >
-                  {/* CARD HEADER */}
-                  <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-neutral-700">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-black text-xs rounded-lg">
-                          {item.box_code || 'B-0'}
-                        </span>
-                        <span className="text-xs font-bold text-slate-600 dark:text-neutral-400">
-                          {item.no_spk || '-'}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-extrabold mt-1 text-slate-900 dark:text-white flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                        {getCleanStoreName(item.store_name)}
-                      </h4>
-                    </div>
-
-                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                      isPackingDone
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-amber-500 text-white'
-                    }`}>
-                      {isPackingDone ? 'DONE' : 'PENDING'}
-                    </span>
-                  </div>
-
-                  {/* CARD BODY INFO */}
-                  <div className="py-2.5 space-y-1.5 text-xs text-slate-600 dark:text-neutral-300">
-                    {item.promo_title && (
-                      <p className="flex items-center gap-1.5 font-medium text-[11px]">
-                        <Tag className="w-3 h-3 text-indigo-500" />
-                        <span>Project: <strong className="text-slate-800 dark:text-neutral-200">{item.promo_title}</strong></span>
-                      </p>
-                    )}
-                    <p className="flex items-center gap-1.5 text-[11px]">
-                      <MapPin className="w-3 h-3 text-slate-400" />
-                      <span>Recipient: {item.recipient_name || '-'}</span>
-                    </p>
-
-                    <div className="flex items-center justify-between text-[11px] pt-1">
-                      <span>Total Qty: <strong className="text-slate-900 dark:text-white">{item.total_qty || 0} pcs</strong></span>
-                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-neutral-700 rounded text-[10px] font-bold">
-                        {item.delivery_type || 'DALAM KOTA'}
-                      </span>
-                    </div>
-
-                    {/* ITEMS DETAIL & DESAIN VISUAL */}
-                    {details.length > 0 && (
-                      <div className="mt-2 p-2 bg-slate-50 dark:bg-neutral-900/60 rounded-xl space-y-1">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Item Details:</span>
-                        <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
-                          {details.map((sub, sIdx) => (
-                            <div key={sIdx} className="flex items-center gap-2 text-[11px]">
-                              {sub.image_url ? (
-                                <img
-                                  src={sub.image_url}
-                                  alt="Design"
-                                  onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code || 'Desain')}
-                                  className="w-7 h-7 object-cover rounded border border-slate-200 dark:border-neutral-700 cursor-pointer"
-                                />
-                              ) : (
-                                <div className="w-7 h-7 bg-slate-200 dark:bg-neutral-700 rounded flex items-center justify-center text-[9px] font-bold">
-                                  No img
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold truncate text-slate-800 dark:text-neutral-200">{sub.code || '-'}</p>
-                                <p className="text-[10px] text-slate-500 dark:text-neutral-400 truncate">{sub.material || '-'} ({sub.size || '-'})</p>
-                              </div>
-                              <span className="font-bold text-slate-700 dark:text-neutral-300">x{sub.qty || 1}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* CARD ACTIONS: AMBIL/UPLOAD FOTO BUKTI PACKING */}
-                  <div className="pt-2.5 border-t border-slate-100 dark:border-neutral-700 flex items-center justify-between gap-2">
-                    {/* BUKTI FOTO */}
-                    <div className="flex items-center gap-2">
-                      {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
-                        <img
-                          src={item.bukti_paking_url}
-                          alt="Bukti Packing"
-                          onClick={() => onOpenImageModal && onOpenImageModal(
-                            item.bukti_paking_url,
-                            `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
-                            item.destination || item.store_name || item.branch_name || '',
-                            item.promo_title || item.project || '',
-                            item.no_spk || item.tracking_id || ''
-                          )}
-                          className="w-10 h-10 object-cover rounded-xl border border-emerald-400 cursor-pointer shadow-2xs"
-                        />
-                      ) : null}
-
-                      <label className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-2xs">
-                        <Camera className="w-4 h-4" />
-                        <span>{isUploadingThis ? 'Uploading...' : 'Proof Photo'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          capture="environment"
-                          disabled={isUploadingThis}
-                          onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-
-                    {/* STATUS TOGGLE */}
+        <div className="rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse min-w-[750px]">
+              <thead>
+                <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
+                  <th className="py-4 pl-4 pr-1 text-center w-8">
                     <button
-                      onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 ${
-                        isPackingDone
-                          ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                          : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                        selectedRowIds.length === filteredList.length && filteredList.length > 0
+                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                          : 'border-slate-400 bg-white hover:border-emerald-600'
+                      }`}
+                      title="Select All Rows"
+                    >
+                      {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
+                  <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
+                  <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
+                  <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
+                  <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
+                  <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
+                  <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
+                {filteredList.map((item) => {
+                  const details = parseItems(item.items_detail);
+                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
+                  const isUploadingThis = uploadingId === item.id;
+                  const isSelected = selectedRowIds.includes(item.id);
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isSelected
+                          ? 'bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40'
+                          : isPackingDone
+                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
+                          : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
                       }`}
                     >
-                      {isPackingDone ? <Check className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                      <span>{isPackingDone ? 'Done' : 'Pending'}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      {/* 1. SELECT CIRCLE */}
+                      <td className="py-4 pl-4 pr-1 text-center w-8">
+                        <button
+                          onClick={() => handleToggleSelectRow(item.id)}
+                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                            isSelected
+                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
+                              : 'border-slate-300 bg-white hover:border-emerald-500'
+                          }`}
+                          title={isSelected ? 'Deselect' : 'Select Row'}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </button>
+                      </td>
 
-          {/* TAMPILAN TABLE DESKTOP (KHUSUS USER PACKING: TANPA KOLOM CHECKER) */}
-          <div className="hidden sm:block rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
-                    <th className="py-4 pl-4 pr-1 text-center w-8">
-                      <button
-                        type="button"
-                        onClick={handleToggleSelectAll}
-                        className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                          selectedRowIds.length === filteredList.length && filteredList.length > 0
-                            ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
-                            : 'border-slate-400 bg-white hover:border-emerald-600'
-                        }`}
-                        title="Select All Rows"
-                      >
-                        {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      {/* 2. BOX */}
+                      <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
+                        <span className="font-bold">{item.box_code || '-'}</span>
+                      </td>
+
+                      {/* 3. STORE NAME / SPK */}
+                      <td className="py-3.5 px-4 max-w-[280px]">
+                        <div className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                          <span>{getCleanStoreName(item.store_name)}</span>
+                        </div>
+                        {item.no_spk && (
+                          <div className="text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
                         )}
-                      </button>
-                    </th>
-                    <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
-                    <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
-                    <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
-                    <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
-                    <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
-                    <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
-                    <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
-                  {filteredList.map((item) => {
-                    const details = parseItems(item.items_detail);
-                    const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
-                    const isUploadingThis = uploadingId === item.id;
-                    const isSelected = selectedRowIds.includes(item.id);
+                      </td>
 
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`transition-colors ${
-                          isSelected
-                            ? 'bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40'
-                            : isPackingDone
-                            ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
-                            : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
-                        }`}
-                      >
-                        {/* 1. SELECT CIRCLE */}
-                        <td className="py-4 pl-4 pr-1 text-center w-8">
-                          <button
-                            onClick={() => handleToggleSelectRow(item.id)}
-                            className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
-                              isSelected
-                                ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
-                                : 'border-slate-300 bg-white hover:border-emerald-500'
-                            }`}
-                            title={isSelected ? 'Deselect' : 'Select Row'}
-                          >
-                            {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </button>
-                        </td>
+                      {/* 4. SHIPPING TYPE */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-semibold text-xs uppercase tracking-wider text-center border ${
+                          item.delivery_type === 'DALAM KOTA'
+                            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
+                            : 'bg-blue-500/15 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
+                        }`}>
+                          {item.delivery_type || 'DALAM KOTA'}
+                        </span>
+                      </td>
 
-                        {/* 2. BOX */}
-                        <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
-                          <span className="font-bold">{item.box_code || '-'}</span>
-                        </td>
+                      {/* 5. IMPORT DATE */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span className="font-mono text-xs text-slate-700 dark:text-neutral-300 font-semibold block">
+                          {formatDateTime(item.created_at || item.updated_at)}
+                        </span>
+                      </td>
 
-                        {/* 3. STORE NAME / SPK */}
-                        <td className="py-3.5 px-4 max-w-[280px]">
-                          <div className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2 flex-wrap tracking-tight">
-                            <span>{getCleanStoreName(item.store_name)}</span>
-                          </div>
-                          {item.no_spk && (
-                            <div className="text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
-                          )}
-                        </td>
-
-                        {/* 4. SHIPPING TYPE */}
-                        <td className="py-4 px-4 whitespace-nowrap">
-                          <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-semibold text-xs uppercase tracking-wider text-center border ${
-                            item.delivery_type === 'DALAM KOTA'
-                              ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
-                              : 'bg-blue-500/15 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
-                          }`}>
-                            {item.delivery_type || 'DALAM KOTA'}
+                      {/* 6. LABEL & DESIGN */}
+                      <td className="py-3.5 px-4 text-center">
+                        {item.source !== 'google_sheet' ? (
+                          <span className="inline-block px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-bold">
+                            Label SJ (Tab Label)
                           </span>
-                        </td>
-
-                        {/* 5. IMPORT DATE */}
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className="font-mono text-xs text-slate-700 dark:text-neutral-300 font-semibold block">
-                            {formatDateTime(item.created_at || item.updated_at)}
-                          </span>
-                        </td>
-
-                        {/* 6. LABEL & DESIGN */}
-                        <td className="py-3.5 px-4 text-center">
-                          {item.source !== 'google_sheet' ? (
-                            <span className="inline-block px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-bold">
-                              Label SJ (Tab Label)
-                            </span>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <div className="flex items-center justify-center gap-1 max-h-12 overflow-y-auto">
-                                {details.map((sub, sIdx) => (
-                                  sub.image_url ? (
-                                    <img
-                                      key={sIdx}
-                                      src={sub.image_url}
-                                      alt="Design"
-                                      onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
-                                      className="w-7 h-7 object-cover rounded border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-2xs hover:scale-105 transition-transform"
-                                    />
-                                  ) : null
-                                ))}
-                              </div>
-                              <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium">
-                                {details.filter(i => i.image_url).length} / {details.length} Designs
-                              </span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 7. PHOTO PROOF */}
-                        <td className="py-3.5 px-4 text-center">
-                          {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <img
-                                src={item.bukti_paking_url}
-                                alt="Bukti Paking"
-                                onClick={() => onOpenImageModal && onOpenImageModal(
-                                  item.bukti_paking_url,
-                                  `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
-                                  item.destination || item.store_name || item.branch_name || '',
-                                  item.promo_title || item.project || '',
-                                  item.no_spk || item.tracking_id || ''
-                                )}
-                                className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
-                              />
-                              <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
-                                <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
-                                <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              <label className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer shadow-2xs transition-all active:scale-95 inline-flex items-center gap-1 text-[11px] font-bold" title="Upload Photo">
-                                <Camera className="w-3.5 h-3.5" />
-                                <span>{isUploadingThis ? '...' : 'Photo'}</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  disabled={isUploadingThis}
-                                  onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
-                                  className="hidden"
-                                />
-                              </label>
-                              <span className="text-slate-400 font-semibold text-[10px]">No Photo</span>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 8. PACKING STATUS */}
-                        <td className="py-3.5 px-4 text-center">
+                        ) : (
                           <div className="flex flex-col items-center justify-center gap-1">
-                            <button
-                              onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
-                                isPackingDone
-                                  ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
-                              }`}
-                            >
-                              <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                              {isPackingDone ? 'Done' : 'Pending'}
-                            </button>
-                            {isPackingDone && (
-                              <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
-                                <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
-                                <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
-                              </div>
-                            )}
+                            <div className="flex items-center justify-center gap-1 max-h-12 overflow-y-auto">
+                              {details.map((sub, sIdx) => (
+                                sub.image_url ? (
+                                  <img
+                                    key={sIdx}
+                                    src={sub.image_url}
+                                    alt="Design"
+                                    onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
+                                    className="w-7 h-7 object-cover rounded border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                  />
+                                ) : null
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium">
+                              {details.filter(i => i.image_url).length} / {details.length} Designs
+                            </span>
                           </div>
-                        </td>
+                        )}
+                      </td>
 
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      {/* 7. PHOTO PROOF */}
+                      <td className="py-3.5 px-4 text-center">
+                        {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <img
+                              src={item.bukti_paking_url}
+                              alt="Bukti Paking"
+                              onClick={() => onOpenImageModal && onOpenImageModal(
+                                item.bukti_paking_url,
+                                `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
+                                item.destination || item.store_name || item.branch_name || '',
+                                item.promo_title || item.project || '',
+                                item.no_spk || item.tracking_id || ''
+                              )}
+                              className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                            />
+                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
+                              <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <label className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer shadow-2xs transition-all active:scale-95 inline-flex items-center gap-1 text-[11px] font-bold" title="Upload Photo">
+                              <Camera className="w-3.5 h-3.5" />
+                              <span>{isUploadingThis ? '...' : 'Photo'}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                disabled={isUploadingThis}
+                                onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
+                                className="hidden"
+                              />
+                            </label>
+                            <span className="text-slate-400 font-semibold text-[10px]">No Photo</span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 8. PACKING STATUS */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                              isPackingDone
+                                ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                                : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                            {isPackingDone ? 'Done' : 'Pending'}
+                          </button>
+                          {isPackingDone && (
+                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
+                              <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </>
+        </div>
       )}
 
     </div>
