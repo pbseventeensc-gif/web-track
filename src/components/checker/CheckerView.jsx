@@ -208,15 +208,15 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
   const pendingChecker = totalReady - checkedBoxes;
 
   return (
-    <div className={`space-y-4 md:space-y-6 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+    <div className={`space-y-3.5 sm:space-y-6 w-full max-w-full overflow-hidden ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
 
       {/* HEADER RINGKAS & REFRESH */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs">
-        <div>
-          <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-amber-500" /> Station Checker Staff
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs max-w-full">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 truncate">
+            <ShieldCheck className="w-5 h-5 text-amber-500 shrink-0" /> Station Checker Staff
           </h2>
-          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5 leading-snug">
             Verifikasi QC Checker untuk box yang telah selesai dipaking & difoto.
           </p>
         </div>
@@ -224,44 +224,44 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
         <button
           onClick={fetchCheckerData}
           disabled={loading}
-          className="w-full sm:w-auto px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
+          className="w-full sm:w-auto px-3.5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Loading Data...' : 'Refresh Data'}
+          {loading ? 'Loading...' : 'Refresh Data'}
         </button>
       </div>
 
       {/* RINGKASAN STATUS BOX CHECKER */}
-      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-        <div className="p-3 sm:p-4 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs text-center">
-          <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider block">READY FOR CHECKER</span>
-          <span className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white">{totalReady}</span>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-full">
+        <div className="p-2.5 sm:p-4 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider block truncate">READY FOR CHECKER</span>
+          <span className="text-base sm:text-2xl font-black text-slate-800 dark:text-white mt-0.5 block">{totalReady}</span>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-2xs text-center">
-          <span className="text-[10px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">ON PROGRESS</span>
-          <span className="text-lg sm:text-2xl font-black text-amber-700 dark:text-amber-400">{pendingChecker}</span>
+        <div className="p-2.5 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block truncate">ON PROGRESS</span>
+          <span className="text-base sm:text-2xl font-black text-amber-700 dark:text-amber-400 mt-0.5 block">{pendingChecker}</span>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs text-center">
-          <span className="text-[10px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">CHECKED</span>
-          <span className="text-lg sm:text-2xl font-black text-emerald-700 dark:text-emerald-400">{checkedBoxes}</span>
+        <div className="p-2.5 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block truncate">CHECKED</span>
+          <span className="text-base sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">{checkedBoxes}</span>
         </div>
       </div>
 
       {/* FILTER BAR & SEARCH */}
-      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs space-y-3">
-        <div className="flex flex-col sm:flex-row gap-2.5 justify-between">
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs space-y-2.5 max-w-full">
+        <div className="flex flex-col sm:flex-row gap-2 justify-between">
 
           {/* SEARCH INPUT */}
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search Box Code, SPK, Store, or Project..."
-              className="w-full pl-9 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-neutral-600 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-neutral-600 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
 
@@ -270,7 +270,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
             <select
               value={filterProject}
               onChange={(e) => setFilterProject(e.target.value)}
-              className="px-3 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none"
+              className="w-full sm:w-auto px-2.5 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none max-w-full"
             >
               <option value="ALL">All Projects ({readyForCheckerList.length})</option>
               {uniqueProjects.map((projKey, idx) => {
@@ -288,13 +288,13 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
         </div>
 
         {/* SEGMENTED STATUS & ROUTE TABS */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-neutral-700">
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-neutral-700 overflow-x-auto pb-1 max-w-full">
 
           {/* STATUS FILTER */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
             <button
               onClick={() => setFilterStatus('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
                 filterStatus === 'ALL'
                   ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
                   : 'text-slate-600 dark:text-neutral-300 font-semibold'
@@ -304,7 +304,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
             </button>
             <button
               onClick={() => setFilterStatus('PENDING')}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
                 filterStatus === 'PENDING'
                   ? 'bg-amber-500 text-white shadow-2xs font-bold'
                   : 'text-slate-600 dark:text-neutral-300 font-semibold'
@@ -314,7 +314,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
             </button>
             <button
               onClick={() => setFilterStatus('CHECKED')}
-              className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
                 filterStatus === 'CHECKED'
                   ? 'bg-emerald-600 text-white shadow-2xs font-bold'
                   : 'text-slate-600 dark:text-neutral-300 font-semibold'
@@ -325,12 +325,12 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
           </div>
 
           {/* ROUTE FILTER */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
             {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((route) => (
               <button
                 key={route}
                 onClick={() => setFilterDelivery(route)}
-                className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
                   filterDelivery === route
                     ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
                     : 'text-slate-600 dark:text-neutral-300 font-semibold'
@@ -344,18 +344,18 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
         </div>
       </div>
 
-      {/* DATA CONTENT AREA (SAMA PERSIS DENGAN TABEL DUA LAYAR HP & WEB) */}
+      {/* DATA CONTENT AREA */}
       {filteredList.length === 0 ? (
-        <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs">
+        <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs max-w-full">
           Belum ada box paking yang siap diperiksa (menunggu foto & status paking selesai).
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
+        <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
-                  <th className="py-4 pl-4 pr-1 text-center w-8">
+                  <th className="py-3.5 pl-4 pr-1 text-center w-8">
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
@@ -371,14 +371,14 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       )}
                     </button>
                   </th>
-                  <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
-                  <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
-                  <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
-                  <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
-                  <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
-                  <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
-                  <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
-                  <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
+                  <th className="py-3.5 pl-1 pr-4 font-semibold">BOX</th>
+                  <th className="py-3.5 px-4 font-semibold">STORE NAME / SPK</th>
+                  <th className="py-3.5 px-4 font-semibold">SHIPPING TYPE</th>
+                  <th className="py-3.5 px-4 text-center font-semibold">IMPORT DATE</th>
+                  <th className="py-3.5 px-4 text-center font-semibold">LABEL & DESIGN</th>
+                  <th className="py-3.5 px-4 text-center font-semibold">PHOTO PROOF</th>
+                  <th className="py-3.5 px-4 text-center font-semibold">PACKING STATUS</th>
+                  <th className="py-3.5 px-4 text-center font-semibold">CHECKER STATUS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
@@ -400,7 +400,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       }`}
                     >
                       {/* 1. SELECT CIRCLE */}
-                      <td className="py-4 pl-4 pr-1 text-center w-8">
+                      <td className="py-3.5 pl-4 pr-1 text-center w-8">
                         <button
                           onClick={() => handleToggleSelectRow(item.id)}
                           className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
@@ -415,23 +415,23 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                       {/* 2. BOX */}
-                      <td className="py-3.5 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
+                      <td className="py-3 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
                         <span className="font-bold">{item.box_code || '-'}</span>
                       </td>
 
                       {/* 3. STORE NAME / SPK */}
-                      <td className="py-3.5 px-4 max-w-[280px]">
-                        <div className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                      <td className="py-3 px-4 max-w-[280px]">
+                        <div className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-2 flex-wrap tracking-tight">
                           <span>{getCleanStoreName(item.store_name)}</span>
                         </div>
                         {item.no_spk && (
-                          <div className="text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
+                          <div className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
                         )}
                       </td>
 
                       {/* 4. SHIPPING TYPE */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`inline-block whitespace-nowrap px-3.5 py-1.5 rounded-lg font-semibold text-xs uppercase tracking-wider text-center border ${
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-lg font-semibold text-[11px] uppercase tracking-wider text-center border ${
                           item.delivery_type === 'DALAM KOTA'
                             ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
                             : 'bg-blue-500/15 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
@@ -441,14 +441,14 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                       {/* 5. IMPORT DATE */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span className="font-mono text-xs text-slate-700 dark:text-neutral-300 font-semibold block">
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className="font-mono text-[11px] text-slate-700 dark:text-neutral-300 font-semibold block">
                           {formatDateTime(item.created_at || item.updated_at)}
                         </span>
                       </td>
 
                       {/* 6. LABEL & DESIGN */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         {item.source !== 'google_sheet' ? (
                           <span className="inline-block px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-bold">
                             Label SJ (Tab Label)
@@ -476,7 +476,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                       {/* 7. PHOTO PROOF */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
                           <div className="flex flex-col items-center justify-center gap-1">
                             <img
@@ -489,7 +489,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                                 item.promo_title || item.project || '',
                                 item.no_spk || item.tracking_id || ''
                               )}
-                              className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                              className="w-9 h-9 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                             />
                             <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
                               <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
@@ -501,8 +501,8 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                         )}
                       </td>
 
-                      {/* 8. PACKING STATUS (DIPASANGKAN UNTUK USER CHECKER) */}
-                      <td className="py-3.5 px-4 text-center">
+                      {/* 8. PACKING STATUS */}
+                      <td className="py-3 px-4 text-center">
                         <div className="flex flex-col items-center justify-center gap-1">
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
@@ -524,7 +524,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                       {/* 9. CHECKER STATUS */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3 px-4 text-center">
                         <div className="flex flex-col items-center justify-center gap-1">
                           <button
                             onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
