@@ -375,7 +375,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             status_qc_packing: 'PENDING',
             status_qc_checker: 'PENDING',
             status_deliver: 'PENDING',
-            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
         }
