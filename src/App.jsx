@@ -23,6 +23,7 @@ import {
   KeyRound,
   ShieldCheck,
   ChevronRight,
+  ChevronLeft,
   Menu,
   X,
   Eye,
