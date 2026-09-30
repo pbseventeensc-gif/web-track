@@ -1551,7 +1551,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                 })()}
                                 {(() => {
                                   const projectItems = sourceList.filter(p => p.promo_title === item.promo_title);
-                                  const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source === 'label_sj');
+                                  const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
                                   if (!isLabelSjProject) {
                                     return (
                                       <button
@@ -1631,7 +1631,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          {item.source === 'label_sj' ? (
+                          {item.source !== 'google_sheet' ? (
                             <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold">
                               Label SJ (Tab Label)
                             </span>
