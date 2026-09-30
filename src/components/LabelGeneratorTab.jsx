@@ -84,7 +84,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         if (details.length === 0) {
           formatted.push({
             NO_SPK: item.no_spk || '',
-            PO_NUMBER: item.promo_title || '',
+            PO_NUMBER: '',
             NO_SJ: item.box_code || '',
             CLIENT: item.client_pt || '',
             PROJECT: item.promo_title || '',
@@ -109,7 +109,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
           details.forEach((d) => {
             formatted.push({
               NO_SPK: item.no_spk || '',
-              PO_NUMBER: d.po_number || item.promo_title || '',
+              PO_NUMBER: d.po_number || '',
               NO_SJ: d.no_sj || item.box_code || '',
               CLIENT: item.client_pt || '',
               PROJECT: d.desc || item.promo_title || '',
