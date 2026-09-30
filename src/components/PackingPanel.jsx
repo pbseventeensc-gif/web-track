@@ -20,12 +20,18 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+import PackingView from './packing/PackingView';
+
 // Global memory cache untuk link gambar aktif di browser
 if (!window.__ACTIVE_DESIGN_URLS__) {
   window.__ACTIVE_DESIGN_URLS__ = {};
 }
 
 export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateField, onOpenImageModal, isPackingRole }) {
+  if (isPackingRole) {
+    return <PackingView isDarkMode={isDarkMode} onOpenImageModal={onOpenImageModal} />;
+  }
+
   const [packingList, setPackingList] = useState([]);
   const [uploadingId, setUploadingId] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -1252,7 +1258,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {stages.map((stage) => {
+          {(isPackingRole ? stages.filter(s => s.id !== 'status_qc_checker' && s.id !== 'status_deliver') : stages).map((stage) => {
             const completedCount = packingList.filter((s) => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
             const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
             const is100Percent = percent === 100 && totalSpk > 0;
@@ -1499,14 +1505,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
                 <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
                 <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
-                <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
-                <th className="py-4 px-4 text-center font-semibold">OUTBOUND</th>
+                {!isPackingRole && (
+                  <>
+                    <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
+                    <th className="py-4 px-4 text-center font-semibold">OUTBOUND</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="p-8 text-center text-slate-500 font-semibold text-xs">
+                  <td colSpan={isPackingRole ? "8" : "10"} className="p-8 text-center text-slate-500 font-semibold text-xs">
                     No matching box data found.
                   </td>
                 </tr>
@@ -1524,59 +1534,61 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan="10" className="py-1.5 px-3 text-center font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
+                          <td colSpan={isPackingRole ? "8" : "10"} className="py-1.5 px-3 text-center font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                               <span>{item.promo_title}{item.no_spk ? ` _ ${item.no_spk}` : ''}</span>
-                              <div className="flex items-center gap-1.5">
-                                {(() => {
-                                  const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
-                                  const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
+                              {!isPackingRole && (
+                                <div className="flex items-center gap-1.5">
+                                  {(() => {
+                                    const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
+                                    const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
 
-                                  return (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (isAllProjSelected) {
-                                          setSelectedRowIds(prev => prev.filter(id => !projRowIds.includes(id)));
-                                        } else {
-                                          setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
-                                        }
-                                      }}
-                                      className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
-                                        isAllProjSelected ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-transparent text-emerald-700 border border-emerald-700/40 hover:bg-emerald-100/60'
-                                      }`}
-                                      title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
-                                    >
-                                      <Check className="w-3.5 h-3.5" />
-                                    </button>
-                                  );
-                                })()}
-                                {(() => {
-                                  const projectItems = sourceList.filter(p => p.promo_title === item.promo_title);
-                                  const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
-                                  if (!isLabelSjProject) {
                                     return (
                                       <button
                                         type="button"
-                                        onClick={() => handlePrintProjectLabels(item.promo_title)}
-                                        className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                        title="Cetak Label"
+                                        onClick={() => {
+                                          if (isAllProjSelected) {
+                                            setSelectedRowIds(prev => prev.filter(id => !projRowIds.includes(id)));
+                                          } else {
+                                            setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
+                                          }
+                                        }}
+                                        className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
+                                          isAllProjSelected ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-transparent text-emerald-700 border border-emerald-700/40 hover:bg-emerald-100/60'
+                                        }`}
+                                        title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
                                       >
-                                        <Printer className="w-3.5 h-3.5" />
+                                        <Check className="w-3.5 h-3.5" />
                                       </button>
                                     );
-                                  }
-                                  return null;
-                                })()}
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteProject(item.promo_title)}
-                                  className="p-1 bg-transparent text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                  title="Hapus Project Ini"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                                  })()}
+                                  {(() => {
+                                    const projectItems = sourceList.filter(p => p.promo_title === item.promo_title);
+                                    const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
+                                    if (!isLabelSjProject) {
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => handlePrintProjectLabels(item.promo_title)}
+                                          className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                          title="Cetak Label"
+                                        >
+                                          <Printer className="w-3.5 h-3.5" />
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteProject(item.promo_title)}
+                                    className="p-1 bg-transparent text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                    title="Hapus Project Ini"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>

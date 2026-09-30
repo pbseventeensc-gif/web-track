@@ -1028,7 +1028,7 @@ export default function App() {
                 Web Tracking Monitoring
               </h1>
               <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {scanParam ? `Staf Paking Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))}
+                {scanParam || packingStaffSession || currentAdmin?.role === 'packing_role' ? `Staff Packing Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))}
               </p>
             </div>
           </div>
@@ -1053,7 +1053,7 @@ export default function App() {
                 onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }}
                 className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
               >
-                <LogOut className="w-4 h-4" /> Logout Staf Paking
+                <LogOut className="w-4 h-4" /> Logout Staff Packing
               </button>
             )}
             {isBranchMode && (
@@ -1077,7 +1077,7 @@ export default function App() {
                 onClick={() => { localStorage.removeItem('kl_admin_session'); setCurrentAdmin(null); setActiveTab('dashboard'); }}
                 className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
               >
-                <LogOut className="w-4 h-4" /> Logout Admin
+                <LogOut className="w-4 h-4" /> {currentAdmin?.role === 'packing_role' ? 'Logout Staff Packing' : 'Logout Admin'}
               </button>
             )}
           </div>
@@ -1085,7 +1085,7 @@ export default function App() {
 
         {/* MAIN BODY AREA */}
         {scanParam ? (
-          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
+          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role' || Boolean(packingStaffSession)} />
         ) : (
           <>
             {isBranchMode ? (
@@ -1313,7 +1313,7 @@ export default function App() {
                   )}
 
                   {activeTab === 'paking' && (
-                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
+                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role' || Boolean(packingStaffSession)} />
                   )}
 
                   {activeTab === 'pengiriman' && (
