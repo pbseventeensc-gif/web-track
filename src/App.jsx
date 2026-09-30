@@ -1007,12 +1007,12 @@ export default function App() {
         {/* HEADER BAR */}
         <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 rounded-3xl shadow-sm border transition-colors ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700' : 'bg-white border-stone-200/80'}`}>
           <div className="flex items-center gap-3.5">
-            {/* Official 3 Curved Bars Wellen Logo */}
-            <div className="flex items-end gap-1 h-9 shrink-0">
-              <div className="w-2.5 h-5 bg-[#FFE600] rounded-t-full shadow-2xs" />
-              <div className="w-2.5 h-7 bg-[#FF7A00] rounded-t-full shadow-2xs" />
-              <div className="w-2.5 h-9 bg-[#E51B24] rounded-t-full shadow-2xs" />
-            </div>
+            {/* GB2 Curved Logo */}
+            <svg viewBox="0 0 48 36" className="w-9 h-8 shrink-0 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+              <path d="M0 36V16C0 7.16344 7.16344 0 16 0V36H0Z" fill="#FFE600" />
+              <path d="M15 36V11C15 4.92487 19.9249 0 26 0V36H15Z" fill="#FF7A00" />
+              <path d="M30 36V6C30 2.68629 32.6863 0 36 0H42C45.3137 0 48 2.68629 48 6V36H30Z" fill="#E51B24" />
+            </svg>
             <div>
               <h1 className={`text-base font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-black'}`}>
                 Web Tracking Monitoring
