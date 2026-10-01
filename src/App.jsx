@@ -407,7 +407,6 @@ function GlassmorphismLoginView({
               </button>
             </div>
           </div>
-        )}
 
         {/* Bottom Subtitle / Demo text matching Image 2 */}
         <div className="text-center pt-1">
@@ -1303,7 +1302,7 @@ export default function App() {
                   )}
 
                   {activeTab === 'paking' && (
-                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role' || Boolean(packingStaffSession)} />
+                    <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
                   )}
 
                   {activeTab === 'pengiriman' && (
