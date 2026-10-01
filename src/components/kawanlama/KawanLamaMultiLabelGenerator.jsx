@@ -618,12 +618,12 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         }
         @media print {
           @page {
-            size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'};
-            margin: 0mm;
+            size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'} !important;
+            margin: 0mm !important;
           }
           html, body {
-            width: 297mm !important;
-            height: 210mm !important;
+            width: ${printMode === 'labels' ? '297mm' : '210mm'} !important;
+            height: ${printMode === 'labels' ? '210mm' : '140mm'} !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
@@ -636,16 +636,16 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 297mm !important;
+            width: ${printMode === 'labels' ? '297mm' : '210mm'} !important;
             margin: 0 !important;
             padding: 0 !important;
           }
           .a4-single-page {
-            width: 270mm !important;
-            max-width: 270mm !important;
-            height: 185mm !important;
-            max-height: 185mm !important;
-            padding: 6mm 8mm !important;
+            width: 275mm !important;
+            max-width: 275mm !important;
+            height: 188mm !important;
+            max-height: 188mm !important;
+            padding: 8mm 10mm !important;
             box-sizing: border-box !important;
             page-break-after: always !important;
             break-after: page !important;
@@ -655,7 +655,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             border-radius: 12px !important;
             background: #ffffff !important;
             box-shadow: none !important;
-            margin: 12mm auto !important;
+            margin: 10mm auto !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: flex-start !important;
