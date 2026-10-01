@@ -17,7 +17,8 @@ import {
   Image as ImageIcon,
   X,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  FileSpreadsheet
 } from 'lucide-react';
 
 import PackingView from './packing/PackingView';
@@ -152,8 +153,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         });
         setPackingList(normalizedData);
       } else {
-        // Auto-Recovery: Jika packing_tracking kosong, panggil handleSyncFromSpkData otomatis
-        await handleSyncFromSpkData();
+        setPackingList([]);
       }
     }
   };
@@ -296,11 +296,66 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
         if (!data || data.length < 2) return;
 
-        // Smart Header Row Detection for Item Codes
-        let codeRowIdx = 1;
+        // Auto-Detect Header Column Positions from rows 0..5
+        let colMap = {
+          storeNo: -1,
+          prCode: -1,
+          boxCode: -1,
+          storeId: -1,
+          company: -1,
+          storeName: -1,
+          noPo: -1,
+          spkWpp: -1,
+          delivery: -1,
+          region: -1,
+          qrAddress: -1,
+          qr: -1
+        };
+
         for (let r = 0; r < Math.min(6, data.length); r++) {
           const row = data[r] || [];
-          const hasCodes = row.some((val, c) => c >= 10 && val && String(val).match(/^[A-Za-z0-9._-]+$/) && !String(val).toUpperCase().includes('QR'));
+          row.forEach((val, c) => {
+            const h = String(val || '').toUpperCase().trim();
+            if (h.includes('NO. STORE') || h.includes('STORE NO') || h === 'NO STORE') colMap.storeNo = c;
+            else if (h.includes('PR. KODE') || h.includes('PR KODE') || h === 'PR CODE') colMap.prCode = c;
+            else if (h.includes('NO. URUT') || h.includes('NO URUT') || h === 'URUT') colMap.boxCode = c;
+            else if (h.includes('STORE ID') || h === 'ID STORE') colMap.storeId = c;
+            else if (h.includes('COMPANY') || h.includes('CLIENT PT') || h === 'PT') colMap.company = c;
+            else if (h.includes('STORE NAME') || h.includes('NAMA TOKO')) colMap.storeName = c;
+            else if (h.includes('NO. PO') || h.includes('NO PO') || h === 'PO') colMap.noPo = c;
+            else if (h.includes('SPK/WPP') || h.includes('SPK WPP') || h.includes('SPK')) colMap.spkWpp = c;
+            else if (h.includes('DELIVERY') || h.includes('PENGIRIMAN')) colMap.delivery = c;
+            else if (h.includes('REGION') || h.includes('PROVINSI') || h.includes('WILAYAH')) colMap.region = c;
+            else if (h.includes('QR ADDRES') || h.includes('QR ADDRESS')) colMap.qrAddress = c;
+            else if (h === 'QR' || h === 'QR CODE') colMap.qr = c;
+          });
+        }
+
+        // Apply fallback indices if header names were not found explicitly
+        const idxStoreNo = colMap.storeNo !== -1 ? colMap.storeNo : 0;
+        const idxPrCode = colMap.prCode !== -1 ? colMap.prCode : 1;
+        const idxBoxCode = colMap.boxCode !== -1 ? colMap.boxCode : 2;
+        const idxStoreId = colMap.storeId !== -1 ? colMap.storeId : 3;
+        const idxCompany = colMap.company !== -1 ? colMap.company : 4;
+        const idxStoreName = colMap.storeName !== -1 ? colMap.storeName : 5;
+        const idxNoPo = colMap.noPo !== -1 ? colMap.noPo : 6;
+        const idxSpkWpp = colMap.spkWpp !== -1 ? colMap.spkWpp : 7;
+        const idxDelivery = colMap.delivery !== -1 ? colMap.delivery : 8;
+        const idxRegion = colMap.region !== -1 ? colMap.region : 9;
+        const idxQrAddress = colMap.qrAddress !== -1 ? colMap.qrAddress : 10;
+        const idxQr = colMap.qr !== -1 ? colMap.qr : 11;
+
+        // Item catalog starts after QR column (col 12 by default if QR column exists, or after last metadata column)
+        const itemStartColIdx = Math.max(
+          12,
+          idxQr !== -1 ? idxQr + 1 : (idxQrAddress !== -1 ? idxQrAddress + 1 : 12)
+        );
+
+        // Smart Header Row Detection for Item Codes
+        let codeRowIdx = 0;
+        for (let r = 0; r < Math.min(6, data.length); r++) {
+          const row = data[r] || [];
+          const hasCodes = row.some((val, c) => c >= itemStartColIdx && val && String(val).trim() !== '');
           if (hasCodes) {
             codeRowIdx = r;
             break;
@@ -308,42 +363,49 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         }
 
         const rowCodes = data[codeRowIdx] || [];
-        const rowDescs = data[codeRowIdx + 1] || [];
-        const rowMaterials = data[codeRowIdx + 2] || [];
-        const rowSizes = data[codeRowIdx + 3] || [];
+        const rowMaterials = data[codeRowIdx + 1] || [];
+        const rowSizes = data[codeRowIdx + 2] || [];
 
         let catalogItems = [];
-        for (let colIdx = 10; colIdx < rowCodes.length; colIdx++) {
-          const rawCode = rowCodes[colIdx];
-          if (rawCode && !String(rawCode).toUpperCase().includes('QR') && String(rawCode).trim() !== '') {
+        for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowMaterials.length, rowSizes.length); colIdx++) {
+          const rawCode = rowCodes[colIdx] ? String(rowCodes[colIdx]).trim() : '';
+          const rawMat = rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : '';
+          const rawSize = rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '';
+
+          if (rawCode && !rawCode.toUpperCase().includes('QR') && rawCode !== '') {
             catalogItems.push({
               colIndex: colIdx,
-              code: String(rawCode).trim(),
-              desc: rowDescs[colIdx] ? String(rowDescs[colIdx]).trim() : 'LAMINATE',
-              material: rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : 'PVC',
-              size: rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '-'
+              code: rawCode,
+              desc: rawCode,
+              material: rawMat || 'PVC',
+              size: rawSize || '-'
             });
           }
         }
 
-        // Smart Store Row Scan (start scanning from r = 4)
-        for (let r = 4; r < data.length; r++) {
+        // Smart Store Row Scan (start scanning from r = 1)
+        for (let r = 1; r < data.length; r++) {
           const row = data[r];
-          if (!row || !row[1] || String(row[1]).toUpperCase().includes('STORE') || String(row[1]).toUpperCase().includes('NOMOR')) continue;
+          if (!row) continue;
 
-          const storeNo = row[1];
-          const prCode = row[2] || '';
-          const boxCode = row[3] || `B${r - 3}`;
-          const storeId = row[4] || '';
-          const clientPt = row[5] || 'CV. MAJU MAKMUR RETALINDO';
-          const storeName = row[6] || '';
-          const noPo = row[7] || '';
-          const spkWpp = row[8] || '';
-          const deliveryType = row[9] || 'DALAM KOTA';
+          const rawStoreNo = String(row[idxStoreNo] || '').trim();
+          if (!rawStoreNo || rawStoreNo.toUpperCase().includes('STORE') || rawStoreNo.toUpperCase().includes('NOMOR') || rawStoreNo.toUpperCase().includes('NO.')) continue;
 
-          // GENERATE QR CODE UNIK SISTEM SESUAI FORMAT ANDROID APP (Format: STORENO_BOXCODE_STOREID_STORENAME)
+          const storeNo = rawStoreNo;
+          const prCode = row[idxPrCode] ? String(row[idxPrCode]).trim() : '';
+          const boxCode = row[idxBoxCode] ? String(row[idxBoxCode]).trim() : `B${r}`;
+          const storeId = row[idxStoreId] ? String(row[idxStoreId]).trim() : '';
+          const clientPt = row[idxCompany] ? String(row[idxCompany]).trim() : 'PT. Sukses Prima Jayaindo';
+          const storeName = row[idxStoreName] ? String(row[idxStoreName]).trim() : '';
+          const noPo = row[idxNoPo] ? String(row[idxNoPo]).trim() : '';
+          const spkWpp = row[idxSpkWpp] ? String(row[idxSpkWpp]).trim() : '';
+          const deliveryType = row[idxDelivery] ? String(row[idxDelivery]).trim() : 'DALAM KOTA';
+          const regionStr = row[idxRegion] ? String(row[idxRegion]).trim() : '-';
+
+          // READ / GENERATE QR ADDRESS (Format: STORENO_BOXCODE_STOREID_STORENAME)
+          const explicitQrAddress = row[idxQrAddress] ? String(row[idxQrAddress]).trim() : '';
+          const qrAddress = explicitQrAddress || `${storeNo}_${boxCode}_${storeId}_${storeName}`;
           const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
-          const qrAddress = `${storeNo}_${boxCode}_${storeId}_${storeName}`;
 
           let storeItems = [];
           let totalQty = 0;
@@ -365,6 +427,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             }
           });
 
+          // Extract area code from boxCode or prCode
+          const areaCodeMatch = boxCode.match(/^[A-Za-z0-9]+/);
+          const areaCode = areaCodeMatch ? areaCodeMatch[0] : 'A1';
+
           parsedRecords.push({
             tracking_id: trackingId,
             no_spk: spkWpp,
@@ -374,8 +440,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             recipient_name: `Store #${storeNo} (${storeId})`,
             total_qty: totalQty,
             box_code: boxCode,
-            area_code: 'Q1',
+            area_code: areaCode,
             delivery_type: deliveryType,
+            region: regionStr,
             qr_address: qrAddress,
             source: 'google_sheet',
             items_detail: storeItems,
@@ -392,9 +459,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         throw new Error('Tidak ada data matriks toko yang terbaca.');
       }
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('packing_tracking')
         .upsert(parsedRecords, { onConflict: 'tracking_id' });
+
+      // Smart Fallback: Jika kolom 'region' belum ada di tabel Supabase, otomatis strip kolom 'region' dan retry
+      if (error && error.message && error.message.includes('region')) {
+        const fallbackRecords = parsedRecords.map(({ region, ...rest }) => rest);
+        const retryRes = await supabase
+          .from('packing_tracking')
+          .upsert(fallbackRecords, { onConflict: 'tracking_id' });
+        error = retryRes.error;
+      }
 
       if (error) throw error;
 
@@ -407,6 +483,32 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     } finally {
       setIsImporting(false);
     }
+  };
+
+  const handleLocalExcelUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const arrayBuffer = evt.target.result;
+        const wb = XLSX.read(arrayBuffer, { type: 'array' });
+        openSheetSelectorModal(wb);
+      } catch (err) {
+        alert('❌ Gagal membaca file Excel: ' + err.message);
+      } finally {
+        setIsImporting(false);
+        e.target.value = '';
+      }
+    };
+    reader.onerror = () => {
+      alert('❌ Gagal membaca file Excel.');
+      setIsImporting(false);
+      e.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleFetchGoogleSheet = async () => {
@@ -981,7 +1083,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const handleSyncFromSpkData = async () => {
+  const handleSyncFromSpkData = async (isManual = false) => {
     try {
       let rowsToSync = [];
       const { data: spkRows, error } = await supabase.from('spk_data').select('*').order('id', { ascending: true });
@@ -992,57 +1094,10 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       }
 
       if (rowsToSync.length === 0) {
-        // Fallback Demo Seed Data agar data tidak pernah kosong
-        rowsToSync = [
-          {
-            tracking_id: 'SPK-2026-001',
-            no_spk: 'SPK-001/PMG/IX/2026',
-            client_pt: 'PT Coca Cola Indonesia',
-            promo_title: 'COCA COLA - MARVIS JKT SEPT 2026',
-            store_name: 'GUDANG 3M CINERE',
-            recipient_name: 'Budi Logistics',
-            qty_order: 100,
-            box_code: 'WL-01',
-            delivery_type: 'DALAM KOTA',
-            status_qc_label: 'PENDING',
-            status_qc_packing: 'PENDING',
-            status_qc_checker: 'PENDING',
-            status_deliver: 'PENDING',
-            items_detail: [{ code: 'ITM-01', desc: 'Hanging Mobile POSM SMAX', qty: 100 }]
-          },
-          {
-            tracking_id: 'SPK-2026-002',
-            no_spk: 'SPK-002/PMG/IX/2026',
-            client_pt: 'PT Nestlé Indonesia',
-            promo_title: 'NESTLE ICE ROAST PROMO',
-            store_name: 'HO Nestlé Jakarta',
-            recipient_name: 'Siti Rahma',
-            qty_order: 50,
-            box_code: 'WL-02',
-            delivery_type: 'LUAR KOTA',
-            status_qc_label: 'PENDING',
-            status_qc_packing: 'PENDING',
-            status_qc_checker: 'PENDING',
-            status_deliver: 'PENDING',
-            items_detail: [{ code: 'ITM-02', desc: 'Nescafe Ice Roast Standee', qty: 50 }]
-          },
-          {
-            tracking_id: 'SPK-2026-003',
-            no_spk: 'SPK-003/PMG/IX/2026',
-            client_pt: 'PT Unilever Indonesia',
-            promo_title: 'UNILEVER POSM DISPLAY 2026',
-            store_name: 'HO Unilever BSD',
-            recipient_name: 'Andi Warehouse',
-            qty_order: 75,
-            box_code: 'WL-03',
-            delivery_type: 'DALAM KOTA',
-            status_qc_label: 'PENDING',
-            status_qc_packing: 'PENDING',
-            status_qc_checker: 'PENDING',
-            status_deliver: 'PENDING',
-            items_detail: [{ code: 'ITM-03', desc: 'Acrylic Display Rack', qty: 75 }]
-          }
-        ];
+        if (isManual) {
+          alert('⚠️ Tidak ada data SPK untuk disinkronkan.');
+        }
+        return;
       }
 
       const payloads = rowsToSync.map((spk) => {
@@ -1072,9 +1127,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
       await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
       await fetchPackingData();
-      alert(`✅ Berhasil memulihkan & menyinkronkan ${payloads.length} data paking!`);
+      if (isManual) {
+        alert(`✅ Berhasil memulihkan & menyinkronkan ${payloads.length} data paking!`);
+      }
     } catch (err) {
-      alert('❌ Gagal sinkronisasi data: ' + err.message);
+      if (isManual) {
+        alert('❌ Gagal sinkronisasi data: ' + err.message);
+      }
     }
   };
 
@@ -1149,54 +1208,68 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
           return (
             <div key={`${item.id}-page-${currentPage}`} className="label-page" style={{ width: '195mm', minHeight: '100mm', height: 'auto', border: '2px solid #000', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', fontFamily: 'Arial, sans-serif', color: '#000', background: '#fff', overflow: 'hidden', marginBottom: '4mm', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-              <div style={{ height: '42mm', display: 'grid', gridTemplateColumns: '30mm 1fr 25mm', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
-                {/* Left Section: Box Code & QR */}
+              <div style={{ height: '48mm', display: 'grid', gridTemplateColumns: '32mm 1fr', borderBottom: '3px solid #000', boxSizing: 'border-box' }}>
+                {/* Left Section: Area / Box Code (e.g. A77) & QR Code */}
                 <div style={{ borderRight: '2px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                  <div style={{ height: '12mm', borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '38px', fontWeight: '900', color: '#dc2626', lineHeight: '1' }}>
-                    {item.box_code || 'B1'}
+                  <div style={{ height: '14mm', borderBottom: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: '900', color: '#dc2626', lineHeight: '1' }}>
+                    {item.area_code && item.area_code !== 'Q1' ? item.area_code : (item.box_code || 'B1')}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3px' }}>
-                    <QRCodeSVG value={item.source === 'google_sheet' ? (item.qr_address || item.tracking_id) : `https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={95} />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
+                    <QRCodeSVG value={item.source === 'google_sheet' ? (item.qr_address || item.tracking_id) : `https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={92} />
                   </div>
                 </div>
 
-                {/* Middle Section: Kop Info */}
-                <div style={{ display: 'flex', flexDirection: 'column', borderRight: '2px solid #000' }}>
-                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '4px 0', background: '#f8fafc' }}>
-                    {item.client_pt}
+                {/* Right Section: Kop Info Grid */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {/* Row 1: Client PT */}
+                  <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '18px', borderBottom: '1px solid #000', padding: '3px 0', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {item.client_pt || 'PT. Sukses Prima Jayaindo'}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 15mm 1fr 25mm', fontSize: '14px', height: '9mm', alignItems: 'stretch' }}>
-                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>NOMOR TOKO</div>
-                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>:</div>
-                    <div style={{ fontWeight: '900', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>{item.recipient_name?.match(/\d+/)?.[0] || '-'}</div>
-                    <div style={{ fontWeight: '900', color: item.delivery_type === 'DALAM KOTA' ? '#000' : '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#facc15' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>
+
+                  {/* Row 2: NO TOKO | LUAR KOTA / DALAM KOTA | REGION */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '25mm 4mm 16mm 1fr 1.2fr', fontSize: '13px', height: '8.5mm', alignItems: 'stretch', borderBottom: '1px solid #000' }}>
+                    <div style={{ paddingLeft: '6px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000' }}>NO TOKO</div>
+                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>:</div>
+                    <div style={{ fontWeight: '900', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>
+                      {item.recipient_name?.match(/\d+/)?.[0] || '-'}
+                    </div>
+                    <div style={{ fontWeight: '900', color: item.delivery_type === 'DALAM KOTA' ? '#000' : '#fff', background: item.delivery_type === 'DALAM KOTA' ? '#facc15' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', borderRight: '1px solid #000' }}>
                       {item.delivery_type || 'DALAM KOTA'}
                     </div>
-                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', borderBottom: '1px solid #000' }}>
+                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', textTransform: 'uppercase', padding: '0 4px' }}>
+                      {item.region || item.area_region || '-'}
+                    </div>
+                  </div>
+
+                  {/* Row 3: MINISO : STORE NAME (gb 1 - CENTERED & EQUAL HEIGHT) | STORE ID */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '25mm 4mm 1fr 28mm', fontSize: '13px', height: '8.5mm', alignItems: 'stretch', borderBottom: '1px solid #000' }}>
+                    <div style={{ paddingLeft: '6px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000' }}>MINISO</div>
+                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000' }}>:</div>
+                    <div style={{ fontWeight: '900', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderRight: '1px solid #000' }}>
+                      {item.store_name}
+                    </div>
+                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                       {item.recipient_name?.match(/\((.*?)\)/)?.[1] || '-'}
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '35mm 4mm 1fr', fontSize: '14px', height: '9mm', alignItems: 'stretch' }}>
-                    <div style={{ paddingLeft: '8px', fontWeight: 'bold', display: 'flex', alignItems: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>MINISO</div>
-                    <div style={{ textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #000', borderBottom: '1px solid #000' }}>:</div>
-                    <div style={{ fontWeight: '900', paddingLeft: '8px', fontSize: '18px', display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderBottom: '1px solid #000' }}>
-                      {item.store_name}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2px' }}>
-                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12px', lineHeight: '1.1' }}>
-                      {item.promo_title}
-                    </div>
-                    <div style={{ textAlign: 'center', fontWeight: '900', fontSize: '12px', marginTop: '1px' }}>
-                      {item.no_spk}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Right Section: Pagination Only (Horizontal & Large) */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                  <div style={{ fontWeight: '900', fontSize: '20px', textAlign: 'center', color: '#000', whiteSpace: 'nowrap' }}>
-                    {currentPage} OF {totalPages}
+                  {/* Bottom Area: NO PO & SPK on Left (EQUAL HEIGHTS), 1 OF 1 FULL HEIGHT on Right */}
+                  <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 28mm', alignItems: 'stretch' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid #000' }}>
+                      {/* Row 4: NO PO (gb 2 - CENTERED & EQUAL HEIGHT) */}
+                      <div style={{ height: '8.5mm', padding: '0 6px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderBottom: '1px solid #000', fontSize: '12px' }}>
+                        {item.promo_title?.toUpperCase().startsWith('NO PO') ? item.promo_title : `NO PO : ${item.promo_title}`}
+                      </div>
+                      {/* Row 5: SPK / WPP (gb 3 - CENTERED & EQUAL HEIGHT TO NO PO) */}
+                      <div style={{ height: '8.5mm', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', fontWeight: '900', fontSize: '13px', textAlign: 'center' }}>
+                        {item.no_spk}
+                      </div>
+                    </div>
+
+                    {/* 1 OF 1 FULL HEIGHT DOWN TO BOTTOM (CENTERED) */}
+                    <div style={{ textAlign: 'center', fontWeight: '900', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                      {currentPage} OF {totalPages}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1205,17 +1278,30 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 {chunk.map((sub, idx) => (
                   <div key={idx} style={{ minHeight: '45mm', height: 'auto', borderBottom: idx === chunk.length - 1 ? 'none' : '2px solid #000', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pageBreakInside: 'avoid' }}>
                     <div style={{ minHeight: '8mm', height: 'auto', borderBottom: '1px solid #000', display: 'grid', gridTemplateColumns: '115mm 1fr', alignItems: 'center', background: sub.material?.toUpperCase().includes('WPB') ? '#e9d5ff' : '#bfdbfe', color: '#000', fontWeight: '900', boxSizing: 'border-box' }}>
-                      <div style={{ fontSize: sub.material?.toUpperCase().includes('WPB') ? '18px' : '11px', fontWeight: 'bold', padding: '3px 10px', lineHeight: '1.1' }}>{sub.material || (sub.code ? 'PVC' : '')}</div>
-                      <div style={{ textAlign: 'center', fontSize: '18px', padding: '0 5px' }}>{sub.size ? `Ukuran : ${sub.size}` : ''}</div>
+                      <div style={{ fontSize: sub.material?.toUpperCase().includes('WPB') ? '18px' : '13px', fontWeight: 'bold', padding: '3px 10px', lineHeight: '1.1' }}>{sub.material || (sub.code ? 'PVC' : '')}</div>
+                      <div style={{ textAlign: 'center', fontSize: '15px', padding: '0 5px' }}>{sub.size && sub.size !== '-' ? `Ukuran : ${sub.size}` : 'Ukuran : -'}</div>
                     </div>
                     <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '80mm 35mm 1fr', alignItems: 'stretch', minHeight: '37mm' }}>
-                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', wordBreak: 'break-word', overflow: 'hidden' }}>
-                        <div style={{ fontSize: (sub.code || '').length > 15 ? '16px' : ((sub.code || '').length > 8 ? '22px' : '40px'), fontWeight: '900', color: '#dc2626', letterSpacing: '-1px', lineHeight: 1.1 }}>
-                          {sub.code || ''}
-                        </div>
-                        <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000', lineHeight: 1.1, textTransform: 'uppercase', marginTop: '2px' }}>
-                          {sub.desc || ''}
-                        </div>
+                      <div style={{ borderRight: '1px solid #000', padding: '4px 6px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center', wordBreak: 'break-word', overflowWrap: 'break-word', overflow: 'hidden' }}>
+                        {(() => {
+                          const len = (sub.code || '').trim().length;
+                          let fSize = '44px';
+                          if (len > 35) fSize = '18px';
+                          else if (len > 25) fSize = '22px';
+                          else if (len > 15) fSize = '28px';
+                          else if (len > 8) fSize = '34px';
+
+                          return (
+                            <div style={{ fontSize: fSize, fontWeight: '900', color: '#dc2626', letterSpacing: '-0.5px', lineHeight: '1.08', wordBreak: 'break-word' }}>
+                              {sub.code || ''}
+                            </div>
+                          );
+                        })()}
+                        {sub.desc && sub.desc.trim().toLowerCase() !== (sub.code || '').trim().toLowerCase() && sub.desc.trim().toLowerCase() !== (sub.material || '').trim().toLowerCase() && (
+                          <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000', lineHeight: '1.1', textTransform: 'uppercase', marginTop: '2px' }}>
+                            {sub.desc}
+                          </div>
+                        )}
                       </div>
                       <div style={{ borderRight: '1px solid #000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
                         <span style={{ fontSize: '64px', fontWeight: '900', lineHeight: 1 }}>{sub.qty || (sub.code ? 0 : '')}</span>
@@ -1339,6 +1425,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         {!isPackingRole && (
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div className="flex items-center gap-2 flex-wrap">
+              <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                {isImporting ? 'Mengimport...' : 'Import File Excel'}
+                <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleLocalExcelUpload} disabled={isImporting} />
+              </label>
+
               <button
                 onClick={() => setIsGSheetModalOpen(true)}
                 className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
