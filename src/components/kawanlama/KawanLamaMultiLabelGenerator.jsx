@@ -621,33 +621,41 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'};
             margin: 0mm;
           }
-          body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
-          body * { visibility: hidden; }
-          .print-container, .print-container * { visibility: visible; }
+          html, body {
+            width: 297mm !important;
+            height: 210mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body * { visibility: hidden !important; }
+          .print-container, .print-container * { visibility: visible !important; }
           .print-container {
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 100% !important;
+            width: 297mm !important;
             margin: 0 !important;
             padding: 0 !important;
           }
           .a4-single-page {
-            width: 258mm !important;
-            max-width: 258mm !important;
-            height: 172mm !important;
-            max-height: 172mm !important;
+            width: 270mm !important;
+            max-width: 270mm !important;
+            height: 185mm !important;
+            max-height: 185mm !important;
             padding: 6mm 8mm !important;
             box-sizing: border-box !important;
-            page-break-before: always !important;
             page-break-after: always !important;
-            break-before: page !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             border: 2px solid #000 !important;
+            border-radius: 12px !important;
+            background: #ffffff !important;
             box-shadow: none !important;
-            margin: 8mm auto !important;
+            margin: 12mm auto !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: flex-start !important;
