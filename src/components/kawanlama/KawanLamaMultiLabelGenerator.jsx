@@ -170,6 +170,270 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
   const activeClientName = isManualCompany ? manualCompanyName : selectedPt;
 
+  // Fungsi Cetak Berdedikasi (A4 Landscape Standalone Window)
+  const handlePrint = () => {
+    if (totalRegions === 0) return;
+
+    if (printMode === 'labels') {
+      let pagesHTML = '';
+      storeKeys.forEach((storeName, storeIdx) => {
+        const absoluteIndex = storeIdx + 1;
+        const storeItems = labels[storeName] || [];
+
+        let tableRowsHTML = '';
+        storeItems.forEach((item, i) => {
+          tableRowsHTML += `
+            <tr style="border-bottom: 1px solid #000;">
+              <td style="border-right: 2px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 13px;">${i + 1}</td>
+              <td style="border-right: 2px solid #000; padding: 6px 10px; text-align: left; font-weight: 800; font-size: 13px; text-transform: uppercase;">${item.Item || ''}</td>
+              <td style="border-right: 2px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 12px;">${item.Bahan || '-'}</td>
+              <td style="border-right: 2px solid #000; padding: 6px; text-align: center; font-weight: bold; font-size: 12px; font-family: monospace;">${item.Ukuran || '-'}</td>
+              <td style="padding: 6px; text-align: center; font-weight: 900; font-size: 13px; font-family: monospace;">${item.Qty || 0} PCS</td>
+            </tr>
+          `;
+        });
+
+        const logoImgHTML = wellenPrintLogo
+          ? `<img src="${wellenPrintLogo}" style="height: 48px; width: auto; object-fit: contain;" />`
+          : `<div style="font-size: 11px; border: 2px solid #000; padding: 4px; font-style: italic; font-weight: bold;">[Upload Logo]</div>`;
+
+        pagesHTML += `
+          <div class="page-break" style="width: 275mm; max-width: 275mm; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 14px; padding: 16px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff; margin: 0 auto; page-break-after: always; break-after: page; position: relative;">
+
+            <div style="position: absolute; top: 16px; right: 16px; background: #f3f4f6; border: 2px solid #000; padding: 4px 12px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #000;">
+              ${absoluteIndex} OF ${totalRegions}
+            </div>
+
+            <div style="display: flex; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; padding-right: 100px;">
+              <div style="height: 48px; min-width: 140px; display: flex; align-items: center;">${logoImgHTML}</div>
+              <div style="flex: 1; text-align: center;">
+                <h1 style="margin: 0; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #000;">${activeClientName}</h1>
+                <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 800; text-transform: uppercase; color: #000;">
+                  ${activePromoTitle} (${spkNumber})
+                </p>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px; font-weight: 800; font-size: 15px; color: #000;">
+              STORE / REGION : ${storeName}
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 13px; color: #000;">
+              <thead>
+                <tr style="background: #f3f4f6; border-bottom: 2px solid #000; font-weight: 800;">
+                  <th style="border-right: 2px solid #000; padding: 8px; width: 6%; text-align: center;">NO</th>
+                  <th style="border-right: 2px solid #000; padding: 8px; width: 38%; text-align: left;">ITEM</th>
+                  <th style="border-right: 2px solid #000; padding: 8px; width: 34%; text-align: center;">BAHAN</th>
+                  <th style="border-right: 2px solid #000; padding: 8px; width: 14%; text-align: center;">UKURAN</th>
+                  <th style="padding: 8px; width: 8%; text-align: center;">QTY</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRowsHTML}
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
+
+      const printWin = window.open('', '_blank', 'width=1100,height=850');
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Cetak Label Store (${totalRegions} Store)</title>
+            <style>
+              @page {
+                size: A4 landscape;
+                margin: 5mm;
+              }
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                color: #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .page-break {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <div>${pagesHTML}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                  window.close();
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    } else {
+      // Print Surat Jalan (DO)
+      let doPagesHTML = '';
+      storeKeys.forEach((storeName, storeIdx) => {
+        const storeItems = labels[storeName] || [];
+        const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
+        const storeSeq = String(storeIdx + 1).padStart(3, '0');
+        const customNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'] || item.DO)?.['No DO'];
+        const extractedWpp = storeItems.reduce((found, item) => found || getWppFromItem(item), '');
+        const storeNoWpp = formatWppText(extractedWpp || defaultWppNumber);
+        const finalDoNumber = (customNoDo && String(customNoDo).trim().toLowerCase() !== 'unik')
+          ? String(customNoDo).trim()
+          : `${spkNumber}-${storeSeq}`;
+
+        let itemsRowsHTML = '';
+        storeItems.forEach((item, i) => {
+          itemsRowsHTML += `
+            <tr style="border-bottom: 1px solid #000; height: 32px;">
+              <td style="border-right: 1px solid #000; padding: 6px; text-align: center; font-weight: bold;">${i + 1}</td>
+              <td style="border-right: 1px solid #000; padding: 6px 10px; font-weight: bold; text-transform: uppercase;">${item.Item || ''} ${item.Bahan ? `_ ${item.Bahan}` : ''}</td>
+              <td style="border-right: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; font-family: monospace;">${item.Ukuran || '-'}</td>
+              <td style="padding: 6px; text-align: center; font-weight: 900; font-family: monospace;">${item.Qty || 0}</td>
+            </tr>
+          `;
+        });
+
+        const emptyRowsCount = Math.max(0, 6 - storeItems.length);
+        for (let e = 0; e < emptyRowsCount; e++) {
+          itemsRowsHTML += `
+            <tr style="border-bottom: 1px solid #000; height: 32px;">
+              <td style="border-right: 1px solid #000; padding: 6px;"></td>
+              <td style="border-right: 1px solid #000; padding: 6px;"></td>
+              <td style="border-right: 1px solid #000; padding: 6px;"></td>
+              <td style="padding: 6px;"></td>
+            </tr>
+          `;
+        }
+
+        const logoHTML = wellenPrintLogo
+          ? `<img src="${wellenPrintLogo}" style="height: 48px; width: auto; object-fit: contain;" />`
+          : `<div style="font-size: 11px; border: 1px solid #000; padding: 4px; font-style: italic;">[Upload Logo]</div>`;
+
+        doPagesHTML += `
+          <div class="page-break" style="width: 200mm; height: 130mm; max-width: 200mm; max-height: 130mm; border: 2px solid #000; border-radius: 12px; padding: 16px; box-sizing: border-box; margin: 0 auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 12px; font-family: Arial, sans-serif; overflow: hidden; page-break-after: always; break-after: page;">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px;">
+                <div>
+                  <div style="height: 48px; width: 180px; display: flex; align-items: center;">${logoHTML}</div>
+                  <p style="font-size: 11px; color: #333; margin: 4px 0 0 0; line-height: 1.2;">
+                    Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br />
+                    Telp. 021 -5506999 &nbsp;&nbsp;|&nbsp;&nbsp; Fax -
+                  </p>
+                </div>
+                <div style="text-align: right;">
+                  <h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">SURAT JALAN</h2>
+                  <p style="margin: 2px 0 0 0; font-size: 14px; font-weight: 800; font-family: monospace;">${finalDoNumber}</p>
+                  <div style="margin-top: 8px; text-align: left; font-size: 12px;">
+                    <span style="font-weight: bold;">Kepada Yth, :</span><br />
+                    <span style="font-weight: 800; text-transform: uppercase; font-size: 13px;">${activeClientName}</span><br />
+                    <span style="font-weight: 800;">STORE : ${storeName}</span>
+                  </div>
+                </div>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 12px; color: #000;">
+                <thead>
+                  <tr style="background: #f3f4f6; border-bottom: 2px solid #000; font-weight: 800;">
+                    <th style="border-right: 1px solid #000; padding: 6px; width: 40px; text-align: center;">No.</th>
+                    <th style="border-right: 1px solid #000; padding: 6px; text-align: left;">Nama Barang</th>
+                    <th style="border-right: 1px solid #000; padding: 6px; width: 110px; text-align: center;">Ukuran</th>
+                    <th style="padding: 6px; width: 70px; text-align: center;">Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsRowsHTML}
+                </tbody>
+                <tfoot>
+                  <tr style="border-top: 2px solid #000; font-weight: 900; background: #f8fafc;">
+                    <td colSpan="3" style="border-right: 1px solid #000; padding: 6px 12px; text-align: right; text-transform: uppercase;">TOTAL :</td>
+                    <td style="padding: 6px; text-align: center; font-family: monospace; font-size: 14px;">${totalQty}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div style="border: 1px solid #000; display: grid; grid-template-columns: repeat(4, 1fr); font-size: 11px;">
+              <div style="padding: 6px; border-right: 1px solid #000;">
+                <p style="margin: 0;"><span style="font-weight: bold;">Tgl</span> : ${currentDateStr}</p>
+                <p style="margin: 2px 0 0 0;"><span style="font-weight: bold;">Nama File</span> : ${activePromoTitle}</p>
+                <div style="margin-top: 12px;">
+                  <p style="margin: 0;"><span style="font-weight: bold;">Inv</span> : ${storeNoWpp || '-'}</p>
+                  <p style="margin: 2px 0 0 0;"><span style="font-weight: bold;">PO</span> : -</p>
+                </div>
+              </div>
+              <div style="padding: 6px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+                <span style="font-weight: bold;">DIBUAT OLEH</span>
+                <span style="border-bottom: 1px solid #000; padding-bottom: 2px; font-weight: 600;">${senderName || '-'}</span>
+              </div>
+              <div style="padding: 6px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+                <span style="font-weight: bold;">DIKIRIM OLEH</span>
+                <span style="border-bottom: 1px solid #000; padding-bottom: 2px;">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</span>
+              </div>
+              <div style="padding: 6px; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+                <span style="font-weight: bold;">DITERIMA OLEH</span>
+                <span style="border-bottom: 1px solid #000; padding-bottom: 2px;">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      const printWin = window.open('', '_blank', 'width=1000,height=800');
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Cetak Surat Jalan (${storeKeys.length} DO)</title>
+            <style>
+              @page {
+                size: 210mm 140mm landscape;
+                margin: 0mm;
+              }
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #fff;
+                color: #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .page-break {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <div style="padding: 5mm;">${doPagesHTML}</div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                  window.close();
+                }, 250);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    }
+  };
+
   return (
     <div className="p-6 rounded-3xl shadow-xs space-y-6 border bg-white border-slate-200 text-black">
       
@@ -374,10 +638,11 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         {/* Tombol Cetak Utama */}
         <div className="flex justify-end pt-1">
           <button 
-            onClick={() => window.print()} 
-            className="py-2.5 px-6 bg-transparent hover:bg-slate-100 text-slate-800 border border-slate-300 font-semibold rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+            onClick={handlePrint}
+            disabled={totalRegions === 0}
+            className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Printer className="w-4 h-4" /> Print
+            <Printer className="w-4 h-4" /> Cetak PDF / Print ({totalRegions} Store)
           </button>
         </div>
       </div>
@@ -405,8 +670,8 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         </div>
       )}
 
-      {/* Area Konten / Cetak */}
-      <div className="print-container">
+      {/* Area Pratinjau Layar */}
+      <div className="preview-container">
         {totalRegions === 0 ? (
           <div className={`text-center py-16 border-2 border-dashed rounded-3xl text-xs ${isDarkMode ? 'border-neutral-700 text-neutral-400' : 'border-stone-300 text-stone-400'}`}>
             Silakan pilih PT dan upload file Excel alokasi untuk mulai mencetak.
@@ -419,7 +684,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
 
               return (
-                <div key={storeIdx} className="a4-single-page relative text-stone-900 bg-white p-6 sm:p-7 mb-8 border-2 border-stone-900 rounded-2xl shadow-sm mx-auto max-w-[265mm]">
+                <div key={storeIdx} className="a4-preview-card relative text-stone-900 bg-white p-6 sm:p-7 mb-8 border-2 border-stone-900 rounded-2xl shadow-sm mx-auto max-w-[275mm]">
                   {/* Indikator Koli */}
                   <div className="absolute top-3.5 right-3.5 bg-stone-100 border-2 border-stone-900 px-3 py-1 rounded-lg text-xs sm:text-sm font-extrabold text-stone-900">
                     {absoluteIndex} OF {totalRegions}
@@ -479,11 +744,9 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
               const totalQty = storeItems.reduce((sum, item) => sum + (Number(item.Qty) || 0), 0);
               
-              // Garansi unik per toko (Format ringkas: SJ-05031-001)
               const storeSeq = String(storeIdx + 1).padStart(3, '0');
               const customNoDo = storeItems.find(item => item['No DO'] || item.NoDO || item['no do'] || item.DO)?.['No DO'];
 
-              // Ekstrak No WPP secara otomatis per toko dari data Excel (pencarian fleksibel)
               const extractedWpp = storeItems.reduce((found, item) => {
                 if (found) return found;
                 return getWppFromItem(item);
@@ -496,7 +759,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                 : `${spkNumber}-${storeSeq}`;
 
               return (
-                <div key={storeIdx} className="surat-jalan-page relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto">
+                <div key={storeIdx} className="surat-jalan-preview relative text-black bg-white p-8 mb-6 border border-stone-300 shadow-sm mx-auto max-w-[210mm]">
                   {/* Header Surat Jalan */}
                   <div className="flex justify-between items-start border-b-2 border-black pb-3 mb-3">
                     <div className="space-y-1">
@@ -594,97 +857,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           )
         )}
       </div>
-
-      <style>{`
-        .a4-single-page {
-          width: 280mm;
-          min-height: 185mm;
-          background: white;
-          padding: 8mm 10mm;
-          box-sizing: border-box;
-          margin-bottom: 20mm;
-          border: 1px solid #ddd;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .surat-jalan-page {
-          width: 210mm;
-          min-height: 140mm;
-          background: white;
-          box-sizing: border-box;
-          margin-bottom: 20mm;
-          padding: 5mm 7mm;
-          border: 1px solid #ccc;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        @media print {
-          @page {
-            size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'} !important;
-            margin: 0mm !important;
-          }
-          html, body {
-            width: ${printMode === 'labels' ? '297mm' : '210mm'} !important;
-            height: ${printMode === 'labels' ? '210mm' : '140mm'} !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * { visibility: hidden !important; }
-          .print-container, .print-container * { visibility: visible !important; }
-          .print-container {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: ${printMode === 'labels' ? '297mm' : '210mm'} !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .a4-single-page {
-            width: 275mm !important;
-            max-width: 275mm !important;
-            height: 188mm !important;
-            max-height: 188mm !important;
-            padding: 8mm 10mm !important;
-            box-sizing: border-box !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            border: 2px solid #000 !important;
-            border-radius: 12px !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-            margin: 10mm auto !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: flex-start !important;
-            overflow: hidden !important;
-          }
-          .a4-single-page:first-child, .a4-single-page:first-of-type {
-            page-break-before: auto !important;
-            break-before: auto !important;
-            margin-top: 8mm !important;
-          }
-          .surat-jalan-page {
-            width: 210mm !important;
-            height: 140mm !important;
-            max-height: 140mm !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 5.1mm 6.5mm 5mm 6.5mm !important;
-            margin-left: -0.5mm !important;
-            margin-top: 0.1mm !important;
-            page-break-after: always !important;
-            break-after: page !important;
-            box-sizing: border-box !important;
-          }
-          .surat-jalan-page:first-child, .surat-jalan-page:first-of-type {
-            margin-top: -6mm !important;
-            padding-top: 2mm !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
