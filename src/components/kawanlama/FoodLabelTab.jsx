@@ -159,70 +159,107 @@ export default function FoodLabelTab({ isDarkMode }) {
 
   const [screenLimit, setScreenLimit] = useState(10);
 
+  // Helper pengelompokan halaman dinamis: < 5 items = 2 label per HVS, >= 5 items = 1 label per HVS
+  const computeDynamicPages = (data) => {
+    if (!data || data.length === 0) return [];
+    const pages = [];
+    let i = 0;
+    while (i < data.length) {
+      const currentStore = data[i];
+      const itemCount = currentStore.itemsData?.length || 0;
+
+      if (itemCount >= 5) {
+        pages.push({
+          type: 'single',
+          stores: [currentStore],
+          globalIndices: [i + 1]
+        });
+        i++;
+      } else {
+        const nextStore = data[i + 1];
+        if (nextStore && (nextStore.itemsData?.length || 0) < 5) {
+          pages.push({
+            type: 'dual',
+            stores: [currentStore, nextStore],
+            globalIndices: [i + 1, i + 2]
+          });
+          i += 2;
+        } else {
+          pages.push({
+            type: 'single',
+            stores: [currentStore],
+            globalIndices: [i + 1]
+          });
+          i++;
+        }
+      }
+    }
+    return pages;
+  };
+
   const handlePrint = () => {
     if (excelData.length === 0) return;
 
     if (activeTab === 'labels') {
       const totalKoli = excelData.length;
+      const pages = computeDynamicPages(excelData);
       let labelPagesHTML = '';
 
-      for (let pageIdx = 0; pageIdx < labelPairs.length; pageIdx++) {
-        const pair = labelPairs[pageIdx];
-        let pairCardsHTML = '';
-
-        pair.forEach((store, idx) => {
+      pages.forEach((page) => {
+        if (page.type === 'single') {
+          const store = page.stores[0];
+          const globalIndex = page.globalIndices[0];
           const activeItems = store.itemsData;
-          const globalIndex = pageIdx * 2 + idx + 1;
 
           let tableRowsHTML = '';
           activeItems.forEach((item, itemIdx) => {
             const bahanTd = itemIdx === 0
-              ? `<td style="border: 2px solid #000; padding: 4px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 11px;" rowspan="${activeItems.length}">${paperBahan}</td>`
+              ? `<td style="border: 2px solid #000; padding: 6px 10px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 13px;" rowspan="${activeItems.length}">${paperBahan}</td>`
               : '';
 
             tableRowsHTML += `
               <tr>
-                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">${itemIdx + 1}</td>
-                <td style="border: 2px solid #000; padding: 4px; text-align: left; font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden;">${item.name}</td>
+                <td style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: 600; font-size: 13px;">${itemIdx + 1}</td>
+                <td style="border: 2px solid #000; padding: 6px 10px; text-align: left; font-weight: bold; font-size: 12px;">${item.name}</td>
                 ${bahanTd}
-                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.size}</td>
-                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.qty}</td>
-                <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">PCS</td>
+                <td style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: 800; font-size: 13px;">${item.size}</td>
+                <td style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: 800; font-size: 13px;">${item.qty}</td>
+                <td style="border: 2px solid #000; padding: 6px; text-align: center; font-weight: 600; font-size: 13px;">PCS</td>
               </tr>
             `;
           });
 
           const logoImgHTML = wellenLogo
-            ? `<img src="${wellenLogo}" style="height: 32px; width: auto; object-fit: contain;" />`
+            ? `<img src="${wellenLogo}" style="height: 42px; width: auto; object-fit: contain;" />`
             : '';
 
-          pairCardsHTML += `
-            <div style="width: 48.5%; max-width: 48.5%; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 16px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff;">
-              <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <div style="flex-shrink: 0; min-width: 32px;">${logoImgHTML}</div>
-                <div style="text-align: center; flex: 1; padding: 0 6px;">
-                  <h3 style="margin: 0; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${companyTitle}</h3>
-                  <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: 700; color: #111;">${projectName}</p>
+          labelPagesHTML += `
+            <div class="page-break" style="width: 275mm; max-width: 275mm; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 16px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff; margin: 0 auto; page-break-after: always; break-after: page;">
+              <div style="border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="flex-shrink: 0; min-width: 42px;">${logoImgHTML}</div>
+                <div style="text-align: center; flex: 1; padding: 0 10px;">
+                  <h3 style="margin: 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${companyTitle}</h3>
+                  <p style="margin: 3px 0 0 0; font-size: 13px; font-weight: 700; color: #111;">${projectName}</p>
                 </div>
-                <div style="flex-shrink: 0; font-weight: 800; font-size: 11px; background: #f3f4f6; border: 2px solid #000; padding: 2px 8px; border-radius: 8px; white-space: nowrap;">
+                <div style="flex-shrink: 0; font-weight: 800; font-size: 13px; background: #f3f4f6; border: 2px solid #000; padding: 3px 12px; border-radius: 8px; white-space: nowrap;">
                   KOLI ${globalIndex} OF ${totalKoli}
                 </div>
               </div>
 
-              <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #000;">
-                <div><span style="display: inline-block; width: 60px;">POOL</span>: ${store.pool}</div>
-                <div><span style="display: inline-block; width: 60px;">STORE</span>: ${store.storeName}</div>
+              <div style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #000;">
+                <div><span style="display: inline-block; width: 75px;">POOL</span>: ${store.pool}</div>
+                <div><span style="display: inline-block; width: 75px;">STORE</span>: ${store.storeName}</div>
               </div>
 
-              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 11px;">
+              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 13px;">
                 <thead>
                   <tr style="background: #f3f4f6; text-align: center; font-weight: 700;">
-                    <th style="border: 2px solid #000; padding: 4px; width: 6%;">NO</th>
-                    <th style="border: 2px solid #000; padding: 4px; text-align: left; width: 49%;">ITEM</th>
-                    <th style="border: 2px solid #000; padding: 4px; width: 19%;">BAHAN</th>
-                    <th style="border: 2px solid #000; padding: 4px; width: 13%;">UKURAN</th>
-                    <th style="border: 2px solid #000; padding: 4px; width: 7%;">QTY</th>
-                    <th style="border: 2px solid #000; padding: 4px; width: 7%;">SAT</th>
+                    <th style="border: 2px solid #000; padding: 6px; width: 6%;">NO</th>
+                    <th style="border: 2px solid #000; padding: 6px; text-align: left; width: 49%;">ITEM</th>
+                    <th style="border: 2px solid #000; padding: 6px; width: 19%;">BAHAN</th>
+                    <th style="border: 2px solid #000; padding: 6px; width: 13%;">UKURAN</th>
+                    <th style="border: 2px solid #000; padding: 6px; width: 7%;">QTY</th>
+                    <th style="border: 2px solid #000; padding: 6px; width: 7%;">SAT</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -231,18 +268,83 @@ export default function FoodLabelTab({ isDarkMode }) {
               </table>
             </div>
           `;
-        });
+        } else {
+          // Dual layout (< 5 items)
+          let pairCardsHTML = '';
+          page.stores.forEach((store, idx) => {
+            const activeItems = store.itemsData;
+            const globalIndex = page.globalIndices[idx];
 
-        if (pair.length === 1) {
-          pairCardsHTML += `<div style="width: 48.5%; visibility: hidden;"></div>`;
+            let tableRowsHTML = '';
+            activeItems.forEach((item, itemIdx) => {
+              const bahanTd = itemIdx === 0
+                ? `<td style="border: 2px solid #000; padding: 4px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 11px;" rowspan="${activeItems.length}">${paperBahan}</td>`
+                : '';
+
+              tableRowsHTML += `
+                <tr>
+                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">${itemIdx + 1}</td>
+                  <td style="border: 2px solid #000; padding: 4px; text-align: left; font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden;">${item.name}</td>
+                  ${bahanTd}
+                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.size}</td>
+                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.qty}</td>
+                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">PCS</td>
+                </tr>
+              `;
+            });
+
+            const logoImgHTML = wellenLogo
+              ? `<img src="${wellenLogo}" style="height: 32px; width: auto; object-fit: contain;" />`
+              : '';
+
+            pairCardsHTML += `
+              <div style="width: 48.5%; max-width: 48.5%; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 16px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff;">
+                <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="flex-shrink: 0; min-width: 32px;">${logoImgHTML}</div>
+                  <div style="text-align: center; flex: 1; padding: 0 6px;">
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${companyTitle}</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: 700; color: #111;">${projectName}</p>
+                  </div>
+                  <div style="flex-shrink: 0; font-weight: 800; font-size: 11px; background: #f3f4f6; border: 2px solid #000; padding: 2px 8px; border-radius: 8px; white-space: nowrap;">
+                    KOLI ${globalIndex} OF ${totalKoli}
+                  </div>
+                </div>
+
+                <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #000;">
+                  <div><span style="display: inline-block; width: 60px;">POOL</span>: ${store.pool}</div>
+                  <div><span style="display: inline-block; width: 60px;">STORE</span>: ${store.storeName}</div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 11px;">
+                  <thead>
+                    <tr style="background: #f3f4f6; text-align: center; font-weight: 700;">
+                      <th style="border: 2px solid #000; padding: 4px; width: 6%;">NO</th>
+                      <th style="border: 2px solid #000; padding: 4px; text-align: left; width: 49%;">ITEM</th>
+                      <th style="border: 2px solid #000; padding: 4px; width: 19%;">BAHAN</th>
+                      <th style="border: 2px solid #000; padding: 4px; width: 13%;">UKURAN</th>
+                      <th style="border: 2px solid #000; padding: 4px; width: 7%;">QTY</th>
+                      <th style="border: 2px solid #000; padding: 4px; width: 7%;">SAT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${tableRowsHTML}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          });
+
+          if (page.stores.length === 1) {
+            pairCardsHTML += `<div style="width: 48.5%; visibility: hidden;"></div>`;
+          }
+
+          labelPagesHTML += `
+            <div class="page-break" style="width: 280mm; max-width: 280mm; height: 185mm; max-height: 185mm; display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; margin: 0 auto; padding: 0; background: #fff;">
+              ${pairCardsHTML}
+            </div>
+          `;
         }
-
-        labelPagesHTML += `
-          <div class="page-break" style="width: 280mm; max-width: 280mm; height: 185mm; max-height: 185mm; display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; margin: 0 auto; padding: 0; background: #fff;">
-            ${pairCardsHTML}
-          </div>
-        `;
-      }
+      });
 
       const printWin = window.open('', '_blank', 'width=1100,height=850');
       printWin.document.write(`
@@ -416,11 +518,7 @@ export default function FoodLabelTab({ isDarkMode }) {
     }
   };
 
-  // Kelompokkan data label toko menjadi berpasangan (2 label per halaman HVS A4 Landscape)
-  const labelPairs = [];
-  for (let i = 0; i < excelData.length; i += 2) {
-    labelPairs.push(excelData.slice(i, i + 2));
-  }
+  const pages = computeDynamicPages(excelData);
 
   return (
     <div className="space-y-6">
@@ -642,102 +740,174 @@ export default function FoodLabelTab({ isDarkMode }) {
           </div>
         ) : activeTab === 'labels' ? (
           <div className="space-y-8">
-            {labelPairs.slice(0, screenLimit).map((pair, pageIdx) => (
-              <div
-                key={pageIdx}
-                className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
-              >
-                {pair.map((store, idx) => {
-                  const activeItems = store.itemsData;
-                  const globalIndex = pageIdx * 2 + idx + 1;
-                  const totalKoli = excelData.length;
+            {pages.slice(0, screenLimit).map((page, pageIdx) => {
+              const totalKoli = excelData.length;
 
-                  return (
-                    <div
-                      key={idx}
-                      className="label-card-item bg-white text-black border-2 border-neutral-900 p-4 sm:p-5 rounded-2xl shadow-sm flex-1 w-full md:w-[48.5%] min-h-[182mm] max-h-[184mm] overflow-hidden flex flex-col justify-start"
-                    >
+              if (page.type === 'single') {
+                const store = page.stores[0];
+                const globalIndex = page.globalIndices[0];
+                const activeItems = store.itemsData;
+
+                return (
+                  <div
+                    key={pageIdx}
+                    className="label-single-page bg-white text-black print-page-break mx-auto w-full max-w-[280mm] min-h-[185mm] mb-8"
+                  >
+                    <div className="bg-white text-black border-2 border-neutral-900 p-6 rounded-2xl shadow-sm w-full min-h-[182mm] max-h-[185mm] overflow-hidden flex flex-col justify-start">
                       {/* Header dengan Koli Indicator */}
-                      <div className="relative border-b-2 border-neutral-900 pb-2 mb-2.5 flex items-center justify-between">
+                      <div className="relative border-b-2 border-neutral-900 pb-3 mb-3 flex items-center justify-between">
                         {wellenLogo ? (
                           <div className="flex-shrink-0">
-                            <img src={wellenLogo} alt="Logo Wellen" className="h-8 sm:h-9 w-auto object-contain" />
+                            <img src={wellenLogo} alt="Logo Wellen" className="h-10 w-auto object-contain" />
                           </div>
                         ) : (
-                          <div className="w-8" />
+                          <div className="w-10" />
                         )}
-                        <div className="text-center flex-1 px-2">
-                          <h3 className="font-extrabold text-xs sm:text-base tracking-wide uppercase">{companyTitle}</h3>
-                          <p className="text-[11px] sm:text-xs font-bold text-neutral-800">{projectName}</p>
+                        <div className="text-center flex-1 px-3">
+                          <h3 className="font-extrabold text-lg sm:text-xl tracking-wide uppercase">{companyTitle}</h3>
+                          <p className="text-xs sm:text-sm font-bold text-neutral-800">{projectName}</p>
                         </div>
-                        <div className="text-right flex-shrink-0 font-extrabold text-[11px] sm:text-xs bg-neutral-100 border-2 border-neutral-900 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                        <div className="text-right flex-shrink-0 font-extrabold text-xs sm:text-sm bg-neutral-100 border-2 border-neutral-900 px-3 py-1 rounded-lg whitespace-nowrap">
                           KOLI {globalIndex} OF {totalKoli}
                         </div>
                       </div>
 
                       {/* POOL & STORE Info */}
-                      <div className="text-xs sm:text-sm font-bold mb-2.5 space-y-0.5 text-neutral-900">
-                        <div className="flex"><span className="w-16 sm:w-18">POOL</span><span>: {store.pool}</span></div>
-                        <div className="flex"><span className="w-16 sm:w-18">STORE</span><span>: {store.storeName}</span></div>
+                      <div className="text-sm sm:text-base font-bold mb-3 space-y-1 text-neutral-900">
+                        <div className="flex"><span className="w-20">POOL</span><span>: {store.pool}</span></div>
+                        <div className="flex"><span className="w-20">STORE</span><span>: {store.storeName}</span></div>
                       </div>
 
                       {/* Table Fixed Width 100% */}
-                      <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-xs">
+                      <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-sm">
                         <thead>
-                          <tr className="bg-neutral-100 text-center font-bold text-[10.5px] sm:text-xs">
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[5%]">NO</th>
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 text-left w-[49%]">ITEM</th>
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[19%]">BAHAN</th>
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[13%]">UKURAN</th>
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">QTY</th>
-                            <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">SAT</th>
+                          <tr className="bg-neutral-100 text-center font-bold text-xs sm:text-sm">
+                            <th className="border-2 border-neutral-900 p-2 w-[6%]">NO</th>
+                            <th className="border-2 border-neutral-900 p-2 text-left w-[48%]">ITEM</th>
+                            <th className="border-2 border-neutral-900 p-2 w-[20%]">BAHAN</th>
+                            <th className="border-2 border-neutral-900 p-2 w-[12%]">UKURAN</th>
+                            <th className="border-2 border-neutral-900 p-2 w-[7%]">QTY</th>
+                            <th className="border-2 border-neutral-900 p-2 w-[7%]">SAT</th>
                           </tr>
                         </thead>
                         <tbody>
                           {activeItems.map((item, itemIdx) => (
                             <tr key={itemIdx}>
-                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">{itemIdx + 1}</td>
-                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 font-bold text-[9.5px] sm:text-[10px] leading-tight whitespace-nowrap overflow-hidden">{item.name}</td>
+                              <td className="border-2 border-neutral-900 p-2 text-center font-semibold text-xs sm:text-sm">{itemIdx + 1}</td>
+                              <td className="border-2 border-neutral-900 p-2 font-bold text-xs sm:text-sm leading-tight">{item.name}</td>
                               {itemIdx === 0 && (
-                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center align-middle font-bold" rowSpan={activeItems.length}>
-                                  <span className="text-[10px] sm:text-[11px] leading-snug block">{paperBahan}</span>
+                                <td className="border-2 border-neutral-900 p-2 text-center align-middle font-bold" rowSpan={activeItems.length}>
+                                  <span className="text-xs sm:text-sm leading-snug block">{paperBahan}</span>
                                 </td>
                               )}
-                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.size}</td>
-                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.qty}</td>
-                              <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">PCS</td>
+                              <td className="border-2 border-neutral-900 p-2 text-center font-extrabold text-xs sm:text-sm">{item.size}</td>
+                              <td className="border-2 border-neutral-900 p-2 text-center font-extrabold text-xs sm:text-sm">{item.qty}</td>
+                              <td className="border-2 border-neutral-900 p-2 text-center font-semibold text-xs sm:text-sm">PCS</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                  );
-                })}
-                {pair.length === 1 && (
-                  <div className="hidden md:block flex-1 w-[48.5%] invisible" />
-                )}
-              </div>
-            ))}
+                  </div>
+                );
+              }
 
-            {labelPairs.length > screenLimit && (
+              return (
+                <div
+                  key={pageIdx}
+                  className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
+                >
+                  {page.stores.map((store, idx) => {
+                    const activeItems = store.itemsData;
+                    const globalIndex = page.globalIndices[idx];
+
+                    return (
+                      <div
+                        key={idx}
+                        className="label-card-item bg-white text-black border-2 border-neutral-900 p-4 sm:p-5 rounded-2xl shadow-sm flex-1 w-full md:w-[48.5%] min-h-[182mm] max-h-[184mm] overflow-hidden flex flex-col justify-start"
+                      >
+                        {/* Header dengan Koli Indicator */}
+                        <div className="relative border-b-2 border-neutral-900 pb-2 mb-2.5 flex items-center justify-between">
+                          {wellenLogo ? (
+                            <div className="flex-shrink-0">
+                              <img src={wellenLogo} alt="Logo Wellen" className="h-8 sm:h-9 w-auto object-contain" />
+                            </div>
+                          ) : (
+                            <div className="w-8" />
+                          )}
+                          <div className="text-center flex-1 px-2">
+                            <h3 className="font-extrabold text-xs sm:text-base tracking-wide uppercase">{companyTitle}</h3>
+                            <p className="text-[11px] sm:text-xs font-bold text-neutral-800">{projectName}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0 font-extrabold text-[11px] sm:text-xs bg-neutral-100 border-2 border-neutral-900 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                            KOLI {globalIndex} OF {totalKoli}
+                          </div>
+                        </div>
+
+                        {/* POOL & STORE Info */}
+                        <div className="text-xs sm:text-sm font-bold mb-2.5 space-y-0.5 text-neutral-900">
+                          <div className="flex"><span className="w-16 sm:w-18">POOL</span><span>: {store.pool}</span></div>
+                          <div className="flex"><span className="w-16 sm:w-18">STORE</span><span>: {store.storeName}</span></div>
+                        </div>
+
+                        {/* Table Fixed Width 100% */}
+                        <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-xs">
+                          <thead>
+                            <tr className="bg-neutral-100 text-center font-bold text-[10.5px] sm:text-xs">
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[5%]">NO</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 text-left w-[49%]">ITEM</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[19%]">BAHAN</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[13%]">UKURAN</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">QTY</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">SAT</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeItems.map((item, itemIdx) => (
+                              <tr key={itemIdx}>
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">{itemIdx + 1}</td>
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 font-bold text-[9.5px] sm:text-[10px] leading-tight whitespace-nowrap overflow-hidden">{item.name}</td>
+                                {itemIdx === 0 && (
+                                  <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center align-middle font-bold" rowSpan={activeItems.length}>
+                                    <span className="text-[10px] sm:text-[11px] leading-snug block">{paperBahan}</span>
+                                  </td>
+                                )}
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.size}</td>
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-extrabold text-[10px] sm:text-[11px]">{item.qty}</td>
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">PCS</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                  {page.stores.length === 1 && (
+                    <div className="hidden md:block flex-1 w-[48.5%] invisible" />
+                  )}
+                </div>
+              );
+            })}
+
+            {pages.length > screenLimit && (
               <div className="no-print p-4 text-center border-t border-slate-200 dark:border-neutral-700 pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <span className="text-xs font-semibold text-slate-600 dark:text-neutral-400">
-                  Menampilkan {screenLimit} dari {labelPairs.length} halaman preview layar.
+                  Menampilkan {screenLimit} dari {pages.length} halaman preview layar.
                 </span>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setScreenLimit(prev => Math.min(labelPairs.length, prev + 10))}
+                    onClick={() => setScreenLimit(prev => Math.min(pages.length, prev + 10))}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition cursor-pointer active:scale-95 shadow-2xs"
                   >
                     ➕ Tampilkan 10 Halaman Lagi
                   </button>
                   <button
                     type="button"
-                    onClick={() => setScreenLimit(labelPairs.length)}
+                    onClick={() => setScreenLimit(pages.length)}
                     className="px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white font-bold text-xs rounded-xl transition cursor-pointer active:scale-95 shadow-2xs"
                   >
-                    👁️ Tampilkan Semua ({labelPairs.length} Halaman)
+                    👁️ Tampilkan Semua ({pages.length} Halaman)
                   </button>
                 </div>
               </div>
