@@ -448,14 +448,14 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                   </div>
 
                   {/* Tabel Item */}
-                  <table className="w-full border-collapse border-2 border-black text-xs sm:text-sm text-stone-900">
+                  <table className="w-full table-fixed border-collapse border-2 border-black text-xs sm:text-sm text-stone-900">
                     <thead>
                       <tr className="bg-stone-100 text-stone-900 border-b-2 border-black">
-                        <th className="border-r-2 border-black p-2.5 w-12 text-center font-extrabold">NO</th>
-                        <th className="border-r-2 border-black p-2.5 text-left font-extrabold">ITEM</th>
-                        <th className="border-r-2 border-black p-2.5 w-36 text-center font-extrabold">BAHAN</th>
-                        <th className="border-r-2 border-black p-2.5 w-28 text-center font-extrabold">UKURAN</th>
-                        <th className="p-2.5 w-24 text-center font-extrabold">QTY</th>
+                        <th className="border-r-2 border-black p-2.5 w-[6%] text-center font-extrabold">NO</th>
+                        <th className="border-r-2 border-black p-2.5 w-[38%] text-left font-extrabold">ITEM</th>
+                        <th className="border-r-2 border-black p-2.5 w-[34%] text-center font-extrabold">BAHAN</th>
+                        <th className="border-r-2 border-black p-2.5 w-[14%] text-center font-extrabold">UKURAN</th>
+                        <th className="p-2.5 w-[8%] text-center font-extrabold">QTY</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -619,23 +619,24 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         @media print {
           @page {
             size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'};
-            margin: 0mm;
+            margin: 5mm;
           }
           body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
           .print-container { position: absolute; left: 0; top: 0; width: 100%; }
           .a4-single-page {
-            width: 297mm !important;
-            height: 210mm !important;
-            max-height: 210mm !important;
-            padding: 10mm 12mm !important;
+            width: 275mm !important;
+            max-width: 275mm !important;
+            height: 190mm !important;
+            max-height: 190mm !important;
+            padding: 6mm 8mm !important;
             box-sizing: border-box !important;
             page-break-after: always !important;
             break-after: page !important;
             border: none !important;
             box-shadow: none !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: flex-start !important;
