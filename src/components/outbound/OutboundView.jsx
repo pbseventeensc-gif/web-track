@@ -1,0 +1,751 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Camera,
+  Search,
+  Check,
+  Clock,
+  RefreshCw,
+  Image as ImageIcon,
+  Truck,
+  QrCode,
+  X
+} from 'lucide-react';
+import { supabase } from '../../supabaseClient';
+
+export default function OutboundView({ isDarkMode, onOpenImageModal }) {
+  const [packingList, setPackingList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [selectedRowIds, setSelectedRowIds] = useState([]);
+
+  // Filter & Search States
+  const [filterDelivery, setFilterDelivery] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'PENDING', 'DELIVERED'
+  const [filterProject, setFilterProject] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Outbound QR Scan Modal States
+  const [showOutboundScanModal, setShowOutboundScanModal] = useState(false);
+  const [outboundScannedCode, setOutboundScannedCode] = useState('');
+  const [matchedOutboundItem, setMatchedOutboundItem] = useState(null);
+  const [outboundScanMsg, setOutboundScanMsg] = useState('');
+
+  const parseItems = (raw) => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  const extractCoreCode = (str) => {
+    if (!str) return '';
+    const parts = String(str).split(/[-.]/);
+    const lastPart = parts[parts.length - 1].trim();
+    const match = lastPart.match(/(\d+)$/);
+    return match ? match[1] : lastPart;
+  };
+
+  const cleanKey = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const getCleanStoreName = (rawStore) => {
+    if (!rawStore) return '-';
+    const str = String(rawStore).trim();
+    const commaParts = str.split(',');
+    if (commaParts.length > 0 && commaParts[0].trim().length > 0) {
+      return commaParts[0].trim();
+    }
+    return str;
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return `${hours}:${mins} / ${day}.${month}`;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const fetchOutboundData = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('packing_tracking')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (!error && data) {
+      const normalizedData = data.map(item => {
+        const details = parseItems(item.items_detail).map((sub, idx) => {
+          const itemCode = sub.code || '';
+          const itemCore = extractCoreCode(itemCode);
+          const activeUrl = sub.image_url ||
+            (window.__ACTIVE_DESIGN_URLS__ && (
+              window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
+              window.__ACTIVE_DESIGN_URLS__[itemCore] ||
+              window.__ACTIVE_DESIGN_URLS__[idx]
+            )) || null;
+
+          return {
+            ...sub,
+            image_url: activeUrl
+          };
+        });
+
+        return {
+          ...item,
+          items_detail: details
+        };
+      });
+
+      setPackingList(normalizedData);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOutboundData();
+
+    const channel = supabase
+      .channel('outbound_view_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'packing_tracking' },
+        () => {
+          fetchOutboundData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleToggleDeliverStatus = async (id, currentValue) => {
+    const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
+    setPackingList(prev =>
+      prev.map(item => item.id === id ? { ...item, status_deliver: nextValue } : item)
+    );
+
+    const { error } = await supabase
+      .from('packing_tracking')
+      .update({
+        status_deliver: nextValue,
+        staff_outbound: 'Staff Outbound',
+        outbound_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) {
+      alert('⚠️ Failed to update status: ' + error.message);
+      fetchOutboundData();
+    }
+  };
+
+  const handleToggleSelectRow = (id) => {
+    setSelectedRowIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedRowIds.length === filteredList.length && filteredList.length > 0) {
+      setSelectedRowIds([]);
+    } else {
+      setSelectedRowIds(filteredList.map(item => item.id));
+    }
+  };
+
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_DIM = 2048;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_DIM) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            }
+          } else {
+            if (height > MAX_DIM) {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              resolve(blob || file);
+            },
+            'image/jpeg',
+            0.8
+          );
+        };
+      };
+    });
+  };
+
+  const handleOutboundCameraCapture = async (e, rowId, boxCode) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingId(`outbound-${rowId}`);
+    try {
+      const uploadBlob = await compressImage(file);
+      const cleanCode = boxCode ? String(boxCode).replace(/[^a-zA-Z0-9-_]/g, '_') : 'box';
+      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
+      const fileName = `outbound_${cleanCode}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('surat-jalan')
+        .upload(fileName, uploadBlob, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: file.type || 'image/jpeg'
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
+      const publicUrl = urlData.publicUrl;
+
+      const nowIso = new Date().toISOString();
+      const staffName = 'Staff Outbound';
+
+      const { error: updateError } = await supabase
+        .from('packing_tracking')
+        .update({
+          outbound_url: publicUrl,
+          bukti_outbound_url: publicUrl,
+          staff_outbound: staffName,
+          outbound_at: nowIso,
+          status_deliver: 'DONE',
+          updated_at: nowIso
+        })
+        .eq('id', rowId);
+
+      if (updateError) throw updateError;
+
+      setPackingList(prev =>
+        prev.map(item =>
+          item.id === rowId
+            ? {
+                ...item,
+                outbound_url: publicUrl,
+                bukti_outbound_url: publicUrl,
+                staff_outbound: staffName,
+                outbound_at: nowIso,
+                status_deliver: 'DONE'
+              }
+            : item
+        )
+      );
+
+      alert('✅ Foto Outbound berhasil diunggah!');
+    } catch (err) {
+      alert('❌ Gagal upload foto Outbound: ' + err.message);
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleProcessOutboundScan = (codeValue) => {
+    if (!codeValue || !codeValue.trim()) return;
+
+    const rawCode = codeValue.trim();
+    let cleanCode = rawCode;
+    if (rawCode.includes('scan=')) {
+      cleanCode = rawCode.split('scan=')[1]?.split('&')[0] || rawCode;
+    }
+    cleanCode = decodeURIComponent(cleanCode).trim();
+
+    const found = readyForOutboundList.find((item) => {
+      const boxCode = (item.box_code || '').toLowerCase();
+      const trackingId = (item.tracking_id || '').toLowerCase();
+      const spk = (item.no_spk || '').toLowerCase();
+      const searchTarget = cleanCode.toLowerCase();
+
+      return boxCode === searchTarget || trackingId === searchTarget || spk === searchTarget || (item.store_name || '').toLowerCase().includes(searchTarget);
+    });
+
+    if (!found) {
+      setOutboundScanMsg(`❌ Box / QR "${cleanCode}" tidak ditemukan di data siap Outbound!`);
+      setOutboundScannedCode('');
+      setMatchedOutboundItem(null);
+      return;
+    }
+
+    setMatchedOutboundItem(found);
+    setOutboundScanMsg(`✅ Box ditemukan: ${found.box_code || '-'} (${found.store_name}). Silakan ambil foto Outbound!`);
+    setOutboundScannedCode('');
+  };
+
+  // SYARAT MUTLAK OUTBOUND: Hanya tampilkan jika Packing DONE & Checker DONE!
+  const readyForOutboundList = packingList.filter(item => {
+    const hasPackingPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
+    const isPackingDone = item.status_qc_packing === 'DONE' || hasPackingPhoto;
+    const isCheckerDone = item.status_qc_checker === 'DONE';
+
+    return isPackingDone && isCheckerDone;
+  });
+
+  const uniqueProjects = Array.from(
+    new Set(
+      readyForOutboundList
+        .filter(item => item.promo_title && item.promo_title.trim() !== '')
+        .map(item => `${item.promo_title || '-'}_${item.no_spk || '-'}`)
+    )
+  );
+
+  const filteredList = readyForOutboundList.filter(item => {
+    if (filterDelivery !== 'ALL' && item.delivery_type !== filterDelivery) return false;
+
+    const isOutboundDone = item.status_deliver === 'DONE' || (item.bukti_outbound_url || item.outbound_url);
+    if (filterStatus === 'PENDING' && isOutboundDone) return false;
+    if (filterStatus === 'DELIVERED' && !isOutboundDone) return false;
+
+    if (filterProject !== 'ALL') {
+      const projKey = `${item.promo_title || '-'}_${item.no_spk || '-'}`;
+      if (projKey !== filterProject) return false;
+    }
+
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      const matchBox = (item.box_code || '').toLowerCase().includes(term);
+      const matchTrack = (item.tracking_id || '').toLowerCase().includes(term);
+      const matchSpk = (item.no_spk || '').toLowerCase().includes(term);
+      const matchStore = (item.store_name || '').toLowerCase().includes(term);
+      const matchPromo = (item.promo_title || '').toLowerCase().includes(term);
+
+      return matchBox || matchTrack || matchSpk || matchStore || matchPromo;
+    }
+
+    return true;
+  });
+
+  const totalReady = readyForOutboundList.length;
+  const deliveredBoxes = readyForOutboundList.filter(
+    item => item.status_deliver === 'DONE' || (item.bukti_outbound_url || item.outbound_url)
+  ).length;
+  const pendingOutbound = totalReady - deliveredBoxes;
+
+  return (
+    <div className={`space-y-3.5 sm:space-y-6 w-full max-w-full overflow-hidden ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+
+      {/* HEADER RINGKAS & REFRESH */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs max-w-full">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 truncate">
+            <Truck className="w-5 h-5 text-purple-600 shrink-0" /> Station Outbound Staff
+          </h2>
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5 leading-snug">
+            Verifikasi Outbound & upload foto pengiriman untuk box yang telah lolos QC Packing & Checker.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={fetchOutboundData}
+            disabled={loading}
+            className="w-full sm:w-auto px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading...' : 'Refresh Data'}
+          </button>
+        </div>
+      </div>
+
+      {/* RINGKASAN STATUS BOX OUTBOUND */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-full">
+        <div className="p-2.5 sm:p-4 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider block truncate">READY FOR OUTBOUND</span>
+          <span className="text-base sm:text-2xl font-black text-slate-800 dark:text-white mt-0.5 block">{totalReady}</span>
+        </div>
+
+        <div className="p-2.5 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block truncate">ON PROGRESS</span>
+          <span className="text-base sm:text-2xl font-black text-amber-700 dark:text-amber-400 mt-0.5 block">{pendingOutbound}</span>
+        </div>
+
+        <div className="p-2.5 sm:p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 shadow-2xs text-center min-w-0">
+          <span className="text-[9px] sm:text-xs font-bold text-purple-800 dark:text-purple-300 uppercase tracking-wider block truncate">DELIVERED</span>
+          <span className="text-base sm:text-2xl font-black text-purple-700 dark:text-purple-400 mt-0.5 block">{deliveredBoxes}</span>
+        </div>
+      </div>
+
+      {/* FILTER BAR & SEARCH */}
+      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs space-y-2.5 max-w-full">
+        <div className="flex flex-col sm:flex-row gap-2 justify-between">
+
+          {/* SEARCH INPUT */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search Box Code, SPK, Store, or Project..."
+              className="w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-neutral-600 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {/* PROJECT SELECTOR */}
+          {uniqueProjects.length > 0 && (
+            <select
+              value={filterProject}
+              onChange={(e) => setFilterProject(e.target.value)}
+              className="w-full sm:w-auto px-2.5 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none max-w-full"
+            >
+              <option value="ALL">All Projects ({readyForOutboundList.length})</option>
+              {uniqueProjects.map((projKey, idx) => {
+                const parts = projKey.split('_');
+                const projName = parts[0] || '-';
+                const spkNo = parts.slice(1).join('_') || '-';
+                return (
+                  <option key={idx} value={projKey}>
+                    {projName} {spkNo !== '-' ? `(${spkNo})` : ''}
+                  </option>
+                );
+              })}
+            </select>
+          )}
+        </div>
+
+        {/* SEGMENTED STATUS & ROUTE TABS */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-neutral-700 overflow-x-auto pb-1 max-w-full">
+
+          {/* STATUS FILTER */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
+            <button
+              onClick={() => setFilterStatus('ALL')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterStatus === 'ALL'
+                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterStatus('PENDING')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterStatus === 'PENDING'
+                  ? 'bg-amber-500 text-white shadow-2xs font-bold'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              ⏳ On Progress
+            </button>
+            <button
+              onClick={() => setFilterStatus('DELIVERED')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterStatus === 'DELIVERED'
+                  ? 'bg-purple-600 text-white shadow-2xs font-bold'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              🚚 Delivered
+            </button>
+          </div>
+
+          {/* ROUTE FILTER */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
+            {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((route) => (
+              <button
+                key={route}
+                onClick={() => setFilterDelivery(route)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                  filterDelivery === route
+                    ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
+                    : 'text-slate-600 dark:text-neutral-300 font-semibold'
+                }`}
+              >
+                {route === 'ALL' ? 'All Routes' : route}
+              </button>
+            ))}
+          </div>
+
+        </div>
+      </div>
+
+      {/* DATA CONTENT AREA */}
+      {filteredList.length === 0 ? (
+        <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs max-w-full">
+          Belum ada box paking yang siap Outbound (menunggu Packing & Checker selesai).
+        </div>
+      ) : (
+        <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs border-collapse min-w-[900px]">
+              <thead>
+                <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
+                  <th className="py-4 pl-4 pr-1 text-center w-8">
+                    <button
+                      type="button"
+                      onClick={handleToggleSelectAll}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                        selectedRowIds.length === filteredList.length && filteredList.length > 0
+                          ? 'bg-purple-600 border-purple-600 text-white shadow-2xs'
+                          : 'border-slate-400 bg-white hover:border-purple-600'
+                      }`}
+                      title="Select All Rows"
+                    >
+                      {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
+                  <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
+                  <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
+                  <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
+                  <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
+                  <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
+                  <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
+                  <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
+                  <th className="py-4 px-4 text-center font-semibold">OUTBOUND PHOTO</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
+                {filteredList.map((item) => {
+                  const details = parseItems(item.items_detail);
+                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
+                  const isCheckerDone = item.status_qc_checker === 'DONE';
+                  const outboundImgUrl = item.outbound_url || item.bukti_outbound_url;
+                  const isOutboundDone = item.status_deliver === 'DONE' || outboundImgUrl;
+                  const isUploadingThis = uploadingId === `outbound-${item.id}`;
+                  const isSelected = selectedRowIds.includes(item.id);
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isSelected
+                          ? 'bg-purple-50/70 hover:bg-purple-100/70 dark:bg-purple-950/40'
+                          : isOutboundDone
+                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
+                          : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
+                      }`}
+                    >
+                      {/* 1. SELECT CIRCLE */}
+                      <td className="py-3.5 pl-4 pr-1 text-center w-8">
+                        <button
+                          onClick={() => handleToggleSelectRow(item.id)}
+                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                            isSelected
+                              ? 'bg-purple-600 border-purple-600 text-white shadow-2xs'
+                              : 'border-slate-300 bg-white hover:border-purple-500'
+                          }`}
+                          title={isSelected ? 'Deselect' : 'Select Row'}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </button>
+                      </td>
+
+                      {/* 2. BOX */}
+                      <td className="py-3 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
+                        <span className="font-bold">{item.box_code || '-'}</span>
+                      </td>
+
+                      {/* 3. STORE NAME / SPK */}
+                      <td className="py-3 px-4 max-w-[280px]">
+                        <div className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                          <span>{getCleanStoreName(item.store_name)}</span>
+                        </div>
+                        {item.no_spk && (
+                          <div className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
+                        )}
+                      </td>
+
+                      {/* 4. SHIPPING TYPE */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-lg font-semibold text-[11px] uppercase tracking-wider text-center border ${
+                          item.delivery_type === 'DALAM KOTA'
+                            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
+                            : 'bg-blue-500/15 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
+                        }`}>
+                          {item.delivery_type || 'DALAM KOTA'}
+                        </span>
+                      </td>
+
+                      {/* 5. IMPORT DATE */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <span className="font-mono text-[11px] text-slate-700 dark:text-neutral-300 font-semibold block">
+                          {formatDateTime(item.created_at || item.updated_at)}
+                        </span>
+                      </td>
+
+                      {/* 6. LABEL & DESIGN */}
+                      <td className="py-3 px-4 text-center">
+                        {item.source !== 'google_sheet' ? (
+                          <span className="inline-block px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-bold">
+                            Label SJ (Tab Label)
+                          </span>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <div className="flex items-center justify-center gap-1 max-h-12 overflow-y-auto">
+                              {details.map((sub, sIdx) => (
+                                sub.image_url ? (
+                                  <img
+                                    key={sIdx}
+                                    src={sub.image_url}
+                                    alt="Design"
+                                    onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
+                                    className="w-7 h-7 object-cover rounded border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                  />
+                                ) : null
+                              ))}
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium">
+                              {details.filter(i => i.image_url).length} / {details.length} Designs
+                            </span>
+                          </div>
+                        )}
+                      </td>
+
+                      {/* 7. PHOTO PROOF (PACKING) */}
+                      <td className="py-3 px-4 text-center">
+                        {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <img
+                              src={item.bukti_paking_url}
+                              alt="Bukti Paking"
+                              onClick={() => onOpenImageModal && onOpenImageModal(
+                                item.bukti_paking_url,
+                                `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
+                                item.destination || item.store_name || item.branch_name || '',
+                                item.promo_title || item.project || '',
+                                item.no_spk || item.tracking_id || ''
+                              )}
+                              className="w-9 h-9 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                            />
+                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
+                              <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-semibold text-[10px]">No Photo</span>
+                        )}
+                      </td>
+
+                      {/* 8. PACKING STATUS */}
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                              isPackingDone
+                                ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                                : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                            {isPackingDone ? 'Done' : 'Pending'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 9. CHECKER STATUS */}
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                              isCheckerDone
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                                : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                            {isCheckerDone ? 'Checked' : 'Pending'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 10. OUTBOUND PHOTO & ACTIONS */}
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          {outboundImgUrl ? (
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <img
+                                src={outboundImgUrl}
+                                alt="Foto Outbound"
+                                onClick={() => onOpenImageModal && onOpenImageModal(
+                                  outboundImgUrl,
+                                  `Foto Outbound - ${item.box_code || item.tracking_id || ''}`,
+                                  item.store_name || '',
+                                  item.promo_title || '',
+                                  item.no_spk || ''
+                                )}
+                                className="w-10 h-10 object-cover rounded-lg border-2 border-purple-400 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                              />
+                              <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
+                                <span className="block truncate max-w-[110px]">{item.staff_outbound || 'Staff Outbound'}</span>
+                                <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.outbound_at || item.updated_at)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <label className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg cursor-pointer shadow-2xs transition-all active:scale-95 inline-flex items-center gap-1 text-[11px] font-bold" title="Upload Foto Outbound">
+                                <Camera className="w-3.5 h-3.5" />
+                                <span>{isUploadingThis ? '...' : 'Foto Outbound'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  disabled={isUploadingThis}
+                                  onChange={(e) => handleOutboundCameraCapture(e, item.id, item.box_code || item.tracking_id)}
+                                  className="hidden"
+                                />
+                              </label>
+                              <button
+                                onClick={() => handleToggleDeliverStatus(item.id, item.status_deliver)}
+                                className="text-[10px] text-slate-500 hover:text-purple-600 font-semibold underline mt-0.5 cursor-pointer"
+                              >
+                                {item.status_deliver === 'DONE' ? 'Mark Pending' : 'Mark Delivered'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
+
+    </div>
+  );
+}
