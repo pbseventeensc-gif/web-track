@@ -44,19 +44,6 @@ import OutboundView from './components/outbound/OutboundView';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
 
-const STAFF_QC_LIST = [
-  "Budi (QC Paking)", "Siti (QC Paking)", "Agus (QC Checker)",
-  "Dewi (QC Checker)", "Eko (QC Deliver)", "Rian (QC Deliver)"
-];
-
-// Daftar 4 User Staf Paking Resmi
-const PACKING_USERS = [
-  { id: 'paking_1', name: 'Staf Paking 1 (Budi)', pin: '1111' },
-  { id: 'paking_2', name: 'Staf Paking 2 (Siti)', pin: '2222' },
-  { id: 'paking_3', name: 'Staf Paking 3 (Joko)', pin: '3333' },
-  { id: 'paking_4', name: 'Staf Paking 4 (Ani)', pin: '4444' }
-];
-
 function GaugeArchCard({
   pillTitle,
   centerPercent = 0,
@@ -170,13 +157,6 @@ function GaugeArchCard({
 
 function GlassmorphismLoginView({
   isBranchMode,
-  scanParam,
-  PACKING_USERS,
-  selectedPackingUser,
-  setSelectedPackingUser,
-  packingPin,
-  setPackingPin,
-  handlePackingLoginSubmit,
   onAdminLogin,
   onKawanLamaLogin,
   onBranchLogin
@@ -258,206 +238,158 @@ function GlassmorphismLoginView({
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white mb-1">Sign in</h1>
           <p className="text-sm text-white/80 font-normal">
-            {scanParam ? 'Good to see you again. (Paking Mode)' : 'Good to see you again.'}
+            Good to see you again.
           </p>
         </div>
 
-        {scanParam ? (
-          /* Packing Staff Form */
-          <form onSubmit={handlePackingLoginSubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-semibold text-white/90 block mb-1.5">Pilih Staf Paking</label>
-              <select
-                value={selectedPackingUser}
-                onChange={(e) => setSelectedPackingUser(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white focus:outline-none transition-all text-sm font-medium cursor-pointer"
-              >
-                {PACKING_USERS.map(u => (
-                  <option key={u.id} value={u.id} className="bg-slate-900 text-white">{u.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-white/90 block mb-1.5">PIN Keamanan</label>
-              <div className="relative flex items-center">
+        {/* Portal Login Form (Admin / Kawan Lama / Branch) */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {activeTab !== 'branch' ? (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-white/90 block mb-1.5">
+                  {activeTab === 'admin' ? 'Username' : 'Email address'}
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  value={packingPin}
-                  onChange={(e) => setPackingPin(e.target.value)}
-                  placeholder="Masukkan 4 digit PIN"
-                  maxLength={4}
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder={activeTab === 'admin' ? 'outbound / ADMIN' : 'admin_kl'}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
-                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm tracking-widest text-center font-bold pr-10"
+                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              className="w-full bg-white text-slate-900 hover:bg-slate-100 font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer mt-2"
-            >
-              Sign in <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-        ) : (
-          /* Portal Login Form (Admin / Kawan Lama / Branch) */
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {activeTab !== 'branch' ? (
-              <>
-                <div>
-                  <label className="text-xs font-semibold text-white/90 block mb-1.5">
-                    {activeTab === 'admin' ? 'Username' : 'Email address'}
-                  </label>
+              <div>
+                <label className="text-xs font-semibold text-white/90 block mb-1.5">Password</label>
+                <div className="relative flex items-center">
                   <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={activeTab === 'admin' ? 'outbound / ADMIN' : 'admin_kl'}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
                     required
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium"
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium pr-10"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
+                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-white/90 block mb-1.5">Password</label>
-                  <div className="relative flex items-center">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      required
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
-                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <label className="text-xs font-semibold text-white/90 block mb-1.5">Kode Cabang</label>
-                  <input
-                    type="text"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="AZKO-001"
-                    required
-                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium uppercase"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-white/90 block mb-1.5">PIN 6 Digit</label>
-                  <div className="relative flex items-center">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={pinCode}
-                      onChange={(e) => setPinCode(e.target.value)}
-                      placeholder="••••••"
-                      maxLength={6}
-                      required
-                      className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium tracking-widest text-center pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Remember me & Forgot Password */}
-            <div className="flex items-center justify-between text-xs text-white/80 pt-1">
-              <label className="flex items-center gap-2 cursor-pointer hover:text-white">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-white/30 bg-white/10 text-orange-500 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
-                />
-                <span>Remember me</span>
-              </label>
-              <span className="hover:underline cursor-pointer opacity-80 hover:opacity-100">Forgot password?</span>
-            </div>
-
-            {errorMsg && (
-              <div className="p-3 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-xs text-center font-medium">
-                {errorMsg}
               </div>
-            )}
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-white/90 block mb-1.5">Kode Cabang</label>
+                <input
+                  type="text"
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  placeholder="AZKO-001"
+                  required
+                  className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium uppercase"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-white text-slate-900 hover:bg-slate-100 font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
-            >
-              {isLoading ? 'Processing...' : 'Sign in'} <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-        )}
+              <div>
+                <label className="text-xs font-semibold text-white/90 block mb-1.5">PIN 6 Digit</label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={pinCode}
+                    onChange={(e) => setPinCode(e.target.value)}
+                    placeholder="••••••"
+                    maxLength={6}
+                    required
+                    className="w-full px-4 py-3.5 rounded-2xl bg-white/10 border border-white/20 focus:border-white/50 focus:bg-white/15 text-white placeholder-white/40 focus:outline-none transition-all text-sm font-medium tracking-widest text-center pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 text-white/60 hover:text-white transition-all p-1 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Remember me & Forgot Password */}
+          <div className="flex items-center justify-between text-xs text-white/80 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer hover:text-white">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-white/30 bg-white/10 text-orange-500 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span>Remember me</span>
+            </label>
+            <span className="hover:underline cursor-pointer opacity-80 hover:opacity-100">Forgot password?</span>
+          </div>
+
+          {errorMsg && (
+            <div className="p-3 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-200 text-xs text-center font-medium">
+              {errorMsg}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-white text-slate-900 hover:bg-slate-100 font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+          >
+            {isLoading ? 'Processing...' : 'Sign in'} <ArrowRight className="w-4 h-4" />
+          </button>
+        </form>
 
         {/* Divider & Role Pills */}
-        {!scanParam && (
-          <div className="space-y-4 pt-2">
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-white/20 w-full" />
-              <span className="bg-slate-900/30 backdrop-blur-md px-3 text-[11px] text-white/70 uppercase tracking-wider font-medium shrink-0">
-                or continue with
-              </span>
-              <div className="border-t border-white/20 w-full" />
-            </div>
+        <div className="space-y-4 pt-2">
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-white/20 w-full" />
+            <span className="bg-slate-900/30 backdrop-blur-md px-3 text-[11px] text-white/70 uppercase tracking-wider font-medium shrink-0">
+              or continue with
+            </span>
+            <div className="border-t border-white/20 w-full" />
+          </div>
 
-            {/* Role Pills matching bottom icons in Image 2 */}
-            <div className="grid grid-cols-3 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setActiveTab('admin')}
-                className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'admin'
-                    ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
-                    : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
-                }`}
-              >
-                <Key className="w-4 h-4 text-amber-300" />
-                <span>Admin Pusat</span>
-              </button>
+          {/* Role Pills matching bottom icons in Image 2 */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab('admin')}
+              className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'admin'
+                  ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
+                  : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
+              }`}
+            >
+              <Key className="w-4 h-4 text-amber-300" />
+              <span>Admin Pusat</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab('kawan_lama')}
-                className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'kawan_lama'
-                    ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
-                    : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
-                }`}
-              >
-                <Shield className="w-4 h-4 text-emerald-300" />
+            <button
+              type="button"
+              onClick={() => setActiveTab('kawan_lama')}
+              className={`py-3 px-2 rounded-2xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'kawan_lama'
+                  ? 'bg-white/25 border-white/60 text-white shadow-lg backdrop-blur-md'
+                  : 'bg-white/5 border-white/15 text-white/70 hover:bg-white/15 hover:text-white'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-emerald-300" />
                 <span>Admin KL</span>
               </button>
 
@@ -627,11 +559,6 @@ export default function App() {
     return s ? JSON.parse(s) : null;
   });
 
-  const [packingStaffSession, setPackingStaffSession] = useState(() => {
-    const s = localStorage.getItem('packing_staff_session');
-    return s ? JSON.parse(s) : null;
-  });
-
   const [spkList, setSpkList] = useState([]);
   
   const [currentKawanLamaAdmin, setCurrentKawanLamaAdmin] = useState(() => {
@@ -640,7 +567,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState(
-    scanParam ? 'paking' : (currentAdmin?.role === 'outbound_role' ? 'outbound' : (currentAdmin?.role === 'checker_role' ? 'checker' : (currentAdmin?.role === 'packing_role' ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard')))))
+    currentAdmin?.role === 'outbound_role' ? 'outbound' : (currentAdmin?.role === 'checker_role' ? 'checker' : (currentAdmin?.role === 'packing_role' ? 'paking' : (currentKawanLamaAdmin ? 'label' : (isBranchMode ? 'kawan_lama' : 'dashboard'))))
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -654,21 +581,18 @@ export default function App() {
     }
   }, [currentAdmin]);
 
-  const [searchTerm, setSearchTerm] = useState(scanParam || ''); 
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpkIds, setSelectedSpkIds] = useState([]);
   const [modalImageInfo, setModalImageModalInfo] = useState({ isOpen: false, url: '', title: '' });
   
   const [showScanModal, setShowScanModal] = useState(false);
   const [scanTargetColumn, setScanTargetColumn] = useState('qc_checker');
-  const [qcStaffName, setQcStaffName] = useState(STAFF_QC_LIST[2]);
+  const [qcStaffName, setQcStaffName] = useState('Staff QC');
   const [scannedInput, setScannedInput] = useState('');
   const [lastScanMessage, setLastScanMessage] = useState('');
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
   const [isImporting, setIsImporting] = useState(false);
-
-  const [selectedPackingUser, setSelectedPackingUser] = useState(PACKING_USERS[0].id);
-  const [packingPin, setPackingPin] = useState('');
 
   const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
   const [klAdminUser, setKlAdminUser] = useState('');
@@ -959,18 +883,7 @@ export default function App() {
     }
   };
 
-  const handlePackingLoginSubmit = (e) => {
-    e.preventDefault();
-    const foundUser = PACKING_USERS.find(u => u.id === selectedPackingUser);
-    if (foundUser && foundUser.pin === packingPin.trim()) {
-      const sessionData = { username: foundUser.name, loginTime: new Date().toISOString() };
-      localStorage.setItem('packing_staff_session', JSON.stringify(sessionData));
-      setPackingStaffSession(sessionData);
-      alert(`✅ Selamat datang, ${foundUser.name}!`);
-    } else {
-      alert('❌ PIN Staf Paking salah! (Gunakan PIN sesuai akun masing-masing: 1111, 2222, 3333, atau 4444)');
-    }
-  };
+
 
   const handleKawanLamaAdminLogin = (e) => {
     e.preventDefault();
@@ -997,23 +910,12 @@ export default function App() {
     (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const isAuthenticated = scanParam 
-    ? (packingStaffSession || currentAdmin || currentKawanLamaAdmin) 
-    : isBranchMode 
-      ? currentBranch 
-      : (currentAdmin || currentKawanLamaAdmin);
+  const isAuthenticated = isBranchMode ? currentBranch : (currentAdmin || currentKawanLamaAdmin);
 
   if (!isAuthenticated) {
     return (
       <GlassmorphismLoginView
         isBranchMode={isBranchMode}
-        scanParam={scanParam}
-        PACKING_USERS={PACKING_USERS}
-        selectedPackingUser={selectedPackingUser}
-        setSelectedPackingUser={setSelectedPackingUser}
-        packingPin={packingPin}
-        setPackingPin={setPackingPin}
-        handlePackingLoginSubmit={handlePackingLoginSubmit}
         onAdminLogin={(admin) => {
           localStorage.setItem('kl_admin_session', JSON.stringify(admin));
           setCurrentAdmin(admin);
@@ -1048,7 +950,7 @@ export default function App() {
                 Web Tracking Monitoring
               </h1>
               <p className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {currentAdmin?.role === 'outbound_role' ? 'Staff Outbound Login: Aktif' : (currentAdmin?.role === 'checker_role' ? 'Staff Checker Login: Aktif' : (scanParam || packingStaffSession || currentAdmin?.role === 'packing_role' ? `Staff Packing Login: ${packingStaffSession?.username || 'Aktif'}` : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))))}
+                {currentAdmin?.role === 'outbound_role' ? 'Staff Outbound Login: Aktif' : (currentAdmin?.role === 'checker_role' ? 'Staff Checker Login: Aktif' : (currentAdmin?.role === 'packing_role' ? 'Staff Packing Login: Aktif' : (isBranchMode ? `Login Cabang: ${currentBranch?.branch_name || 'Aktif'}` : (currentKawanLamaAdmin ? 'Login: Admin Kawan Lama (Akses 3 Tab)' : `Admin Login: Aktif`))))}
               </p>
             </div>
           </div>
@@ -1066,16 +968,6 @@ export default function App() {
               {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
               <span>{isDarkMode ? 'Tema Terang' : 'Tema Gelap'}</span>
             </button>
-
-            {/* Logout Red Pill Button Matching Reference */}
-            {scanParam && (
-              <button
-                onClick={() => { localStorage.removeItem('packing_staff_session'); setPackingStaffSession(null); window.location.href = window.location.pathname; }}
-                className="px-5 py-2 bg-[#E11D48] hover:bg-rose-700 text-white rounded-full text-xs font-bold shadow-sm flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" /> Logout Staff Packing
-              </button>
-            )}
             {isBranchMode && (
               <button
                 onClick={() => { localStorage.removeItem('kl_branch_session'); setCurrentBranch(null); window.location.reload(); }}
@@ -1104,11 +996,7 @@ export default function App() {
         </div>
 
         {/* MAIN BODY AREA */}
-        {scanParam ? (
-          <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role' || Boolean(packingStaffSession)} />
-        ) : (
-          <>
-            {isBranchMode ? (
+        {isBranchMode ? (
               <KawanLamaTab isDarkMode={isDarkMode} currentUser={currentBranch} isBranchMode={true} />
             ) : (
               <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 items-start w-full max-w-full min-w-0">
@@ -1460,7 +1348,6 @@ export default function App() {
                       handleUploadSuratJalan={handleUploadSuratJalan}
                       getPercent={getPercent}
                       getStatusBadge={getStatusBadge}
-                      STAFF_QC_LIST={STAFF_QC_LIST}
                       searchTerm={searchTerm}
                       setSearchTerm={setSearchTerm}
                     />
@@ -1469,8 +1356,6 @@ export default function App() {
 
               </div>
             )}
-          </>
-        )}
 
       </div>
 

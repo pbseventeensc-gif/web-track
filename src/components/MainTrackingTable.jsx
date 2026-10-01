@@ -18,7 +18,6 @@ export default function MainTrackingTable({
   handleUploadSuratJalan,
   getPercent,
   getStatusBadge,
-  STAFF_QC_LIST,
   searchTerm,
   setSearchTerm
 }) {
@@ -219,7 +218,7 @@ export default function MainTrackingTable({
                         }`}
                       >
                         <option value="">-- Pilih QC --</option>
-                        {STAFF_QC_LIST.map((staff, idx) => (
+                        {['Staff QC 1', 'Staff QC 2', 'Staff QC 3', 'Staff QC 4'].map((staff, idx) => (
                           <option key={idx} value={staff}>{staff}</option>
                         ))}
                       </select>
