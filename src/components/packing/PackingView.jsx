@@ -15,6 +15,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   const [selectedRowIds, setSelectedRowIds] = useState([]);
 
   // Filter & Search States
+  const [filterSource, setFilterSource] = useState('ALL'); // 'ALL', 'google_sheet', 'label_sj'
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
   const [filterProject, setFilterProject] = useState('ALL');
@@ -266,6 +267,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   );
 
   const filteredList = packingList.filter(item => {
+    if (filterSource !== 'ALL' && (filterSource === 'google_sheet' ? item.source !== 'google_sheet' : item.source === 'google_sheet')) return false;
     if (filterDelivery !== 'ALL' && item.delivery_type !== filterDelivery) return false;
 
     const isDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
@@ -379,6 +381,40 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
 
         {/* SEGMENTED STATUS & ROUTE TABS - SCROLLABLE ON HP WITHOUT OVERFLOWING PAGE */}
         <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-neutral-700 overflow-x-auto pb-1 max-w-full">
+
+          {/* SOURCE FILTER (TEXT ONLY) */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
+            <button
+              onClick={() => setFilterSource('ALL')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterSource === 'ALL'
+                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              Semua Data
+            </button>
+            <button
+              onClick={() => setFilterSource('google_sheet')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterSource === 'google_sheet'
+                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              Google Sheets
+            </button>
+            <button
+              onClick={() => setFilterSource('label_sj')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
+                filterSource === 'label_sj'
+                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
+                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
+              }`}
+            >
+              Label & SJ
+            </button>
+          </div>
 
           {/* STATUS FILTER */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">

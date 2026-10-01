@@ -42,6 +42,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const [suratJalanGroup, setSuratJalanGroup] = useState(null);
 
   // Filter & Search States
+  const [filterSource, setFilterSource] = useState('ALL'); // 'ALL', 'google_sheet', 'label_sj'
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
   const [filterStage, setFilterStage] = useState('ALL'); // 'ALL', 'status_qc_label', 'status_qc_packing', 'status_qc_checker', 'status_deliver'
@@ -617,11 +618,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   };
 
   const handleBatchPrintAll = () => {
-    const listToPrint = selectedRowIds.length > 0
+    const listToFilter = selectedRowIds.length > 0
       ? filteredList.filter(item => selectedRowIds.includes(item.id))
       : filteredList;
+    const listToPrint = listToFilter.filter(item => item.source === 'google_sheet');
 
-    if (listToPrint.length === 0) return alert('⚠️ Tidak ada data label yang dapat dicetak.');
+    if (listToPrint.length === 0) {
+      return alert('⚠️ Fitur Print Label A4 non-aktif untuk data dari Tab Cetak Label & SJ (sudah dicetak di Tab Label).');
+    }
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
     setSelectedLabelItem(null);
@@ -643,11 +647,17 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   };
 
   const handlePrintSuratJalan = (itemsToPrint) => {
+    const targetList = itemsToPrint || filteredList;
+    const validItems = targetList.filter(item => item.source === 'google_sheet');
+
+    if (validItems.length === 0) {
+      return alert('⚠️ Fitur Surat Jalan non-aktif untuk data dari Tab Cetak Label & SJ (Surat Jalan sudah dibuat di Tab Label).');
+    }
     setIsBatchPrinting(false);
     setSelectedLabelItem(null);
     setPrintListOverride(null);
     setIsSuratJalanPrinting(true);
-    setSuratJalanGroup(itemsToPrint);
+    setSuratJalanGroup(validItems);
 
     setTimeout(() => {
       const printArea = document.querySelector('.print-area');
@@ -1076,6 +1086,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Filter list by status & delivery first so uniqueProjects only shows projects matching current status (e.g. Done)
   const statusFilteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
+    const matchSource = filterSource === 'ALL' || (filterSource === 'google_sheet' ? item.source === 'google_sheet' : item.source !== 'google_sheet');
     const isDone = item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
 
@@ -1086,7 +1097,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       matchStage = isStageDone;
     }
 
-    return matchDelivery && matchStatus && matchStage;
+    return matchDelivery && matchSource && matchStatus && matchStage;
   });
 
   const uniqueProjects = Array.from(
@@ -1341,19 +1352,39 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
               </label>
 
-              <button
-                onClick={handleBatchPrintAll}
-                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
-              </button>
+              {(() => {
+                const isAllLabelSj = filteredList.length > 0 && filteredList.every(i => i.source !== 'google_sheet');
+                const isPrintDisabled = filterSource === 'label_sj' || isAllLabelSj;
+                return (
+                  <>
+                    <button
+                      onClick={handleBatchPrintAll}
+                      disabled={isPrintDisabled}
+                      className={`px-3.5 py-2 border font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 ${
+                        isPrintDisabled
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed'
+                          : 'bg-white hover:bg-slate-100 text-black border-slate-300 cursor-pointer'
+                      }`}
+                      title={isPrintDisabled ? "Fitur Print Label A4 non-aktif untuk data dari Tab Cetak Label & SJ" : ""}
+                    >
+                      <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
+                    </button>
 
-              <button
-                onClick={() => handlePrintSuratJalan(filteredList)}
-                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
-              </button>
+                    <button
+                      onClick={() => handlePrintSuratJalan(filteredList)}
+                      disabled={isPrintDisabled}
+                      className={`px-3.5 py-2 border font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 ${
+                        isPrintDisabled
+                          ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed'
+                          : 'bg-white hover:bg-slate-100 text-black border-slate-300 cursor-pointer'
+                      }`}
+                      title={isPrintDisabled ? "Fitur Surat Jalan non-aktif untuk data dari Tab Cetak Label & SJ" : ""}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
+                    </button>
+                  </>
+                );
+              })()}
 
               <button
                 onClick={handleDownloadPackingReport}
@@ -1375,6 +1406,40 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         {/* SUB-HEADER SEGMENTED CONTROL & SEARCH */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pt-4 border-t border-slate-200">
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Source Filter Tabs (Text Only, Neat & Clean) */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <button
+                onClick={() => setFilterSource('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  filterSource === 'ALL'
+                    ? 'bg-white shadow-xs font-bold text-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
+                }`}
+              >
+                Semua Data
+              </button>
+              <button
+                onClick={() => setFilterSource('google_sheet')}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  filterSource === 'google_sheet'
+                    ? 'bg-white shadow-xs font-bold text-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
+                }`}
+              >
+                Google Sheets
+              </button>
+              <button
+                onClick={() => setFilterSource('label_sj')}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                  filterSource === 'label_sj'
+                    ? 'bg-white shadow-xs font-bold text-black'
+                    : 'text-slate-700 hover:text-black font-semibold'
+                }`}
+              >
+                Label & SJ
+              </button>
+            </div>
+
             {/* Status Progress Tabs */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
