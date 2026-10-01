@@ -419,31 +419,31 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
               const storeItems = labels[storeName] || [];
 
               return (
-                <div key={storeIdx} className="a4-single-page relative text-stone-900 bg-white p-8 mb-8 border-2 border-stone-900 rounded-2xl shadow-sm mx-auto max-w-[280mm]">
+                <div key={storeIdx} className="a4-single-page relative text-stone-900 bg-white p-6 sm:p-7 mb-8 border-2 border-stone-900 rounded-2xl shadow-sm mx-auto max-w-[265mm]">
                   {/* Indikator Koli */}
-                  <div className="absolute top-4 right-4 bg-stone-100 border-2 border-stone-900 px-3 py-1 rounded-lg text-xs sm:text-sm font-extrabold text-stone-900">
+                  <div className="absolute top-3.5 right-3.5 bg-stone-100 border-2 border-stone-900 px-3 py-1 rounded-lg text-xs sm:text-sm font-extrabold text-stone-900">
                     {absoluteIndex} OF {totalRegions}
                   </div>
 
                   {/* Header Kop */}
-                  <div className="flex items-center border-b-2 border-black pb-3 mb-4 pr-24">
-                    <div className="h-16 w-44 flex items-center justify-start">
+                  <div className="flex items-center border-b-2 border-black pb-2.5 mb-3 pr-24">
+                    <div className="h-12 w-36 flex items-center justify-start">
                       {wellenPrintLogo ? (
                         <img src={wellenPrintLogo} className="h-full object-contain" alt="Logo" />
                       ) : (
-                        <div className="text-xs border-2 border-stone-900 p-2 font-bold italic text-stone-800">[Upload Logo]</div>
+                        <div className="text-xs border-2 border-stone-900 p-1.5 font-bold italic text-stone-800">[Upload Logo]</div>
                       )}
                     </div>
                     <div className="flex-grow text-center">
-                      <h1 className="font-extrabold text-base sm:text-xl uppercase text-stone-900 tracking-wide">{activeClientName}</h1>
-                      <p className="font-extrabold text-xs sm:text-sm mt-1 uppercase text-stone-900">
+                      <h1 className="font-extrabold text-base sm:text-lg uppercase text-stone-900 tracking-wide">{activeClientName}</h1>
+                      <p className="font-extrabold text-xs sm:text-sm mt-0.5 uppercase text-stone-900">
                         {activePromoTitle} ({spkNumber})
                       </p>
                     </div>
                   </div>
 
                   {/* Info Store / Region */}
-                  <div className="mb-4 font-extrabold text-sm sm:text-base text-stone-900">
+                  <div className="mb-3 font-extrabold text-sm sm:text-base text-stone-900">
                     STORE / REGION : {storeName}
                   </div>
 
@@ -451,21 +451,21 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                   <table className="w-full table-fixed border-collapse border-2 border-black text-xs sm:text-sm text-stone-900">
                     <thead>
                       <tr className="bg-stone-100 text-stone-900 border-b-2 border-black">
-                        <th className="border-r-2 border-black p-2.5 w-[6%] text-center font-extrabold">NO</th>
-                        <th className="border-r-2 border-black p-2.5 w-[38%] text-left font-extrabold">ITEM</th>
-                        <th className="border-r-2 border-black p-2.5 w-[34%] text-center font-extrabold">BAHAN</th>
-                        <th className="border-r-2 border-black p-2.5 w-[14%] text-center font-extrabold">UKURAN</th>
-                        <th className="p-2.5 w-[8%] text-center font-extrabold">QTY</th>
+                        <th className="border-r-2 border-black p-2 w-[6%] text-center font-extrabold">NO</th>
+                        <th className="border-r-2 border-black p-2 w-[38%] text-left font-extrabold">ITEM</th>
+                        <th className="border-r-2 border-black p-2 w-[34%] text-center font-extrabold">BAHAN</th>
+                        <th className="border-r-2 border-black p-2 w-[14%] text-center font-extrabold">UKURAN</th>
+                        <th className="p-2 w-[8%] text-center font-extrabold">QTY</th>
                       </tr>
                     </thead>
                     <tbody>
                       {storeItems.map((item, i) => (
                         <tr key={i} className="border-b border-black text-stone-900">
-                          <td className="border-r-2 border-black p-2.5 text-center font-bold">{i + 1}</td>
-                          <td className="border-r-2 border-black p-2.5 font-extrabold uppercase">{item.Item}</td>
-                          <td className="border-r-2 border-black p-2.5 text-center font-bold">{item.Bahan || '-'}</td>
-                          <td className="border-r-2 border-black p-2.5 text-center font-bold font-mono">{item.Ukuran || '-'}</td>
-                          <td className="p-2.5 text-center font-black font-mono text-sm sm:text-base">{item.Qty} PCS</td>
+                          <td className="border-r-2 border-black p-2 text-center font-bold">{i + 1}</td>
+                          <td className="border-r-2 border-black p-2 font-extrabold uppercase">{item.Item}</td>
+                          <td className="border-r-2 border-black p-2 text-center font-bold">{item.Bahan || '-'}</td>
+                          <td className="border-r-2 border-black p-2 text-center font-bold font-mono">{item.Ukuran || '-'}</td>
+                          <td className="p-2 text-center font-black font-mono text-xs sm:text-sm">{item.Qty} PCS</td>
                         </tr>
                       ))}
                     </tbody>
@@ -619,27 +619,44 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
         @media print {
           @page {
             size: ${printMode === 'labels' ? 'A4 landscape' : '210mm 140mm landscape'};
-            margin: 5mm;
+            margin: 0mm;
           }
           body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
-          .print-container { position: absolute; left: 0; top: 0; width: 100%; }
+          .print-container {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
           .a4-single-page {
-            width: 275mm !important;
-            max-width: 275mm !important;
-            height: 190mm !important;
-            max-height: 190mm !important;
+            width: 258mm !important;
+            max-width: 258mm !important;
+            height: 172mm !important;
+            max-height: 172mm !important;
             padding: 6mm 8mm !important;
             box-sizing: border-box !important;
+            page-break-before: always !important;
             page-break-after: always !important;
+            break-before: page !important;
             break-after: page !important;
-            border: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            border: 2px solid #000 !important;
             box-shadow: none !important;
-            margin: 0 auto !important;
+            margin: 8mm auto !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: flex-start !important;
+            overflow: hidden !important;
+          }
+          .a4-single-page:first-child, .a4-single-page:first-of-type {
+            page-break-before: auto !important;
+            break-before: auto !important;
+            margin-top: 8mm !important;
           }
           .surat-jalan-page {
             width: 210mm !important;
