@@ -159,7 +159,7 @@ export default function FoodLabelTab({ isDarkMode }) {
 
   const [screenLimit, setScreenLimit] = useState(10);
 
-  // Helper pengelompokan halaman dinamis: < 5 items = 2 label per HVS, >= 5 items = 1 label per HVS
+  // Helper pengelompokan halaman dinamis: < 5 items = 2 tabel horizontal per HVS, >= 5 items = 1 tabel per HVS
   const computeDynamicPages = (data) => {
     if (!data || data.length === 0) return [];
     const pages = [];
@@ -269,7 +269,7 @@ export default function FoodLabelTab({ isDarkMode }) {
             </div>
           `;
         } else {
-          // Dual layout (< 5 items)
+          // Dual layout (< 5 items) - Formatan Horizontal Stacked (Atas & Bawah)
           let pairCardsHTML = '';
           page.stores.forEach((store, idx) => {
             const activeItems = store.itemsData;
@@ -278,52 +278,52 @@ export default function FoodLabelTab({ isDarkMode }) {
             let tableRowsHTML = '';
             activeItems.forEach((item, itemIdx) => {
               const bahanTd = itemIdx === 0
-                ? `<td style="border: 2px solid #000; padding: 4px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 11px;" rowspan="${activeItems.length}">${paperBahan}</td>`
+                ? `<td style="border: 2px solid #000; padding: 3px 8px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 11px;" rowspan="${activeItems.length}">${paperBahan}</td>`
                 : '';
 
               tableRowsHTML += `
                 <tr>
-                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">${itemIdx + 1}</td>
-                  <td style="border: 2px solid #000; padding: 4px; text-align: left; font-weight: bold; font-size: 10px; white-space: nowrap; overflow: hidden;">${item.name}</td>
+                  <td style="border: 2px solid #000; padding: 3px; text-align: center; font-weight: 600; font-size: 11px;">${itemIdx + 1}</td>
+                  <td style="border: 2px solid #000; padding: 3px 8px; text-align: left; font-weight: bold; font-size: 11px; white-space: nowrap; overflow: hidden;">${item.name}</td>
                   ${bahanTd}
-                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.size}</td>
-                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 800; font-size: 11px;">${item.qty}</td>
-                  <td style="border: 2px solid #000; padding: 4px; text-align: center; font-weight: 600; font-size: 11px;">PCS</td>
+                  <td style="border: 2px solid #000; padding: 3px; text-align: center; font-weight: 800; font-size: 11px;">${item.size}</td>
+                  <td style="border: 2px solid #000; padding: 3px; text-align: center; font-weight: 800; font-size: 11px;">${item.qty}</td>
+                  <td style="border: 2px solid #000; padding: 3px; text-align: center; font-weight: 600; font-size: 11px;">PCS</td>
                 </tr>
               `;
             });
 
             const logoImgHTML = wellenLogo
-              ? `<img src="${wellenLogo}" style="height: 32px; width: auto; object-fit: contain;" />`
+              ? `<img src="${wellenLogo}" style="height: 26px; width: auto; object-fit: contain;" />`
               : '';
 
             pairCardsHTML += `
-              <div style="width: 48.5%; max-width: 48.5%; height: 185mm; max-height: 185mm; border: 2px solid #000; border-radius: 16px; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff;">
-                <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-                  <div style="flex-shrink: 0; min-width: 32px;">${logoImgHTML}</div>
+              <div style="width: 100%; height: 88mm; max-height: 88mm; border: 2px solid #000; border-radius: 12px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; background: #fff;">
+                <div style="border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                  <div style="flex-shrink: 0; min-width: 26px;">${logoImgHTML}</div>
                   <div style="text-align: center; flex: 1; padding: 0 6px;">
                     <h3 style="margin: 0; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${companyTitle}</h3>
-                    <p style="margin: 2px 0 0 0; font-size: 11px; font-weight: 700; color: #111;">${projectName}</p>
+                    <p style="margin: 1px 0 0 0; font-size: 11px; font-weight: 700; color: #111;">${projectName}</p>
                   </div>
-                  <div style="flex-shrink: 0; font-weight: 800; font-size: 11px; background: #f3f4f6; border: 2px solid #000; padding: 2px 8px; border-radius: 8px; white-space: nowrap;">
+                  <div style="flex-shrink: 0; font-weight: 800; font-size: 11px; background: #f3f4f6; border: 2px solid #000; padding: 2px 8px; border-radius: 6px; white-space: nowrap;">
                     KOLI ${globalIndex} OF ${totalKoli}
                   </div>
                 </div>
 
-                <div style="font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #000;">
-                  <div><span style="display: inline-block; width: 60px;">POOL</span>: ${store.pool}</div>
+                <div style="font-size: 12px; font-weight: 700; margin-bottom: 6px; color: #000; display: flex; justify-content: space-between;">
+                  <div><span style="display: inline-block; width: 50px;">POOL</span>: ${store.pool}</div>
                   <div><span style="display: inline-block; width: 60px;">STORE</span>: ${store.storeName}</div>
                 </div>
 
                 <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; table-layout: fixed; font-size: 11px;">
                   <thead>
                     <tr style="background: #f3f4f6; text-align: center; font-weight: 700;">
-                      <th style="border: 2px solid #000; padding: 4px; width: 6%;">NO</th>
-                      <th style="border: 2px solid #000; padding: 4px; text-align: left; width: 49%;">ITEM</th>
-                      <th style="border: 2px solid #000; padding: 4px; width: 19%;">BAHAN</th>
-                      <th style="border: 2px solid #000; padding: 4px; width: 13%;">UKURAN</th>
-                      <th style="border: 2px solid #000; padding: 4px; width: 7%;">QTY</th>
-                      <th style="border: 2px solid #000; padding: 4px; width: 7%;">SAT</th>
+                      <th style="border: 2px solid #000; padding: 3px; width: 5%;">NO</th>
+                      <th style="border: 2px solid #000; padding: 3px; text-align: left; width: 52%;">ITEM</th>
+                      <th style="border: 2px solid #000; padding: 3px; width: 20%;">BAHAN</th>
+                      <th style="border: 2px solid #000; padding: 3px; width: 11%;">UKURAN</th>
+                      <th style="border: 2px solid #000; padding: 3px; width: 6%;">QTY</th>
+                      <th style="border: 2px solid #000; padding: 3px; width: 6%;">SAT</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -334,12 +334,8 @@ export default function FoodLabelTab({ isDarkMode }) {
             `;
           });
 
-          if (page.stores.length === 1) {
-            pairCardsHTML += `<div style="width: 48.5%; visibility: hidden;"></div>`;
-          }
-
           labelPagesHTML += `
-            <div class="page-break" style="width: 280mm; max-width: 280mm; height: 185mm; max-height: 185mm; display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 8mm; box-sizing: border-box; page-break-after: always; break-after: page; margin: 0 auto; padding: 0; background: #fff;">
+            <div class="page-break" style="width: 275mm; max-width: 275mm; height: 185mm; max-height: 185mm; display: flex; flex-direction: column; justify-content: space-between; gap: 6mm; box-sizing: border-box; page-break-after: always; break-after: page; margin: 0 auto; padding: 0; background: #fff;">
               ${pairCardsHTML}
             </div>
           `;
@@ -573,10 +569,10 @@ export default function FoodLabelTab({ isDarkMode }) {
               height: 185mm !important;
               max-height: 185mm !important;
               display: flex !important;
-              flex-direction: row !important;
+              flex-direction: column !important;
               justify-content: space-between !important;
               align-items: stretch !important;
-              gap: 8mm !important;
+              gap: 6mm !important;
               box-sizing: border-box !important;
               page-break-after: always !important;
               break-after: page !important;
@@ -585,17 +581,17 @@ export default function FoodLabelTab({ isDarkMode }) {
               padding: 0 !important;
             }
             .label-card-item {
-              width: 48.5% !important;
-              max-width: 48.5% !important;
-              height: 185mm !important;
-              max-height: 185mm !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              height: 88mm !important;
+              max-height: 88mm !important;
               box-sizing: border-box !important;
               display: flex !important;
               flex-direction: column !important;
               justify-content: flex-start !important;
-              padding: 4mm !important;
+              padding: 3mm 4mm !important;
               border-width: 2px !important;
-              border-radius: 16px !important;
+              border-radius: 12px !important;
               overflow: hidden !important;
             }
           ` : `
@@ -815,7 +811,7 @@ export default function FoodLabelTab({ isDarkMode }) {
               return (
                 <div
                   key={pageIdx}
-                  className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col md:flex-row gap-6 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
+                  className="label-pair-page bg-white text-black print-page-break mx-auto flex flex-col gap-4 justify-between items-stretch w-full max-w-[280mm] min-h-[185mm] mb-8"
                 >
                   {page.stores.map((store, idx) => {
                     const activeItems = store.itemsData;
@@ -824,16 +820,16 @@ export default function FoodLabelTab({ isDarkMode }) {
                     return (
                       <div
                         key={idx}
-                        className="label-card-item bg-white text-black border-2 border-neutral-900 p-4 sm:p-5 rounded-2xl shadow-sm flex-1 w-full md:w-[48.5%] min-h-[182mm] max-h-[184mm] overflow-hidden flex flex-col justify-start"
+                        className="label-card-item bg-white text-black border-2 border-neutral-900 p-4 sm:p-5 rounded-2xl shadow-sm w-full min-h-[88mm] max-h-[90mm] overflow-hidden flex flex-col justify-start"
                       >
                         {/* Header dengan Koli Indicator */}
-                        <div className="relative border-b-2 border-neutral-900 pb-2 mb-2.5 flex items-center justify-between">
+                        <div className="relative border-b-2 border-neutral-900 pb-2 mb-2 flex items-center justify-between">
                           {wellenLogo ? (
                             <div className="flex-shrink-0">
-                              <img src={wellenLogo} alt="Logo Wellen" className="h-8 sm:h-9 w-auto object-contain" />
+                              <img src={wellenLogo} alt="Logo Wellen" className="h-7 w-auto object-contain" />
                             </div>
                           ) : (
-                            <div className="w-8" />
+                            <div className="w-7" />
                           )}
                           <div className="text-center flex-1 px-2">
                             <h3 className="font-extrabold text-xs sm:text-base tracking-wide uppercase">{companyTitle}</h3>
@@ -845,28 +841,28 @@ export default function FoodLabelTab({ isDarkMode }) {
                         </div>
 
                         {/* POOL & STORE Info */}
-                        <div className="text-xs sm:text-sm font-bold mb-2.5 space-y-0.5 text-neutral-900">
-                          <div className="flex"><span className="w-16 sm:w-18">POOL</span><span>: {store.pool}</span></div>
-                          <div className="flex"><span className="w-16 sm:w-18">STORE</span><span>: {store.storeName}</span></div>
+                        <div className="text-xs sm:text-sm font-bold mb-2 flex justify-between text-neutral-900">
+                          <div className="flex"><span className="font-bold mr-2">POOL:</span><span>{store.pool}</span></div>
+                          <div className="flex"><span className="font-bold mr-2">STORE:</span><span>{store.storeName}</span></div>
                         </div>
 
-                        {/* Table Fixed Width 100% */}
+                        {/* Table Fixed Width 100% Horizontal Stacked */}
                         <table className="w-full table-fixed border-collapse border-2 border-neutral-900 text-xs">
                           <thead>
                             <tr className="bg-neutral-100 text-center font-bold text-[10.5px] sm:text-xs">
                               <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[5%]">NO</th>
-                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 text-left w-[49%]">ITEM</th>
-                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[19%]">BAHAN</th>
-                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[13%]">UKURAN</th>
-                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">QTY</th>
-                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[7%]">SAT</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 text-left w-[52%]">ITEM</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[20%]">BAHAN</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[11%]">UKURAN</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[6%]">QTY</th>
+                              <th className="border-2 border-neutral-900 p-1 sm:p-1.5 w-[6%]">SAT</th>
                             </tr>
                           </thead>
                           <tbody>
                             {activeItems.map((item, itemIdx) => (
                               <tr key={itemIdx}>
                                 <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center font-semibold text-[10px] sm:text-[11px]">{itemIdx + 1}</td>
-                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 font-bold text-[9.5px] sm:text-[10px] leading-tight whitespace-nowrap overflow-hidden">{item.name}</td>
+                                <td className="border-2 border-neutral-900 p-1 sm:p-1.5 font-bold text-[10px] sm:text-[11px] leading-tight whitespace-nowrap overflow-hidden">{item.name}</td>
                                 {itemIdx === 0 && (
                                   <td className="border-2 border-neutral-900 p-1 sm:p-1.5 text-center align-middle font-bold" rowSpan={activeItems.length}>
                                     <span className="text-[10px] sm:text-[11px] leading-snug block">{paperBahan}</span>
@@ -882,9 +878,6 @@ export default function FoodLabelTab({ isDarkMode }) {
                       </div>
                     );
                   })}
-                  {page.stores.length === 1 && (
-                    <div className="hidden md:block flex-1 w-[48.5%] invisible" />
-                  )}
                 </div>
               );
             })}
