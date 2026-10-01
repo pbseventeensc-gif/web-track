@@ -162,10 +162,6 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
 
   const storeKeys = Object.keys(labels);
   const totalRegions = storeKeys.length;
-  const pagePairs = [];
-  for (let i = 0; i < totalRegions; i += 2) {
-    pagePairs.push(storeKeys.slice(i, i + 2));
-  }
 
   const currentDateStr = new Date().toLocaleString('en-GB', { 
     day: '2-digit', month: 'short', year: 'numeric', 
@@ -186,7 +182,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
             </div>
             <div>
               <h2 className="font-bold text-sm tracking-wide text-slate-900">
-                Label & Delivery Order
+                Label & Delivery Order (Kawan Lama Project)
               </h2>
               <p className="text-xs text-slate-500 font-normal mt-0.5">
                 Set company details, promo title, SPK/DO number, and upload allocation Excel.
@@ -204,7 +200,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                   : 'text-slate-600 font-medium hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <Tag className="w-3.5 h-3.5" /> Labels
+              <Tag className="w-3.5 h-3.5" /> Labels (1 HVS Full)
             </button>
             <button
               onClick={() => setPrintMode('do')}
@@ -219,7 +215,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           </div>
         </div>
 
-        {/* ENTERPRISE FORM GRID (STYLED LIKE IMAGE 1) */}
+        {/* ENTERPRISE FORM GRID */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
 
           {/* SECTION 1: COMPANY & PROJECT INFORMATION */}
@@ -417,58 +413,66 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           </div>
         ) : (
           printMode === 'labels' ? (
-            // ================= RENDER LABEL 2-IN-1 (LANDSCAPE PAGE DENGAN 2 LABEL VERTIKAL) =================
-            pagePairs.map((pair, pageIdx) => (
-              <div key={pageIdx} className="a4-landscape-page relative">
-                <div className="vertical-cut-line"></div>
+            // ================= RENDER LABEL 1 HVS FULL PER STORE =================
+            storeKeys.map((storeName, storeIdx) => {
+              const absoluteIndex = storeIdx + 1;
+              const storeItems = labels[storeName] || [];
 
-                {pair.map((storeName, cardIdx) => {
-                  const absoluteIndex = pageIdx * 2 + cardIdx + 1;
-                  return (
-                    <div key={cardIdx} className="label-card relative text-stone-900">
-                      <div className="absolute top-2.5 right-2.5 bg-stone-100 border border-stone-300 px-2 py-0.5 rounded text-[10px] font-bold text-stone-800">
-                        {absoluteIndex} OF {totalRegions}
-                      </div>
+              return (
+                <div key={storeIdx} className="a4-single-page relative text-stone-900 bg-white p-8 mb-8 border-2 border-stone-900 rounded-2xl shadow-sm mx-auto max-w-[280mm]">
+                  {/* Indikator Koli */}
+                  <div className="absolute top-4 right-4 bg-stone-100 border-2 border-stone-900 px-3 py-1 rounded-lg text-xs sm:text-sm font-extrabold text-stone-900">
+                    {absoluteIndex} OF {totalRegions}
+                  </div>
 
-                      <div className="flex items-center border-b-2 border-black pb-2 mb-2.5 pr-14">
-                        <div className="h-12 w-32 flex items-center justify-start">
-                          {wellenPrintLogo ? <img src={wellenPrintLogo} className="h-full object-contain" alt="Logo" /> : <div className="text-[9px] border p-1 italic text-stone-800">[Upload Logo]</div>}
-                        </div>
-                        <div className="flex-grow text-center">
-                          <h1 className="font-bold text-xs uppercase text-stone-900">{activeClientName}</h1>
-                          <p className="font-bold text-[9px] mt-0.5 uppercase text-stone-900">
-                            {activePromoTitle} ( {spkNumber} )
-                          </p>
-                        </div>
-                      </div>
-                      <div className="mb-2 font-bold text-xs text-stone-900">STORE / REGION : {storeName}</div>
-                      <table className="w-full border-collapse border border-black text-[11px] text-stone-900">
-                        <thead>
-                          <tr className="bg-gray-100 text-stone-900">
-                            <th className="border border-black p-1 w-8 text-center font-bold">NO</th>
-                            <th className="border border-black p-1 text-left font-bold">ITEM</th>
-                            <th className="border border-black p-1 w-28 text-center font-bold">BAHAN</th>
-                            <th className="border border-black p-1 w-20 text-center font-bold">UKURAN</th>
-                            <th className="border border-black p-1 w-16 text-center font-bold">QTY</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {labels[storeName].map((item, i) => (
-                            <tr key={i} className="text-stone-900">
-                              <td className="border border-black p-1 text-center font-medium">{i + 1}</td>
-                              <td className="border border-black p-1 font-medium">{item.Item}</td>
-                              <td className="border border-black p-1 text-center">{item.Bahan}</td>
-                              <td className="border border-black p-1 text-center">{item.Ukuran}</td>
-                              <td className="border border-black p-1 text-center font-bold">{item.Qty} PCS</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  {/* Header Kop */}
+                  <div className="flex items-center border-b-2 border-black pb-3 mb-4 pr-24">
+                    <div className="h-16 w-44 flex items-center justify-start">
+                      {wellenPrintLogo ? (
+                        <img src={wellenPrintLogo} className="h-full object-contain" alt="Logo" />
+                      ) : (
+                        <div className="text-xs border-2 border-stone-900 p-2 font-bold italic text-stone-800">[Upload Logo]</div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            ))
+                    <div className="flex-grow text-center">
+                      <h1 className="font-extrabold text-base sm:text-xl uppercase text-stone-900 tracking-wide">{activeClientName}</h1>
+                      <p className="font-extrabold text-xs sm:text-sm mt-1 uppercase text-stone-900">
+                        {activePromoTitle} ({spkNumber})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Info Store / Region */}
+                  <div className="mb-4 font-extrabold text-sm sm:text-base text-stone-900">
+                    STORE / REGION : {storeName}
+                  </div>
+
+                  {/* Tabel Item */}
+                  <table className="w-full border-collapse border-2 border-black text-xs sm:text-sm text-stone-900">
+                    <thead>
+                      <tr className="bg-stone-100 text-stone-900 border-b-2 border-black">
+                        <th className="border-r-2 border-black p-2.5 w-12 text-center font-extrabold">NO</th>
+                        <th className="border-r-2 border-black p-2.5 text-left font-extrabold">ITEM</th>
+                        <th className="border-r-2 border-black p-2.5 w-36 text-center font-extrabold">BAHAN</th>
+                        <th className="border-r-2 border-black p-2.5 w-28 text-center font-extrabold">UKURAN</th>
+                        <th className="p-2.5 w-24 text-center font-extrabold">QTY</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storeItems.map((item, i) => (
+                        <tr key={i} className="border-b border-black text-stone-900">
+                          <td className="border-r-2 border-black p-2.5 text-center font-bold">{i + 1}</td>
+                          <td className="border-r-2 border-black p-2.5 font-extrabold uppercase">{item.Item}</td>
+                          <td className="border-r-2 border-black p-2.5 text-center font-bold">{item.Bahan || '-'}</td>
+                          <td className="border-r-2 border-black p-2.5 text-center font-bold font-mono">{item.Ukuran || '-'}</td>
+                          <td className="p-2.5 text-center font-black font-mono text-sm sm:text-base">{item.Qty} PCS</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })
           ) : (
             // ================= RENDER SURAT JALAN (DO) PER STORE =================
             storeKeys.map((storeName, storeIdx) => {
@@ -554,7 +558,7 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                     </tfoot>
                   </table>
 
-                  {/* Footer / Tanda Tangan Surat Jalan dengan Nama Pengirim Dinamis */}
+                  {/* Footer / Tanda Tangan Surat Jalan */}
                   <div className="border border-t-0 border-black grid grid-cols-4 text-[12px]">
                     <div className="p-2 border-r border-black space-y-1">
                       <p><span className="font-bold">Tgl</span> : {currentDateStr}</p>
@@ -592,23 +596,15 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
       </div>
 
       <style>{`
-        .a4-landscape-page {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10mm;
+        .a4-single-page {
+          width: 280mm;
+          min-height: 185mm;
           background: white;
-          padding: 10mm;
+          padding: 8mm 10mm;
+          box-sizing: border-box;
           margin-bottom: 20mm;
           border: 1px solid #ddd;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .vertical-cut-line { display: none; }
-        .label-card {
-          border: 1px solid #000;
-          padding: 10px;
-          background: #fff;
-          box-sizing: border-box;
-          width: 100%;
         }
         .surat-jalan-page {
           width: 210mm;
@@ -629,44 +625,20 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
           .print-container { position: absolute; left: 0; top: 0; width: 100%; }
-          .a4-landscape-page {
-            width: 297mm;
-            height: 210mm;
-            padding: 8mm 10mm;
-            box-sizing: border-box;
-            page-break-after: always;
-            break-after: page;
-            border: none;
-            box-shadow: none;
-            position: relative;
-            display: grid;
-            grid-template-columns: 134mm 134mm;
-            gap: 9mm;
-            justify-content: center;
-            align-content: center;
-            margin: 0;
-          }
-          .vertical-cut-line {
-            display: block;
-            position: absolute;
-            left: 50%;
-            top: 8mm;
-            bottom: 8mm;
-            border-left: 2px dashed #333;
-            transform: translateX(-50%);
-            z-index: 10;
-          }
-          .label-card {
-            width: 134mm;
-            height: 194mm;
-            border: 1px solid #000;
-            padding: 8mm;
-            box-sizing: border-box;
-            background: #fff;
-            page-break-inside: avoid;
-            break-inside: avoid;
-            display: flex;
-            flex-direction: column;
+          .a4-single-page {
+            width: 297mm !important;
+            height: 210mm !important;
+            max-height: 210mm !important;
+            padding: 10mm 12mm !important;
+            box-sizing: border-box !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-start !important;
           }
           .surat-jalan-page {
             width: 210mm !important;
