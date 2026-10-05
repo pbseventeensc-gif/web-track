@@ -147,15 +147,15 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
           if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer') && !clientName.toLowerCase().includes('nama ccod')) {
             imported.push({
-              deliver_to: clientName,
+              deliver_to: picName,
               kota_region: address || 'Address pending',
               pic_name: picName,
               phone: phoneNum,
-              hos_region: hos || '-',
+              hos_region: clientName,
               region_city: hos || '-',
               item_name: form.item_title,
               custom_koli: qtyParsed,
-              transporter_dr: combinedTransporterDr
+              transporter_dr: ''
             });
           }
         });
