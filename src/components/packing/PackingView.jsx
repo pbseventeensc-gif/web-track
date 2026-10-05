@@ -4,7 +4,9 @@ import {
   Search,
   Check,
   Clock,
-  RefreshCw
+  RefreshCw,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 
@@ -19,6 +21,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
   const [filterProject, setFilterProject] = useState('ALL');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
 
   const parseItems = (raw) => {
@@ -262,11 +265,23 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     new Set(
       packingList
         .filter(item => item.promo_title && item.promo_title.trim() !== '')
-        .map(item => `${item.promo_title || '-'}_${item.no_spk || '-'}`)
+        .map(item => (item.promo_title || '-').trim())
+        .filter(str => str !== '-' && str !== '')
     )
-  );
+  ).sort((a, b) => a.localeCompare(b));
 
-  const filteredList = packingList.filter(item => {
+  const sortedPackingList = [...packingList].sort((a, b) => {
+    const projA = (a.promo_title || '').toLowerCase();
+    const projB = (b.promo_title || '').toLowerCase();
+    if (projA !== projB) {
+      return sortOrder === 'asc' ? projA.localeCompare(projB) : projB.localeCompare(projA);
+    }
+    const storeA = (a.store_name || '').toLowerCase();
+    const storeB = (b.store_name || '').toLowerCase();
+    return sortOrder === 'asc' ? storeA.localeCompare(storeB) : storeB.localeCompare(storeA);
+  });
+
+  const filteredList = sortedPackingList.filter(item => {
     if (filterSource !== 'ALL' && (filterSource === 'google_sheet' ? item.source !== 'google_sheet' : item.source === 'google_sheet')) return false;
     if (filterDelivery !== 'ALL' && item.delivery_type !== filterDelivery) return false;
 
@@ -275,8 +290,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     if (filterStatus === 'COMPLETED' && !isDone) return false;
 
     if (filterProject !== 'ALL') {
-      const projKey = `${item.promo_title || '-'}_${item.no_spk || '-'}`;
-      if (projKey !== filterProject) return false;
+      if ((item.promo_title || '').trim().toLowerCase() !== filterProject.trim().toLowerCase()) return false;
     }
 
     if (searchTerm.trim() !== '') {
@@ -362,19 +376,12 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
             <select
               value={filterProject}
               onChange={(e) => setFilterProject(e.target.value)}
-              className="w-full sm:w-auto px-2.5 py-2 text-xs font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none max-w-full"
+              className="w-full sm:w-auto px-4.5 py-2.5 sm:py-3 text-sm font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer min-w-[180px] sm:min-w-[220px]"
             >
               <option value="ALL">All Projects ({packingList.length})</option>
-              {uniqueProjects.map((projKey, idx) => {
-                const parts = projKey.split('_');
-                const projName = parts[0] || '-';
-                const spkNo = parts.slice(1).join('_') || '-';
-                return (
-                  <option key={idx} value={projKey}>
-                    {projName} {spkNo !== '-' ? `(${spkNo})` : ''}
-                  </option>
-                );
-              })}
+              {uniqueProjects.map((projName, idx) => (
+                <option key={idx} value={projName}>{projName}</option>
+              ))}
             </select>
           )}
         </div>
@@ -497,7 +504,20 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                       )}
                     </button>
                   </th>
-                  <th className="py-3.5 pl-1 pr-4 font-semibold">BOX</th>
+                  <th className="py-3.5 pl-1 pr-4 font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                      className="inline-flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer select-none"
+                      title="Urutkan Ascending / Descending"
+                    >
+                      <span>BOX</span>
+                      <span className="flex flex-col -space-y-1.5 text-slate-500 dark:text-neutral-400">
+                        <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-emerald-600 dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
+                        <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-emerald-600 dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
+                      </span>
+                    </button>
+                  </th>
                   <th className="py-3.5 px-4 font-semibold">STORE NAME / SPK</th>
                   <th className="py-3.5 px-4 font-semibold">SHIPPING TYPE</th>
                   <th className="py-3.5 px-4 text-center font-semibold">IMPORT DATE</th>
@@ -507,23 +527,61 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
-                {filteredList.map((item) => {
+                {filteredList.map((item, idx) => {
                   const details = parseItems(item.items_detail);
                   const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
                   const isUploadingThis = uploadingId === item.id;
                   const isSelected = selectedRowIds.includes(item.id);
+                  const showProjectDivider = idx === 0 || (item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title);
 
                   return (
-                    <tr
-                      key={item.id}
-                      className={`transition-colors ${
-                        isSelected
-                          ? 'bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40'
-                          : isPackingDone
-                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
-                          : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
-                      }`}
-                    >
+                    <React.Fragment key={item.id}>
+                      {showProjectDivider && (
+                        <tr className="bg-amber-100/90 border-y-2 border-amber-300 dark:bg-amber-950/80 dark:border-amber-700">
+                          <td colSpan="8" className="py-2 px-3 font-bold text-amber-950 dark:text-amber-200 text-[11px] tracking-wider uppercase shadow-2xs">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="font-black text-amber-950 dark:text-amber-200">{item.promo_title}</span>
+                                <span className="text-amber-800/40 dark:text-amber-400/40">|</span>
+                                <div className="flex items-center gap-1.5 flex-wrap normal-case">
+                                  {(() => {
+                                    const projItems = packingList.filter(p => p.promo_title === item.promo_title);
+                                    const totalProj = projItems.length;
+                                    const labelDone = projItems.filter(p => p.status_qc_label === 'DONE' || String(p.status_qc_label).includes('DONE')).length;
+                                    const packingDone = projItems.filter(p => p.status_qc_packing === 'DONE' || (p.bukti_paking_url && p.bukti_paking_url !== 'No Foto')).length;
+                                    const checkerDone = projItems.filter(p => p.status_qc_checker === 'DONE').length;
+                                    return (
+                                      <>
+                                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] border border-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-800">
+                                          Label: {labelDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800">
+                                          Packing: {packingDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                                          Checker: {checkerDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800">
+                                          Total Box: {totalProj}
+                                        </span>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        className={`transition-colors ${
+                          isSelected
+                            ? 'bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40'
+                            : isPackingDone
+                            ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
+                            : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
+                        }`}
+                      >
                       {/* 1. SELECT CIRCLE */}
                       <td className="py-3.5 pl-4 pr-1 text-center w-8">
                         <button
@@ -588,7 +646,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                                     src={sub.image_url}
                                     alt="Design"
                                     onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
-                                    className="w-7 h-7 object-cover rounded border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain bg-slate-50 dark:bg-neutral-900 rounded-xl border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-sm hover:scale-105 transition-transform p-0.5"
                                   />
                                 ) : null
                               ))}
@@ -614,7 +672,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                                 item.promo_title || item.project || '',
                                 item.no_spk || item.tracking_id || ''
                               )}
-                              className="w-9 h-9 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                              className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-105 transition-transform shadow-sm"
                             />
                             <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
                               <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
@@ -664,8 +722,9 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                     </tr>
-                  );
-                })}
+                  </React.Fragment>
+                );
+              })}
               </tbody>
             </table>
           </div>

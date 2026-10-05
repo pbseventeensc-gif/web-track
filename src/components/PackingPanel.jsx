@@ -57,6 +57,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
   const [filterStage, setFilterStage] = useState('ALL'); // 'ALL', 'status_qc_label', 'status_qc_packing', 'status_qc_checker', 'status_deliver'
   const [filterProject, setFilterProject] = useState('ALL');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [printListOverride, setPrintListOverride] = useState(null);
 
@@ -241,13 +242,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       .from('packing_tracking')
       .update({ [fieldName]: nextValue, updated_at: new Date().toISOString() })
       .eq('id', id);
-
-    if (targetItem?.no_spk) {
-      await supabase
-        .from('spk_data')
-        .update({ [fieldName]: nextValue, updated_at: new Date().toISOString() })
-        .eq('no_spk', targetItem.no_spk);
-    }
 
     if (error) {
       alert('❌ Gagal memperbarui status: ' + error.message);
@@ -951,18 +945,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         })
         .eq('id', rowId);
 
-      const targetItem = packingList.find(i => i.id === rowId);
-      if (targetItem?.no_spk) {
-        await supabase
-          .from('spk_data')
-          .update({
-            bukti_paking_url: urlData.publicUrl,
-            status_qc_packing: 'DONE',
-            updated_at: new Date().toISOString()
-          })
-          .eq('no_spk', targetItem.no_spk);
-      }
-
       if (updateError) throw updateError;
 
       alert('✅ Bukti paking Ultra HD berhasil diunggah!');
@@ -1254,18 +1236,24 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const uniqueProjects = Array.from(
     new Set(
       statusFilteredList
-        .map(item => {
-          const project = item.promo_title || '-';
-          const spk = item.no_spk || '-';
-          return `${project}_${spk}`;
-        })
-        .filter(str => str !== '-_-')
+        .map(item => (item.promo_title || '-').trim())
+        .filter(str => str !== '-' && str !== '')
     )
-  );
+  ).sort((a, b) => a.localeCompare(b));
 
-  const filteredList = statusFilteredList.filter((item) => {
-    const projectKey = `${item.promo_title || '-'}_${item.no_spk || '-'}`;
-    const matchProject = filterProject === 'ALL' || projectKey === filterProject;
+  const sortedStatusList = [...statusFilteredList].sort((a, b) => {
+    const projA = (a.promo_title || '').toLowerCase();
+    const projB = (b.promo_title || '').toLowerCase();
+    if (projA !== projB) {
+      return sortOrder === 'asc' ? projA.localeCompare(projB) : projB.localeCompare(projA);
+    }
+    const storeA = (a.store_name || '').toLowerCase();
+    const storeB = (b.store_name || '').toLowerCase();
+    return sortOrder === 'asc' ? storeA.localeCompare(storeB) : storeB.localeCompare(storeA);
+  });
+
+  const filteredList = sortedStatusList.filter((item) => {
+    const matchProject = filterProject === 'ALL' || (item.promo_title || '').trim().toLowerCase() === filterProject.trim().toLowerCase();
 
     const matchSearch =
       searchTerm === '' ||
@@ -1769,7 +1757,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+                className="px-4.5 py-2.5 sm:py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer min-w-[170px] sm:min-w-[200px]"
               >
                 <option value="ALL">All statuses</option>
                 <option value="IN_PROGRESS">In Progress</option>
@@ -1780,7 +1768,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <select
                 value={filterStage}
                 onChange={(e) => setFilterStage(e.target.value)}
-                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+                className="px-4.5 py-2.5 sm:py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer min-w-[170px] sm:min-w-[200px]"
               >
                 <option value="ALL">All staff</option>
                 {stages.map(s => (
@@ -1792,7 +1780,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <select
                 value={filterSource}
                 onChange={(e) => setFilterSource(e.target.value)}
-                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+                className="px-4.5 py-2.5 sm:py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer min-w-[170px] sm:min-w-[200px]"
               >
                 <option value="ALL">All origins</option>
                 <option value="google_sheet">Google Sheets</option>
@@ -1803,7 +1791,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <select
                 value={filterDelivery}
                 onChange={(e) => setFilterDelivery(e.target.value)}
-                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+                className="px-4.5 py-2.5 sm:py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer min-w-[170px] sm:min-w-[200px]"
               >
                 <option value="ALL">All City</option>
                 <option value="DALAM KOTA">Dalam Kota</option>
@@ -1814,16 +1802,12 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               <select
                 value={filterProject}
                 onChange={(e) => setFilterProject(e.target.value)}
-                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+                className="px-4.5 py-2.5 sm:py-3 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer min-w-[180px] sm:min-w-[220px]"
               >
                 <option value="ALL">All Project</option>
-                {uniqueProjects.map((projKey, i) => {
-                  const parts = projKey.split('_');
-                  const projName = parts[0] || '-';
-                  return (
-                    <option key={i} value={projKey}>{projName}</option>
-                  );
-                })}
+                {uniqueProjects.map((projName, i) => (
+                  <option key={i} value={projName}>{projName}</option>
+                ))}
               </select>
             </div>
 
@@ -1852,7 +1836,20 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     )}
                   </button>
                 </th>
-                <th className="py-4 pl-1 pr-4 font-semibold">BOX</th>
+                <th className="py-4 pl-1 pr-4 font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="inline-flex items-center gap-1.5 hover:text-indigo-600 transition-colors cursor-pointer select-none"
+                    title="Urutkan Ascending / Descending"
+                  >
+                    <span>BOX</span>
+                    <span className="flex flex-col -space-y-1.5 text-slate-500">
+                      <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-indigo-600 stroke-[3]' : 'opacity-40'}`} />
+                      <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-indigo-600 stroke-[3]' : 'opacity-40'}`} />
+                    </span>
+                  </button>
+                </th>
                 <th className="py-4 px-4 font-semibold">STORE NAME / SPK</th>
                 <th className="py-4 px-4 font-semibold">SHIPPING TYPE</th>
                 <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
@@ -1888,9 +1885,37 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-amber-100/90 border-y-2 border-amber-300">
-                          <td colSpan={isPackingRole ? "8" : "10"} className="py-1.5 px-3 text-center font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
+                          <td colSpan={isPackingRole ? "8" : "10"} className="py-2 px-3 font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                              <span>{item.promo_title}{item.no_spk ? ` _ ${item.no_spk}` : ''}</span>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="font-black text-amber-950">{item.promo_title}</span>
+                                <span className="text-amber-800/40">|</span>
+                                <div className="flex items-center gap-1.5 flex-wrap normal-case">
+                                  {(() => {
+                                    const projItems = sourceList.filter(p => p.promo_title === item.promo_title);
+                                    const totalProj = projItems.length;
+                                    const labelDone = projItems.filter(p => p.status_qc_label === 'DONE' || String(p.status_qc_label).includes('DONE')).length;
+                                    const packingDone = projItems.filter(p => p.status_qc_packing === 'DONE' || (p.bukti_paking_url && p.bukti_paking_url !== 'No Foto')).length;
+                                    const checkerDone = projItems.filter(p => p.status_qc_checker === 'DONE').length;
+                                    return (
+                                      <>
+                                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] border border-blue-300">
+                                          Label: {labelDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                                          Packing: {packingDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
+                                          Checker: {checkerDone}/{totalProj}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300">
+                                          Total Box: {totalProj}
+                                        </span>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
                               {!isPackingRole && (
                                 <div className="flex items-center gap-1.5">
                                   {(() => {
@@ -2042,7 +2067,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                   item.project || item.project_name || '',
                                   item.no_spk || item.spk_no || item.tracking_id || ''
                                 )}
-                                className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                                className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-slate-300 cursor-pointer hover:scale-105 transition-transform shadow-sm"
                               />
                               <div className="text-[10px] font-semibold text-slate-800 leading-tight">
                                 <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
@@ -2129,7 +2154,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                         item.project || item.project_name || '',
                                         item.no_spk || item.spk_no || item.tracking_id || ''
                                       )}
-                                      className="w-10 h-10 object-cover rounded-lg border-2 border-emerald-500 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                                      className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-emerald-500 cursor-pointer hover:scale-105 transition-transform shadow-sm"
                                     />
                                     <label
                                       className="absolute -bottom-1 -right-1 bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-full cursor-pointer shadow-xs border border-white"
