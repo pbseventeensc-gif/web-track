@@ -31,7 +31,8 @@ import {
   ArrowRight,
   Shield,
   Building,
-  Key
+  Key,
+  FolderKanban
 } from 'lucide-react';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
@@ -41,6 +42,7 @@ import DesignPanel from './components/DesignPanel';
 import PackingPanel from './components/PackingPanel';
 import CheckerView from './components/checker/CheckerView';
 import OutboundView from './components/outbound/OutboundView';
+import DeskPrintView from './components/deskprint/DeskPrintView';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
 
@@ -1196,7 +1198,8 @@ export default function App() {
                         <div className="space-y-1">
                           {[
                             { id: 'dashboard', label: 'Production Dashboard', icon: LayoutDashboard },
-                            { id: 'design', label: 'Desk Print', icon: Palette },
+                            { id: 'desk_print', label: 'Desk Print', icon: FolderKanban },
+                            { id: 'design', label: 'Design Panel', icon: Palette },
                             { id: 'produksi', label: 'Produksi Cetak', icon: Printer },
                             { id: 'finishing', label: 'Finishing Panel', icon: Scissors },
                             { id: 'paking', label: 'Paking Station', icon: Package },
@@ -1293,6 +1296,10 @@ export default function App() {
                     <ComingSoonDashboardView title="PRODUCTION DASHBOARD" />
                   )}
 
+                  {activeTab === 'desk_print' && (
+                    <DeskPrintView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
                   {activeTab === 'design' && (
                     <DesignPanel isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
                   )}
@@ -1329,7 +1336,7 @@ export default function App() {
                     <OutboundView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
                   )}
 
-                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'checker' && activeTab !== 'outbound' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'desk_print' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'checker' && activeTab !== 'outbound' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
                     <MainTrackingTable
                       isDarkMode={isDarkMode}
                       activeTab={activeTab}

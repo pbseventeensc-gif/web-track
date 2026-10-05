@@ -520,13 +520,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
   const syncToPackingDatabase = async (groupedItems) => {
     for (const item of groupedItems) {
-      const trackingCode = item.NO_SPK || item.TRACKING_ID;
+      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
       const payload = {
         tracking_id: trackingCode,
         no_spk: item.NO_SPK,
         client_pt: item.CLIENT || '-',
         promo_title: item.PROJECT || '-',
-        store_name: item.DELIVERY_ADDRESS || 'Store Utama',
+        store_name: item.DELIVERY_ADDRESS || item.store_name || 'Store Utama',
         recipient_name: item.RECIPIENT_NAME || '-',
         total_qty: item.totalCombinedQty,
         source: 'label_sj',

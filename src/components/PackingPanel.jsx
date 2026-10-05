@@ -18,7 +18,14 @@ import {
   X,
   Sparkles,
   RefreshCw,
-  FileSpreadsheet
+  FileSpreadsheet,
+  FolderKanban,
+  Box,
+  CheckCircle2,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle
 } from 'lucide-react';
 
 import PackingView from './packing/PackingView';
@@ -41,6 +48,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const [isBatchPrinting, setIsBatchPrinting] = useState(false);
   const [isSuratJalanPrinting, setIsSuratJalanPrinting] = useState(false);
   const [suratJalanGroup, setSuratJalanGroup] = useState(null);
+  const [openDetailCard, setOpenDetailCard] = useState(null);
+  const [isActionsDropdownOpen, setIsActionsDropdownOpen] = useState(false);
 
   // Filter & Search States
   const [filterSource, setFilterSource] = useState('ALL'); // 'ALL', 'google_sheet', 'label_sj'
@@ -60,6 +69,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   const [pendingWorkbook, setPendingWorkbook] = useState(null);
   const [availableSheets, setAvailableSheets] = useState([]);
   const [selectedSheets, setSelectedSheets] = useState([]);
+
+  // Desk Print Auto-Match States
+  const [isDeskPrintModalOpen, setIsDeskPrintModalOpen] = useState(false);
+  const [deskPrintFolders, setDeskPrintFolders] = useState([]);
+  const [selectedDeskFolderId, setSelectedDeskFolderId] = useState('');
 
   // Modal Custom Image Override
   const [editingRowItem, setEditingRowItem] = useState(null);
@@ -624,6 +638,84 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
       setIsUploadingImages(false);
       e.target.value = '';
     }
+  };
+
+  // Auto-Match Gambar Desain dari Desk Print
+  const handleOpenDeskPrintModal = () => {
+    let localFolders = [];
+    try {
+      const data = localStorage.getItem('desk_print_folders');
+      if (data) localFolders = JSON.parse(data);
+    } catch (e) {
+      console.error(e);
+    }
+    if (window.__DESK_PRINT_FOLDERS__ && window.__DESK_PRINT_FOLDERS__.length > 0) {
+      localFolders = window.__DESK_PRINT_FOLDERS__;
+    }
+    setDeskPrintFolders(localFolders);
+    if (localFolders.length > 0) {
+      setSelectedDeskFolderId(localFolders[0].id);
+    }
+    setIsDeskPrintModalOpen(true);
+  };
+
+  const handleExecuteAutoMatchDeskPrint = async () => {
+    if (!selectedDeskFolderId) return alert('⚠️ Silakan pilih Folder Project terlebih dahulu.');
+    const targetFolder = deskPrintFolders.find(f => f.id === selectedDeskFolderId);
+    if (!targetFolder || !targetFolder.images || targetFolder.images.length === 0) {
+      return alert('⚠️ Folder Project yang dipilih belum memiliki gambar desain.');
+    }
+
+    if (packingList.length === 0) {
+      return alert('⚠️ Silakan Import Data Toko di Packing Station terlebih dahulu!');
+    }
+
+    setIsUploadingImages(true);
+    let matchedCount = 0;
+
+    const folderImageMap = {};
+    targetFolder.images.forEach(img => {
+      if (img.item_code) folderImageMap[cleanKey(img.item_code)] = img.image_url;
+      if (img.core_code) folderImageMap[img.core_code] = img.image_url;
+    });
+
+    const updatedList = await Promise.all(
+      packingList.map(async (row) => {
+        let isRowChanged = false;
+        const details = parseItems(row.items_detail);
+
+        const updatedDetails = details.map((sub, idx) => {
+          const itemCode = sub.code || '';
+          const itemCore = extractCoreCode(itemCode);
+          const matchedUrl = folderImageMap[cleanKey(itemCode)] || folderImageMap[itemCore] || folderImageMap[idx];
+
+          if (matchedUrl) {
+            matchedCount++;
+            isRowChanged = true;
+            return { ...sub, image_url: matchedUrl };
+          }
+          return sub;
+        });
+
+        if (isRowChanged) {
+          try {
+            await supabase
+              .from('packing_tracking')
+              .update({ items_detail: JSON.stringify(updatedDetails) })
+              .eq('id', row.id);
+          } catch (e) {
+            console.error(e);
+          }
+          return { ...row, items_detail: updatedDetails };
+        }
+        return row;
+      })
+    );
+
+    setPackingList(updatedList);
+    setIsUploadingImages(false);
+    setIsDeskPrintModalOpen(false);
+    alert(`✅ Berhasil mencocokkan & memasang ${matchedCount} gambar desain dari Desk Print (${targetFolder.name})!`);
   };
 
   const handleSingleImageOverride = (rowId, itemIndex, file) => {
@@ -1343,9 +1435,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
 
   return (
-    <div className="space-y-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs text-black">
+    <div className="space-y-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs text-black" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <div>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-base font-bold uppercase tracking-wider text-black">
             Packing Control Panel
           </h2>
@@ -1354,277 +1446,389 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {(isPackingRole ? stages.filter(s => s.id !== 'status_qc_checker' && s.id !== 'status_deliver') : stages).map((stage) => {
-            const completedCount = packingList.filter((s) => s[stage.id] === 'DONE' || (s[stage.id] && String(s[stage.id]).includes('DONE'))).length;
-            const percent = totalSpk > 0 ? Math.round((completedCount / totalSpk) * 100) : 0;
-            const is100Percent = percent === 100 && totalSpk > 0;
-            const isActive = filterStage === stage.id;
+        {/* TOP METRIC CARDS WITH INTERACTIVE DETAILS BREAKDOWN (QC Stages) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
 
-            return (
-              <div
-                key={stage.id}
-                onClick={() => setFilterStage(isActive ? 'ALL' : stage.id)}
-                className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer ${
-                  isActive
-                    ? 'ring-2 ring-indigo-600 bg-indigo-50/70 border-indigo-400 shadow-sm'
-                    : is100Percent
-                    ? 'bg-emerald-50/80 border-emerald-400 shadow-xs hover:border-emerald-500'
-                    : 'bg-white border-slate-200 shadow-2xs hover:border-slate-400'
-                }`}
-                title="Click to filter table by this stage"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 text-black">
-                      <div className={`w-2 h-2 rounded-full ${stage.color}`}></div> {stage.label}
-                    </h3>
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-lg ${
-                      is100Percent ? 'bg-emerald-600 text-white' : 'bg-amber-500/10 text-amber-800'
-                    }`}>
-                      {percent}%
-                    </span>
+          {/* Card 1: QC LABEL */}
+          <div
+            onClick={() => setFilterStage(filterStage === 'status_qc_label' ? 'ALL' : 'status_qc_label')}
+            className={`bg-white p-5 rounded-2xl border shadow-2xs relative flex flex-col justify-between cursor-pointer transition-all ${filterStage === 'status_qc_label' ? 'ring-2 ring-indigo-600 border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-slate-400'}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <Box className="w-4 h-4" />
                   </div>
-                  <p className="text-[10px] font-semibold text-slate-500 mb-2">{stage.staff}</p>
-
-                  <div className="text-center py-2 space-y-0.5">
-                    <span className="text-xl font-extrabold tracking-tight block text-black">
-                      {completedCount} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider block">Boxes Completed</span>
-                  </div>
+                  <span className="text-sm font-bold text-slate-700">QC LABEL</span>
                 </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'qc_label' ? null : 'qc_label'); }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  Details {openDetailCard === 'qc_label' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {packingList.filter(s => s.status_qc_label === 'DONE' || (s.status_qc_label && String(s.status_qc_label).includes('DONE'))).length} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
+              </div>
+            </div>
 
-                <div className="mt-2 pt-2 border-t border-slate-200/80 text-[10px] font-semibold flex justify-between items-center text-slate-700">
-                  <span>Status:</span>
-                  <span className={is100Percent ? 'text-emerald-700 font-bold' : 'text-amber-700 font-bold'}>
-                    {is100Percent ? '🟢 100% Completed 🎉' : '🟡 In Progress'}
-                  </span>
+            {openDetailCard === 'qc_label' && (
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-20 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">QC LABEL BREAKDOWN</span>
+                  <button onClick={() => setOpenDetailCard(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                      <span>Completed / Pending</span>
+                      <span>{packingList.filter(s => s.status_qc_label === 'DONE' || (s.status_qc_label && String(s.status_qc_label).includes('DONE'))).length} / {totalSpk}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="bg-blue-600 h-full rounded-full" style={{ width: `${totalSpk > 0 ? (packingList.filter(s => s.status_qc_label === 'DONE' || (s.status_qc_label && String(s.status_qc_label).includes('DONE'))).length / totalSpk) * 100 : 0}%` }}></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {filterStage !== 'ALL' && (
-          <div className="mt-4 mb-2 flex items-center justify-between bg-indigo-50 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-900 shadow-2xs">
-            <span>🔍 Filter Table by Stage: <strong>{stages.find(s => s.id === filterStage)?.label}</strong> (Showing Completed)</span>
-            <button
-              onClick={() => setFilterStage('ALL')}
-              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
-            >
-              Reset Stage Filter
-            </button>
+            )}
           </div>
-        )}
+
+          {/* Card 2: QC PACKING */}
+          <div
+            onClick={() => setFilterStage(filterStage === 'status_qc_packing' ? 'ALL' : 'status_qc_packing')}
+            className={`bg-white p-5 rounded-2xl border shadow-2xs relative flex flex-col justify-between cursor-pointer transition-all ${filterStage === 'status_qc_packing' ? 'ring-2 ring-indigo-600 border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-slate-400'}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">QC PACKING</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'qc_packing' ? null : 'qc_packing'); }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  Details {openDetailCard === 'qc_packing' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {packingList.filter(s => s.status_qc_packing === 'DONE' || (s.status_qc_packing && String(s.status_qc_packing).includes('DONE'))).length} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
+              </div>
+            </div>
+
+            {openDetailCard === 'qc_packing' && (
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-20 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">QC PACKING BREAKDOWN</span>
+                  <button onClick={() => setOpenDetailCard(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                      <span>Completed / Pending</span>
+                      <span>{packingList.filter(s => s.status_qc_packing === 'DONE' || (s.status_qc_packing && String(s.status_qc_packing).includes('DONE'))).length} / {totalSpk}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${totalSpk > 0 ? (packingList.filter(s => s.status_qc_packing === 'DONE' || (s.status_qc_packing && String(s.status_qc_packing).includes('DONE'))).length / totalSpk) * 100 : 0}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card 3: QC CHECKER */}
+          <div
+            onClick={() => setFilterStage(filterStage === 'status_qc_checker' ? 'ALL' : 'status_qc_checker')}
+            className={`bg-white p-5 rounded-2xl border shadow-2xs relative flex flex-col justify-between cursor-pointer transition-all ${filterStage === 'status_qc_checker' ? 'ring-2 ring-indigo-600 border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-slate-400'}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">QC CHECKER</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'qc_checker' ? null : 'qc_checker'); }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  Details {openDetailCard === 'qc_checker' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {packingList.filter(s => s.status_qc_checker === 'DONE' || (s.status_qc_checker && String(s.status_qc_checker).includes('DONE'))).length} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
+              </div>
+            </div>
+
+            {openDetailCard === 'qc_checker' && (
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-20 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">QC CHECKER BREAKDOWN</span>
+                  <button onClick={() => setOpenDetailCard(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                      <span>Completed / Pending</span>
+                      <span>{packingList.filter(s => s.status_qc_checker === 'DONE' || (s.status_qc_checker && String(s.status_qc_checker).includes('DONE'))).length} / {totalSpk}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="bg-amber-600 h-full rounded-full" style={{ width: `${totalSpk > 0 ? (packingList.filter(s => s.status_qc_checker === 'DONE' || (s.status_qc_checker && String(s.status_qc_checker).includes('DONE'))).length / totalSpk) * 100 : 0}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card 4: DELIVER */}
+          <div
+            onClick={() => setFilterStage(filterStage === 'status_deliver' ? 'ALL' : 'status_deliver')}
+            className={`bg-white p-5 rounded-2xl border shadow-2xs relative flex flex-col justify-between cursor-pointer transition-all ${filterStage === 'status_deliver' ? 'ring-2 ring-indigo-600 border-indigo-500 bg-indigo-50/40' : 'border-slate-200 hover:border-slate-400'}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <span className="text-sm font-bold text-slate-700">DELIVER</span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'deliver' ? null : 'deliver'); }}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  Details {openDetailCard === 'deliver' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </div>
+              <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                {packingList.filter(s => s.status_deliver === 'DONE' || (s.status_deliver && String(s.status_deliver).includes('DONE'))).length} <span className="text-xs font-medium text-slate-500">/ {totalSpk}</span>
+              </div>
+            </div>
+
+            {openDetailCard === 'deliver' && (
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl p-4 z-20 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">DELIVER BREAKDOWN</span>
+                  <button onClick={() => setOpenDetailCard(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-2.5">
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                      <span>Completed / Pending</span>
+                      <span>{packingList.filter(s => s.status_deliver === 'DONE' || (s.status_deliver && String(s.status_deliver).includes('DONE'))).length} / {totalSpk}</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div className="bg-purple-600 h-full rounded-full" style={{ width: `${totalSpk > 0 ? (packingList.filter(s => s.status_deliver === 'DONE' || (s.status_deliver && String(s.status_deliver).includes('DONE'))).length / totalSpk) * 100 : 0}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
       </div>
 
       <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-2xs">
 
-        {/* ENTERPRISE ACTION TOOLBAR */}
-        {!isPackingRole && (
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-            <div className="flex items-center gap-2 flex-wrap">
-              <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                {isImporting ? 'Mengimport...' : 'Import File Excel'}
-                <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleLocalExcelUpload} disabled={isImporting} />
-              </label>
+        {/* MODERN FILTER & SEARCH TOOLBAR (Gambar 3) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3 mb-5">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
 
-              <button
-                onClick={() => setIsGSheetModalOpen(true)}
-                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                <Globe className="w-3.5 h-3.5 text-slate-700" /> Import Google Sheet
-              </button>
+            {/* Left side: Search & Dropdown Filters */}
+            <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
 
-              <label className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
-                <Upload className="w-3.5 h-3.5 text-slate-700" />
-                {isUploadingImages ? 'Memasang Foto...' : 'Upload Desain'}
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleBulkUploadDesignImages} disabled={isUploadingImages} />
-              </label>
+              {/* Actions Dropdown Button */}
+              {!isPackingRole && (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsActionsDropdownOpen(!isActionsDropdownOpen)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <span>Actions</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
 
-              {(() => {
-                const isAllLabelSj = filteredList.length > 0 && filteredList.every(i => i.source !== 'google_sheet');
-                const isPrintDisabled = filterSource === 'label_sj' || isAllLabelSj;
-                return (
-                  <>
-                    <button
-                      onClick={handleBatchPrintAll}
-                      disabled={isPrintDisabled}
-                      className={`px-3.5 py-2 border font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 ${
-                        isPrintDisabled
-                          ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed'
-                          : 'bg-white hover:bg-slate-100 text-black border-slate-300 cursor-pointer'
-                      }`}
-                      title={isPrintDisabled ? "Fitur Print Label A4 non-aktif untuk data dari Tab Cetak Label & SJ" : ""}
-                    >
-                      <Printer className="w-3.5 h-3.5 text-slate-700" /> Print Label A4
-                    </button>
+                  {isActionsDropdownOpen && (
+                    <div className="absolute left-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-30 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                        Management Actions
+                      </div>
 
-                    <button
-                      onClick={() => handlePrintSuratJalan(filteredList)}
-                      disabled={isPrintDisabled}
-                      className={`px-3.5 py-2 border font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 ${
-                        isPrintDisabled
-                          ? 'bg-slate-100 text-slate-400 border-slate-200 opacity-50 cursor-not-allowed'
-                          : 'bg-white hover:bg-slate-100 text-black border-slate-300 cursor-pointer'
-                      }`}
-                      title={isPrintDisabled ? "Fitur Surat Jalan non-aktif untuk data dari Tab Cetak Label & SJ" : ""}
-                    >
-                      <FileText className="w-3.5 h-3.5 text-slate-700" /> Surat Jalan
-                    </button>
-                  </>
-                );
-              })()}
+                      <label className="w-full px-3 py-2 hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>{isImporting ? 'Mengimport...' : 'Import File Excel'}</span>
+                        <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={(e) => { handleLocalExcelUpload(e); setIsActionsDropdownOpen(false); }} disabled={isImporting} />
+                      </label>
 
-              <button
-                onClick={handleDownloadPackingReport}
-                className="px-3.5 py-2 bg-white hover:bg-slate-100 text-black border border-slate-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-              >
-                <Download className="w-3.5 h-3.5 text-slate-700" /> Export Excel
-              </button>
+                      <button
+                        onClick={() => { setIsGSheetModalOpen(true); setIsActionsDropdownOpen(false); }}
+                        className="w-full px-3 py-2 hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
+                      >
+                        <Globe className="w-4 h-4 text-slate-600" />
+                        <span>Import Google Sheet</span>
+                      </button>
 
-              <button
-                onClick={handleClearAllPackingData}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
-              </button>
-            </div>
-          </div>
-        )}
+                      <label className="w-full px-3 py-2 hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer">
+                        <Upload className="w-4 h-4 text-slate-600" />
+                        <span>{isUploadingImages ? 'Memasang Foto...' : 'Upload Desain'}</span>
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { handleBulkUploadDesignImages(e); setIsActionsDropdownOpen(false); }} disabled={isUploadingImages} />
+                      </label>
 
-        {/* SUB-HEADER SEGMENTED CONTROL & SEARCH */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pt-4 border-t border-slate-200">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Source Filter Tabs (Text Only, Neat & Clean) */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() => setFilterSource('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  filterSource === 'ALL'
-                    ? 'bg-white shadow-xs font-bold text-black'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                Semua Data
-              </button>
-              <button
-                onClick={() => setFilterSource('google_sheet')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  filterSource === 'google_sheet'
-                    ? 'bg-white shadow-xs font-bold text-black'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                Google Sheets
-              </button>
-              <button
-                onClick={() => setFilterSource('label_sj')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  filterSource === 'label_sj'
-                    ? 'bg-white shadow-xs font-bold text-black'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                Label & SJ
-              </button>
-            </div>
+                      <button
+                        onClick={() => { handleOpenDeskPrintModal(); setIsActionsDropdownOpen(false); }}
+                        className="w-full px-3 py-2 hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
+                      >
+                        <FolderKanban className="w-4 h-4 text-teal-600" />
+                        <span>Auto-Match Desk Print</span>
+                      </button>
 
-            {/* Status Progress Tabs */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() => setFilterStatus('ALL')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                  filterStatus === 'ALL'
-                    ? 'bg-white shadow-xs font-bold text-black'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                Semua ({sourceList.length})
-              </button>
-              <button
-                onClick={() => setFilterStatus('IN_PROGRESS')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filterStatus === 'IN_PROGRESS'
-                    ? 'bg-amber-500 text-white shadow-xs font-bold'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                ⏳ On Progress ({pendingBoxCount})
-              </button>
-              <button
-                onClick={() => setFilterStatus('COMPLETED')}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filterStatus === 'COMPLETED'
-                    ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                    : 'text-slate-700 hover:text-black font-semibold'
-                }`}
-              >
-                ✅ Done ({completedBoxCount})
-              </button>
-            </div>
+                      <button
+                        onClick={() => { handleSyncFromSpkData(true); setIsActionsDropdownOpen(false); }}
+                        className="w-full px-3 py-2 hover:bg-amber-50 text-amber-900 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
+                      >
+                        <RefreshCw className="w-4 h-4 text-amber-600" />
+                        <span>Pulihkan Data Paking</span>
+                      </button>
 
-            {/* Delivery Route Filter */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setFilterDelivery(type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
-                    filterDelivery === type
-                      ? 'bg-white shadow-xs font-bold text-black'
-                      : 'text-slate-700 hover:text-black font-semibold'
-                  }`}
-                >
-                  {type === 'ALL' ? 'All Routes' : type}
-                </button>
-              ))}
-            </div>
+                      {(() => {
+                        const isAllLabelSj = filteredList.length > 0 && filteredList.every(i => i.source !== 'google_sheet');
+                        const isPrintDisabled = filterSource === 'label_sj' || isAllLabelSj;
+                        return (
+                          <>
+                            <button
+                              onClick={() => { handleBatchPrintAll(); setIsActionsDropdownOpen(false); }}
+                              disabled={isPrintDisabled}
+                              className={`w-full px-3 py-2 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 text-left ${isPrintDisabled ? 'opacity-40 cursor-not-allowed text-slate-400' : 'hover:bg-slate-50 text-slate-800 cursor-pointer'}`}
+                            >
+                              <Printer className="w-4 h-4 text-slate-600" />
+                              <span>Print Label A4</span>
+                            </button>
 
-            {/* Filter By Project / Batch Dropdown */}
-            {uniqueProjects.length > 0 && (
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                <select
-                  value={filterProject}
-                  onChange={(e) => setFilterProject(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white text-slate-900 border-0 focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">Project: All ({statusFilteredList.length})</option>
-                  {uniqueProjects.map((projKey, i) => {
-                    const parts = projKey.split('_');
-                    const projName = parts[0] || '-';
-                    const spkNo = parts.slice(1).join('_') || '-';
-                    const projBoxCount = statusFilteredList.filter(item => `${item.promo_title || '-'}_${item.no_spk || '-'}` === projKey).length;
-                    return (
-                      <option key={i} value={projKey}>
-                        {projName} {spkNo !== '-' ? `(${spkNo})` : ''} - {projBoxCount} Boxes
-                      </option>
-                    );
-                  })}
-                </select>
+                            <button
+                              onClick={() => { handlePrintSuratJalan(filteredList); setIsActionsDropdownOpen(false); }}
+                              disabled={isPrintDisabled}
+                              className={`w-full px-3 py-2 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 text-left ${isPrintDisabled ? 'opacity-40 cursor-not-allowed text-slate-400' : 'hover:bg-slate-50 text-slate-800 cursor-pointer'}`}
+                            >
+                              <FileText className="w-4 h-4 text-slate-600" />
+                              <span>Surat Jalan</span>
+                            </button>
+                          </>
+                        );
+                      })()}
+
+                      <button
+                        onClick={() => { handleDownloadPackingReport(); setIsActionsDropdownOpen(false); }}
+                        className="w-full px-3 py-2 hover:bg-slate-50 text-slate-800 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
+                      >
+                        <Download className="w-4 h-4 text-slate-600" />
+                        <span>Export Excel</span>
+                      </button>
+
+                      <div className="border-t border-slate-100 my-1"></div>
+
+                      <button
+                        onClick={() => { handleClearAllPackingData(); setIsActionsDropdownOpen(false); }}
+                        className="w-full px-3 py-2 hover:bg-rose-50 text-rose-700 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-600" />
+                        <span>Clear Data</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+        {/* MODERN FILTER & SEARCH TOOLBAR (Gambar 3) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3 mb-5">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+
+            {/* Left side: Search & Dropdown Filters */}
+            <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
+
+              {/* Search Box */}
+              <div className="relative flex-1 sm:flex-initial min-w-[260px]">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search SPK no., order, customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-all"
+                />
               </div>
-            )}
-          </div>
 
-          <div className="w-full sm:w-80 relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search Store, SPK, or Box..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-300 text-xs bg-white text-black placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-semibold"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-rose-600 font-bold"
+              {/* Status Filter Dropdown */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+                <option value="ALL">All statuses</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+
+              {/* Design Status Dropdown */}
+              <select
+                value={filterStage}
+                onChange={(e) => setFilterStage(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+              >
+                <option value="ALL">All staff</option>
+                {stages.map(s => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+
+              {/* Origins Filter Dropdown */}
+              <select
+                value={filterSource}
+                onChange={(e) => setFilterSource(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+              >
+                <option value="ALL">All origins</option>
+                <option value="google_sheet">Google Sheets</option>
+                <option value="label_sj">Label & SJ</option>
+              </select>
+
+              {/* Branches / Delivery Filter Dropdown */}
+              <select
+                value={filterDelivery}
+                onChange={(e) => setFilterDelivery(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+              >
+                <option value="ALL">All City</option>
+                <option value="DALAM KOTA">Dalam Kota</option>
+                <option value="LUAR KOTA">Luar Kota</option>
+              </select>
+
+              {/* Machines / Project Filter Dropdown */}
+              <select
+                value={filterProject}
+                onChange={(e) => setFilterProject(e.target.value)}
+                className="px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer"
+              >
+                <option value="ALL">All Project</option>
+                {uniqueProjects.map((projKey, i) => {
+                  const parts = projKey.split('_');
+                  const projName = parts[0] || '-';
+                  return (
+                    <option key={i} value={projKey}>{projName}</option>
+                  );
+                })}
+              </select>
+            </div>
+
+
+
           </div>
         </div>
 
@@ -2114,6 +2318,75 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         </div>
       )}
 
+      {/* MODAL AUTO-MATCH DESK PRINT */}
+      {isDeskPrintModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className={`w-full max-w-lg rounded-3xl p-6 shadow-2xl border ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-900'}`}>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b dark:border-neutral-700">
+              <h3 className="font-bold text-sm uppercase flex items-center gap-2">
+                <FolderKanban className="w-5 h-5 text-teal-500" /> Auto-Match Gambar dari Desk Print
+              </h3>
+              <button
+                onClick={() => setIsDeskPrintModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-neutral-700 flex items-center justify-center font-bold text-stone-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 leading-relaxed">
+              Pilih Folder Project dari <strong>Desk Print</strong>. Sistem akan mencocokkan kode item toko di Packing Station dengan gambar desain yang ada di folder tersebut secara otomatis:
+            </p>
+
+            {deskPrintFolders.length === 0 ? (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs text-center mb-4">
+                Belum ada Folder Project di Desk Print. Silakan masuk ke menu <strong>Desk Print</strong> di sidebar untuk membuat folder dan mengunggah gambar terlebih dahulu.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto mb-6">
+                {deskPrintFolders.map(folder => {
+                  const isSelected = folder.id === selectedDeskFolderId;
+                  const imgCount = (folder.images || []).length;
+                  return (
+                    <div
+                      key={folder.id}
+                      onClick={() => setSelectedDeskFolderId(folder.id)}
+                      className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400 font-bold'
+                          : 'bg-stone-50 dark:bg-neutral-900 border-stone-200 dark:border-neutral-700 text-stone-700 dark:text-stone-300'
+                      }`}
+                    >
+                      <div>
+                        <h4 className="text-xs font-bold">{folder.name}</h4>
+                        <p className="text-[11px] text-stone-400 font-normal">{imgCount} gambar desain tersimpan</p>
+                      </div>
+                      {isSelected && <span className="text-xs font-bold text-teal-500">✓ Terpilih</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setIsDeskPrintModalOpen(false)}
+                className="px-4 py-2 bg-stone-200 dark:bg-neutral-700 text-stone-700 dark:text-stone-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleExecuteAutoMatchDeskPrint}
+                disabled={deskPrintFolders.length === 0}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
+              >
+                ⚡ Pasang Gambar Desain
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL SCAN QR CODE OUTBOUND */}
       {showOutboundScanModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in">
@@ -2370,5 +2643,8 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         )}
       </div>
     </div>
+  </div>
+  </div>
+  </div>
   );
 }

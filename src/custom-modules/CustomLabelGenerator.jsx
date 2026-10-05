@@ -137,23 +137,22 @@ export default function CustomLabelGenerator({ isDarkMode }) {
 
         const imported = [];
         rawData.slice(1).forEach((row) => {
-          const city = row[1] ? String(row[1]).trim() : '';
-          const clientName = row[5] ? String(row[5]).trim() : (row[2] ? String(row[2]).trim() : '');
+          const hos = row[1] ? String(row[1]).trim() : '';
+          const clientName = row[2] ? String(row[2]).trim() : '';
           const address = row[7] ? String(row[7]).trim() : (row[4] ? String(row[4]).trim() : '');
-          const phone = row[8] ? String(row[8]).trim() : (row[6] ? String(row[6]).trim() : '-');
-          const picName = row[9] ? String(row[9]).trim() : clientName;
-          const region = row[10] ? String(row[10]).trim() : '';
-          
-          const rawQtyStr = row[11] !== undefined ? String(row[11]) : (row[8] ? String(row[8]) : '1');
-          const qtyParsed = parseInt(rawQtyStr.replace(/\D/g, '')) || 1;
+          const picName = row[5] ? String(row[5]).trim() : '-';
+          const phoneNum = row[6] ? String(row[6]).trim() : '-';
+          const rawQtyStr = row[8] !== undefined ? String(row[8]) : '1';
+          const qtyParsed = parseInt(String(rawQtyStr).replace(/\D/g, '')) || 1;
 
-          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer')) {
+          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer') && !clientName.toLowerCase().includes('nama ccod')) {
             imported.push({
               deliver_to: clientName,
               kota_region: address || 'Address pending',
               pic_name: picName,
-              phone: phone,
-              region_city: `${region} - ${city}`.trim() !== '-' ? `${region} - ${city}` : '-',
+              phone: phoneNum,
+              hos_region: hos || '-',
+              region_city: hos || '-',
               item_name: form.item_title,
               custom_koli: qtyParsed,
               transporter_dr: combinedTransporterDr
