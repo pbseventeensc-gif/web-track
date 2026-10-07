@@ -415,7 +415,7 @@ export default function FoodLabelTab({ isDarkMode }) {
           : `<div style="font-weight: 900; font-size: 9px; border: 1px solid #000; padding: 1px 4px;">WELLEN</div>`;
 
         doPagesHTML += `
-          <div class="page-break" style="width: 20cm; height: 12.8cm; max-width: 20cm; max-height: 12.8cm; border: 2px solid #000; border-radius: 12px; padding: 8px; box-sizing: border-box; margin: 0 auto 20px auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; font-family: Arial, sans-serif; overflow: hidden;">
+          <div class="page-break" style="width: 20cm; height: 12.2cm; max-width: 20cm; max-height: 12.2cm; border: 2px solid #000; border-radius: 12px; padding: 6px; box-sizing: border-box; margin: 0 auto 20px auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; font-family: Arial, sans-serif; overflow: hidden;">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 3px; margin-bottom: 4px;">
                 <div style="display: flex; align-items: center; gap: 6px;">

@@ -321,34 +321,34 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
           : `<div style="font-size: 11px; border: 1px solid #000; padding: 4px; font-style: italic;">[Upload Logo]</div>`;
 
         doPagesHTML += `
-          <div class="page-break" style="width: 200mm; height: 130mm; max-width: 200mm; max-height: 130mm; border: 2px solid #000; border-radius: 12px; padding: 16px; box-sizing: border-box; margin: 0 auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 12px; font-family: Arial, sans-serif; overflow: hidden; page-break-after: always; break-after: page;">
+          <div class="page-break" style="width: 200mm; height: 124mm; max-width: 200mm; max-height: 124mm; border: 2px solid #000; border-radius: 12px; padding: 12px; box-sizing: border-box; margin: 0 auto; background: #fff; display: flex; flex-direction: column; justify-content: space-between; font-size: 11.5px; font-family: Arial, sans-serif; overflow: hidden; page-break-after: always; break-after: page;">
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px;">
                 <div>
-                  <div style="height: 48px; width: 180px; display: flex; align-items: center;">${logoHTML}</div>
-                  <p style="font-size: 11px; color: #333; margin: 4px 0 0 0; line-height: 1.2;">
+                  <div style="height: 42px; width: 160px; display: flex; align-items: center;">${logoHTML}</div>
+                  <p style="font-size: 10.5px; color: #333; margin: 3px 0 0 0; line-height: 1.1;">
                     Jl. Raya Pasar Minggu No. 49 RT.002 RW. 007 Duren Tiga, Jakarta<br />
                     Telp. 021 -5506999 &nbsp;&nbsp;|&nbsp;&nbsp; Fax -
                   </p>
                 </div>
                 <div style="text-align: right;">
-                  <h2 style="margin: 0; font-size: 18px; font-weight: 900; text-transform: uppercase;">SURAT JALAN</h2>
-                  <p style="margin: 2px 0 0 0; font-size: 14px; font-weight: 800; font-family: monospace;">${finalDoNumber}</p>
-                  <div style="margin-top: 8px; text-align: left; font-size: 12px;">
+                  <h2 style="margin: 0; font-size: 17px; font-weight: 900; text-transform: uppercase;">SURAT JALAN</h2>
+                  <p style="margin: 2px 0 0 0; font-size: 13px; font-weight: 800; font-family: monospace;">${finalDoNumber}</p>
+                  <div style="margin-top: 6px; text-align: left; font-size: 11.5px;">
                     <span style="font-weight: bold;">Kepada Yth, :</span><br />
-                    <span style="font-weight: 800; text-transform: uppercase; font-size: 13px;">${activeClientName}</span><br />
+                    <span style="font-weight: 800; text-transform: uppercase; font-size: 12.5px;">${activeClientName}</span><br />
                     <span style="font-weight: 800;">STORE : ${storeName}</span>
                   </div>
                 </div>
               </div>
 
-              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 12px; color: #000;">
+              <table style="width: 100%; border-collapse: collapse; border: 2px solid #000; font-size: 11.5px; color: #000;">
                 <thead>
                   <tr style="background: #f3f4f6; border-bottom: 2px solid #000; font-weight: 800;">
-                    <th style="border-right: 1px solid #000; padding: 6px; width: 40px; text-align: center;">No.</th>
-                    <th style="border-right: 1px solid #000; padding: 6px; text-align: left;">Nama Barang</th>
-                    <th style="border-right: 1px solid #000; padding: 6px; width: 110px; text-align: center;">Ukuran</th>
-                    <th style="padding: 6px; width: 70px; text-align: center;">Qty</th>
+                    <th style="border-right: 1px solid #000; padding: 4px 6px; width: 36px; text-align: center;">No.</th>
+                    <th style="border-right: 1px solid #000; padding: 4px 6px; text-align: left;">Nama Barang</th>
+                    <th style="border-right: 1px solid #000; padding: 4px 6px; width: 100px; text-align: center;">Ukuran</th>
+                    <th style="padding: 4px 6px; width: 60px; text-align: center;">Qty</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -356,31 +356,31 @@ export default function KawanLamaMultiLabelGenerator({ isDarkMode }) {
                 </tbody>
                 <tfoot>
                   <tr style="border-top: 2px solid #000; font-weight: 900; background: #f8fafc;">
-                    <td colSpan="3" style="border-right: 1px solid #000; padding: 6px 12px; text-align: right; text-transform: uppercase;">TOTAL :</td>
-                    <td style="padding: 6px; text-align: center; font-family: monospace; font-size: 14px;">${totalQty}</td>
+                    <td colSpan="3" style="border-right: 1px solid #000; padding: 4px 10px; text-align: right; text-transform: uppercase;">TOTAL :</td>
+                    <td style="padding: 4px; text-align: center; font-family: monospace; font-size: 13px;">${totalQty}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
 
-            <div style="border: 1px solid #000; display: grid; grid-template-columns: repeat(4, 1fr); font-size: 11px;">
-              <div style="padding: 6px; border-right: 1px solid #000;">
+            <div style="border: 1px solid #000; display: grid; grid-template-columns: repeat(4, 1fr); font-size: 10.5px;">
+              <div style="padding: 5px; border-right: 1px solid #000;">
                 <p style="margin: 0;"><span style="font-weight: bold;">Tgl</span> : ${currentDateStr}</p>
                 <p style="margin: 2px 0 0 0;"><span style="font-weight: bold;">Nama File</span> : ${activePromoTitle}</p>
-                <div style="margin-top: 12px;">
+                <div style="margin-top: 8px;">
                   <p style="margin: 0;"><span style="font-weight: bold;">Inv</span> : ${storeNoWpp || '-'}</p>
                   <p style="margin: 2px 0 0 0;"><span style="font-weight: bold;">PO</span> : -</p>
                 </div>
               </div>
-              <div style="padding: 6px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+              <div style="padding: 5px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
                 <span style="font-weight: bold;">DIBUAT OLEH</span>
                 <span style="border-bottom: 1px solid #000; padding-bottom: 2px; font-weight: 600;">${senderName || '-'}</span>
               </div>
-              <div style="padding: 6px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+              <div style="padding: 5px; border-right: 1px solid #000; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
                 <span style="font-weight: bold;">DIKIRIM OLEH</span>
                 <span style="border-bottom: 1px solid #000; padding-bottom: 2px;">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</span>
               </div>
-              <div style="padding: 6px; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
+              <div style="padding: 5px; display: flex; flex-direction: column; justify-content: space-between; text-align: center;">
                 <span style="font-weight: bold;">DITERIMA OLEH</span>
                 <span style="border-bottom: 1px solid #000; padding-bottom: 2px;">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</span>
               </div>
