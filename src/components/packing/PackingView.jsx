@@ -175,15 +175,18 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 420;
-          const MAX_HEIGHT = 595;
+          const MAX_DIM = 2560;
           let width = img.width;
           let height = img.height;
 
-          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
           }
 
           canvas.width = width;
@@ -198,11 +201,18 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
               resolve(blob || file);
             },
             'image/jpeg',
-            0.85
+            0.98
           );
         };
       };
     });
+  };
+
+  const processImageForUpload = async (file) => {
+    if (file.size <= 15 * 1024 * 1024) {
+      return file;
+    }
+    return await compressImage(file);
   };
 
   const handleCameraCapture = async (e, rowId, trackingId) => {
@@ -211,7 +221,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
 
     setUploadingId(rowId);
     try {
-      const uploadBlob = await compressImage(file);
+      const uploadBlob = await processImageForUpload(file);
       const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
       const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
       const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.${fileExt}`;

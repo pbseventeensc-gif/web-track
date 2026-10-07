@@ -878,15 +878,18 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 420;
-          const MAX_HEIGHT = 595;
+          const MAX_DIM = 2560;
           let width = img.width;
           let height = img.height;
 
-          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
           }
 
           canvas.width = width;
@@ -901,13 +904,16 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
           canvas.toBlob((blob) => {
             resolve(blob);
-          }, 'image/jpeg', 0.85);
+          }, 'image/jpeg', 0.98);
         };
       };
     });
   };
 
   const processImageForUpload = async (file) => {
+    if (file.size <= 15 * 1024 * 1024) {
+      return file;
+    }
     return await compressImage(file);
   };
 

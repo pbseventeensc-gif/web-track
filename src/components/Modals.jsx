@@ -255,8 +255,8 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
           <img
             src={modalImageInfo.url}
             alt="Preview High Res"
-            style={{ imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
-            className="h-[74vh] max-h-[78vh] min-h-[380px] w-auto max-w-[92vw] object-contain rounded-2xl shadow-2xl block mx-auto border border-slate-800"
+            style={{ width: '420px', height: '595px', maxWidth: '92vw', maxHeight: '80vh', objectFit: 'contain', imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
+            className="rounded-2xl shadow-2xl block mx-auto border border-slate-800 bg-black object-contain"
           />
         </div>
 
