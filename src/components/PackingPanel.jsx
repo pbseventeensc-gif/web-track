@@ -1912,15 +1912,16 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           className="bg-amber-100/90 border-y-2 border-amber-300 cursor-pointer select-none hover:bg-amber-200 transition-colors"
                           title={isCollapsed ? "Klik untuk buka project" : "Klik untuk tutup (hide) project"}
                         >
-                          <td colSpan={isPackingRole ? "8" : "10"} className="py-2 px-3 font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
-                            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                              <div className="flex items-center gap-2.5 flex-wrap">
-                                <span className="p-0.5 rounded bg-amber-300 text-amber-950 flex items-center justify-center">
+                          <td colSpan={isPackingRole ? "8" : "10"} className="py-2.5 px-3 font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
+                            <div className="flex flex-row justify-between items-center gap-4 w-full">
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <span className="p-0.5 rounded bg-amber-300 text-amber-950 flex items-center justify-center shrink-0">
                                   {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
                                 </span>
-                                <span className="font-black text-amber-950">{currentGroupKey}</span>
-                                <span className="text-amber-800/40">|</span>
-                                <div className="flex items-center gap-1.5 flex-wrap normal-case">
+                                <span className="font-black text-amber-950 truncate">{currentGroupKey}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 normal-case" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   {(() => {
                                     const projItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
                                     const totalProj = projItems.length;
@@ -1929,75 +1930,76 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     const checkerDone = projItems.filter(p => p.status_qc_checker === 'DONE').length;
                                     return (
                                       <>
-                                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] border border-blue-300">
+                                        <span className="px-2.5 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] border border-blue-300">
                                           Label: {labelDone}/{totalProj}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                                        <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
                                           Packing: {packingDone}/{totalProj}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
+                                        <span className="px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
                                           Checker: {checkerDone}/{totalProj}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300">
+                                        <span className="px-2.5 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300">
                                           Total Box: {totalProj}
                                         </span>
                                       </>
                                     );
                                   })()}
                                 </div>
-                              </div>
-                              {!isPackingRole && (
-                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                  {(() => {
-                                    const projRowIds = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase()).map(p => p.id);
-                                    const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
 
-                                    return (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (isAllProjSelected) {
-                                            setSelectedRowIds(prev => prev.filter(id => !projRowIds.includes(id)));
-                                          } else {
-                                            setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
-                                          }
-                                        }}
-                                        className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
-                                          isAllProjSelected ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-transparent text-emerald-700 border border-emerald-700/40 hover:bg-emerald-100/60'
-                                        }`}
-                                        title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
-                                      >
-                                        <Check className="w-3.5 h-3.5" />
-                                      </button>
-                                    );
-                                  })()}
-                                  {(() => {
-                                    const projectItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
-                                    const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
-                                    if (!isLabelSjProject) {
+                                {!isPackingRole && (
+                                  <div className="flex items-center gap-1.5 border-l border-amber-300 pl-2">
+                                    {(() => {
+                                      const projRowIds = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase()).map(p => p.id);
+                                      const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
+
                                       return (
                                         <button
                                           type="button"
-                                          onClick={() => handlePrintProjectLabels(currentGroupKey)}
-                                          className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                          title="Cetak Label"
+                                          onClick={() => {
+                                            if (isAllProjSelected) {
+                                              setSelectedRowIds(prev => prev.filter(id => !projRowIds.includes(id)));
+                                            } else {
+                                              setSelectedRowIds(prev => Array.from(new Set([...prev, ...projRowIds])));
+                                            }
+                                          }}
+                                          className={`p-1.5 rounded-md transition-all cursor-pointer flex items-center justify-center shadow-2xs active:scale-95 ${
+                                            isAllProjSelected ? 'bg-emerald-600 text-white border border-emerald-600' : 'bg-white text-emerald-700 border border-emerald-700/40 hover:bg-emerald-50'
+                                          }`}
+                                          title={isAllProjSelected ? 'Batal pilih semua store di project ini' : 'Pilih semua store di project ini'}
                                         >
-                                          <Printer className="w-3.5 h-3.5" />
+                                          <Check className="w-3.5 h-3.5" />
                                         </button>
                                       );
-                                    }
-                                    return null;
-                                  })()}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteProject(currentGroupKey)}
-                                    className="p-1 bg-transparent text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                    title="Hapus Project Ini"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              )}
+                                    })()}
+                                    {(() => {
+                                      const projectItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
+                                      const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
+                                      if (!isLabelSjProject) {
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => handlePrintProjectLabels(currentGroupKey)}
+                                            className="p-1.5 bg-white text-emerald-800 border border-emerald-800/40 hover:bg-emerald-50 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                            title="Cetak Label"
+                                          >
+                                            <Printer className="w-3.5 h-3.5" />
+                                          </button>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteProject(currentGroupKey)}
+                                      className="p-1.5 bg-white text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
+                                      title="Hapus Project Ini"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
