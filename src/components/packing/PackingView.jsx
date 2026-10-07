@@ -15,6 +15,11 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState(null);
   const [selectedRowIds, setSelectedRowIds] = useState([]);
+  const [collapsedProjects, setCollapsedProjects] = useState({});
+
+  const toggleProjectCollapse = (projKey) => {
+    setCollapsedProjects(prev => ({ ...prev, [projKey]: !prev[projKey] }));
+  };
 
   // Filter & Search States
   const [filterSource, setFilterSource] = useState('ALL'); // 'ALL', 'google_sheet', 'label_sj'
@@ -560,13 +565,22 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                   const prevGroupKey = idx > 0 ? getProjectGroupKey(filteredList[idx - 1]?.promo_title) : null;
                   const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
 
+                  const isCollapsed = !!collapsedProjects[currentGroupKey];
+
                   return (
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
-                        <tr className="bg-amber-100/90 border-y-2 border-amber-300 dark:bg-amber-950/80 dark:border-amber-700">
+                        <tr
+                          onClick={() => toggleProjectCollapse(currentGroupKey)}
+                          className="bg-amber-100/90 border-y-2 border-amber-300 dark:bg-amber-950/80 dark:border-amber-700 cursor-pointer select-none hover:bg-amber-200/90 dark:hover:bg-amber-900/80 transition-colors"
+                          title={isCollapsed ? "Klik untuk buka project" : "Klik untuk tutup (hide) project"}
+                        >
                           <td colSpan="8" className="py-2 px-3 font-bold text-amber-950 dark:text-amber-200 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                               <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="p-0.5 rounded bg-amber-300/80 dark:bg-amber-800 text-amber-950 dark:text-amber-100 flex items-center justify-center">
+                                  {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                                </span>
                                 <span className="font-black text-amber-950 dark:text-amber-200">{currentGroupKey}</span>
                                 <span className="text-amber-800/40 dark:text-amber-400/40">|</span>
                                 <div className="flex items-center gap-1.5 flex-wrap normal-case">
@@ -584,11 +598,14 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                                         <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800">
                                           Packing: {packingDone}/{totalProj}
                                         </span>
-                                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                                        <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
                                           Checker: {checkerDone}/{totalProj}
                                         </span>
                                         <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800">
                                           Total Box: {totalProj}
+                                        </span>
+                                        <span className="text-[10px] italic text-amber-900/70 dark:text-amber-300/70 ml-1 font-semibold">
+                                          {isCollapsed ? '(Sembunyi - Klik untuk Buka)' : '(Klik untuk Tutup)'}
                                         </span>
                                       </>
                                     );
@@ -599,6 +616,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                           </td>
                         </tr>
                       )}
+                      {!isCollapsed && (
                       <tr
                         className={`transition-colors ${
                           isSelected
@@ -748,6 +766,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                       </td>
 
                     </tr>
+                  )}
                   </React.Fragment>
                 );
               })}
