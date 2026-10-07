@@ -1053,17 +1053,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
   const generateViewerUrl = (rawUrl, title, item) => {
     if (!rawUrl || rawUrl === 'No Foto' || rawUrl === '-') return '-';
-    if (rawUrl.includes('viewImg=')) return rawUrl;
-
-    const baseUrl = 'https://web-track-phi-gilt.vercel.app/';
-    const params = new URLSearchParams({
-      viewImg: rawUrl,
-      title: title,
-      store: item.store_name || '-',
-      project: item.promo_title || '-',
-      spk: item.no_spk || '-'
-    });
-    return `${baseUrl}?${params.toString()}`;
+    if (rawUrl.startsWith('data:')) {
+      return '[Base64 Image Data]';
+    }
+    if (rawUrl.length > 500) {
+      return rawUrl.slice(0, 500);
+    }
+    return rawUrl;
   };
 
   const handleDownloadPackingReport = async () => {
@@ -1112,8 +1108,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           for (let C = range.s.c; C <= range.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
             const cell = worksheet[cellAddress];
-            if (cell && typeof cell.v === 'string' && cell.v.startsWith('http')) {
-              cell.l = { Target: cell.v, Tooltip: 'Klik untuk Buka / Lihat Foto' };
+            if (cell && typeof cell.v === 'string') {
+              if (cell.v.length > 32767) {
+                cell.v = cell.v.slice(0, 32000) + '...';
+              }
+              if (cell.v.startsWith('http') && cell.v.length <= 1000) {
+                cell.l = { Target: cell.v, Tooltip: 'Klik untuk Buka / Lihat Foto' };
+              }
             }
           }
         }
