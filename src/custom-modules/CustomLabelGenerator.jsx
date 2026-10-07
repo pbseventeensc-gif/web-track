@@ -135,27 +135,81 @@ export default function CustomLabelGenerator({ isDarkMode }) {
           ? `${headerTransporter} - ${headerDrNo}`
           : (headerTransporter || headerDrNo || '');
 
-        const imported = [];
-        rawData.slice(1).forEach((row) => {
-          const hos = row[1] ? String(row[1]).trim() : '';
-          const clientName = row[2] ? String(row[2]).trim() : '';
-          const address = row[7] ? String(row[7]).trim() : (row[4] ? String(row[4]).trim() : '');
-          const picName = row[5] ? String(row[5]).trim() : '-';
-          const phoneNum = row[6] ? String(row[6]).trim() : '-';
-          const rawQtyStr = row[8] !== undefined ? String(row[8]) : '1';
-          const qtyParsed = parseInt(String(rawQtyStr).replace(/\D/g, '')) || 1;
+        let headerDateRequired = '';
+        for (let r = 0; r < Math.min(5, rawData.length); r++) {
+          for (let c = 0; c < rawData[r].length; c++) {
+            const cellVal = String(rawData[r][c] || '').trim();
+            if (cellVal.toLowerCase().includes('date required')) {
+              for (let offset = 1; offset <= 3; offset++) {
+                if (rawData[r][c+offset] !== undefined && rawData[r][c+offset] !== '') {
+                  headerDateRequired = String(rawData[r][c+offset]).trim();
+                  break;
+                }
+              }
+            }
+          }
+          if (headerDateRequired) break;
+        }
 
-          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed') && !clientName.toLowerCase().includes('customer') && !clientName.toLowerCase().includes('nama ccod')) {
+        let formattedDate = headerDateRequired;
+        if (formattedDate) {
+          if (!isNaN(formattedDate) && (typeof formattedDate === 'number' || String(formattedDate).match(/^\d{5}$/))) {
+            const serial = Number(formattedDate);
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+            const jsDate = new Date(excelEpoch.getTime() + serial * 86400000);
+            const day = String(jsDate.getUTCDate()).padStart(2, '0');
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[jsDate.getUTCMonth()];
+            const year = String(jsDate.getUTCFullYear()).slice(-2);
+            formattedDate = `${day}-${month}-${year}`;
+          } else if (formattedDate.includes('-') && formattedDate.length >= 10) {
+            const parts = formattedDate.split('-');
+            if (parts.length === 3) {
+              const y = parts[0];
+              const mIndex = parseInt(parts[1], 10) - 1;
+              const d = parts[2];
+              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              if (monthNames[mIndex]) {
+                formattedDate = `${d}-${monthNames[mIndex]}-${y.slice(-2)}`;
+              }
+            }
+          }
+        }
+
+        if (formattedDate || combinedTransporterDr) {
+          setForm(prev => ({
+            ...prev,
+            periode: formattedDate || prev.periode,
+            channel: '',
+            transporter_dr: combinedTransporterDr || prev.transporter_dr
+          }));
+        }
+
+        const imported = [];
+        rawData.forEach((row) => {
+          const clientName = row[5] ? String(row[5]).trim() : '';
+
+          if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('customer company name') && !clientName.toLowerCase().includes('customer') && !clientName.toLowerCase().includes('nama ccod')) {
+            const city = row[1] ? String(row[1]).trim() : '';
+            const address = row[7] ? String(row[7]).trim() : '';
+            const phoneNum = row[8] ? String(row[8]).trim() : '-';
+            const consigneeName = row[9] ? String(row[9]).trim() : '-';
+            const region = row[10] ? String(row[10]).trim() : '';
+            const rawQtyStr = row[11] !== undefined ? String(row[11]) : '1';
+            const qtyParsed = parseInt(String(rawQtyStr).replace(/\D/g, '')) || 1;
+
+            const regionCityCombined = [region, city].filter(Boolean).join(' - ') || city || '-';
+
             imported.push({
-              deliver_to: picName,
+              deliver_to: clientName,
               kota_region: address || 'Address pending',
-              pic_name: picName,
+              pic_name: consigneeName,
               phone: phoneNum,
-              hos_region: clientName,
-              region_city: hos || '-',
+              hos_region: city,
+              region_city: regionCityCombined,
               item_name: form.item_title,
               custom_koli: qtyParsed,
-              transporter_dr: ''
+              transporter_dr: combinedTransporterDr
             });
           }
         });
