@@ -32,7 +32,8 @@ import {
   Shield,
   Building,
   Key,
-  FolderKanban
+  FolderKanban,
+  FolderCheck
 } from 'lucide-react';
 import KawanLamaTab from './components/KawanLamaTab';
 import LabelGeneratorTab from './components/LabelGeneratorTab';
@@ -43,6 +44,7 @@ import PackingPanel from './components/PackingPanel';
 import CheckerView from './components/checker/CheckerView';
 import OutboundView from './components/outbound/OutboundView';
 import DeskPrintView from './components/deskprint/DeskPrintView';
+import CloseProjectView from './components/packing/CloseProjectView';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
 
@@ -1203,6 +1205,7 @@ export default function App() {
                             { id: 'produksi', label: 'Produksi Cetak', icon: Printer },
                             { id: 'finishing', label: 'Finishing Panel', icon: Scissors },
                             { id: 'paking', label: 'Paking Station', icon: Package },
+                            { id: 'close_project', label: 'Close Project', icon: FolderCheck },
                             { id: 'pengiriman', label: 'Pengiriman & SJ', icon: Truck }
                           ].map(item => {
                             const isActive = activeTab === item.id;
@@ -1312,6 +1315,10 @@ export default function App() {
                     <PackingPanel isDarkMode={isDarkMode} spkList={displayedList} handleUpdateField={handleUpdateField} onOpenImageModal={openImageModal} isPackingRole={currentAdmin?.role === 'packing_role'} />
                   )}
 
+                  {activeTab === 'close_project' && (
+                    <CloseProjectView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                  )}
+
                   {activeTab === 'pengiriman' && (
                     <ComingSoonDashboardView title="PENGIRIMAN & SURAT JALAN" />
                   )}
@@ -1336,7 +1343,7 @@ export default function App() {
                     <OutboundView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
                   )}
 
-                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'desk_print' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'checker' && activeTab !== 'outbound' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
+                  {activeTab !== 'label' && activeTab !== 'kawan_lama' && activeTab !== 'design' && activeTab !== 'desk_print' && activeTab !== 'custom_modules' && activeTab !== 'paking' && activeTab !== 'close_project' && activeTab !== 'checker' && activeTab !== 'outbound' && activeTab !== 'dashboard' && activeTab !== 'finishing' && activeTab !== 'pengiriman' && (
                     <MainTrackingTable
                       isDarkMode={isDarkMode}
                       activeTab={activeTab}

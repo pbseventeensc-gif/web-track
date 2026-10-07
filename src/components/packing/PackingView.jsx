@@ -275,17 +275,25 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return str.trim();
   };
 
+  const activePackingList = packingList.filter(item => {
+    const hasOutbound = (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5) &&
+                        ((item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
+                         item.outbound_url ||
+                         item.status_deliver === 'DONE');
+    return !hasOutbound;
+  });
+
   // Filter Data Logic
   const uniqueProjects = Array.from(
     new Set(
-      packingList
+      activePackingList
         .filter(item => item.promo_title && item.promo_title.trim() !== '')
         .map(item => getProjectGroupKey(item.promo_title))
         .filter(str => str !== '-' && str !== '')
     )
   ).sort((a, b) => a.localeCompare(b));
 
-  const sortedPackingList = [...packingList].sort((a, b) => {
+  const sortedPackingList = [...activePackingList].sort((a, b) => {
     const projA = getProjectGroupKey(a.promo_title).toLowerCase();
     const projB = getProjectGroupKey(b.promo_title).toLowerCase();
     if (projA !== projB) {
@@ -323,8 +331,8 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return true;
   });
 
-  const totalBoxes = packingList.length;
-  const completedBoxes = packingList.filter(
+  const totalBoxes = activePackingList.length;
+  const completedBoxes = activePackingList.filter(
     item => item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-')
   ).length;
   const pendingBoxes = totalBoxes - completedBoxes;
