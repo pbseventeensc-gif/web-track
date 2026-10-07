@@ -878,19 +878,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          // Ultra HD High-Resolution Mode (Max 2560px for crystal-clear text & barcode readability)
-          const MAX_DIM = 2560;
+          const MAX_WIDTH = 420;
+          const MAX_HEIGHT = 595;
           let width = img.width;
           let height = img.height;
 
-          if (width > MAX_DIM || height > MAX_DIM) {
-            if (width > height) {
-              height = Math.round((height * MAX_DIM) / width);
-              width = MAX_DIM;
-            } else {
-              width = Math.round((width * MAX_DIM) / height);
-              height = MAX_DIM;
-            }
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
           }
 
           canvas.width = width;
@@ -905,18 +901,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
           canvas.toBlob((blob) => {
             resolve(blob);
-          }, 'image/jpeg', 0.98);
+          }, 'image/jpeg', 0.85);
         };
       };
     });
   };
 
   const processImageForUpload = async (file) => {
-    // Jika file <= 15MB, gunakan FILE ASLI LANGSUNG (RAW ORIGINAL) tanpa kompresi canvas.
-    // Menjamin 100% ketajaman piksel kamera sensor tanpa penurunan kualitas sedikitpun.
-    if (file.size <= 15 * 1024 * 1024) {
-      return file;
-    }
     return await compressImage(file);
   };
 
