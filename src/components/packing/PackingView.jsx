@@ -604,9 +604,6 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                                         <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800">
                                           Total Box: {totalProj}
                                         </span>
-                                        <span className="text-[10px] italic text-amber-900/70 dark:text-amber-300/70 ml-1 font-semibold">
-                                          {isCollapsed ? '(Sembunyi - Klik untuk Buka)' : '(Klik untuk Tutup)'}
-                                        </span>
                                       </>
                                     );
                                   })()}
