@@ -260,19 +260,27 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     }
   };
 
+  const getProjectGroupKey = (promoTitle) => {
+    if (!promoTitle) return '-';
+    let str = String(promoTitle).trim();
+    str = str.replace(/^NO\s*PO\s*[:\-]?\s*\d+\s*/i, '');
+    str = str.replace(/^\d+\s+/, '');
+    return str.trim();
+  };
+
   // Filter Data Logic
   const uniqueProjects = Array.from(
     new Set(
       packingList
         .filter(item => item.promo_title && item.promo_title.trim() !== '')
-        .map(item => (item.promo_title || '-').trim())
+        .map(item => getProjectGroupKey(item.promo_title))
         .filter(str => str !== '-' && str !== '')
     )
   ).sort((a, b) => a.localeCompare(b));
 
   const sortedPackingList = [...packingList].sort((a, b) => {
-    const projA = (a.promo_title || '').toLowerCase();
-    const projB = (b.promo_title || '').toLowerCase();
+    const projA = getProjectGroupKey(a.promo_title).toLowerCase();
+    const projB = getProjectGroupKey(b.promo_title).toLowerCase();
     if (projA !== projB) {
       return sortOrder === 'asc' ? projA.localeCompare(projB) : projB.localeCompare(projA);
     }
@@ -290,7 +298,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     if (filterStatus === 'COMPLETED' && !isDone) return false;
 
     if (filterProject !== 'ALL') {
-      if ((item.promo_title || '').trim().toLowerCase() !== filterProject.trim().toLowerCase()) return false;
+      if (getProjectGroupKey(item.promo_title).toLowerCase() !== filterProject.trim().toLowerCase()) return false;
     }
 
     if (searchTerm.trim() !== '') {
@@ -300,8 +308,9 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
       const matchSpk = (item.no_spk || '').toLowerCase().includes(term);
       const matchStore = (item.store_name || '').toLowerCase().includes(term);
       const matchPromo = (item.promo_title || '').toLowerCase().includes(term);
+      const matchGroup = getProjectGroupKey(item.promo_title).toLowerCase().includes(term);
 
-      return matchBox || matchTrack || matchSpk || matchStore || matchPromo;
+      return matchBox || matchTrack || matchSpk || matchStore || matchPromo || matchGroup;
     }
 
     return true;
@@ -532,7 +541,9 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                   const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
                   const isUploadingThis = uploadingId === item.id;
                   const isSelected = selectedRowIds.includes(item.id);
-                  const showProjectDivider = idx === 0 || (item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title);
+                  const currentGroupKey = getProjectGroupKey(item.promo_title);
+                  const prevGroupKey = idx > 0 ? getProjectGroupKey(filteredList[idx - 1]?.promo_title) : null;
+                  const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
 
                   return (
                     <React.Fragment key={item.id}>
@@ -541,11 +552,11 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                           <td colSpan="8" className="py-2 px-3 font-bold text-amber-950 dark:text-amber-200 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                               <div className="flex items-center gap-2.5 flex-wrap">
-                                <span className="font-black text-amber-950 dark:text-amber-200">{item.promo_title}</span>
+                                <span className="font-black text-amber-950 dark:text-amber-200">{currentGroupKey}</span>
                                 <span className="text-amber-800/40 dark:text-amber-400/40">|</span>
                                 <div className="flex items-center gap-1.5 flex-wrap normal-case">
                                   {(() => {
-                                    const projItems = packingList.filter(p => p.promo_title === item.promo_title);
+                                    const projItems = packingList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
                                     const totalProj = projItems.length;
                                     const labelDone = projItems.filter(p => p.status_qc_label === 'DONE' || String(p.status_qc_label).includes('DONE')).length;
                                     const packingDone = projItems.filter(p => p.status_qc_packing === 'DONE' || (p.bukti_paking_url && p.bukti_paking_url !== 'No Foto')).length;

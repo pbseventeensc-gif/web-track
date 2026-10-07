@@ -770,9 +770,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }, 800);
   };
 
-  const handlePrintProjectLabels = (projectName) => {
-    const projectItems = sourceList.filter(item => item.promo_title === projectName);
-    if (projectItems.length === 0) return alert(`⚠️ Tidak ada data label untuk project "${projectName}".`);
+  const handlePrintProjectLabels = (projectGroupKey) => {
+    const projectItems = sourceList.filter(item => getProjectGroupKey(item.promo_title).toLowerCase() === projectGroupKey.toLowerCase());
+    if (projectItems.length === 0) return alert(`⚠️ Tidak ada data label untuk project "${projectGroupKey}".`);
 
     setIsSuratJalanPrinting(false);
     setIsBatchPrinting(true);
@@ -794,12 +794,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }, 800);
   };
 
-  const handleDeleteProject = async (projectName) => {
-    if (!confirm(`Hapus seluruh data untuk project "${projectName}" dari database?`)) return;
-    const { error } = await supabase.from('packing_tracking').delete().eq('promo_title', projectName);
+  const handleDeleteProject = async (projectGroupKey) => {
+    if (!confirm(`Hapus seluruh data untuk project "${projectGroupKey}" dari database?`)) return;
+    const projectItems = sourceList.filter(item => getProjectGroupKey(item.promo_title).toLowerCase() === projectGroupKey.toLowerCase());
+    const idsToDelete = projectItems.map(i => i.id);
+    if (idsToDelete.length === 0) return;
+    const { error } = await supabase.from('packing_tracking').delete().in('id', idsToDelete);
     if (!error) {
       await fetchPackingData();
-      alert(`✅ Project "${projectName}" berhasil dihapus.`);
+      alert(`✅ Project "${projectGroupKey}" berhasil dihapus.`);
     } else {
       alert('Gagal menghapus project: ' + error.message);
     }
@@ -1233,17 +1236,25 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     return matchDelivery && matchSource && matchStatus && matchStage;
   });
 
+  const getProjectGroupKey = (promoTitle) => {
+    if (!promoTitle) return '-';
+    let str = String(promoTitle).trim();
+    str = str.replace(/^NO\s*PO\s*[:\-]?\s*\d+\s*/i, '');
+    str = str.replace(/^\d+\s+/, '');
+    return str.trim();
+  };
+
   const uniqueProjects = Array.from(
     new Set(
       statusFilteredList
-        .map(item => (item.promo_title || '-').trim())
+        .map(item => getProjectGroupKey(item.promo_title))
         .filter(str => str !== '-' && str !== '')
     )
   ).sort((a, b) => a.localeCompare(b));
 
   const sortedStatusList = [...statusFilteredList].sort((a, b) => {
-    const projA = (a.promo_title || '').toLowerCase();
-    const projB = (b.promo_title || '').toLowerCase();
+    const projA = getProjectGroupKey(a.promo_title).toLowerCase();
+    const projB = getProjectGroupKey(b.promo_title).toLowerCase();
     if (projA !== projB) {
       return sortOrder === 'asc' ? projA.localeCompare(projB) : projB.localeCompare(projA);
     }
@@ -1253,14 +1264,15 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   });
 
   const filteredList = sortedStatusList.filter((item) => {
-    const matchProject = filterProject === 'ALL' || (item.promo_title || '').trim().toLowerCase() === filterProject.trim().toLowerCase();
+    const matchProject = filterProject === 'ALL' || getProjectGroupKey(item.promo_title).toLowerCase() === filterProject.trim().toLowerCase();
 
     const matchSearch =
       searchTerm === '' ||
       item.store_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.no_spk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.promo_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.box_code?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.box_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getProjectGroupKey(item.promo_title).toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchProject && matchSearch;
   });
@@ -1877,9 +1889,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                   const isCheckerDone = item.status_qc_checker === 'DONE';
                   const isRowComplete = isPackingDone || isCheckerDone;
                   const isSelected = selectedRowIds.includes(item.id);
-
-                  // Tampilkan Baris Blok Orange Pembatas Project/Promo jika ada perubahan project/batch atau baris pertama
-                  const showProjectDivider = idx === 0 || (item.promo_title && item.promo_title !== filteredList[idx - 1]?.promo_title);
+                  const currentGroupKey = getProjectGroupKey(item.promo_title);
+                  const prevGroupKey = idx > 0 ? getProjectGroupKey(filteredList[idx - 1]?.promo_title) : null;
+                  const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
 
                   return (
                     <React.Fragment key={item.id}>
@@ -1888,11 +1900,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                           <td colSpan={isPackingRole ? "8" : "10"} className="py-2 px-3 font-bold text-amber-950 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
                               <div className="flex items-center gap-2.5 flex-wrap">
-                                <span className="font-black text-amber-950">{item.promo_title}</span>
+                                <span className="font-black text-amber-950">{currentGroupKey}</span>
                                 <span className="text-amber-800/40">|</span>
                                 <div className="flex items-center gap-1.5 flex-wrap normal-case">
                                   {(() => {
-                                    const projItems = sourceList.filter(p => p.promo_title === item.promo_title);
+                                    const projItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
                                     const totalProj = projItems.length;
                                     const labelDone = projItems.filter(p => p.status_qc_label === 'DONE' || String(p.status_qc_label).includes('DONE')).length;
                                     const packingDone = projItems.filter(p => p.status_qc_packing === 'DONE' || (p.bukti_paking_url && p.bukti_paking_url !== 'No Foto')).length;
@@ -1919,7 +1931,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                               {!isPackingRole && (
                                 <div className="flex items-center gap-1.5">
                                   {(() => {
-                                    const projRowIds = sourceList.filter(p => p.promo_title === item.promo_title).map(p => p.id);
+                                    const projRowIds = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase()).map(p => p.id);
                                     const isAllProjSelected = projRowIds.length > 0 && projRowIds.every(id => selectedRowIds.includes(id));
 
                                     return (
@@ -1942,13 +1954,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                     );
                                   })()}
                                   {(() => {
-                                    const projectItems = sourceList.filter(p => p.promo_title === item.promo_title);
+                                    const projectItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
                                     const isLabelSjProject = projectItems.length > 0 && projectItems.every(p => p.source !== 'google_sheet');
                                     if (!isLabelSjProject) {
                                       return (
                                         <button
                                           type="button"
-                                          onClick={() => handlePrintProjectLabels(item.promo_title)}
+                                          onClick={() => handlePrintProjectLabels(currentGroupKey)}
                                           className="p-1 bg-transparent text-emerald-800 border border-emerald-800/40 hover:bg-emerald-100/60 rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                           title="Cetak Label"
                                         >
@@ -1960,7 +1972,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                   })()}
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteProject(item.promo_title)}
+                                    onClick={() => handleDeleteProject(currentGroupKey)}
                                     className="p-1 bg-transparent text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
                                     title="Hapus Project Ini"
                                   >
