@@ -1842,6 +1842,13 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           <table className="w-full text-left border-collapse bg-white">
             <thead className="sticky top-0 z-20 bg-[#F1F5F9] border-b-2 border-slate-300 text-slate-800 font-bold uppercase tracking-wider text-xs">
               <tr>
+                <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
+                {!isPackingRole && (
+                  <>
+                    <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
+                    <th className="py-4 px-4 text-center font-semibold">OUTBOUND</th>
+                  </>
+                )}
                 <th className="py-4 pl-4 pr-1 text-center w-8 font-semibold">
                   <button
                     onClick={handleToggleSelectAll}
@@ -1876,13 +1883,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                 <th className="py-4 px-4 text-center font-semibold">IMPORT DATE</th>
                 <th className="py-4 px-4 text-center font-semibold">LABEL & DESIGN</th>
                 <th className="py-4 px-4 text-center font-semibold">PHOTO PROOF</th>
-                <th className="py-4 px-4 text-center font-semibold">PACKING STATUS</th>
-                {!isPackingRole && (
-                  <>
-                    <th className="py-4 px-4 text-center font-semibold">CHECKER STATUS</th>
-                    <th className="py-4 px-4 text-center font-semibold">OUTBOUND</th>
-                  </>
-                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -2015,6 +2015,125 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             : 'hover:bg-slate-50 bg-white'
                         }`}
                       >
+                        {/* 2. STATUS PACKING (Layout: Done/Pending -> User ID -> Timestamp) */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                                isPackingDone
+                                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                              }`}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
+                              {isPackingDone ? 'Done' : 'Pending'}
+                            </button>
+                            {isPackingDone && (
+                              <div className="text-[10px] font-semibold text-slate-800 leading-tight mt-0.5">
+                                <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
+                                <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {!isPackingRole && (
+                          <>
+                            {/* 3. STATUS CHECKER (Layout: Checked/Pending -> User ID -> Timestamp) */}
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <button
+                                  onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                                    isCheckerDone
+                                      ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                      : 'bg-slate-100 text-slate-700 border-slate-300'
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                                  {isCheckerDone ? 'Checked' : 'Pending'}
+                                </button>
+                                {isCheckerDone && (
+                                  <div className="text-[10px] font-semibold text-slate-800 leading-tight mt-0.5">
+                                    <span className="block truncate max-w-[110px]">{item.checker_by || item.scanned_by || 'Staff Checker'}</span>
+                                    <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* 4. OUTBOUND (FOTO BUKTI OUTBOUND) */}
+                            <td className="py-3.5 px-4 text-center">
+                              {(() => {
+                                const outboundImgUrl = item.outbound_url || item.bukti_outbound_url || (item.catatan?.startsWith('http') ? item.catatan : null);
+                                const staffName = item.staff_outbound || item.outbound_by || item.scanned_by || 'Outbound';
+
+                                if (uploadingId === `outbound-${item.id}`) {
+                                  return (
+                                    <div className="flex items-center justify-center gap-1 text-xs text-emerald-700 font-bold">
+                                      <Clock className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                                      <span>Uploading...</span>
+                                    </div>
+                                  );
+                                }
+
+                                if (outboundImgUrl) {
+                                  return (
+                                    <div className="flex flex-col items-center justify-center gap-1">
+                                      <div className="relative group">
+                                        <img
+                                          src={outboundImgUrl}
+                                          alt="Foto Outbound"
+                                          onClick={() => onOpenImageModal(
+                                            outboundImgUrl,
+                                            `Foto Outbound - ${item.box_code || item.tracking_id || ''}`,
+                                            item.destination || item.store_name || item.branch_name || '',
+                                            item.project || item.project_name || '',
+                                            item.no_spk || item.spk_no || item.tracking_id || ''
+                                          )}
+                                          className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-emerald-500 cursor-pointer hover:scale-105 transition-transform shadow-sm"
+                                        />
+                                        <label
+                                          className="absolute -bottom-1 -right-1 bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-full cursor-pointer shadow-xs border border-white"
+                                          title="Ganti Foto Outbound"
+                                        >
+                                          <Camera className="w-2.5 h-2.5" />
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={(e) => handleOutboundCameraCapture(e, item.id, item.box_code || item.tracking_id)}
+                                            className="hidden"
+                                          />
+                                        </label>
+                                      </div>
+                                      <div className="text-[10px] font-semibold text-slate-800 leading-tight">
+                                        <span className="block truncate max-w-[110px]">{staffName}</span>
+                                        <span className="text-[9px] font-mono text-slate-500 font-normal block">{formatDateTime(item.outbound_at || item.updated_at) || '-'}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <label className="px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 flex items-center justify-center gap-1.5 shadow-2xs mx-auto active:scale-95">
+                                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Outbound</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      capture="environment"
+                                      onChange={(e) => handleOutboundCameraCapture(e, item.id, item.box_code || item.tracking_id)}
+                                      className="hidden"
+                                    />
+                                  </label>
+                                );
+                              })()}
+                            </td>
+                          </>
+                        )}
+
                         <td className="py-4 pl-4 pr-1 text-center w-8">
                           <button
                             onClick={() => handleToggleSelectRow(item.id)}
