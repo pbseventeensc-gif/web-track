@@ -53,53 +53,130 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
         const data = new Uint8Array(evt.target.result);
         const wb = XLSX.read(data, { type: 'array' });
         const sheetName = wb.SheetNames[0];
-        const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+        const ws = wb.Sheets[sheetName];
 
-        if (!rawData || rawData.length === 0) {
-          alert('❌ File Excel kosong atau tidak terbaca!');
-          return;
+        // Dual-mode parsing: Try raw array sheet_to_json({ header: 1 }) first to support Wellen Print print preview / direct format
+        const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        let formattedData = [];
+        let detectedClient = 'WELLEN PRINT';
+        let generatedSpkNo = `SPK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        // Scan header metadata & tabular columns
+        let headerRowIdx = -1;
+        let colMap = { no: -1, mesin: -1, namaBarang: -1, ukuran: -1, qty: -1, finishing: -1 };
+
+        rawRows.forEach((r, rIdx) => {
+          if (!r || r.length === 0) return;
+          const rowStr = r.map(c => String(c || '').trim()).join(' ').toLowerCase();
+
+          // Extract Client Name if present
+          if (rowStr.includes('pemberi kerja') || rowStr.includes('client')) {
+            const foundClient = r.find(cell => cell && typeof cell === 'string' && !cell.toLowerCase().includes('pemberi kerja') && !cell.toLowerCase().includes('nama'));
+            if (foundClient) detectedClient = foundClient.trim();
+          }
+
+          // Extract SPK No if present
+          if (rowStr.includes('spk-') || rowStr.includes('no. spk') || rowStr.includes('no spk')) {
+            const foundSpk = r.find(cell => cell && typeof cell === 'string' && cell.toUpperCase().includes('SPK'));
+            if (foundSpk) generatedSpkNo = foundSpk.trim();
+          }
+
+          // Detect header row containing "nama barang", "ukuran", "qty", or "finishing"
+          if ((rowStr.includes('nama barang') || rowStr.includes('barang') || rowStr.includes('finishing')) && headerRowIdx === -1) {
+            headerRowIdx = rIdx;
+            r.forEach((cell, cIdx) => {
+              if (!cell) return;
+              const c = String(cell).toLowerCase().trim();
+              if (c === 'n' || c === 'no' || c === 'no.') colMap.no = cIdx;
+              else if (c.includes('mesin')) colMap.mesin = cIdx;
+              else if (c.includes('nama barang') || c.includes('barang') || c.includes('nama')) colMap.namaBarang = cIdx;
+              else if (c.includes('ukuran')) colMap.ukuran = cIdx;
+              else if (c === 'qty' || c === 'quantity' || c.includes('jumlah')) colMap.qty = cIdx;
+              else if (c.includes('finishing') || c.includes('finish')) colMap.finishing = cIdx;
+            });
+          }
+        });
+
+        // If table header found via array rows, extract data rows below headerRowIdx
+        if (headerRowIdx !== -1 && colMap.namaBarang !== -1) {
+          for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+            const r = rawRows[i];
+            if (!r || r.length === 0) continue;
+
+            const bahan = r[colMap.namaBarang] ? String(r[colMap.namaBarang]).trim() : '';
+            if (!bahan || bahan.toLowerCase().includes('total') || bahan.toLowerCase().includes('note')) continue;
+
+            const mesin = colMap.mesin !== -1 && r[colMap.mesin] ? String(r[colMap.mesin]).trim() : '';
+            const ukuran = colMap.ukuran !== -1 && r[colMap.ukuran] ? String(r[colMap.ukuran]).trim() : '-';
+            const rawQty = colMap.qty !== -1 ? r[colMap.qty] : 1;
+            const qtyOrder = Number(String(rawQty).replace(/[^0-9]/g, '')) || 1;
+            const finishing = colMap.finishing !== -1 && r[colMap.finishing] ? String(r[colMap.finishing]).trim() : '-';
+
+            const itemDescription = mesin ? `[Mesin: ${mesin}] ${bahan}` : bahan;
+
+            formattedData.push({
+              no_spk: generatedSpkNo,
+              client: detectedClient,
+              project: `SPK Report - ${detectedClient}`,
+              bahan: itemDescription,
+              ukuran: ukuran,
+              qty_order: qtyOrder,
+              qty_print: 0,
+              qty_finish: 0,
+              qty_pack: 0,
+              qty_ship: 0,
+              store_code: '-',
+              delivery_route: finishing
+            });
+          }
         }
 
-        const formattedData = rawData.map((row, index) => {
-          const noSpk = String(row['No SPK'] || row['NO_SPK'] || row['no_spk'] || `SPK-${Date.now()}-${index}`).trim();
-          const client = String(row['Client'] || row['CLIENT'] || row['client'] || 'PT MUJARA KREASI INDONESIA').trim();
-          const project = String(row['Project'] || row['PROJECT'] || row['project'] || 'Project SPK').trim();
-          const bahan = String(row['Nama Barang'] || row['NAMA_BARANG'] || row['Bahan'] || row['bahan'] || 'Material Standar').trim();
-          const ukuran = String(row['Ukuran'] || row['UKURAN'] || row['ukuran'] || '-').trim();
-          const rawQty = row['Qty'] || row['QTY'] || row['qty'] || row['Jumlah'] || 1;
-          const qtyOrder = Number(String(rawQty).replace(/[^0-9]/g, '')) || 1;
-          const storeCode = String(row['Store Code'] || row['STORE_CODE'] || row['store_code'] || '-').trim();
-          const deliveryRoute = String(row['Delivery Route'] || row['DELIVERY_ROUTE'] || row['Finishing'] || row['finishing'] || '-').trim();
+        // Fallback to standard keyed JSON object parsing if array parser found nothing
+        if (formattedData.length === 0) {
+          const rawData = XLSX.utils.sheet_to_json(ws);
+          if (rawData && rawData.length > 0) {
+            formattedData = rawData.map((row, index) => {
+              const noSpk = String(row['No SPK'] || row['NO_SPK'] || row['no_spk'] || generatedSpkNo).trim();
+              const client = String(row['Client'] || row['CLIENT'] || row['client'] || detectedClient).trim();
+              const project = String(row['Project'] || row['PROJECT'] || row['project'] || 'Project SPK').trim();
+              const bahan = String(row['Nama Barang'] || row['NAMA_BARANG'] || row['Bahan'] || row['bahan'] || '').trim();
+              const ukuran = String(row['Ukuran'] || row['UKURAN'] || row['ukuran'] || '-').trim();
+              const rawQty = row['Qty'] || row['QTY'] || row['qty'] || row['Jumlah'] || 1;
+              const qtyOrder = Number(String(rawQty).replace(/[^0-9]/g, '')) || 1;
+              const storeCode = String(row['Store Code'] || row['STORE_CODE'] || row['store_code'] || '-').trim();
+              const deliveryRoute = String(row['Delivery Route'] || row['DELIVERY_ROUTE'] || row['Finishing'] || row['finishing'] || '-').trim();
 
-          if (!noSpk && !bahan) return null;
+              if (!bahan) return null;
 
-          return {
-            no_spk: noSpk,
-            client: client,
-            project: project,
-            bahan: bahan,
-            ukuran: ukuran,
-            qty_order: qtyOrder,
-            qty_print: 0,
-            qty_finish: 0,
-            qty_pack: 0,
-            qty_ship: 0,
-            store_code: storeCode,
-            delivery_route: deliveryRoute
-          };
-        }).filter(item => item !== null);
+              return {
+                no_spk: noSpk,
+                client: client,
+                project: project,
+                bahan: bahan,
+                ukuran: ukuran,
+                qty_order: qtyOrder,
+                qty_print: 0,
+                qty_finish: 0,
+                qty_pack: 0,
+                qty_ship: 0,
+                store_code: storeCode,
+                delivery_route: deliveryRoute
+              };
+            }).filter(item => item !== null);
+          }
+        }
 
         if (formattedData.length > 0) {
           const { error } = await supabase.from('spk_data').insert(formattedData);
           if (!error) {
-            alert(`✅ Sukses! Berhasil mengimport ${formattedData.length} data SPK dari Excel.`);
+            alert(`✅ Sukses! Berhasil mengimport ${formattedData.length} data item SPK dari Excel.`);
             if (onImportSuccess) onImportSuccess();
             if (onClose) onClose();
           } else {
             alert('❌ Gagal menyimpan ke database Supabase: ' + error.message);
           }
         } else {
-          alert('⚠️ Format baris Excel tidak dikenali atau kosong.');
+          alert('⚠️ Format baris Excel tidak dikenali. Pastikan terdapat kolom "Nama Barang", "Ukuran", "Qty", dan "Finishing".');
         }
       } catch (err) {
         alert('❌ Gagal memproses file Excel: ' + err.message);
@@ -132,7 +209,7 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
-          Unggah file Excel (.xlsx / .xls) dengan format data SPK (No SPK, Client, Project, Nama Barang, Ukuran, Qty, Finishing) untuk dimasukkan otomatis ke sistem tracking produksi.
+          Unggah file Excel (.xlsx / .xls) dengan format data SPK (Mendukung format standar kolom & format cetak preview Wellen seperti <b>Mesin</b>, <b>Nama Barang</b>, <b>Ukuran</b>, <b>Qty</b>, dan <b>Finishing</b>).
         </p>
 
         <div className="space-y-3.5">
