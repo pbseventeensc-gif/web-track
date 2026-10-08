@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Printer, Trash2, Upload, FileText, Check, Clock } from 'lucide-react';
+import { Search, Printer, Trash2, Upload, FileText, Check, Clock, FileSpreadsheet, QrCode } from 'lucide-react';
 
 export default function MainTrackingTable({
   isDarkMode,
@@ -19,7 +19,9 @@ export default function MainTrackingTable({
   getPercent,
   getStatusBadge,
   searchTerm,
-  setSearchTerm
+  setSearchTerm,
+  onOpenSpkImport,
+  onOpenQrModal
 }) {
   return (
     <div className="space-y-4">
@@ -41,6 +43,14 @@ export default function MainTrackingTable({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenSpkImport && (
+            <button
+              onClick={onOpenSpkImport}
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Upload SPK Excel
+            </button>
+          )}
           {selectedSpkIds.length > 0 && (
             <>
               <button
@@ -92,6 +102,7 @@ export default function MainTrackingTable({
               <th className="p-3 text-center">Progress</th>
               <th className="p-3 text-center">QC Checker</th>
               <th className="p-3 text-center">Surat Jalan</th>
+              <th className="p-3 text-center">QR Code</th>
               <th className="p-3 text-center w-20">Aksi</th>
             </tr>
           </thead>
@@ -99,7 +110,7 @@ export default function MainTrackingTable({
           <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-slate-100'}`}>
             {displayedList.length === 0 ? (
               <tr>
-                <td colSpan="12" className="p-8 text-center text-slate-400 dark:text-slate-500 font-medium">
+                <td colSpan="13" className="p-8 text-center text-slate-400 dark:text-slate-500 font-medium">
                   Tidak ada data SPK yang ditemukan.
                 </td>
               </tr>
@@ -242,6 +253,17 @@ export default function MainTrackingTable({
                           <input type="file" onChange={(e) => handleUploadSuratJalan(e, item)} className="hidden" />
                         </label>
                       )}
+                    </td>
+
+                    {/* QR Code Button */}
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => onOpenQrModal && onOpenQrModal(item)}
+                        title="Lihat QR Code & Link ke Semua Divisi"
+                        className="px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/40 hover:bg-orange-100 dark:hover:bg-orange-900/60 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-900 font-bold inline-flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                      >
+                        <QrCode className="w-3.5 h-3.5" /> QR Code
+                      </button>
                     </td>
 
                     {/* Delete button */}

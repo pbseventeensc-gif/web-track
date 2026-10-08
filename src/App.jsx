@@ -47,6 +47,8 @@ import DeskPrintView from './components/deskprint/DeskPrintView';
 import CloseProjectView from './components/packing/CloseProjectView';
 import { BranchLoginModal, AdminLoginModal, ScanQCModal, ImagePreviewModal } from './components/Modals';
 import CustomModulesIndex from './custom-modules/Index';
+import SpkExcelImporter from './components/SpkExcelImporter';
+import SpkQrModal from './components/SpkQrModal';
 
 function GaugeArchCard({
   pillTitle,
@@ -596,6 +598,8 @@ export default function App() {
   const [selectedSpkId, setSelectedSpkId] = useState('');
   const [finishingForm, setFinishingForm] = useState({ finishing_type: 'inhouse', sub_vendor_name: '', qty_finish_sub_out: 0, qty_finish: 0 });
   const [isImporting, setIsImporting] = useState(false);
+  const [showSpkImportModal, setShowSpkImportModal] = useState(false);
+  const [selectedQrSpk, setSelectedQrSpk] = useState(null);
 
   const [showKawanLamaAdminModal, setShowKawanLamaAdminModal] = useState(false);
   const [klAdminUser, setKlAdminUser] = useState('');
@@ -1363,6 +1367,8 @@ export default function App() {
                       getStatusBadge={getStatusBadge}
                       searchTerm={searchTerm}
                       setSearchTerm={setSearchTerm}
+                      onOpenSpkImport={() => setShowSpkImportModal(true)}
+                      onOpenQrModal={(item) => setSelectedQrSpk(item)}
                     />
                   )}
                 </div>
@@ -1373,6 +1379,8 @@ export default function App() {
       </div>
 
       <ScanQCModal isOpen={showScanModal} onClose={() => setShowScanModal(false)} isDarkMode={isDarkMode} scanTargetColumn={scanTargetColumn} setScanTargetColumn={setScanTargetColumn} scannedInput={scannedInput} setScannedInput={setScannedInput} handleSubmitInput={handleSubmitInput} lastScanMessage={lastScanMessage} />
+      <SpkExcelImporter isOpen={showSpkImportModal} onClose={() => setShowSpkImportModal(false)} isDarkMode={isDarkMode} onImportSuccess={fetchSpkData} />
+      <SpkQrModal isOpen={!!selectedQrSpk} onClose={() => setSelectedQrSpk(null)} spkItem={selectedQrSpk} isDarkMode={isDarkMode} setActiveTab={setActiveTab} setSearchTerm={setSearchTerm} />
       <ImagePreviewModal isOpen={modalImageInfo.isOpen} onClose={closeImageModal} modalImageInfo={modalImageInfo} />
       <AdminLoginModal isOpen={showAdminLoginModal} onClose={() => setShowAdminLoginModal(false)} onLoginSuccess={(admin) => { localStorage.setItem('kl_admin_session', JSON.stringify(admin)); setCurrentAdmin(admin); setShowAdminLoginModal(false); }} />
       <BranchLoginModal isOpen={showBranchLoginModal} onClose={() => setShowBranchLoginModal(false)} onLoginSuccess={(branch) => { setCurrentBranch(branch); localStorage.setItem('kl_branch_session', JSON.stringify(branch)); setShowBranchLoginModal(false); }} />
