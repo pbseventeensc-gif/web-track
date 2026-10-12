@@ -50,13 +50,11 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: false });
 
     if (!error && data) {
-      // Filter hanya yang sudah memiliki bukti outbound atau status deliver DONE
+      // Filter yang sudah selesai packing atau checker (karena step outbound di paking station telah dihapus)
       const closedData = data.filter(item => {
-        const hasOutbound = (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5) &&
-                            ((item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-                             item.outbound_url ||
-                             item.status_deliver === 'DONE');
-        return hasOutbound;
+        const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
+        const isCheckerDone = item.status_qc_checker === 'DONE';
+        return isPackingDone || isCheckerDone;
       });
 
       setPackingList(closedData);
@@ -150,11 +148,11 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
           <div className="flex items-center gap-2">
             <FolderCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white truncate">
-              Close Project (Arsip Selesai Outbound)
+              Close Project
             </h2>
           </div>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5 leading-snug">
-            Daftar project & box paking yang telah selesai proses packing hingga bukti outbound lengkap.
+            Daftar project & box paking yang telah selesai diproses.
           </p>
         </div>
 
@@ -211,7 +209,7 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
       {/* TABLE CONTENT */}
       {filteredList.length === 0 ? (
         <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs max-w-full">
-          Belum ada data project yang di-close (selesai outbound).
+          Belum ada data project yang di-close.
         </div>
       ) : (
         <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
@@ -236,7 +234,6 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
                   <th className="py-3.5 px-4">STORE NAME / SPK</th>
                   <th className="py-3.5 px-4">SHIPPING TYPE</th>
                   <th className="py-3.5 px-4 text-center">FOTO PAKING</th>
-                  <th className="py-3.5 px-4 text-center">FOTO OUTBOUND</th>
                   <th className="py-3.5 px-4 text-center">STATUS</th>
                 </tr>
               </thead>
@@ -247,13 +244,12 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
                   const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
 
                   const pakingImgUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '';
-                  const outboundImgUrl = item.outbound_url || item.bukti_outbound_url || '';
 
                   return (
                     <React.Fragment key={item.id}>
                       {showProjectDivider && (
                         <tr className="bg-purple-100/90 border-y-2 border-purple-300 dark:bg-purple-950/80 dark:border-purple-700">
-                          <td colSpan="7" className="py-2 px-3 font-bold text-purple-950 dark:text-purple-200 text-[11px] tracking-wider uppercase shadow-2xs">
+                          <td colSpan="6" className="py-2 px-3 font-bold text-purple-950 dark:text-purple-200 text-[11px] tracking-wider uppercase shadow-2xs">
                             <div className="flex justify-between items-center gap-2">
                               <span className="font-black text-purple-950 dark:text-purple-200">{currentGroupKey}</span>
                               <span className="px-2 py-0.5 rounded bg-purple-200 text-purple-900 font-bold text-[10px] dark:bg-purple-900 dark:text-purple-200">
@@ -288,18 +284,6 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
                               alt="Paking"
                               onClick={() => onOpenImageModal && onOpenImageModal(pakingImgUrl, `Bukti Paking - ${item.box_code}`, item.store_name, item.promo_title, item.no_spk)}
                               className="w-12 h-12 object-cover rounded-xl border border-emerald-500 cursor-pointer hover:scale-105 transition-transform shadow-2xs mx-auto"
-                            />
-                          ) : (
-                            <span className="text-slate-400 text-[10px]">No Foto</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {outboundImgUrl ? (
-                            <img
-                              src={outboundImgUrl}
-                              alt="Outbound"
-                              onClick={() => onOpenImageModal && onOpenImageModal(outboundImgUrl, `Bukti Outbound - ${item.box_code}`, item.store_name, item.promo_title, item.no_spk)}
-                              className="w-12 h-12 object-cover rounded-xl border border-purple-500 cursor-pointer hover:scale-105 transition-transform shadow-2xs mx-auto"
                             />
                           ) : (
                             <span className="text-slate-400 text-[10px]">No Foto</span>
