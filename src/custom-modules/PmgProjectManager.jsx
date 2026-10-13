@@ -330,6 +330,14 @@ export default function PmgProjectManager({ isDarkMode }) {
               max-height: 138mm;
               overflow: hidden;
             }
+            .section-box-do {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: flex-start;
+              max-height: 138mm;
+              overflow: hidden;
+            }
             .divider-cut {
               border-bottom: 2px dashed #000;
               margin: 4px 0;
@@ -858,7 +866,7 @@ export default function PmgProjectManager({ isDarkMode }) {
               </div>
 
               {/* ================= BOTTOM SECTION: DELIVERY ORDER ================= */}
-              <div className="section-box" style={{ fontFamily: 'Arial, sans-serif', justifyContent: 'flex-start', gap: '3px' }}>
+              <div className="section-box-do" style={{ fontFamily: 'Arial, sans-serif', gap: '3px' }}>
                 <div style={{ marginBottom: '4px' }}>
                   <div style={{ fontWeight: 'bold', fontSize: '10px', textDecoration: 'underline', marginBottom: '0px' }}>DELIVERY ORDER</div>
                   <div style={{ fontWeight: 'bold', fontSize: '14px', fontFamily: 'serif', marginTop: '-1px' }}>SURAT JALAN</div>
