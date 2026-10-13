@@ -375,7 +375,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           }
         }
 
-        const rowCodes = data[codeRowIdx] || [];
+        let actualCodeRowIdx = codeRowIdx;
         const rowCandidate1 = data[codeRowIdx + 1] || [];
         const rowCandidate2 = data[codeRowIdx + 2] || [];
         const rowCandidate3 = data[codeRowIdx + 3] || [];
@@ -385,19 +385,34 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           return s.includes('PVC') || s.includes('MM') || s.includes('SISI') || s.includes('ACRYLIC') || s.includes('VINYL') || s.includes('ALBATROS') || s.includes('BANNER') || s.includes('STICKER') || s.includes('WPB');
         };
 
+        const isCodeRowCandidate = (row) => {
+          return (row || []).some(val => {
+            const s = String(val || '').toUpperCase();
+            return s.includes('PENAMAAN') || s.includes('IMAGE') || s.includes('KODE') || s.includes('CODE');
+          });
+        };
+
         let rowNewCols = [];
         let rowMaterials = [];
         let rowSizes = [];
 
-        if (rowCandidate1.some(val => isMaterialStr(val))) {
+        if (isCodeRowCandidate(rowCandidate1)) {
+          rowNewCols = data[codeRowIdx] || [];
+          actualCodeRowIdx = codeRowIdx + 1;
+          rowMaterials = rowCandidate2;
+          rowSizes = rowCandidate3;
+        } else if (rowCandidate1.some(val => isMaterialStr(val))) {
           rowNewCols = [];
           rowMaterials = rowCandidate1;
           rowSizes = rowCandidate2;
         } else {
-          rowNewCols = rowCandidate1;
+          rowNewCols = data[codeRowIdx] || [];
+          actualCodeRowIdx = codeRowIdx + 1;
           rowMaterials = rowCandidate2;
           rowSizes = rowCandidate3;
         }
+
+        const rowCodes = data[actualCodeRowIdx] || [];
 
         let catalogItems = [];
         for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowNewCols.length, rowMaterials.length, rowSizes.length); colIdx++) {
