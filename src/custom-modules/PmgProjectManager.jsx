@@ -52,7 +52,10 @@ export default function PmgProjectManager({ isDarkMode }) {
     pic_up: '',
     phone_no: '',
 
+    time: '',
+    project_no: '',
     vehicle_no: '',
+    courier_info: 'DI PICK UP EKSPEDISI JMS',
     sender_name: 'NINING'
   });
 
@@ -480,6 +483,49 @@ export default function PmgProjectManager({ isDarkMode }) {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+          <div>
+            <label className="block font-bold mb-1 opacity-75">Time</label>
+            <input
+              type="text"
+              placeholder="e.g. 14:30"
+              value={form.time}
+              onChange={e => setForm({ ...form, time: e.target.value })}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-75">Project No.</label>
+            <input
+              type="text"
+              placeholder="e.g. PRJ-001"
+              value={form.project_no}
+              onChange={e => setForm({ ...form, project_no: e.target.value })}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-75">Vehicle No.</label>
+            <input
+              type="text"
+              placeholder="e.g. B 1234 XYZ"
+              value={form.vehicle_no}
+              onChange={e => setForm({ ...form, vehicle_no: e.target.value })}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1 opacity-75">Courier / Pick Up Info</label>
+            <input
+              type="text"
+              placeholder="e.g. DI PICK UP EKSPEDISI JMS"
+              value={form.courier_info}
+              onChange={e => setForm({ ...form, courier_info: e.target.value })}
+              className={`w-full p-2.5 border rounded-xl font-semibold text-xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'}`}
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div>
             <label className="block font-bold mb-1 opacity-75">DR No. (Delivery Order No.)</label>
@@ -551,7 +597,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                   />
                   <span className="text-[10px] opacity-60 font-mono">#{idx + 1}</span>
                 </div>
-                <div className="sm:col-span-6">
+                <div className="sm:col-span-5">
                   <input 
                     type="text" placeholder="Item Name / Title"
                     value={item.item_name} onChange={e => handleItemChange(idx, 'item_name', e.target.value)}
@@ -570,6 +616,13 @@ export default function PmgProjectManager({ isDarkMode }) {
                   <input 
                     type="text" inputMode="numeric" value={item.qty}
                     onChange={e => handleItemChange(idx, 'qty', e.target.value.replace(/\D/g, ''))}
+                    className={`w-full p-2 border-2 border-slate-400 dark:border-stone-600 rounded-xl font-bold text-center text-xs ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-white text-black'}`}
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <input
+                    type="text" placeholder="PCS"
+                    value={item.unit || 'PCS'} onChange={e => handleItemChange(idx, 'unit', e.target.value)}
                     className={`w-full p-2 border-2 border-slate-400 dark:border-stone-600 rounded-xl font-bold text-center text-xs ${isDarkMode ? 'bg-neutral-900 text-white' : 'bg-white text-black'}`}
                   />
                 </div>
@@ -635,52 +688,82 @@ export default function PmgProjectManager({ isDarkMode }) {
               
               {/* ================= TOP SECTION: PROOF OF DELIVERY (POD) ================= */}
               <div className="section-box space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: 'none' }}>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', width: '40%', verticalAlign: 'top' }}>
-                      <h2 style={{ margin: '0 0 1px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
-                      <p style={{ margin: '1px 0', fontSize: '6px', lineHeight: '1.1' }}>EightyEight@Kasablanka Tower A.30 B Floor<br/>Jl. Raya Casablanca Kav 88 Jakarta 12870<br/>Tlp. +62 21 29820243 Fax: +62 21 29820244</p>
+                    <td style={{ border: 'none', padding: '0 4px', width: '38%', verticalAlign: 'top', height: '120px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '16px' }}>
+                        <h2 style={{ margin: '0 0 6px 0', fontSize: '11.5px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
+                        <p style={{ margin: 0, fontSize: '8.5px', lineHeight: '1.25' }}>EightyEight@Kasablanka Tower A.30 B Floor<br/>Jl. Raya Casablanca Kav 88 Jakarta 12870<br/>Tlp. +62 21 29820243 Fax: +62 21 29820244<br/>Web : <span style={{ color: '#2563eb', textDecoration: 'underline' }}>www.pmgasia.com</span></p>
+                      </div>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
-                      <h1 style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', fontFamily: 'serif' }}>Proof Of Delivery</h1>
+                    <td style={{ border: 'none', padding: '0 4px', textAlign: 'center', verticalAlign: 'middle', width: '34%', height: '120px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <h1 style={{ margin: 0, fontSize: '26px', fontWeight: 'bold', fontFamily: 'serif' }}>Proof Of Delivery</h1>
+                      </div>
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
-                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '24px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
+                    <td style={{ border: 'none', padding: '0 4px', textAlign: 'right', verticalAlign: 'bottom', width: '28%', height: '120px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-end', height: '100%' }}>
+                        {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '120px', width: 'auto', objectFit: 'contain' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
+                      </div>
                     </td>
                   </tr>
                 </table>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', marginTop: '-1px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: '9px', marginTop: '10px', marginBottom: '4px' }}>
+                  DR No. &nbsp;&nbsp;&nbsp;: {printData.dr_number || ''}
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', border: '1px solid #000' }}>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '15%', fontWeight: 'bold' }}>DR No.</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '35%' }}>: {printData.dr_number || ''}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '15%', fontWeight: 'bold' }}>Deliver to</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '35%', fontWeight: 'bold' }}>: {printData.deliver_to || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Date</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: <span style={{ borderBottom: '1px solid #000', paddingBottom: '1px', display: 'inline-block', width: '90%' }}>{printData.delivery_date}</span></td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Deliver to</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: {printData.deliver_to || ''}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Date</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.delivery_date}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold', verticalAlign: 'top' }} rowSpan={2}>Address</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', verticalAlign: 'top' }} rowSpan={2}>: {printData.address || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.time || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.courier_info || ''}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Trx Code</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.transaction_code}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}><div style={{ borderBottom: '1px solid #000', height: '10px', width: '90%' }}></div></td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>:</td>
                   </tr>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Project Name</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.project_name}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>PIC / Phone</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.pic_up || ''} / {printData.phone_no || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_no || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project Name</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
                   </tr>
                 </table>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '6px', fontSize: '8px' }}>
                   <thead>
                     <tr style={{ background: '#d3d3d3' }}>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '8%', textAlign: 'center' }}>NO.</th>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '57%', textAlign: 'center' }}>ITEM</th>
-                      <th style={{ border: '1px solid #000', padding: '2px', width: '15%', textAlign: 'center' }}>QTY</th>
+                      <th style={{ border: '1px solid #000', padding: '2px', width: '15%', textAlign: 'center' }}>QUANTITIES</th>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '20%', textAlign: 'center' }}>ADDITIONAL INFO</th>
                     </tr>
                   </thead>
@@ -690,7 +773,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                         <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{i + 1}</td>
                         <td style={{ border: '1px solid #000', padding: '2px' }}>{item.item_name} {item.dimensions ? `_ ${item.dimensions}` : ''}</td>
                         <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{item.qty}</td>
-                        <td style={{ border: '1px solid #000', padding: '2px' }}></td>
+                        <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{item.unit || 'PCS'}</td>
                       </tr>
                     ))}
                     {renderEmptyRows(printData.pmg_project_items?.length || 0)}
@@ -701,46 +784,69 @@ export default function PmgProjectManager({ isDarkMode }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '-1px', fontSize: '8px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'right', width: '65%', background: '#e6e6e6' }} colSpan="2">
                         Grand Total :
                       </td>
-                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'center', width: '15%', background: '#e6e6e6' }}>
                         {calculateGrandTotal(printData.pmg_project_items)}
+                      </td>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', width: '20%', background: '#e6e6e6' }}>
+                        &nbsp;
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
-                {/* SIGNATURE POD */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '-1px', fontSize: '7px' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Sender</td>
-                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Recipient</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Sender Full Name</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>{printData.sender_name || 'NINING'}</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Recipient Full Name</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}></td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Signature and Stamp</td>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Signature and Stamp</td>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Date</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Date</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
-                    </tr>
-                  </tbody>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: 'none', marginTop: '4px' }}>
+                  <tr>
+                    <td style={{ width: '48%', verticalAlign: 'top', border: 'none', padding: 0 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '7px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px', width: '50%' }}>Nama Lengkap Pengirim</td>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px', width: '50%' }}>{printData.sender_name || 'NINING'}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                            <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                    <td style={{ width: '4%', border: 'none', padding: 0 }}></td>
+                    <td style={{ width: '48%', verticalAlign: 'top', border: 'none', padding: 0 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', fontSize: '7px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', background: '#f2f2f2' }} colSpan="2">Penerima</td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px', width: '50%' }}>Nama Lengkap Penerima</td>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px', width: '50%' }}></td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
+                            <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
+                          </tr>
+                          <tr>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
+                            <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
                 </table>
 
-                <div style={{ fontSize: '7px', fontStyle: 'italic', marginTop: '1px' }}>
-                  - Claim period for missing or damaged items is strictly 7 days from receipt.
+                <div style={{ border: '1px solid #000', padding: '3px 4px', fontSize: '7px', fontStyle: 'italic', marginTop: '4px' }}>
+                  - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
                 </div>
               </div>
 
@@ -752,54 +858,67 @@ export default function PmgProjectManager({ isDarkMode }) {
               </div>
 
               {/* ================= BOTTOM SECTION: DELIVERY ORDER ================= */}
-              <div className="section-box space-y-1" style={{ fontFamily: 'Arial, sans-serif' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000' }}>
+              <div className="section-box" style={{ fontFamily: 'Arial, sans-serif', justifyContent: 'flex-start', gap: '3px' }}>
+                <div style={{ marginBottom: '4px' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '10px', textDecoration: 'underline', marginBottom: '0px' }}>DELIVERY ORDER</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '14px', fontFamily: 'serif', marginTop: '-1px' }}>SURAT JALAN</div>
+                </div>
+
+                <div style={{ fontWeight: 'bold', fontSize: '9px', marginTop: '4px', marginBottom: '4px' }}>
+                  DR No. &nbsp;&nbsp;&nbsp;: {printData.dr_number || '0'}
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', border: '1px solid #000' }}>
                   <tr>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', width: '40%', verticalAlign: 'top' }}>
-                      <h2 style={{ margin: '0 0 1px 0', fontSize: '10px', fontWeight: 'bold' }}>PT. PMG INTEGRASI KOMUNIKASI</h2>
-                      <p style={{ margin: '1px 0', fontSize: '6px', lineHeight: '1.1' }}>EightyEight@Kasablanka Tower A.30 B Floor<br/>Jl. Raya Casablanca Kav 88 Jakarta 12870<br/>Tlp. +62 21 29820243 Fax: +62 21 29820244</p>
-                    </td>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'center', verticalAlign: 'middle', width: '35%' }}>
-                      <h3 style={{ margin: 0, fontSize: '8px', fontWeight: 'bold' }}>DELIVERY ORDER</h3>
-                      <h1 style={{ margin: 0, fontSize: '11px', fontWeight: 'bold', fontFamily: 'serif' }}>DELIVERY ORDER</h1>
-                    </td>
-                    <td style={{ border: '1px solid #000', padding: '3px 4px', textAlign: 'right', verticalAlign: 'middle', width: '25%' }}>
-                      {pmgLogo ? <img src={pmgLogo} alt="Logo" style={{ maxHeight: '24px', marginLeft: 'auto' }} /> : <div style={{ fontWeight: 'bold', fontSize: '11px' }}>PMG GROUP</div>}
-                    </td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Date</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: <span style={{ borderBottom: '1px solid #000', paddingBottom: '1px', display: 'inline-block', width: '90%' }}>{printData.delivery_date}</span></td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Deliver to</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: {printData.deliver_to || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.time || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.courier_info || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}><div style={{ borderBottom: '1px solid #000', height: '10px', width: '90%' }}></div></td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>:</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_no || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>ITEM</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
                   </tr>
                 </table>
 
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', marginTop: '-1px' }}>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '15%', fontWeight: 'bold' }}>DR No.</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '35%' }}>: {printData.dr_number || ''}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '15%', fontWeight: 'bold' }}>Deliver to</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', width: '35%', fontWeight: 'bold' }}>: {printData.deliver_to || ''}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Date</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.delivery_date}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold', verticalAlign: 'top' }} rowSpan={2}>Address</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', verticalAlign: 'top' }} rowSpan={2}>: {printData.address || ''}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Trx Code</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.transaction_code}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>Project Name</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.project_name}</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px', fontWeight: 'bold' }}>PIC / Phone</td>
-                    <td style={{ border: '1px solid #000', padding: '2px 3px' }}>: {printData.pic_up || ''} / {printData.phone_no || ''}</td>
-                  </tr>
-                </table>
-
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '-1px', fontSize: '8px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '6px', fontSize: '8px' }}>
                   <thead>
                     <tr style={{ background: '#d3d3d3' }}>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '8%', textAlign: 'center' }}>NO.</th>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '57%', textAlign: 'center' }}>ITEM</th>
-                      <th style={{ border: '1px solid #000', padding: '2px', width: '15%', textAlign: 'center' }}>QTY</th>
+                      <th style={{ border: '1px solid #000', padding: '2px', width: '15%', textAlign: 'center' }}>QUANTITIES</th>
                       <th style={{ border: '1px solid #000', padding: '2px', width: '20%', textAlign: 'center' }}>ADDITIONAL INFO</th>
                     </tr>
                   </thead>
@@ -809,7 +928,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                         <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{i + 1}</td>
                         <td style={{ border: '1px solid #000', padding: '2px' }}>{item.item_name} {item.dimensions ? `_ ${item.dimensions}` : ''}</td>
                         <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{item.qty}</td>
-                        <td style={{ border: '1px solid #000', padding: '2px' }}></td>
+                        <td style={{ border: '1px solid #000', padding: '2px', textAlign: 'center' }}>{item.unit || 'PCS'}</td>
                       </tr>
                     ))}
                     {renderEmptyRows(printData.pmg_project_items?.length || 0)}
@@ -820,46 +939,49 @@ export default function PmgProjectManager({ isDarkMode }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '-1px', fontSize: '8px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'right', width: '80%', background: '#e6e6e6' }}>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'right', width: '65%', background: '#e6e6e6' }} colSpan="2">
                         Grand Total :
                       </td>
-                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'center', width: '20%', background: '#e6e6e6' }}>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', fontWeight: 'bold', textAlign: 'center', width: '15%', background: '#e6e6e6' }}>
                         {calculateGrandTotal(printData.pmg_project_items)}
+                      </td>
+                      <td style={{ border: '1px solid #000', padding: '2px 4px', width: '20%', background: '#e6e6e6' }}>
+                        &nbsp;
                       </td>
                     </tr>
                   </tbody>
                 </table>
 
                 {/* SIGNATURE DELIVERY ORDER */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '-1px', fontSize: '7px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginTop: '4px', fontSize: '7px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Sender</td>
-                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Recipient</td>
+                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Pengirim</td>
+                      <td style={{ border: '1px solid #000', textAlign: 'center', fontWeight: 'bold', width: '50%', background: '#f2f2f2' }} colSpan="2">Penerima</td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Sender Full Name</td>
+                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Nama Lengkap Pengirim</td>
                       <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>{printData.sender_name || 'NINING'}</td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Recipient Full Name</td>
+                      <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}>Nama Lengkap Penerima</td>
                       <td style={{ border: '1px solid #000', padding: '2px 3px', width: '25%' }}></td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Signature and Stamp</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
                       <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Signature and Stamp</td>
+                      <td style={{ border: '1px solid #000', padding: '8px 3px' }}>Tanda Tangan dan Stempel</td>
                       <td style={{ border: '1px solid #000', padding: '8px 3px' }}></td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Date</td>
+                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
                       <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
-                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Date</td>
+                      <td style={{ border: '1px solid #000', padding: '2px 3px' }}>Tanggal</td>
                       <td style={{ border: '1px solid #000', padding: '2px 3px' }}></td>
                     </tr>
                   </tbody>
                 </table>
 
-                <div style={{ fontSize: '7px', fontStyle: 'italic', marginTop: '1px' }}>
-                  - Claim period for missing or damaged items is strictly 7 days from receipt.
+                <div style={{ border: '1px solid #000', padding: '3px 4px', fontSize: '7px', fontStyle: 'italic', marginTop: '-1px' }}>
+                  - Batas Complain Kekurangan atau Kerusakan Barang Hanya 7 Hari dari Barang diterima, Lebih dari itu Tidak Diterima
                 </div>
               </div>
 

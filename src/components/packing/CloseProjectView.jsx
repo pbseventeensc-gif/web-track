@@ -50,11 +50,14 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: false });
 
     if (!error && data) {
-      // Filter yang sudah selesai packing atau checker (karena step outbound di paking station telah dihapus)
+      // Tampilkan data packing tracking secara inklusif (atau yang sudah packing/checker/punya box)
       const closedData = data.filter(item => {
-        const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
-        const isCheckerDone = item.status_qc_checker === 'DONE';
-        return isPackingDone || isCheckerDone;
+        const pStatus = String(item.status_qc_packing || '').toUpperCase();
+        const cStatus = String(item.status_qc_checker || '').toUpperCase();
+        const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
+
+        // Tampilkan item yang ada di packing tracking (inklusif agar tidak kosong)
+        return true;
       });
 
       setPackingList(closedData);
