@@ -280,13 +280,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return str.trim();
   };
 
-  const activePackingList = packingList.filter(item => {
-    const hasOutbound = (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5) &&
-                        ((item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-                         item.outbound_url ||
-                         item.status_deliver === 'DONE');
-    return !hasOutbound;
-  });
+  const activePackingList = packingList;
 
   // Filter Data Logic
   const uniqueProjects = Array.from(

@@ -1217,13 +1217,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const sourceList = packingList.filter(item => {
-    const hasOutbound = (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5) &&
-                        ((item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-                         item.outbound_url ||
-                         item.status_deliver === 'DONE');
-    return !hasOutbound;
-  });
+  const sourceList = packingList;
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto')).length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
