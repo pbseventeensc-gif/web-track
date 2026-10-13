@@ -251,12 +251,12 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Photo Display - Clean Image */}
-        <div className="flex items-center justify-center">
+        <div className="w-full max-w-md sm:max-w-lg h-[60vh] sm:h-[70vh] flex items-center justify-center bg-black rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
           <img
             src={modalImageInfo.url}
             alt="Preview High Res"
-            style={{ width: 'auto', height: 'auto', maxWidth: '92vw', maxHeight: '80vh', objectFit: 'contain', imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
-            className="rounded-2xl shadow-2xl block mx-auto border border-slate-800 bg-black object-contain"
+            style={{ objectFit: 'contain', imageRendering: 'high-quality', WebkitBackfaceVisibility: 'hidden' }}
+            className="w-full h-full block mx-auto object-contain"
           />
         </div>
 
