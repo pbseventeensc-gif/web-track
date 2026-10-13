@@ -1132,6 +1132,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           'Status QC Checker': item.status_qc_checker || 'PENDING',
           'Status Deliver': item.status_deliver || 'PENDING',
           '📸 Link Foto Bukti Paking': generateViewerUrl(rawPakingUrl, 'Foto Bukti Paking', item),
+          '📸 Link Foto Bukti Checker': generateViewerUrl(item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' ? item.bukti_checker_url : '', 'Foto Bukti Checker', item),
           '🚚 Link Foto Outbound': generateViewerUrl(rawOutboundUrl, 'Foto Outbound', item),
           '🎨 Link Foto Desain / Visual': generateViewerUrl(rawDesignUrl, 'Foto Desain Visual', item),
           'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
@@ -2168,7 +2169,21 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
                         {!isPackingRole && (
                           <td className="py-3.5 px-4 text-center">
-                            <div className="flex flex-col items-center justify-center gap-1">
+                            <div className="flex flex-col items-center justify-center gap-1.5">
+                              {item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' ? (
+                                <img
+                                  src={item.bukti_checker_url}
+                                  alt="Bukti Checker"
+                                  onClick={() => onOpenImageModal(
+                                    item.bukti_checker_url,
+                                    `Bukti Checker - ${item.tracking_id || item.box_code || ''}`,
+                                    item.destination || item.store_name || item.branch_name || '',
+                                    item.promo_title || item.project || '',
+                                    item.no_spk || item.tracking_id || ''
+                                  )}
+                                  className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-amber-500 cursor-pointer hover:scale-105 transition-transform shadow-sm"
+                                />
+                              ) : null}
                               <button
                                 onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
                                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
