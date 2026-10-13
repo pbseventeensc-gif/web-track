@@ -220,7 +220,18 @@ export default function PmgProjectManager({ isDarkMode }) {
 
     const savedDestId = await saveDestinationToDatabase();
 
-    const { courier_info, ...dbForm } = form;
+    const dbForm = {
+      dr_number: form.dr_number || '',
+      transaction_code: form.transaction_code || '',
+      project_name: form.project_name || '',
+      delivery_date: form.delivery_date || '',
+      deliver_to: form.deliver_to || '',
+      address: form.address || '',
+      pic_up: form.pic_up || '',
+      phone_no: form.phone_no || '',
+      sender_name: form.sender_name || 'NINING'
+    };
+
     const { data: projData, error: projError } = await supabase
       .from('pmg_projects')
       .insert([dbForm])
@@ -668,7 +679,7 @@ export default function PmgProjectManager({ isDarkMode }) {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => setPrintData({ ...p, courier_info: p.courier_info || 'DI PICK UP EKSPEDISI JMS' })} title="Print POD and DO" className="p-1.5 border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 font-bold rounded-full transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center">
+                <button onClick={() => setPrintData({ ...p, courier_info: p.courier_info || 'DI PICK UP EKSPEDISI JMS', time: p.time || '', project_no: p.project_no || '', vehicle_no: p.vehicle_no || '' })} title="Print POD and DO" className="p-1.5 border border-stone-300 bg-white hover:bg-stone-100 text-stone-800 font-bold rounded-full transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center">
                   <Printer className="w-4 h-4" />
                 </button>
                 <button onClick={() => handleDeleteSingle(p.id, p.project_name)} title="Delete" className="p-1.5 border border-stone-300 bg-white hover:bg-rose-50 text-rose-600 font-bold rounded-full transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center justify-center">
