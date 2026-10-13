@@ -944,10 +944,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   };
 
   const processImageForUpload = async (file) => {
-    if (file.size <= 15 * 1024 * 1024) {
-      return file;
-    }
-    return await compressImage(file);
+    return file; // Gunakan file asli bawaan HP tanpa kompresi / resize
   };
 
   const handleCameraCapture = async (e, rowId, trackingId) => {

@@ -218,7 +218,7 @@ export default function OutboundView({ isDarkMode, onOpenImageModal }) {
 
     setUploadingId(`outbound-${rowId}`);
     try {
-      const uploadBlob = await compressImage(file);
+      const uploadBlob = file; // Gunakan file asli bawaan HP tanpa kompresi / resize
       const cleanCode = boxCode ? String(boxCode).replace(/[^a-zA-Z0-9-_]/g, '_') : 'box';
       const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
       const fileName = `outbound_${cleanCode}_${Date.now()}.${fileExt}`;
