@@ -376,12 +376,14 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         }
 
         const rowCodes = data[codeRowIdx] || [];
-        const rowMaterials = data[codeRowIdx + 1] || [];
-        const rowSizes = data[codeRowIdx + 2] || [];
+        const rowNewCols = data[codeRowIdx + 1] || [];
+        const rowMaterials = data[codeRowIdx + 2] || [];
+        const rowSizes = data[codeRowIdx + 3] || [];
 
         let catalogItems = [];
-        for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowMaterials.length, rowSizes.length); colIdx++) {
+        for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowNewCols.length, rowMaterials.length, rowSizes.length); colIdx++) {
           const rawCode = rowCodes[colIdx] ? String(rowCodes[colIdx]).trim() : '';
+          const rawNewCol = rowNewCols[colIdx] ? String(rowNewCols[colIdx]).trim() : '';
           const rawMat = rowMaterials[colIdx] ? String(rowMaterials[colIdx]).trim() : '';
           const rawSize = rowSizes[colIdx] ? String(rowSizes[colIdx]).trim() : '';
 
@@ -389,6 +391,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             catalogItems.push({
               colIndex: colIdx,
               code: rawCode,
+              newCode: rawNewCol,
               desc: rawCode,
               material: rawMat || 'PVC',
               size: rawSize || '-'
@@ -429,6 +432,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
               const activeImg = window.__ACTIVE_DESIGN_URLS__[cat.code] || window.__ACTIVE_DESIGN_URLS__[catIdx] || '';
               storeItems.push({
                 code: cat.code,
+                newCode: cat.newCode,
                 desc: cat.desc,
                 material: cat.material,
                 size: cat.size,
@@ -1392,6 +1396,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                             </div>
                           );
                         })()}
+                        {sub.newCode && (
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000', lineHeight: '1.1', textTransform: 'uppercase', marginTop: '2px' }}>
+                            {sub.newCode}
+                          </div>
+                        )}
                         {sub.desc && sub.desc.trim().toLowerCase() !== (sub.code || '').trim().toLowerCase() && sub.desc.trim().toLowerCase() !== (sub.material || '').trim().toLowerCase() && (
                           <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#000', lineHeight: '1.1', textTransform: 'uppercase', marginTop: '2px' }}>
                             {sub.desc}
