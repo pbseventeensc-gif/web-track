@@ -1217,7 +1217,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const sourceList = packingList;
+  const sourceList = packingList.filter(item => item.source !== 'label_sj');
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto')).length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
