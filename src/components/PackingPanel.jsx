@@ -376,9 +376,28 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
         }
 
         const rowCodes = data[codeRowIdx] || [];
-        const rowNewCols = data[codeRowIdx + 1] || [];
-        const rowMaterials = data[codeRowIdx + 2] || [];
-        const rowSizes = data[codeRowIdx + 3] || [];
+        const rowCandidate1 = data[codeRowIdx + 1] || [];
+        const rowCandidate2 = data[codeRowIdx + 2] || [];
+        const rowCandidate3 = data[codeRowIdx + 3] || [];
+
+        const isMaterialStr = (str) => {
+          const s = String(str || '').toUpperCase();
+          return s.includes('PVC') || s.includes('MM') || s.includes('SISI') || s.includes('ACRYLIC') || s.includes('VINYL') || s.includes('ALBATROS') || s.includes('BANNER') || s.includes('STICKER') || s.includes('WPB');
+        };
+
+        let rowNewCols = [];
+        let rowMaterials = [];
+        let rowSizes = [];
+
+        if (rowCandidate1.some(val => isMaterialStr(val))) {
+          rowNewCols = [];
+          rowMaterials = rowCandidate1;
+          rowSizes = rowCandidate2;
+        } else {
+          rowNewCols = rowCandidate1;
+          rowMaterials = rowCandidate2;
+          rowSizes = rowCandidate3;
+        }
 
         let catalogItems = [];
         for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowNewCols.length, rowMaterials.length, rowSizes.length); colIdx++) {
