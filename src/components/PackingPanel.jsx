@@ -397,9 +397,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           rowMaterials = rowCandidate1;
           rowSizes = rowCandidate2;
         } else {
-          // 4-row format (Kolom baru, Code, Material, Size)
-          rowNewCols = rowCandidate0; // kolom baru
-          rowCodes = rowCandidate1;     // kode utama (besar merah)
+          // 4-row format (Code, Kolom baru, Material, Size)
+          rowCodes = rowCandidate0;     // kode utama (besar merah, e.g. 240 - A.3)
+          rowNewCols = rowCandidate1;   // kolom baru (e.g. Standing KTWB)
           rowMaterials = rowCandidate2; // material
           rowSizes = rowCandidate3;     // size
         }
