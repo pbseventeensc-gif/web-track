@@ -375,7 +375,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           }
         }
 
-        let actualCodeRowIdx = codeRowIdx;
+        const rowCandidate0 = data[codeRowIdx] || [];
         const rowCandidate1 = data[codeRowIdx + 1] || [];
         const rowCandidate2 = data[codeRowIdx + 2] || [];
         const rowCandidate3 = data[codeRowIdx + 3] || [];
@@ -385,34 +385,24 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
           return s.includes('PVC') || s.includes('MM') || s.includes('SISI') || s.includes('ACRYLIC') || s.includes('VINYL') || s.includes('ALBATROS') || s.includes('BANNER') || s.includes('STICKER') || s.includes('WPB');
         };
 
-        const isCodeRowCandidate = (row) => {
-          return (row || []).some(val => {
-            const s = String(val || '').toUpperCase();
-            return s.includes('PENAMAAN') || s.includes('IMAGE') || s.includes('KODE') || s.includes('CODE');
-          });
-        };
-
+        let rowCodes = [];
         let rowNewCols = [];
         let rowMaterials = [];
         let rowSizes = [];
 
-        if (isCodeRowCandidate(rowCandidate1)) {
-          rowNewCols = data[codeRowIdx] || [];
-          actualCodeRowIdx = codeRowIdx + 1;
-          rowMaterials = rowCandidate2;
-          rowSizes = rowCandidate3;
-        } else if (rowCandidate1.some(val => isMaterialStr(val))) {
+        if (rowCandidate1.some(val => isMaterialStr(val))) {
+          // 3-row format (Code, Material, Size)
           rowNewCols = [];
+          rowCodes = rowCandidate0;
           rowMaterials = rowCandidate1;
           rowSizes = rowCandidate2;
         } else {
-          rowNewCols = data[codeRowIdx] || [];
-          actualCodeRowIdx = codeRowIdx + 1;
-          rowMaterials = rowCandidate2;
-          rowSizes = rowCandidate3;
+          // 4-row format (Kolom baru, Code, Material, Size)
+          rowNewCols = rowCandidate0; // kolom baru
+          rowCodes = rowCandidate1;     // kode utama (besar merah)
+          rowMaterials = rowCandidate2; // material
+          rowSizes = rowCandidate3;     // size
         }
-
-        const rowCodes = data[actualCodeRowIdx] || [];
 
         let catalogItems = [];
         for (let colIdx = itemStartColIdx; colIdx < Math.max(rowCodes.length, rowNewCols.length, rowMaterials.length, rowSizes.length); colIdx++) {
