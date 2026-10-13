@@ -280,7 +280,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return str.trim();
   };
 
-  const activePackingList = packingList.filter(item => item.source !== 'label_sj');
+  const activePackingList = packingList.filter(item => item.source === 'label_sj');
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
