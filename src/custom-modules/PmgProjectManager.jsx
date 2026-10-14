@@ -681,7 +681,14 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Date</td>
                     <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: <span style={{ borderBottom: '1px solid #000', paddingBottom: '1px', display: 'inline-block', width: '90%' }}>{printData.delivery_date}</span></td>
                     <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Deliver to</td>
-                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: {printData.deliver_to || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>
+                      : {printData.deliver_to || ''}
+                      {printData.address && (
+                        <div style={{ fontSize: '7.5px', marginTop: '1px', lineHeight: '1.2' }}>
+                          {printData.address}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
@@ -836,7 +843,14 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Date</td>
                     <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: <span style={{ borderBottom: '1px solid #000', paddingBottom: '1px', display: 'inline-block', width: '90%' }}>{printData.delivery_date}</span></td>
                     <td style={{ border: 'none', padding: '2px 3px', width: '18%', fontWeight: 'bold' }}>Deliver to</td>
-                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>: {printData.deliver_to || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', width: '32%' }}>
+                      : {printData.deliver_to || ''}
+                      {printData.address && (
+                        <div style={{ fontSize: '7.5px', marginTop: '1px', lineHeight: '1.2' }}>
+                          {printData.address}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
