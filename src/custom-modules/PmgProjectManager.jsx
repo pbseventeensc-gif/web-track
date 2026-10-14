@@ -709,16 +709,10 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
-                  </tr>
-                  <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
                     <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>PIC / Attention</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.pic_up || ''}</td>
                   </tr>
                   <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project Name</td>
@@ -871,16 +865,10 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
-                  </tr>
-                  <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
                     <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
-                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                    <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>PIC / Attention</td>
+                    <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.pic_up || ''}</td>
                   </tr>
                   <tr>
                     <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>ITEM</td>
