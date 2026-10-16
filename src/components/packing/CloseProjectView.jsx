@@ -19,6 +19,11 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProject, setFilterProject] = useState('ALL');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [collapsedProjects, setCollapsedProjects] = useState({});
+
+  const toggleProjectCollapse = (projKey) => {
+    setCollapsedProjects(prev => ({ ...prev, [projKey]: !prev[projKey] }));
+  };
 
   const parseItems = (raw) => {
     if (!raw) return [];
@@ -237,53 +242,66 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
           Belum ada data project yang di-close.
         </div>
       ) : (
-        <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
-              <thead>
-                <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
-                  <th className="py-3.5 pl-4 pr-2 w-12 text-center">NO</th>
-                  <th className="py-3.5 px-3">
-                    <button
-                      type="button"
-                      onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                      className="inline-flex items-center gap-1.5 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer select-none"
-                    >
-                      <span>BOX</span>
-                      <span className="flex flex-col -space-y-1.5 text-slate-500 dark:text-neutral-400">
-                        <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-purple-600 dark:text-purple-400 stroke-[3]' : 'opacity-40'}`} />
-                        <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-purple-600 dark:text-purple-400 stroke-[3]' : 'opacity-40'}`} />
-                      </span>
-                    </button>
-                  </th>
-                  <th className="py-3.5 px-4">STORE NAME / SPK</th>
-                  <th className="py-3.5 px-4">SHIPPING TYPE</th>
-                  <th className="py-3.5 px-4 text-center">FOTO PAKING</th>
-                  <th className="py-3.5 px-4 text-center">STATUS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
-                {filteredList.map((item, idx) => {
-                  const currentGroupKey = getProjectGroupKey(item.promo_title);
-                  const prevGroupKey = idx > 0 ? getProjectGroupKey(filteredList[idx - 1]?.promo_title) : null;
-                  const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
+        <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs max-h-[620px] overflow-y-auto overflow-x-auto relative">
+          <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+            <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider shadow-2xs">
+              <tr>
+                <th className="py-3.5 pl-4 pr-2 w-12 text-center bg-slate-100 dark:bg-neutral-800">NO</th>
+                <th className="py-3.5 px-3 bg-slate-100 dark:bg-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="inline-flex items-center gap-1.5 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer select-none"
+                  >
+                    <span>BOX</span>
+                    <span className="flex flex-col -space-y-1.5 text-slate-500 dark:text-neutral-400">
+                      <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-purple-600 dark:text-purple-400 stroke-[3]' : 'opacity-40'}`} />
+                      <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-purple-600 dark:text-purple-400 stroke-[3]' : 'opacity-40'}`} />
+                    </span>
+                  </button>
+                </th>
+                <th className="py-3.5 px-4 bg-slate-100 dark:bg-neutral-800">STORE NAME / SPK</th>
+                <th className="py-3.5 px-4 bg-slate-100 dark:bg-neutral-800">SHIPPING TYPE</th>
+                <th className="py-3.5 px-4 text-center bg-slate-100 dark:bg-neutral-800">FOTO PAKING</th>
+                <th className="py-3.5 px-4 text-center bg-slate-100 dark:bg-neutral-800">STATUS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
+              {filteredList.map((item, idx) => {
+                const currentGroupKey = getProjectGroupKey(item.promo_title);
+                const prevGroupKey = idx > 0 ? getProjectGroupKey(filteredList[idx - 1]?.promo_title) : null;
+                const showProjectDivider = idx === 0 || currentGroupKey !== prevGroupKey;
 
-                  const pakingImgUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '';
+                const isCollapsed = !!collapsedProjects[currentGroupKey];
+                const pakingImgUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '';
+                const projBoxCount = packingList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase()).length;
 
-                  return (
-                    <React.Fragment key={item.id}>
-                      {showProjectDivider && (
-                        <tr className="bg-purple-100/90 border-y-2 border-purple-300 dark:bg-purple-950/80 dark:border-purple-700">
-                          <td colSpan="6" className="py-2 px-3 font-bold text-purple-950 dark:text-purple-200 text-[11px] tracking-wider uppercase shadow-2xs">
-                            <div className="flex justify-between items-center gap-2">
-                              <span className="font-black text-purple-950 dark:text-purple-200">{currentGroupKey}</span>
-                              <span className="px-2 py-0.5 rounded bg-purple-200 text-purple-900 font-bold text-[10px] dark:bg-purple-900 dark:text-purple-200">
-                                Selesai Closed
+                return (
+                  <React.Fragment key={item.id}>
+                    {showProjectDivider && (
+                      <tr
+                        onClick={() => toggleProjectCollapse(currentGroupKey)}
+                        className="bg-purple-100/90 border-y-2 border-purple-300 dark:bg-purple-950/80 dark:border-purple-700 cursor-pointer select-none hover:bg-purple-200/90 dark:hover:bg-purple-900/80 transition-colors"
+                        title={isCollapsed ? "Klik untuk buka project" : "Klik untuk tutup (hide) project"}
+                      >
+                        <td colSpan="6" className="py-2.5 px-3 font-bold text-purple-950 dark:text-purple-200 text-[11px] tracking-wider uppercase shadow-2xs">
+                          <div className="flex flex-row justify-between items-center gap-4 w-full">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <span className="p-0.5 rounded bg-purple-300/80 dark:bg-purple-800 text-purple-950 dark:text-purple-100 flex items-center justify-center shrink-0">
+                                {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                              </span>
+                              <span className="font-black text-purple-950 dark:text-purple-200 truncate">{currentGroupKey}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 normal-case">
+                              <span className="px-2.5 py-0.5 rounded bg-purple-200 text-purple-900 font-bold text-[10px] dark:bg-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-700">
+                                SELESAI CLOSED ({projBoxCount} Box)
                               </span>
                             </div>
-                          </td>
-                        </tr>
-                      )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {!isCollapsed && (
                       <tr className="hover:bg-slate-50 dark:hover:bg-neutral-700/40 transition-colors">
                         <td className="py-3 pl-4 pr-2 text-center font-bold text-slate-500">{idx + 1}</td>
                         <td className="py-3 px-3 font-mono font-bold text-purple-600 dark:text-purple-400">
@@ -320,12 +338,12 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
                           </span>
                         </td>
                       </tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
