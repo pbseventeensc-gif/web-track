@@ -1279,7 +1279,11 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const sourceList = packingList;
+  // Data tetap berada di Packing Station selama Checker BELUM upload foto
+  const sourceList = packingList.filter(item => {
+    const hasCheckerPhoto = item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' && item.bukti_checker_url.length > 5;
+    return !hasCheckerPhoto;
+  });
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto')).length;
   const pendingBoxCount = sourceList.length - completedBoxCount;

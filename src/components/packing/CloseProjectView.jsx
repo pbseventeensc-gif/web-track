@@ -55,7 +55,12 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: false });
 
     if (!error && data) {
-      const closedData = data.map(item => {
+      // HANYA tampilkan data di Close Project jika checker SUDAH upload foto
+      const filtered = data.filter(item => {
+        return item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' && item.bukti_checker_url.length > 5;
+      });
+
+      const closedData = filtered.map(item => {
         let details = [];
         if (Array.isArray(item.items_detail)) details = item.items_detail;
         else if (typeof item.items_detail === 'string') {

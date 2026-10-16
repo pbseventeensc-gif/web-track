@@ -314,7 +314,11 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return str.trim();
   };
 
-  const activePackingList = packingList;
+  // Data tetap berada di Packing Station selama Checker BELUM upload foto
+  const activePackingList = packingList.filter(item => {
+    const hasCheckerPhoto = item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' && item.bukti_checker_url.length > 5;
+    return !hasCheckerPhoto;
+  });
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
