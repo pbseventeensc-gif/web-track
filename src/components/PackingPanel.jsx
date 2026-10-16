@@ -9,7 +9,6 @@ import {
   Printer,
   FileText,
   Download,
-  Trash2,
   Check,
   Clock,
   Search,
@@ -1802,16 +1801,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                         <Download className="w-4 h-4 text-slate-600" />
                         <span>Export Excel</span>
                       </button>
-
-                      <div className="border-t border-slate-100 my-1"></div>
-
-                      <button
-                        onClick={() => { handleClearAllPackingData(); setIsActionsDropdownOpen(false); }}
-                        className="w-full px-3 py-2 hover:bg-rose-50 text-rose-700 font-semibold rounded-xl text-xs transition-all flex items-center gap-2.5 cursor-pointer text-left"
-                      >
-                        <Trash2 className="w-4 h-4 text-rose-600" />
-                        <span>Clear Data</span>
-                      </button>
                     </div>
                   )}
                 </div>
@@ -2048,14 +2037,6 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                       }
                                       return null;
                                     })()}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteProject(currentGroupKey)}
-                                      className="p-1.5 bg-white text-rose-700 border border-rose-700/40 hover:bg-rose-600 hover:text-white rounded-md transition-all cursor-pointer shadow-2xs flex items-center justify-center active:scale-95"
-                                      title="Hapus Project Ini"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -2082,7 +2063,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
                                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
                                 : 'border-slate-300 bg-white hover:border-emerald-500'
                             }`}
-                            title={isSelected ? 'Hapus Pilihan' : 'Pilih Baris Ini'}
+                            title={isSelected ? 'Batal Pilih' : 'Pilih Baris Ini'}
                           >
                             {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                           </button>
