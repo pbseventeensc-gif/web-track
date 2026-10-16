@@ -103,22 +103,39 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
           };
         });
 
-        const firstSub = details[0] || {};
+        const isValid = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-';
 
-        const rawStore = (item.store_name || '').trim();
-        const cleanStore = (rawStore && rawStore !== '-')
-          ? rawStore
-          : (item.recipient_name && item.recipient_name.trim() !== '-' ? item.recipient_name.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+        let cleanStore = isValid(item.store_name) ? String(item.store_name).trim() : '';
+        if (!cleanStore) cleanStore = isValid(item.recipient_name) ? String(item.recipient_name).trim() : '';
+        if (!cleanStore) cleanStore = isValid(item.client_pt) ? String(item.client_pt).trim() : '';
+        if (!cleanStore) {
+          for (const d of details) {
+            if (isValid(d.delivery_address)) { cleanStore = String(d.delivery_address).trim(); break; }
+            if (isValid(d.recipient_name)) { cleanStore = String(d.recipient_name).trim(); break; }
+            if (isValid(d.brand)) { cleanStore = String(d.brand).trim(); break; }
+          }
+        }
+        if (!cleanStore) cleanStore = '-';
 
-        const rawPromo = (item.promo_title || '').trim();
-        const cleanPromo = (rawPromo && rawPromo !== '-')
-          ? rawPromo
-          : (firstSub.desc && firstSub.desc.trim() !== '-' ? firstSub.desc.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+        let cleanPromo = isValid(item.promo_title) ? String(item.promo_title).trim() : '';
+        if (!cleanPromo) {
+          for (const d of details) {
+            if (isValid(d.desc)) { cleanPromo = String(d.desc).trim(); break; }
+            if (isValid(d.brand)) { cleanPromo = String(d.brand).trim(); break; }
+            if (isValid(d.po_number)) { cleanPromo = `PO: ${d.po_number}`.trim(); break; }
+          }
+        }
+        if (!cleanPromo) cleanPromo = isValid(item.client_pt) ? String(item.client_pt).trim() : '-';
 
-        const rawBox = (item.box_code || '').trim();
-        const cleanBox = (rawBox && rawBox !== '-')
-          ? rawBox
-          : (firstSub.no_sj && firstSub.no_sj.trim() !== '-' ? firstSub.no_sj.trim() : (item.no_spk && item.no_spk.trim() !== '-' ? item.no_spk.trim() : '-'));
+        let cleanBox = isValid(item.box_code) ? String(item.box_code).trim() : '';
+        if (!cleanBox) {
+          for (const d of details) {
+            if (isValid(d.no_sj)) { cleanBox = String(d.no_sj).trim(); break; }
+            if (isValid(d.code)) { cleanBox = String(d.code).trim(); break; }
+            if (isValid(d.po_number)) { cleanBox = String(d.po_number).trim(); break; }
+          }
+        }
+        if (!cleanBox) cleanBox = isValid(item.no_spk) ? String(item.no_spk).trim() : '-';
 
         const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
         const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
