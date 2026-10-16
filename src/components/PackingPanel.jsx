@@ -159,6 +159,23 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
             return { ...sub, image_url: activeUrl };
           });
 
+          const firstSub = details[0] || {};
+
+          const rawStore = (item.store_name || '').trim();
+          const cleanStore = (rawStore && rawStore !== '-')
+            ? rawStore
+            : (item.recipient_name && item.recipient_name.trim() !== '-' ? item.recipient_name.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+          const rawPromo = (item.promo_title || '').trim();
+          const cleanPromo = (rawPromo && rawPromo !== '-')
+            ? rawPromo
+            : (firstSub.desc && firstSub.desc.trim() !== '-' ? firstSub.desc.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+          const rawBox = (item.box_code || '').trim();
+          const cleanBox = (rawBox && rawBox !== '-')
+            ? rawBox
+            : (firstSub.no_sj && firstSub.no_sj.trim() !== '-' ? firstSub.no_sj.trim() : (item.no_spk && item.no_spk.trim() !== '-' ? item.no_spk.trim() : '-'));
+
           // Set status sesuai data DB, hormati nilai DONE jika di database sudah DONE (hasil scan)
           const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
           const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
@@ -166,6 +183,9 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
 
           return {
             ...item,
+            store_name: cleanStore,
+            promo_title: cleanPromo,
+            box_code: cleanBox,
             status_qc_packing: statusPacking,
             status_qc_checker: statusChecker,
             items_detail: details
@@ -1243,7 +1263,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
     }
   };
 
-  const sourceList = packingList.filter(item => item.source !== 'label_sj');
+  const sourceList = packingList;
 
   const completedBoxCount = sourceList.filter(item => item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto')).length;
   const pendingBoxCount = sourceList.length - completedBoxCount;
@@ -1251,7 +1271,7 @@ export default function PackingPanel({ isDarkMode, spkList = [], handleUpdateFie
   // Filter list by status & delivery first so uniqueProjects only shows projects matching current status (e.g. Done)
   const statusFilteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
-    const matchSource = filterSource === 'ALL' || (filterSource === 'google_sheet' ? item.source === 'google_sheet' : item.source !== 'google_sheet');
+    const matchSource = filterSource === 'ALL' || (filterSource === 'google_sheet' ? (item.source === 'google_sheet' || !item.source) : item.source === 'label_sj');
     const isDone = item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
 

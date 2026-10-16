@@ -103,11 +103,31 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
           };
         });
 
+        const firstSub = details[0] || {};
+
+        const rawStore = (item.store_name || '').trim();
+        const cleanStore = (rawStore && rawStore !== '-')
+          ? rawStore
+          : (item.recipient_name && item.recipient_name.trim() !== '-' ? item.recipient_name.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+        const rawPromo = (item.promo_title || '').trim();
+        const cleanPromo = (rawPromo && rawPromo !== '-')
+          ? rawPromo
+          : (firstSub.desc && firstSub.desc.trim() !== '-' ? firstSub.desc.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+        const rawBox = (item.box_code || '').trim();
+        const cleanBox = (rawBox && rawBox !== '-')
+          ? rawBox
+          : (firstSub.no_sj && firstSub.no_sj.trim() !== '-' ? firstSub.no_sj.trim() : (item.no_spk && item.no_spk.trim() !== '-' ? item.no_spk.trim() : '-'));
+
         const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
         const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
 
         return {
           ...item,
+          store_name: cleanStore,
+          promo_title: cleanPromo,
+          box_code: cleanBox,
           items_detail: details,
           status_qc_packing: statusPacking
         };
@@ -277,7 +297,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     return str.trim();
   };
 
-  const activePackingList = packingList.filter(item => item.source !== 'label_sj');
+  const activePackingList = packingList;
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
@@ -301,7 +321,10 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   });
 
   const filteredList = sortedPackingList.filter(item => {
-    if (filterSource !== 'ALL' && (filterSource === 'google_sheet' ? item.source !== 'google_sheet' : item.source === 'google_sheet')) return false;
+    if (filterSource !== 'ALL') {
+      if (filterSource === 'google_sheet' && item.source === 'label_sj') return false;
+      if (filterSource === 'label_sj' && item.source !== 'label_sj') return false;
+    }
     if (filterDelivery !== 'ALL' && item.delivery_type !== filterDelivery) return false;
 
     const isDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');

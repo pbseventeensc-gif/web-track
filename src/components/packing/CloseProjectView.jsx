@@ -50,14 +50,36 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal }) {
       .order('id', { ascending: false });
 
     if (!error && data) {
-      // Tampilkan data packing tracking secara inklusif (atau yang sudah packing/checker/punya box)
-      const closedData = data.filter(item => {
-        const pStatus = String(item.status_qc_packing || '').toUpperCase();
-        const cStatus = String(item.status_qc_checker || '').toUpperCase();
-        const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
+      const closedData = data.map(item => {
+        let details = [];
+        if (Array.isArray(item.items_detail)) details = item.items_detail;
+        else if (typeof item.items_detail === 'string') {
+          try { details = JSON.parse(item.items_detail); } catch (e) { details = []; }
+        }
+        const firstSub = details[0] || {};
 
-        // Tampilkan item yang ada di packing tracking (inklusif agar tidak kosong)
-        return true;
+        const rawStore = (item.store_name || '').trim();
+        const cleanStore = (rawStore && rawStore !== '-')
+          ? rawStore
+          : (item.recipient_name && item.recipient_name.trim() !== '-' ? item.recipient_name.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+        const rawPromo = (item.promo_title || '').trim();
+        const cleanPromo = (rawPromo && rawPromo !== '-')
+          ? rawPromo
+          : (firstSub.desc && firstSub.desc.trim() !== '-' ? firstSub.desc.trim() : (item.client_pt && item.client_pt.trim() !== '-' ? item.client_pt.trim() : '-'));
+
+        const rawBox = (item.box_code || '').trim();
+        const cleanBox = (rawBox && rawBox !== '-')
+          ? rawBox
+          : (firstSub.no_sj && firstSub.no_sj.trim() !== '-' ? firstSub.no_sj.trim() : (item.no_spk && item.no_spk.trim() !== '-' ? item.no_spk.trim() : '-'));
+
+        return {
+          ...item,
+          store_name: cleanStore,
+          promo_title: cleanPromo,
+          box_code: cleanBox,
+          items_detail: details
+        };
       });
 
       setPackingList(closedData);

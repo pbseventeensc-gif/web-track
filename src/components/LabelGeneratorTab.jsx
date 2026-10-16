@@ -152,18 +152,24 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     // Group itemsToSave by SPK + Delivery Address
     const groupedMap = {};
     itemsToSave.forEach(item => {
-      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
-      const groupKey = `${item.NO_SPK || 'SPK'}_${item.DELIVERY_ADDRESS || 'ADDRESS'}`;
+      const spkVal = (item.NO_SPK && item.NO_SPK !== '-') ? item.NO_SPK : 'SPK';
+      const addressVal = (item.DELIVERY_ADDRESS && item.DELIVERY_ADDRESS !== '-') ? item.DELIVERY_ADDRESS : ((item.RECIPIENT_NAME && item.RECIPIENT_NAME !== '-') ? item.RECIPIENT_NAME : 'STORE');
+      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(spkVal, addressVal);
+      const groupKey = `${spkVal}_${addressVal}`;
+
+      const validProject = (item.PROJECT && item.PROJECT !== '-') ? item.PROJECT : ((item.ITEM_DESCRIPTION && item.ITEM_DESCRIPTION !== '-') ? item.ITEM_DESCRIPTION : '-');
+      const validStore = (item.DELIVERY_ADDRESS && item.DELIVERY_ADDRESS !== '-') ? item.DELIVERY_ADDRESS : ((item.RECIPIENT_NAME && item.RECIPIENT_NAME !== '-') ? item.RECIPIENT_NAME : (item.CLIENT && item.CLIENT !== '-' ? item.CLIENT : 'Store Utama'));
+      const validBox = (item.NO_SJ && item.NO_SJ !== '-') ? item.NO_SJ : (item.box_code && item.box_code !== '-' ? item.box_code : 'WL-01');
 
       if (!groupedMap[groupKey]) {
         groupedMap[groupKey] = {
           tracking_id: trackingCode,
-          no_spk: item.NO_SPK || '-',
-          client_pt: item.CLIENT || '-',
-          promo_title: item.PROJECT || item.ITEM_DESCRIPTION || '-',
-          store_name: item.DELIVERY_ADDRESS || 'Store Utama',
-          recipient_name: item.RECIPIENT_NAME || '-',
-          box_code: item.NO_SJ || 'WL-01',
+          no_spk: (item.NO_SPK && item.NO_SPK !== '-') ? item.NO_SPK : '-',
+          client_pt: (item.CLIENT && item.CLIENT !== '-') ? item.CLIENT : '-',
+          promo_title: validProject,
+          store_name: validStore,
+          recipient_name: (item.RECIPIENT_NAME && item.RECIPIENT_NAME !== '-') ? item.RECIPIENT_NAME : '-',
+          box_code: validBox,
           itemsList: [],
           totalCombinedQty: 0
         };
@@ -270,6 +276,26 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     XLSX.writeFile(wb, "Template_Import_WellenPrint.xlsx");
   };
 
+  const getExcelVal = (row, keys, fallback = '') => {
+    if (!row) return fallback;
+    for (const k of keys) {
+      if (row[k] !== undefined && row[k] !== null) {
+        const val = String(row[k]).trim();
+        if (val !== '' && val !== '-') return val;
+      }
+    }
+    const rowKeys = Object.keys(row);
+    for (const k of keys) {
+      const kNorm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const matchedKey = rowKeys.find(rk => rk.toLowerCase().replace(/[^a-z0-9]/g, '') === kNorm);
+      if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+        const val = String(row[matchedKey]).trim();
+        if (val !== '' && val !== '-') return val;
+      }
+    }
+    return fallback;
+  };
+
   const parseExcelDate = (val) => {
     if (!val) return '-';
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -303,36 +329,48 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         }
 
         const cleanedData = rawData.map((row) => {
-          const rawQty = row.QTY_TOTAL || row['Qty Total'] || row.qty_total || row.QTY || row['Total Qty'] || 0;
-          const rawKoli = row.QTY_PER_KOLI || row['Qty Per Koli'] || row.qty_per_koli || row['ISI PER KOLI'] || 50;
-          const rawDate = row.DATE_PRODUCTION || row['Date Production'] || row['Tgl Produksi'] || row.date_production;
-          const deliveryAddress = String(row.DELIVERY_ADDRESS || row['Delivery Address'] || row.delivery_address || row['Alamat Penerima'] || '').trim();
-          const spkVal = String(row.NO_SPK || row['No SPK'] || row.no_spk || '').trim();
+          const rawQty = getExcelVal(row, ['QTY_TOTAL', 'Qty Total', 'qty_total', 'QTY', 'Total Qty', 'Qty', 'Jumlah'], '0');
+          const rawKoli = getExcelVal(row, ['QTY_PER_KOLI', 'Qty Per Koli', 'qty_per_koli', 'ISI PER KOLI', 'Koli', 'KOLI'], '50');
+          const rawDate = getExcelVal(row, ['DATE_PRODUCTION', 'Date Production', 'Tgl Produksi', 'date_production', 'Tanggal', 'Tgl']);
           
+          const spkVal = getExcelVal(row, ['NO_SPK', 'No SPK', 'no_spk', 'SPK', 'Spk', 'NO SPK', 'SPK/WPP', 'SPK WPP', 'No. SPK', 'NO. SPK']);
+          const deliveryAddress = getExcelVal(row, ['DELIVERY_ADDRESS', 'Delivery Address', 'delivery_address', 'Alamat Penerima', 'Store Name', 'STORE NAME', 'Nama Store', 'NAMA STORE', 'Nama Toko', 'NAMA TOKO', 'Store', 'STORE', 'Destination', 'DESTINATION', 'Cabang', 'CABANG', 'Toko', 'TOKO', 'Alamat', 'ALAMAT']);
+          const projectVal = getExcelVal(row, ['PROJECT', 'Project Name', 'PROJECT NAME', 'Nama Project', 'NAMA PROJECT', 'Nama Projek', 'NAMA PROJEK', 'Projek', 'PROJEK', 'Project', 'project', 'Promo', 'PROMO', 'Nama Promo', 'NAMA PROMO', 'Title', 'TITLE', 'Item Description', 'ITEM_DESCRIPTION']);
+          const noSjVal = getExcelVal(row, ['NO_SJ', 'NO SJ', 'No SJ', 'no_sj', 'BOX', 'Box', 'box', 'Box Code', 'BOX CODE', 'Surat Jalan', 'SURAT JALAN', 'No Box', 'NO_BOX']);
+          const clientVal = getExcelVal(row, ['CLIENT', 'Client', 'client', 'COMPANY', 'Company', 'company', 'PT', 'Client PT', 'CLIENT PT', 'Nama Client', 'NAMA CLIENT']);
+          const recipientNameVal = getExcelVal(row, ['RECIPIENT_NAME', 'Recipient Name', 'Nama Penerima', 'NAMA PENERIMA', 'Penerima', 'PENERIMA', 'Recipient', 'RECIPIENT']);
+          const recipientPhoneVal = getExcelVal(row, ['RECIPIENT_PHONE', 'Recipient Phone', 'No Telp Penerima', 'Telepon Penerima', 'Phone', 'No HP']);
+          const itemDescVal = getExcelVal(row, ['ITEM_DESCRIPTION', 'Item Description', 'item_description', 'Deskripsi', 'DESKRIPSI', 'Nama Barang', 'NAMA BARANG', 'Produk', 'PRODUK', 'Item', 'ITEM']);
+          const brandVal = getExcelVal(row, ['BRAND', 'Brand', 'brand', 'FILE NAME', 'File Name', 'FILE_NAME', 'Kode Barang', 'KODE BARANG']);
+          const mediaVal = getExcelVal(row, ['MEDIA', 'Media', 'media', 'Bahan', 'BAHAN', 'Material', 'MATERIAL']);
+          const ukuranVal = getExcelVal(row, ['UKURAN', 'Ukuran', 'ukuran', 'Size', 'SIZE']);
+          const poVal = getExcelVal(row, ['PO_NUMBER', 'PO Number', 'po_number', 'NO PO', 'No PO', 'PO']);
+          const wppVal = getExcelVal(row, ['NO_WPP', 'No WPP', 'no_wpp', 'WPP']);
+
           return {
             NO_SPK: spkVal,
-            PO_NUMBER: String(row.PO_NUMBER || row['PO Number'] || '').trim(),
-            NO_SJ: String(row.NO_SJ || row['NO SJ'] || `WL-${Math.floor(10 + Math.random() * 90)}`).trim(),
-            CLIENT: String(row.CLIENT || row.Client || row.COMPANY || '').trim(),
-            PROJECT: String(row.PROJECT || row['Project Name'] || row.project || '').trim(),
-            NO_WPP: String(row.NO_WPP || row['No WPP'] || row.no_wpp || '').trim(),
-            BRAND: String(row.BRAND || row.Brand || row['FILE NAME'] || '').trim(),
-            RECIPIENT_NAME: String(row.RECIPIENT_NAME || row['Recipient Name'] || row['Nama Penerima'] || '').trim(),
-            RECIPIENT_PHONE: String(row.RECIPIENT_PHONE || row['Recipient Phone'] || '').trim(),
+            PO_NUMBER: poVal,
+            NO_SJ: noSjVal || `WL-${Math.floor(10 + Math.random() * 90)}`,
+            CLIENT: clientVal,
+            PROJECT: projectVal,
+            NO_WPP: wppVal,
+            BRAND: brandVal,
+            RECIPIENT_NAME: recipientNameVal,
+            RECIPIENT_PHONE: recipientPhoneVal,
             DELIVERY_ADDRESS: deliveryAddress,
-            ITEM_DESCRIPTION: String(row.ITEM_DESCRIPTION || row['Item Description'] || '').trim(),
-            MEDIA: String(row.MEDIA || row.Media || '').trim(),
-            UKURAN: String(row.UKURAN || row.Ukuran || '').trim(),
+            ITEM_DESCRIPTION: itemDescVal,
+            MEDIA: mediaVal,
+            UKURAN: ukuranVal,
             QTY_TOTAL: Number(String(rawQty).replace(/[^0-9]/g, '')) || 0,
             QTY_PER_KOLI: Number(String(rawKoli).replace(/[^0-9]/g, '')) || 50,
             DATE_PRODUCTION: parseExcelDate(rawDate),
-            SENDER: String(row.SENDER || 'WELLEN PRINT').trim(),
-            SENDER_TELP: String(row.SENDER_TELP || '021-5506999').trim(),
-            VISUAL_IMAGE: String(row.VISUAL_IMAGE || '').trim(),
-            VISUAL_IMAGE_2: String(row.VISUAL_IMAGE_2 || '').trim(),
-            TRACKING_ID: generateNumericTrackingId(spkVal, deliveryAddress)
+            SENDER: getExcelVal(row, ['SENDER', 'Sender', 'Pengirim'], 'WELLEN PRINT'),
+            SENDER_TELP: getExcelVal(row, ['SENDER_TELP', 'Sender Telp', 'Telp Pengirim'], '021-5506999'),
+            VISUAL_IMAGE: getExcelVal(row, ['VISUAL_IMAGE', 'Visual Image']),
+            VISUAL_IMAGE_2: getExcelVal(row, ['VISUAL_IMAGE_2', 'Visual Image 2']),
+            TRACKING_ID: generateNumericTrackingId(spkVal, deliveryAddress || recipientNameVal || 'STORE')
           };
-        }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.QTY_TOTAL > 0);
+        }).filter((item) => item.NO_SPK !== '' || item.CLIENT !== '' || item.DELIVERY_ADDRESS !== '' || item.QTY_TOTAL > 0);
 
         setPreviousLabelData(labelData);
         const combinedData = [...cleanedData, ...labelData];
@@ -519,21 +557,8 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const syncToPackingDatabase = async (groupedItems) => {
-    for (const item of groupedItems) {
-      const trackingCode = item.TRACKING_ID || generateNumericTrackingId(item.NO_SPK, item.DELIVERY_ADDRESS);
-      const payload = {
-        tracking_id: trackingCode,
-        no_spk: item.NO_SPK,
-        client_pt: item.CLIENT || '-',
-        promo_title: item.PROJECT || '-',
-        store_name: item.DELIVERY_ADDRESS || item.store_name || 'Store Utama',
-        recipient_name: item.RECIPIENT_NAME || '-',
-        total_qty: item.totalCombinedQty,
-        source: 'label_sj',
-        updated_at: new Date().toISOString()
-      };
-      await supabase.from('packing_tracking').upsert(payload, { onConflict: 'tracking_id' });
-    }
+    if (!groupedItems || groupedItems.length === 0) return;
+    await saveItemsToSupabase(groupedItems);
   };
 
   const handlePrintLabels = async () => {
