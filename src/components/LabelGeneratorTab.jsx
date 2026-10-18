@@ -3,10 +3,7 @@ import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
 import { supabase } from '../supabaseClient';
 import {
-  Printer,
   FileSpreadsheet,
-  Layers,
-  Truck,
   Upload,
   Download,
   Image as ImageIcon,
@@ -14,8 +11,6 @@ import {
   Trash2,
   Tag,
   RefreshCw,
-  Check,
-  Clock,
   Search,
   X,
   RotateCcw
@@ -236,7 +231,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const { error } = await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
     if (error) {
       console.error('Error saving to Supabase packing_tracking:', error);
-      alert('⚠️ Gagal menyimpan ke database Supabase: ' + error.message);
+      alert('Gagal menyimpan data ke basis data: ' + error.message);
     }
   };
 
@@ -248,13 +243,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       const base64Logo = evt.target.result;
       setHeaderLogoUrl(base64Logo);
       localStorage.setItem('wellen_header_logo', base64Logo);
-      alert('✅ Logo Header KOP berhasil diunggah!');
+      alert('Logo Kop Dokumen berhasil diunggah dan disimpan.');
     };
     reader.readAsDataURL(file);
   };
 
   const handleResetHeaderLogo = () => {
-    if (confirm('Hapus logo header custom?')) {
+    if (confirm('Hapus logo kop dokumen kustom dan kembali ke teks standar?')) {
       setHeaderLogoUrl('');
       localStorage.removeItem('wellen_header_logo');
     }
@@ -325,7 +320,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         const rawData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         
         if (!rawData || rawData.length === 0) {
-          return alert('❌ File Excel kosong atau tidak terbaca!');
+          return alert('Berkas Excel kosong atau tidak dapat dibaca.');
         }
 
         const cleanedData = rawData.map((row) => {
@@ -380,9 +375,9 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
         // Auto Save Online to Supabase
         await saveItemsToSupabase(cleanedData);
 
-        alert(`✅ Sukses Validasi & Simpan Online! ${cleanedData.length} baris data baru ditambahkan (Total: ${combinedData.length} data).`);
+        alert(`Berhasil memvalidasi dan menyimpan data secara daring. ${cleanedData.length} baris baru ditambahkan (Total: ${combinedData.length} baris).`);
       } catch (err) { 
-        alert('Gagal membaca file Excel: ' + err.message); 
+        alert('Gagal membaca berkas Excel: ' + err.message); 
       }
     };
     reader.readAsArrayBuffer(file); 
@@ -390,12 +385,12 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleUndoImport = () => {
-    if (!previousLabelData) return alert('⚠️ Tidak ada riwayat import sebelumnya untuk dipulihkan.');
-    if (confirm('Pulihkan data ke kondisi sebelum import terakhir?')) {
+    if (!previousLabelData) return alert('Tidak ada riwayat impor sebelumnya untuk dipulihkan.');
+    if (confirm('Pulihkan data ke kondisi sebelum impor terakhir?')) {
       setLabelData(previousLabelData);
       setSelectedRows(previousLabelData.map((_, i) => i));
       setPreviousLabelData(null);
-      alert('✅ Data berhasil dipulihkan ke kondisi sebelum import.');
+      alert('Data berhasil dipulihkan ke kondisi sebelum impor.');
     }
   };
 
@@ -413,7 +408,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     if (files.length === 0) return;
 
     if (labelData.length === 0) {
-      return alert('⚠️ Harap import data Excel terlebih dahulu sebelum melakukan upload gambar massal!');
+      return alert('Harap mengimpor data Excel terlebih dahulu sebelum melakukan pengunggahan gambar massal.');
     }
 
     const newLabelData = [...labelData];
@@ -453,7 +448,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
 
     setLabelData(newLabelData);
     await saveItemsToSupabase(newLabelData);
-    alert(`✅ Sukses! ${successCount} gambar berhasil diunggah dan tersimpan ke database.`);
+    alert(`Berhasil mengunggah dan menyimpan ${successCount} gambar visual ke basis data.`);
     e.target.value = '';
   };
 
@@ -472,14 +467,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleClearAllData = async () => {
-    if (confirm('Clear & hapus seluruh data tersimpan di database?')) {
+    if (confirm('Apakah Anda yakin ingin menghapus seluruh data yang tersimpan di basis data?')) {
       const { error } = await supabase.from('packing_tracking').delete().gt('id', 0);
       if (!error) {
         setLabelData([]);
         setSelectedRows([]);
-        alert('✅ Seluruh data berhasil dibersihkan.');
+        alert('Seluruh data berhasil dihapus.');
       } else {
-        alert('Gagal membersihkan data: ' + error.message);
+        alert('Gagal menghapus data: ' + error.message);
       }
     }
   };
@@ -513,7 +508,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const url = URL.createObjectURL(blob);
     const printWin = window.open(url, '_blank');
     if (!printWin) {
-      alert('⚠️ Pop-up diblokir oleh browser! Mohon izinkan pop-up untuk situs ini.');
+      alert('Jendela cetak diblokir oleh peramban. Mohon izinkan pop-up untuk situs ini.');
     }
   };
 
@@ -562,7 +557,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handlePrintLabels = async () => {
-    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    if (labelData.length === 0) return alert('Belum ada data yang diimpor untuk dicetak.');
     const groupedItems = groupSelectedRows();
     await syncToPackingDatabase(groupedItems);
     
@@ -609,7 +604,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       const labelsHtml = await Promise.all(pair.map(async (item) => {
         const img1 = item.VISUAL_IMAGE ? `<img src="${item.VISUAL_IMAGE}" class="preview-img">` : '';
         const img2 = item.VISUAL_IMAGE_2 ? `<img src="${item.VISUAL_IMAGE_2}" class="preview-img">` : '';
-        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ No Image ]</div>` : '';
+        const noImg = (!item.VISUAL_IMAGE && !item.VISUAL_IMAGE_2) ? `<div style="font-size:11px; opacity:0.5;">[ Tanpa Visual ]</div>` : '';
 
         const itemsHtml = item.itemsList.map(it => 
           `• ${it.ITEM_DESCRIPTION || it.BRAND || it.PROJECT || '-'} (${it.MEDIA || ''} ${it.UKURAN ? '- ' + it.UKURAN : ''}) [<strong>${it.QTY_TOTAL || 0} Pcs</strong>]`
@@ -673,15 +668,13 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       return `<div class="label-page">${labelsHtml.join('<div class="cut-guide"></div>')}</div>`;
     }));
 
-    const fullHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Label - Wellen Print</title><style>
-      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; } 
-      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
-      .control-group { display: flex; align-items: center; gap: 8px; }
-      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
-      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
-      .action-bar button:hover { background: #4338CA; }
+    const fullHtml = `<!DOCTYPE html><html><head><title>Cetak & Unduh PDF Label Kolian - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #ffffff; color: #0f172a; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; border-bottom: 1px solid #e2e8f0; box-sizing: border-box; font-size: 12px; }
+      .action-bar button { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 8px 14px; font-weight: 700; border-radius: 8px; cursor: pointer; font-size: 12px; }
+      .action-bar button:hover { background: #dbeafe; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 0px; }
-      .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; overflow: hidden; } 
+      .label-page { width: 210mm; height: 297mm; max-height: 297mm; padding: 2mm 8mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; overflow: hidden; } 
       .label-box { border: 2px solid #000; width: 100%; height: 143mm; max-height: 143mm; display: flex; flex-direction: column; box-sizing: border-box; background: #fff; overflow: hidden; }
       .cut-guide { width: 100%; border-top: 1px dashed #444; margin: 0.5mm 0; }
       .header-table { width: 100%; border-bottom: 2px solid #000; border-collapse: collapse; } 
@@ -710,10 +703,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Pengaturan Printer Office & Cetak Label</b></span>
+        <span><b>Pengaturan Cetak & Unduh Label Kolian</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
-          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
-          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
+          <button onclick="window.print()">Cetak / Pengaturan Printer</button>
+          <button onclick="window.print()" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0;">Simpan sebagai PDF</button>
         </div>
       </div>
       <div class="page-wrapper">${pagesHtml}</div>
@@ -723,7 +716,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handlePrintSuratJalan = async () => {
-    if (labelData.length === 0) return alert('⚠️ Belum ada data yang di-import!');
+    if (labelData.length === 0) return alert('Belum ada data yang diimpor untuk dicetak.');
     const groupedItems = groupSelectedRows();
     await syncToPackingDatabase(groupedItems);
 
@@ -860,16 +853,14 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     }).join('');
 
-    const fullSjHtml = `<!DOCTYPE html><html><head><title>Print & Download PDF Surat Jalan - Wellen Print</title><style>
-      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #555; color: #000; } 
-      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #1e1e1e; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.4); font-size: 12px; }
-      .control-group { display: flex; align-items: center; gap: 8px; }
-      .control-group select, .control-group label { background: #333; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
-      .action-bar button { background: #4F46E5; color: white; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
-      .action-bar button:hover { background: #4338CA; }
+    const fullSjHtml = `<!DOCTYPE html><html><head><title>Cetak & Unduh PDF Surat Jalan - Wellen Print</title><style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f1f5f9; color: #000; } 
+      .action-bar { position: fixed; top: 0; left: 0; width: 100%; background: #ffffff; color: #0f172a; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; z-index: 1000; border-bottom: 1px solid #e2e8f0; box-sizing: border-box; font-size: 12px; }
+      .action-bar button { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 8px 14px; font-weight: 700; border-radius: 8px; cursor: pointer; font-size: 12px; }
+      .action-bar button:hover { background: #dbeafe; }
       .page-wrapper { margin-top: 65px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
       
-      .sj-page { width: 210mm; height: 140mm; padding: 5mm 7mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.5); margin-bottom: 20px; font-size: 11px; } 
+      .sj-page { width: 210mm; height: 140mm; padding: 5mm 7mm; box-sizing: border-box; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; font-size: 11px; } 
       
       .font-bold { font-weight: bold; } .font-normal { font-weight: normal; } .text-center { text-align: center; } 
       .sj-top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; } 
@@ -914,10 +905,10 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
       }
     </style></head><body>
       <div class="action-bar">
-        <span><b>🖨️ Surat Jalan (Clean Layout & No Blank Page)</b></span>
+        <span><b>Pratinjau Cetak Surat Jalan</b></span>
         <div style="display: flex; gap: 10px; align-items: center;">
-          <button onclick="window.print()" style="background:#0D9488;">🖨️ Print / Setting Printer</button>
-          <button onclick="window.print()" style="background:#4F46E5;">📥 Download PDF</button>
+          <button onclick="window.print()">Cetak / Pengaturan Printer</button>
+          <button onclick="window.print()" style="background:#ecfdf5; color:#047857; border-color:#a7f3d0;">Simpan sebagai PDF</button>
         </div>
       </div>
       <div class="page-wrapper">${pagesHtml}</div>
@@ -950,114 +941,116 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   return (
     <div className="space-y-4">
       {/* Header Logo Card */}
-      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className={`p-4 rounded-2xl border shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 ${isDarkMode ? 'bg-neutral-900 border-neutral-800 text-slate-100' : 'bg-white border-slate-200/80 text-slate-800'}`}>
         <div className="flex items-center gap-3">
-          <div className="w-20 h-14 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden p-1">
-            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Header" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold text-slate-400 text-center">No Logo</span>}
+          <div className="w-20 h-14 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-800 flex items-center justify-center overflow-hidden p-1">
+            {headerLogoUrl ? <img src={headerLogoUrl} alt="Logo Kop" className="max-w-full max-h-full object-contain" /> : <span className="text-[10px] font-bold text-slate-400 text-center">Tanpa Logo</span>}
           </div>
           <div>
-            <h4 className="font-extrabold text-xs text-black flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-indigo-600" /> Logo Header (Label & Delivery Order)
+            <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Logo Kop Dokumen (Label & Surat Jalan)
             </h4>
-            <p className="text-[11px] font-medium text-slate-500 mt-0.5">{headerLogoUrl ? 'Custom header logo active (Saved)' : 'Using default text "WELLEN PRINT"'}</p>
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+              {headerLogoUrl ? 'Logo kop kustom aktif dan tersimpan di memori perangkat' : 'Menggunakan identitas teks standar "WELLEN PRINT"'}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5">
-            <Upload className="w-3.5 h-3.5 text-slate-700" /> Upload Logo Header <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 transition-all active:scale-95 shadow-2xs flex items-center gap-1.5">
+            <Upload className="w-3.5 h-3.5" /> Unggah Logo Kop <input type="file" accept="image/*" onChange={handleUploadHeaderLogo} className="hidden" />
           </label>
           {headerLogoUrl && (
-            <button onClick={handleResetHeaderLogo} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
-              <RefreshCw className="w-3.5 h-3.5 text-rose-700" /> Reset
+            <button onClick={handleResetHeaderLogo} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50/90 hover:bg-rose-100/90 text-rose-700 border border-rose-200/80 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800/60 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <RefreshCw className="w-3.5 h-3.5" /> Atur Ulang
             </button>
           )}
         </div>
       </div>
 
       {/* Action Toolbar Card */}
-      <div className="p-4 rounded-2xl border border-slate-200 bg-white text-black shadow-2xs flex flex-col xl:flex-row items-center justify-between gap-4">
+      <div className={`p-4 rounded-2xl border shadow-2xs flex flex-col xl:flex-row items-center justify-between gap-4 ${isDarkMode ? 'bg-neutral-900 border-neutral-800 text-slate-100' : 'bg-white border-slate-200/80 text-slate-800'}`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs flex items-center gap-1.5">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-700" /> Import Label & DO Excel <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 transition-all shadow-2xs flex items-center gap-1.5">
+            <FileSpreadsheet className="w-3.5 h-3.5" /> Impor Data Excel (Label & SJ) <input type="file" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} className="hidden" />
           </label>
-          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-extrabold text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer">
-            <Download className="w-3.5 h-3.5 text-slate-700" /> Download Excel Template
+          <button onClick={handleDownloadTemplate} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer">
+            <Download className="w-3.5 h-3.5" /> Unduh Templat Excel
           </button>
           
-          <div className="flex items-center gap-1.5 ml-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-slate-800">
-            <span className="text-[11px] font-extrabold px-1 text-slate-500">DO Format:</span>
-            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'modern' ? 'bg-white text-indigo-600 border border-indigo-200/80 shadow-2xs font-extrabold' : 'text-slate-700 hover:text-black'}`}>Modern</button>
-            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${sjFormatType === 'classic' ? 'bg-white text-indigo-600 border border-indigo-200/80 shadow-2xs font-extrabold' : 'text-slate-700 hover:text-black'}`}>Classic</button>
+          <div className="flex items-center gap-1.5 ml-1 bg-slate-100/80 dark:bg-neutral-800 p-1 rounded-xl border border-slate-200/80 dark:border-neutral-700">
+            <span className="text-[11px] font-semibold px-1.5 text-slate-500 dark:text-slate-400">Format SJ:</span>
+            <button onClick={() => setSjFormatType('modern')} className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${sjFormatType === 'modern' ? 'bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Modern</button>
+            <button onClick={() => setSjFormatType('classic')} className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${sjFormatType === 'classic' ? 'bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 shadow-2xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}>Klasik</button>
           </div>
 
-          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
-            <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 1 (Left) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 transition-all flex items-center gap-1.5 shadow-2xs">
+            <Upload className="w-3.5 h-3.5" /> Unggah Massal Visual 1 (Kiri) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE')} className="hidden" />
           </label>
-          <label className="px-3.5 py-2 rounded-xl text-xs font-extrabold cursor-pointer text-black bg-white border border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-2xs">
-            <Upload className="w-3.5 h-3.5 text-slate-700" /> Bulk Upload Image 2 (Right) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
+          <label className="px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 transition-all flex items-center gap-1.5 shadow-2xs">
+            <Upload className="w-3.5 h-3.5" /> Unggah Massal Visual 2 (Kanan) <input type="file" accept="image/*" multiple onChange={(e) => handleBatchUploadGlobal(e, 'VISUAL_IMAGE_2')} className="hidden" />
           </label>
           {previousLabelData && (
-            <button onClick={handleUndoImport} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
-              <RotateCcw className="w-3.5 h-3.5 text-amber-700" /> Batalkan Import Terakhir
+            <button onClick={handleUndoImport} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-50/90 hover:bg-amber-100/90 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <RotateCcw className="w-3.5 h-3.5" /> Batalkan Impor Terakhir
             </button>
           )}
           {labelData.length > 0 && (
-            <button onClick={handleClearAllData} className="px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs transition-all flex items-center gap-1 cursor-pointer">
-              <Trash2 className="w-3.5 h-3.5 text-rose-700" /> Clear Data
+            <button onClick={handleClearAllData} className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-50/90 hover:bg-rose-100/90 text-rose-700 border border-rose-200/80 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800/60 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer">
+              <Trash2 className="w-3.5 h-3.5" /> Hapus Semua Data
             </button>
           )}
         </div>
 
-        {/* PRINT BUTTONS: UNIFORM SIZE, NO LOUD COLORS, SAME SHAPE */}
+        {/* PRINT BUTTONS: SOFT TONAL PASTEL SURFACES */}
         <div className="flex items-center gap-2.5">
-          <button onClick={handlePrintSuratJalan} className="h-10 px-5 rounded-xl font-extrabold text-xs bg-white hover:bg-slate-50 text-slate-900 border border-slate-300 shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
-            <FileText className="w-4 h-4 text-slate-700" /> Print DO
+          <button onClick={handlePrintSuratJalan} className="h-10 px-4 rounded-xl font-semibold text-xs bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
+            <FileText className="w-4 h-4" /> Cetak Surat Jalan
           </button>
-          <button onClick={handlePrintLabels} className="h-10 px-5 rounded-xl font-extrabold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
-            <Tag className="w-4 h-4" /> Print Labels
+          <button onClick={handlePrintLabels} className="h-10 px-4 rounded-xl font-semibold text-xs bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 shadow-2xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95">
+            <Tag className="w-4 h-4" /> Cetak Label Kolian
           </button>
         </div>
       </div>
 
       {/* Search Input Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+      <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl border shadow-2xs ${isDarkMode ? 'bg-neutral-900 border-neutral-800 text-slate-100' : 'bg-white border-slate-200/80 text-slate-800'}`}>
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Cari Nomor SPK, Client, Brand, Penerima, Alamat, Deskripsi, PO/SJ..."
+            placeholder="Cari Nomor SPK, Klien, Merek, Penerima, Alamat, Deskripsi, Nomor PO/SJ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 placeholder-slate-400 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+            className={`w-full pl-10 pr-9 py-2 border rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-slate-100 placeholder-neutral-500' : 'bg-slate-50/80 border-slate-200/90 text-slate-800 placeholder-slate-400 focus:bg-white'}`}
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs cursor-pointer"
-              title="Clear search"
+              title="Hapus pencarian"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
-        <div className="text-xs text-slate-500 font-semibold whitespace-nowrap px-1 flex items-center gap-2">
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap px-1 flex items-center gap-2">
           {searchTerm ? (
-            <span>Hasil Pencarian: <strong className="text-indigo-600 font-bold">{filteredData.length}</strong> dari {labelData.length} SPK</span>
+            <span>Hasil Pencarian: <strong className="text-blue-600 dark:text-blue-400 font-bold">{filteredData.length}</strong> dari {labelData.length} SPK</span>
           ) : (
-            <span>Total: <strong className="text-slate-900 font-bold">{labelData.length}</strong> SPK</span>
+            <span>Total: <strong className="text-slate-900 dark:text-slate-100 font-bold">{labelData.length}</strong> SPK</span>
           )}
           {selectedRows.length > 0 && (
-            <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-200 font-extrabold">
+            <span className="bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 px-2.5 py-1 rounded-lg font-bold">
               {selectedRows.length} Terpilih
             </span>
           )}
         </div>
       </div>
 
-      {/* ULTRA-CLEAN ENTERPRISE GRID TABLE */}
-      <div className="max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border border-slate-200/80 shadow-2xs bg-white custom-scrollbar">
-        <table className="w-full text-left text-xs border-collapse bg-white">
-          <thead className="sticky top-0 z-20 bg-[#F8FAFC] border-b border-slate-200/80 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+      {/* ENTERPRISE GRID TABLE */}
+      <div className={`max-h-[680px] overflow-y-auto overflow-x-auto relative rounded-2xl border shadow-2xs custom-scrollbar ${isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200/80'}`}>
+        <table className="w-full text-left text-xs border-collapse">
+          <thead className={`sticky top-0 z-20 border-b font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'bg-neutral-800/95 border-neutral-700 text-slate-300' : 'bg-slate-50/95 border-slate-200/80 text-slate-500'}`}>
             <tr>
               <th className="p-3.5 text-center w-10">
                 <input
@@ -1073,26 +1066,26 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                       setSelectedRows(prev => Array.from(new Set([...prev, ...filteredIndices])));
                     }
                   }}
-                  className="cursor-pointer accent-indigo-600 w-4 h-4"
+                  className="cursor-pointer accent-blue-600 w-4 h-4"
                 />
               </th>
               <th className="p-3.5">NOMOR SPK</th>
-              <th className="p-3.5">CLIENT & BRAND</th>
-              <th className="p-3.5">RECIPIENT & ADDRESS</th>
-              <th className="p-3.5">SPECIFICATION / MEDIA / SIZE</th>
-              <th className="p-3.5 text-center">TOTAL QTY</th>
-              <th className="p-3.5 text-center">ITEMS / PACKAGE</th>
-              <th className="p-3.5 text-center">VISUAL IMAGES</th>
+              <th className="p-3.5">KLIEN & MEREK</th>
+              <th className="p-3.5">PENERIMA & ALAMAT TUJUAN</th>
+              <th className="p-3.5">SPESIFIKASI / MEDIA / UKURAN</th>
+              <th className="p-3.5 text-center">TOTAL KUANTITAS</th>
+              <th className="p-3.5 text-center">ISI PER KOLIAN</th>
+              <th className="p-3.5 text-center">VISUAL PRODUK</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-slate-100'}`}>
             {filteredData.length === 0 ? (
               <tr>
-                <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">
+                <td colSpan="8" className="p-8 text-center text-slate-400 dark:text-neutral-500 font-medium">
                   {searchTerm ? (
-                    <span>Tidak ditemukan data yang cocok dengan pencarian "<strong>{searchTerm}</strong>".</span>
+                    <span>Tidak ditemukan data yang sesuai dengan kata kunci pencarian "<strong>{searchTerm}</strong>".</span>
                   ) : (
-                    <span>Table is empty. Please click <strong>"Download Excel Template"</strong> above or import data.</span>
+                    <span>Tabel masih kosong. Silakan klik tombol <strong>"Unduh Templat Excel"</strong> atau impor berkas data alokasi di atas.</span>
                   )}
                 </td>
               </tr>
@@ -1105,9 +1098,9 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                 const isChecked = selectedRows.includes(idx);
 
                 return (
-                  <tr key={idx} className={`transition-colors hover:bg-slate-50/80 bg-white ${isChecked ? 'bg-indigo-50/60' : 'bg-white'}`}>
+                  <tr key={idx} className={`transition-colors ${isChecked ? (isDarkMode ? 'bg-blue-950/25 hover:bg-blue-950/35' : 'bg-blue-50/50 hover:bg-blue-50/80') : (isDarkMode ? 'hover:bg-neutral-800/50' : 'hover:bg-slate-50/80')}`}>
                     <td className="p-3 align-middle text-center">
-                      <input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-indigo-600 w-4 h-4" />
+                      <input type="checkbox" checked={isChecked} onChange={() => setSelectedRows(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])} className="cursor-pointer accent-blue-600 w-4 h-4" />
                     </td>
                     <td className="p-3 align-middle min-w-[150px]">
                       {(() => {
@@ -1117,7 +1110,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                         const subSpk = parts.slice(1).join('/').trim();
                         return (
                           <div className="flex flex-col">
-                            <span className="font-mono text-slate-900 font-extrabold text-xs sm:text-sm whitespace-nowrap">
+                            <span className="font-mono text-slate-900 dark:text-slate-100 font-extrabold text-xs sm:text-sm whitespace-nowrap">
                               {mainSpk}
                             </span>
                             {subSpk && (
@@ -1130,43 +1123,43 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
                       })()}
                     </td>
                     <td className="p-3 align-middle max-w-[220px]">
-                      <div className="font-bold text-slate-900 text-xs truncate" title={row.CLIENT}>{row.CLIENT || '-'}</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate" title={row.CLIENT}>{row.CLIENT || '-'}</div>
                       <div className="text-[10px] font-mono text-slate-400 font-medium truncate" title={row.BRAND}>{row.BRAND || '-'}</div>
                     </td>
                     <td className="p-3 align-middle max-w-[260px]">
-                      <div className="font-bold text-slate-900 text-xs truncate">{row.RECIPIENT_NAME || '-'} {row.RECIPIENT_PHONE ? `(${row.RECIPIENT_PHONE})` : ''}</div>
-                      <div className="text-[11px] font-medium text-slate-500 truncate" title={row.DELIVERY_ADDRESS}>{row.DELIVERY_ADDRESS || '-'}</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate">{row.RECIPIENT_NAME || '-'} {row.RECIPIENT_PHONE ? `(${row.RECIPIENT_PHONE})` : ''}</div>
+                      <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate" title={row.DELIVERY_ADDRESS}>{row.DELIVERY_ADDRESS || '-'}</div>
                     </td>
                     <td className="p-3 align-middle max-w-[200px]">
-                      <div className="font-medium text-slate-700 text-xs truncate" title={row.ITEM_DESCRIPTION}>{row.ITEM_DESCRIPTION || '-'}</div>
+                      <div className="font-medium text-slate-700 dark:text-slate-300 text-xs truncate" title={row.ITEM_DESCRIPTION}>{row.ITEM_DESCRIPTION || '-'}</div>
                       <div className="text-[10px] text-slate-400 font-medium truncate">{row.MEDIA || '-'} {row.UKURAN ? `(${row.UKURAN})` : ''}</div>
                     </td>
-                    <td className="p-3 align-middle text-center font-extrabold text-slate-900 text-sm whitespace-nowrap">{total.toLocaleString()} Pcs</td>
+                    <td className="p-3 align-middle text-center font-extrabold text-slate-900 dark:text-slate-100 text-sm whitespace-nowrap">{total.toLocaleString()} Pcs</td>
                     <td className="p-3 align-middle text-center">
                       <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                         <input 
                           type="number" 
                           value={row.QTY_PER_KOLI || 50} 
                           onChange={(e) => handleUpdateKoliRow(idx, e.target.value)} 
-                          className="w-16 px-2 py-1 rounded-lg border border-slate-300 text-xs font-bold text-center bg-white text-black"
+                          className={`w-16 px-2 py-1 rounded-lg border text-xs font-bold text-center ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'}`}
                         />
-                        <span className="text-[10px] text-slate-500 font-semibold">Pcs (<strong className="text-black">{totalKoliCalc} Koli</strong>)</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Pcs (<strong className="text-slate-900 dark:text-slate-100">{totalKoliCalc} Koli</strong>)</span>
                       </div>
                     </td>
                     <td className="p-3 align-middle text-center">
                       <div className="flex flex-col items-center gap-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-slate-400">Img 1:</span>
-                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
-                          <label className="cursor-pointer px-1.5 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-md text-[10px] font-bold transition-all shadow-2xs">
-                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
+                          <span className="text-[10px] font-bold text-slate-400">Vis 1:</span>
+                          {row.VISUAL_IMAGE ? <img src={row.VISUAL_IMAGE} alt="1" onClick={() => onOpenImageModal(row.VISUAL_IMAGE, `Visual 1`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 dark:border-neutral-700 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 rounded-md text-[10px] font-semibold transition-all shadow-2xs">
+                            Unggah <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE')} className="hidden" />
                           </label>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-slate-400">Img 2:</span>
-                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
-                          <label className="cursor-pointer px-1.5 py-0.5 bg-white hover:bg-slate-100 text-black border border-slate-300 rounded-md text-[10px] font-bold transition-all shadow-2xs">
-                            Upload <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
+                          <span className="text-[10px] font-bold text-slate-400">Vis 2:</span>
+                          {row.VISUAL_IMAGE_2 ? <img src={row.VISUAL_IMAGE_2} alt="2" onClick={() => onOpenImageModal(row.VISUAL_IMAGE_2, `Visual 2`, row.DELIVERY_ADDRESS, row.PROJECT, row.NO_SPK)} className="w-8 h-6 object-contain border border-slate-300 dark:border-neutral-700 rounded-md bg-white cursor-pointer hover:scale-110 transition-transform shadow-2xs" /> : <span className="text-[10px] text-slate-400 font-medium">-</span>}
+                          <label className="cursor-pointer px-2 py-0.5 bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 rounded-md text-[10px] font-semibold transition-all shadow-2xs">
+                            Unggah <input type="file" accept="image/*" onChange={(e) => handleImageUploadRow(e, idx, 'VISUAL_IMAGE_2')} className="hidden" />
                           </label>
                         </div>
                       </div>

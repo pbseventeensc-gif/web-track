@@ -6,17 +6,11 @@ import {
   Upload,
   Trash2,
   Search,
-  Plus,
-  CheckCircle2,
-  AlertCircle,
   Eye,
   RefreshCw,
   Folder,
-  Layers,
-  ArrowRight,
-  Sparkles
+  Layers
 } from 'lucide-react';
-import { supabase } from '../../supabaseClient';
 
 export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
   const [folders, setFolders] = useState([]);
@@ -27,14 +21,13 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
   const [newFolderDesc, setNewFolderDesc] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // Load Initial Folders from LocalStorage & Supabase
   useEffect(() => {
     loadFolders();
   }, []);
 
   const extractCoreCode = (str) => {
     if (!str) return '';
-    const cleanStr = String(str).replace(/\.[^/.]+$/, ''); // Strip extension
+    const cleanStr = String(str).replace(/\.[^/.]+$/, '');
     const parts = cleanStr.split(/[-._]/);
     const lastPart = parts[parts.length - 1].trim();
     const match = lastPart.match(/(\d+)$/);
@@ -42,24 +35,22 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
   };
 
   const loadFolders = async () => {
-    // 1. Load local fallback
     const localData = localStorage.getItem('desk_print_folders');
     let initialFolders = [];
     if (localData) {
       try {
         initialFolders = JSON.parse(localData);
       } catch (e) {
-        console.error('Failed to parse local desk_print_folders:', e);
+        console.error('Gagal membaca data folder pracetak lokal:', e);
       }
     }
 
-    // Default sample folder if empty
     if (initialFolders.length === 0) {
       initialFolders = [
         {
           id: 'folder-demo-01',
-          name: 'Promo Kawan Lama Oktober 2026',
-          description: 'Folder gambar desain promo master cabang Kawan Lama',
+          name: 'Program Promosi Kawan Lama Oktober 2026',
+          description: 'Penyimpanan berkas gambar desain master cabang Kawan Lama',
           created_at: new Date().toISOString(),
           images: []
         }
@@ -72,24 +63,11 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
       setSelectedFolderId(initialFolders[0].id);
     }
 
-    // Sync window global variable for Packing Station access
     syncGlobalFolders(initialFolders);
-
-    // 2. Try fetching from Supabase table if available
-    try {
-      const { data, error } = await supabase.from('desk_print_folders').select('*').order('id', { ascending: false });
-      if (!error && data && data.length > 0) {
-        setFolders(data);
-        syncGlobalFolders(data);
-      }
-    } catch (e) {
-      // Supabase table fallback
-    }
   };
 
   const syncGlobalFolders = (folderData) => {
     window.__DESK_PRINT_FOLDERS__ = folderData;
-    // Map code -> url into active design urls map
     const activeUrls = {};
     folderData.forEach(folder => {
       (folder.images || []).forEach(img => {
@@ -109,23 +87,16 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
     setFolders(updatedFolders);
     localStorage.setItem('desk_print_folders', JSON.stringify(updatedFolders));
     syncGlobalFolders(updatedFolders);
-
-    // Try saving to Supabase if table exists
-    try {
-      await supabase.from('desk_print_folders').upsert(updatedFolders);
-    } catch (e) {
-      // Ignore if Supabase table not created yet
-    }
   };
 
   const handleCreateFolder = (e) => {
     e.preventDefault();
-    if (!newFolderName.trim()) return alert('⚠️ Silakan masukkan nama Folder Project.');
+    if (!newFolderName.trim()) return alert('Silakan masukkan nama folder proyek terlebih dahulu.');
 
     const newFolder = {
       id: `folder-${Date.now()}`,
       name: newFolderName.trim(),
-      description: newFolderDesc.trim() || 'Folder Gambar Desain Master',
+      description: newFolderDesc.trim() || 'Folder Berkas Desain Master',
       created_at: new Date().toISOString(),
       images: []
     };
@@ -140,7 +111,7 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleDeleteFolder = (folderId, folderName) => {
-    if (!window.confirm(`Hapus folder project "${folderName}" beserta seluruh gambar di dalamnya?`)) return;
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus folder proyek "${folderName}" beserta seluruh berkas gambar di dalamnya?`)) return;
 
     const updated = folders.filter(f => f.id !== folderId);
     saveFoldersState(updated);
@@ -163,7 +134,7 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
             reader.onload = (event) => {
               const base64Str = event.target.result;
               const fileName = file.name;
-              const itemCode = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+              const itemCode = fileName.replace(/\.[^/.]+$/, '');
               const coreCode = extractCoreCode(fileName);
               const sizeKb = Math.round(file.size / 1024);
 
@@ -193,9 +164,9 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
       });
 
       await saveFoldersState(updatedFolders);
-      alert(`✅ Berhasil menambahkan ${processedImages.length} gambar ke Folder Project!`);
+      alert(`Berhasil menambahkan ${processedImages.length} berkas gambar ke dalam folder proyek.`);
     } catch (err) {
-      alert('❌ Gagal upload gambar: ' + err.message);
+      alert('Gagal mengunggah berkas gambar: ' + err.message);
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -229,65 +200,66 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
   });
 
   return (
-    <div className={`min-h-screen p-4 sm:p-6 transition-colors ${isDarkMode ? 'bg-neutral-900 text-stone-100' : 'bg-[#F4F5F7] text-stone-900'}`}>
-      {/* Header Banner - Clean & Clear Style */}
-      <div className={`rounded-3xl p-6 sm:p-8 mb-6 border shadow-xs relative overflow-hidden transition-colors ${
+    <div className="space-y-6 w-full max-w-full">
+      {/* Header Banner */}
+      <div className={`rounded-3xl p-6 sm:p-7 border shadow-xs transition-colors ${
         isDarkMode
-          ? 'bg-neutral-800/90 border-neutral-700 text-white'
-          : 'bg-white border-slate-200 text-slate-900'
+          ? 'bg-neutral-800/90 border-neutral-700/80 text-white'
+          : 'bg-white border-slate-200/80 text-slate-800'
       }`}>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border mb-3 ${
-              isDarkMode ? 'bg-neutral-700/60 text-slate-300 border-neutral-600' : 'bg-slate-100 text-slate-700 border-slate-200'
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border mb-2.5 ${
+              isDarkMode ? 'bg-blue-950/40 text-blue-300 border-blue-800/60' : 'bg-blue-50/90 text-blue-700 border-blue-200/80'
             }`}>
-              <Sparkles className="w-3.5 h-3.5" /> Desk Print Repository
+              <Layers className="w-3.5 h-3.5" /> Penyimpanan Master Pracetak
             </div>
-            <h1 className={`text-2xl sm:text-3xl font-black tracking-tight flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-              <FolderKanban className="w-8 h-8 text-slate-700 dark:text-slate-300" />
-              Desk Print
-            </h1>
-            <p className={`text-xs sm:text-sm mt-1 max-w-xl font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-              Kelola folder project dan master gambar desain. Gambar di Desk Print otomatis dapat diambil oleh **Packing Station** saat import Excel / Google Sheet.
+            <h2 className={`text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2.5 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
+              <FolderKanban className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              Manajemen Berkas Pracetak (Desk Print)
+            </h2>
+            <p className={`text-xs sm:text-sm mt-1 max-w-2xl font-normal leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+              Kelola direktori proyek dan berkas gambar desain master. Seluruh gambar yang tersimpan dapat dicocokkan secara otomatis oleh <strong className="font-semibold">Packing Station</strong> saat proses impor jadwal kerja.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsCreatingFolder(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 shadow-xs transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
           >
             <FolderPlus className="w-4 h-4" />
-            + Buat Folder Project Baru
+            <span>Buat Folder Proyek Baru</span>
           </button>
         </div>
       </div>
 
-      {/* Main Grid: Left Sidebar Folders & Right Folder Contents */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: List of Folders */}
         <div className="lg:col-span-4 space-y-4">
           <div className={`p-5 rounded-3xl border shadow-xs ${
-            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-slate-200'
+            isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80' : 'bg-white border-slate-200/80'
           }`}>
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-neutral-700">
-              <h2 className="font-bold text-sm uppercase flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                <Folder className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                Folder Project ({folders.length})
-              </h2>
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-neutral-700/70">
+              <h3 className="font-semibold text-xs uppercase tracking-wider flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <Folder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                Daftar Folder Proyek ({folders.length})
+              </h3>
               <button
+                type="button"
                 onClick={loadFolders}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-700 transition-all cursor-pointer"
-                title="Reload Folders"
+                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-700 transition-all cursor-pointer"
+                title="Muat Ulang Daftar Folder"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Folder List */}
             <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
               {folders.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs">
-                  Belum ada folder project. Klik "+ Buat Folder Project Baru".
+                  Belum ada folder proyek. Silakan klik tombol "Buat Folder Proyek Baru".
                 </div>
               ) : (
                 folders.map(folder => {
@@ -300,35 +272,36 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
                       onClick={() => setSelectedFolderId(folder.id)}
                       className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
                         isSelected
-                          ? (isDarkMode ? 'bg-neutral-700/80 border-slate-500 text-white font-bold shadow-xs' : 'bg-slate-100 border-slate-300 text-slate-900 font-bold shadow-xs')
-                          : (isDarkMode ? 'bg-neutral-900/60 border-neutral-700/60 hover:bg-neutral-700/50 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700')
+                          ? (isDarkMode ? 'bg-blue-950/40 border-blue-800/70 text-blue-200 font-semibold shadow-2xs' : 'bg-blue-50/70 border-blue-200/90 text-blue-900 font-semibold shadow-2xs')
+                          : (isDarkMode ? 'bg-neutral-900/50 border-neutral-700/60 hover:bg-neutral-700/40 text-slate-300' : 'bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/70 text-slate-700')
                       }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`p-2.5 rounded-xl ${
+                        <div className={`p-2.5 rounded-xl border ${
                           isSelected
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                            ? 'bg-blue-100/80 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800'
                             : isDarkMode
-                            ? 'bg-neutral-800 text-slate-400'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            ? 'bg-neutral-800 text-slate-400 border-neutral-700'
+                            : 'bg-white text-slate-500 border-slate-200/80'
                         }`}>
                           <Layers className="w-4 h-4" />
                         </div>
                         <div className="truncate">
-                          <h3 className="text-xs font-bold truncate">{folder.name}</h3>
-                          <p className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
-                            {imgCount} gambar • {folder.description}
+                          <h4 className="text-xs font-semibold truncate">{folder.name}</h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5">
+                            {imgCount} berkas • {folder.description}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteFolder(folder.id, folder.name);
                           }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                           title="Hapus Folder"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -345,28 +318,29 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
         {/* Right Column: Active Folder Images Gallery */}
         <div className="lg:col-span-8 space-y-4">
           <div className={`p-5 sm:p-6 rounded-3xl border shadow-xs ${
-            isDarkMode ? 'bg-neutral-800 border-neutral-700' : 'bg-white border-slate-200'
+            isDarkMode ? 'bg-neutral-800/90 border-neutral-700/80' : 'bg-white border-slate-200/80'
           }`}>
             {selectedFolder ? (
               <>
-                {/* Active Folder Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200 dark:border-neutral-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-neutral-700/70">
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Folder Aktif</span>
-                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                      <FolderKanban className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Direktori Aktif</span>
+                    <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 text-slate-800 dark:text-white mt-0.5">
+                      <FolderKanban className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                       {selectedFolder.name}
-                    </h2>
+                    </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {selectedFolder.description} • {(selectedFolder.images || []).length} File Desain Tersimpan
+                      {selectedFolder.description} • {(selectedFolder.images || []).length} Berkas Desain Tersimpan
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95">
+                    <label htmlFor="desk-print-upload" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 font-semibold text-xs shadow-2xs transition-all cursor-pointer active:scale-95">
                       <Upload className="w-4 h-4" />
-                      {isUploading ? 'Mengunggah...' : '+ Upload Gambar Desain'}
+                      <span>{isUploading ? 'Mengunggah Berkas...' : 'Unggah Gambar Desain'}</span>
                       <input
+                        id="desk-print-upload"
+                        name="deskPrintUpload"
                         type="file"
                         multiple
                         accept="image/*"
@@ -381,16 +355,19 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
                 {/* Filter & Search Bar */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <div className="relative flex-1">
+                    <label htmlFor="desk-print-search" className="sr-only">Cari kode item atau nama berkas gambar</label>
                     <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
+                      id="desk-print-search"
+                      name="deskPrintSearch"
                       type="text"
-                      placeholder="Cari kode item atau nama file gambar..."
+                      placeholder="Cari kode item atau nama berkas gambar..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-xs focus:outline-none focus:ring-2 focus:ring-slate-400 ${
+                      className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                         isDarkMode
                           ? 'bg-neutral-900 border-neutral-700 text-white placeholder-slate-400'
-                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                          : 'bg-slate-50/70 border-slate-200/80 text-slate-800 placeholder-slate-400'
                       }`}
                     />
                   </div>
@@ -398,11 +375,11 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
 
                 {/* Image Grid */}
                 {filteredImages.length === 0 ? (
-                  <div className="text-center py-16 border-2 border-dashed rounded-3xl border-slate-200 dark:border-neutral-700">
-                    <ImageIcon className="w-12 h-12 text-slate-300 dark:text-neutral-600 mx-auto mb-3" />
-                    <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400">Belum ada gambar di folder ini</h3>
-                    <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                      Klik tombol "+ Upload Gambar Desain" di atas untuk menambahkan gambar masal ke folder project ini.
+                  <div className="text-center py-16 border border-dashed rounded-3xl border-slate-200 dark:border-neutral-700 bg-slate-50/40 dark:bg-neutral-900/30">
+                    <ImageIcon className="w-10 h-10 text-slate-300 dark:text-neutral-600 mx-auto mb-3" />
+                    <h4 className="text-sm font-semibold text-slate-600 dark:text-slate-300">Belum ada berkas gambar pada folder ini</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                      Gunakan tombol "Unggah Gambar Desain" di kanan atas untuk menambahkan gambar master ke dalam folder ini.
                     </p>
                   </div>
                 ) : (
@@ -412,47 +389,47 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
                         key={img.id}
                         className={`group rounded-2xl border overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col ${
                           isDarkMode
-                            ? 'bg-neutral-900 border-neutral-700'
-                            : 'bg-white border-slate-200'
+                            ? 'bg-neutral-900/70 border-neutral-700/80'
+                            : 'bg-white border-slate-200/80'
                         }`}
                       >
-                        {/* Image Preview Container */}
-                        <div className="relative aspect-square bg-slate-100 dark:bg-neutral-950 overflow-hidden flex items-center justify-center p-2">
+                        <div className="relative aspect-square bg-slate-50 dark:bg-neutral-950 overflow-hidden flex items-center justify-center p-2">
                           <img
                             src={img.image_url}
                             alt={img.item_code}
                             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                           />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <button
+                              type="button"
                               onClick={() => onOpenImageModal && onOpenImageModal(img.image_url, img.item_code, selectedFolder.name)}
-                              className="p-2 bg-white/90 rounded-full text-slate-900 hover:bg-white transition-all cursor-pointer shadow-sm"
-                              title="Lihat HD"
+                              className="p-2 bg-white/95 rounded-full text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition-all cursor-pointer shadow-sm"
+                              title="Pratinjau Resolusi Penuh"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteImage(selectedFolder.id, img.id)}
-                              className="p-2 bg-rose-600/90 rounded-full text-white hover:bg-rose-600 transition-all cursor-pointer shadow-sm"
-                              title="Hapus Gambar"
+                              className="p-2 bg-rose-50/95 rounded-full text-rose-700 hover:bg-rose-100 border border-rose-200 transition-all cursor-pointer shadow-sm"
+                              title="Hapus Berkas Gambar"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
 
-                        {/* Details Footer */}
                         <div className="p-3 flex-1 flex flex-col justify-between">
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase rounded bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-slate-300">
-                                {img.core_code ? `Core: ${img.core_code}` : 'ITEM'}
+                              <span className="inline-block px-2 py-0.5 text-[10px] font-semibold uppercase rounded bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50">
+                                {img.core_code ? `Kode: ${img.core_code}` : 'ITEM'}
                               </span>
-                              <span className="text-[10px] text-slate-400">{img.size_kb} KB</span>
+                              <span className="text-[10px] text-slate-400 tabular-nums">{img.size_kb} KB</span>
                             </div>
-                            <h4 className="text-xs font-bold truncate text-slate-800 dark:text-slate-200" title={img.item_code}>
+                            <h5 className="text-xs font-semibold truncate text-slate-800 dark:text-slate-200" title={img.item_code}>
                               {img.item_code}
-                            </h4>
+                            </h5>
                           </div>
                           <span className="text-[10px] text-slate-400 font-mono mt-1 block truncate">
                             {img.file_name}
@@ -465,7 +442,7 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
               </>
             ) : (
               <div className="text-center py-20 text-slate-400 text-xs">
-                Silakan pilih atau buat folder project di sebelah kiri.
+                Silakan pilih atau buat folder proyek di panel sebelah kiri.
               </div>
             )}
           </div>
@@ -474,36 +451,40 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
 
       {/* Modal Create Folder */}
       {isCreatingFolder && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-[100] p-4">
           <div className={`w-full max-w-sm p-6 rounded-2xl border shadow-xl transition-all ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+            isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200 text-slate-800'
           }`}>
-            <h3 className="font-bold text-base mb-1">Buat Folder Project Baru</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Buat wadah baru untuk menyimpan master gambar desain.</p>
+            <h3 className="font-bold text-base mb-1">Buat Folder Proyek Baru</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Tambahkan direktori baru untuk mengelompokkan gambar desain master.</p>
 
             <form onSubmit={handleCreateFolder} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Nama Folder Project</label>
+                <label htmlFor="new-folder-name" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Nama Folder Proyek</label>
                 <input
+                  id="new-folder-name"
+                  name="newFolderName"
                   type="text"
-                  placeholder="Contoh: Promo Nasional November 2026"
+                  placeholder="Contoh: Program Promosi Nasional November 2026"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-slate-400 ${
-                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                   }`}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Deskripsi (Opsional)</label>
+                <label htmlFor="new-folder-desc" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Keterangan (Opsional)</label>
                 <input
+                  id="new-folder-desc"
+                  name="newFolderDesc"
                   type="text"
-                  placeholder="Keterangan singkat folder..."
+                  placeholder="Deskripsi singkat isi folder..."
                   value={newFolderDesc}
                   onChange={(e) => setNewFolderDesc(e.target.value)}
-                  className={`w-full px-3 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-slate-400 ${
-                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                  className={`w-full px-3 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                   }`}
                 />
               </div>
@@ -512,13 +493,13 @@ export default function DeskPrintView({ isDarkMode, onOpenImageModal }) {
                 <button
                   type="button"
                   onClick={() => setIsCreatingFolder(false)}
-                  className="flex-1 py-2.5 border rounded-xl font-bold text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-neutral-800 transition-all cursor-pointer"
+                  className="flex-1 py-2.5 border border-slate-200 dark:border-neutral-700 rounded-xl font-semibold text-xs text-slate-700 dark:text-slate-300 bg-slate-50 hover:bg-slate-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 transition-all cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold rounded-xl text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+                  className="flex-1 py-2.5 bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer active:scale-95"
                 >
                   Simpan Folder
                 </button>

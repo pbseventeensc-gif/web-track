@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { Check, Trash2, Search, Megaphone, RotateCcw, Clock } from 'lucide-react';
+import { Check, Trash2, Search, Megaphone, RotateCcw } from 'lucide-react';
 
-export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
+export default function DesignPanel({ isDarkMode }) {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const fetchApprovedOrders = async () => {
+    const { data, error } = await supabase
+      .from('kl_orders')
+      .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
+      .in('status', ['APPROVED', 'approved'])
+      .order('updated_at', { ascending: false });
+
+    if (!error && data) {
+      setOrders(data);
+    }
+  };
 
   useEffect(() => {
     fetchApprovedOrders();
@@ -26,19 +37,9 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     };
   }, []);
 
-  const fetchApprovedOrders = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('kl_orders')
-      .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
-      .in('status', ['APPROVED', 'approved'])
-      .order('updated_at', { ascending: false });
-
-    if (!error && data) {
-      setOrders(data);
-    }
-    setLoading(false);
-  };
+  const activePromoName = orders.length > 0 && orders[0].project_name
+    ? orders[0].project_name
+    : 'Program Promosi Nasional Kawan Lama Group';
 
   const handleUpdateDesignStatus = async (order, newStatus) => {
     const orderId = order.id;
@@ -47,24 +48,24 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
 
     const { error } = await supabase
       .from('kl_orders')
-      .update({ 
+      .update({
         design_status: newStatus,
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId);
 
     if (error) {
-      alert('Gagal update status desain: ' + error.message);
+      alert('Gagal memperbarui status desain: ' + error.message);
       return;
     }
 
     if (newStatus === 'READY') {
       const generatedSpkNo = `SPK-KL-${orderId.slice(0, 6).toUpperCase()}`;
       const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
-      
+
       const itemSummaries = order.kl_order_items?.map(
         i => `${i.kl_master_items?.item_name || 'Item'} (${i.qty} pcs)`
-      ).join(', ') || 'Paket Material Promo';
+      ).join(', ') || 'Paket Material Promosi';
 
       const { data: existingSpk } = await supabase
         .from('spk_data')
@@ -78,38 +79,37 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
           client: `KAWAN LAMA (${branchName})`,
           project: `${promoTitle} - [${branchName}]`,
           bahan: itemSummaries,
-          ukuran: 'Paket Bundling Toko',
+          ukuran: 'Paket Bundling Cabang',
           qty_order: totalQty > 0 ? totalQty : 1,
           qty_print: 0,
           qty_finish: 0,
           qty_pack: 0,
           qty_ship: 0,
           store_code: branchName,
-          delivery_route: 'DISTRIBUSI LOGISTIK TOKO'
+          delivery_route: 'DISTRIBUSI LOGISTIK CABANG'
         }]);
 
         if (!spkError) {
-          alert(`Status READY CETAK. 1 SPK Toko "${generatedSpkNo}" (${totalQty} pcs total) diterbitkan ke Tab Produksi.`);
+          alert(`Status Siap Cetak telah diaktifkan. Nomor SPK "${generatedSpkNo}" (${totalQty} unit) berhasil diterbitkan ke antrean Produksi.`);
         }
       } else {
-        alert(`Status READY CETAK aktif (SPK Toko ${generatedSpkNo} sudah terdaftar di Produksi).`);
+        alert(`Status Siap Cetak aktif. Nomor SPK ${generatedSpkNo} sudah terdaftar pada antrean Produksi.`);
       }
     }
 
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, design_status: newStatus } : o));
   };
 
-  // Hapus order dari tabel Supabase
   const handleDeleteOrder = async (orderId, branchName) => {
-    if (confirm(`Hapus order toko "${branchName}" beserta item pesanannya?`)) {
+    if (confirm(`Apakah Anda yakin ingin menghapus pesanan cabang "${branchName}" beserta rincian itemnya?`)) {
       await supabase.from('kl_order_items').delete().eq('order_id', orderId);
       const { error } = await supabase.from('kl_orders').delete().eq('id', orderId);
 
       if (!error) {
         setOrders(prev => prev.filter(o => o.id !== orderId));
-        alert(`Order "${branchName}" berhasil dihapus.`);
+        alert(`Pesanan cabang "${branchName}" berhasil dihapus.`);
       } else {
-        alert('Gagal menghapus order: ' + error.message);
+        alert('Gagal menghapus pesanan: ' + error.message);
       }
     }
   };
@@ -129,88 +129,91 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
     return branchName.toLowerCase().includes(q) || projectName.toLowerCase().includes(q) || idStr.includes(q);
   });
 
-  const activePromoName = orders.length > 0 && orders[0].project_name 
-    ? orders[0].project_name 
-    : 'PROMO NASIONAL KAWAN LAMA GROUP';
-
   const pendingCount = orders.filter(o => o.design_status !== 'READY').length;
   const readyCount = orders.filter(o => o.design_status === 'READY').length;
 
   return (
-    <div className="space-y-6">
-      {/* Top Header Card */}
-      <div className={`p-4 rounded-2xl border shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-colors ${
-        isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+    <div className="space-y-5">
+      {/* Header Panel */}
+      <div className={`p-5 rounded-2xl border shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors ${
+        isDarkMode ? 'bg-neutral-900 border-neutral-800 text-slate-100' : 'bg-white border-slate-200/90 text-slate-800'
       }`}>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-orange-600 text-white shadow-2xs">
-              Active Promo Campaign
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="px-3 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wider bg-indigo-50/90 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60">
+              Antrean Verifikasi Desain Pracetak
             </span>
-            <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">Total: {orders.length} Approved Stores</span>
+            <span className="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">
+              Total Cabang Disetujui: <strong className="text-slate-800 dark:text-slate-200">{orders.length}</strong>
+            </span>
           </div>
-          <h2 className="text-sm font-black mt-1 text-black dark:text-white flex items-center gap-1.5">
-            <Megaphone className="w-4 h-4 text-orange-600 dark:text-orange-400" /> {activePromoName}
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Megaphone className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>{activePromoName}</span>
           </h2>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-          {/* Search Input */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search store / promo / ID..."
+              placeholder="Cari cabang, program, atau ID..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/50 shadow-2xs ${
-                isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white placeholder-slate-400' : 'bg-white border-slate-300 text-black placeholder-slate-500'
+              className={`w-full pl-9 pr-3 py-2 border rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all ${
+                isDarkMode
+                  ? 'bg-neutral-800/90 border-neutral-700 text-slate-100 placeholder-slate-400'
+                  : 'bg-slate-50/80 border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white'
               }`}
             />
           </div>
 
           <div className="flex items-center gap-2 text-xs whitespace-nowrap">
             {pendingCount > 0 ? (
-              <span className="px-3.5 py-1.5 rounded-full text-xs font-bold border bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800 inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-600" /> {pendingCount} Pending Design
+              <span className="px-3 py-1.5 rounded-xl text-xs font-semibold border bg-amber-50/90 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60 inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                {pendingCount} Menunggu Desain
               </span>
             ) : (
-              <span className="px-3.5 py-1.5 rounded-full text-xs font-bold border bg-slate-100 dark:bg-neutral-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-neutral-700 inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-slate-500" /> All Design Ready
+              <span className="px-3 py-1.5 rounded-xl text-xs font-semibold border bg-slate-100/80 dark:bg-neutral-800 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-neutral-700 inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+                Seluruh Desain Selesai
               </span>
             )}
 
-            <span className="px-3.5 py-1.5 rounded-full text-xs font-bold border bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800 inline-flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" /> {readyCount} Ready
+            <span className="px-3 py-1.5 rounded-xl text-xs font-semibold border bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60 inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              {readyCount} Siap Cetak
             </span>
           </div>
         </div>
       </div>
 
-      {/* ULTRA-CLEAN HIGH-CONTRAST DATA GRID */}
-      <div className={`max-h-[620px] overflow-y-auto relative rounded-2xl border shadow-xs custom-scrollbar ${
-        isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+      {/* Tabel Data Desain */}
+      <div className={`max-h-[620px] overflow-y-auto relative rounded-2xl border shadow-2xs custom-scrollbar ${
+        isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200/90'
       }`}>
         <table className="w-full text-left text-xs border-collapse">
-          <thead className={`sticky top-0 z-20 border-b text-xs font-black uppercase tracking-wider ${
+          <thead className={`sticky top-0 z-20 border-b text-[11px] font-semibold uppercase tracking-wider ${
             isDarkMode
-              ? 'bg-neutral-800 border-neutral-700 text-white'
-              : 'bg-slate-100 border-slate-300 text-black'
+              ? 'bg-neutral-800/95 border-neutral-700 text-slate-300'
+              : 'bg-slate-50/95 border-slate-200 text-slate-600'
           }`}>
             <tr>
-              <th className="p-3.5">PROMO & STORE NAME</th>
-              <th className="p-3.5">ORDER PACKAGE ITEMS</th>
-              <th className="p-3.5 w-44 text-center">FILE STATUS</th>
-              <th className="p-3.5">TECHNICAL DESIGN NOTES</th>
-              <th className="p-3.5 text-center w-40">ACTIONS</th>
+              <th className="p-3.5">Program & Nama Cabang</th>
+              <th className="p-3.5">Rincian Paket Material</th>
+              <th className="p-3.5 w-44 text-center">Status Berkas</th>
+              <th className="p-3.5">Catatan Teknis Desain</th>
+              <th className="p-3.5 text-center w-44">Tindakan</th>
             </tr>
           </thead>
 
-          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-slate-200'}`}>
+          <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800' : 'divide-slate-100'}`}>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td colSpan="5" className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">
-                  No design queue available for approved store orders.
+                <td colSpan="5" className="p-10 text-center text-slate-500 dark:text-slate-400 font-medium">
+                  Belum ada antrean desain untuk pesanan cabang yang telah disetujui.
                 </td>
               </tr>
             ) : (
@@ -218,43 +221,43 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                 const isReady = order.design_status === 'READY';
                 const promoTitle = order.project_name || activePromoName;
                 const totalQty = order.kl_order_items?.reduce((sum, item) => sum + Number(item.qty || 0), 0) || 0;
-                const branchName = order.kl_branches?.branch_name || 'Store Branch';
+                const branchName = order.kl_branches?.branch_name || 'Cabang Toko';
 
                 return (
                   <tr key={order.id} className={`transition-colors ${
-                    isDarkMode ? 'hover:bg-neutral-800/60' : 'hover:bg-slate-50'
+                    isDarkMode ? 'hover:bg-neutral-800/50' : 'hover:bg-slate-50/80'
                   }`}>
                     <td className="p-3.5 align-top">
-                      <span className="text-[11px] font-mono text-slate-700 dark:text-slate-300 font-bold uppercase block">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-medium uppercase block">
                         {promoTitle}
                       </span>
-                      <strong className="font-black text-black dark:text-white text-xs sm:text-sm block mt-0.5">
+                      <strong className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm block mt-0.5">
                         {branchName}
                       </strong>
-                      <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400 font-bold block mt-0.5">
-                        ID: {order.id.slice(0, 8)} | Total: <strong className="text-black dark:text-white font-black">{totalQty} pcs</strong>
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 block mt-0.5">
+                        ID: {order.id.slice(0, 8)} | Total: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{totalQty} unit</strong>
                       </span>
                     </td>
 
                     <td className="p-3.5 align-top">
                       <div className="space-y-1">
                         {order.kl_order_items?.map((item, idx) => (
-                          <div key={idx} className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            • <strong className="text-black dark:text-white font-black">{item.kl_master_items?.item_name}</strong> ({item.qty} pcs)
-                            <span className="text-slate-600 dark:text-slate-400 ml-1.5 text-[11px] font-mono">[{item.kl_master_items?.size || '-'}]</span>
+                          <div key={idx} className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                            • <strong className="text-slate-800 dark:text-slate-100 font-semibold">{item.kl_master_items?.item_name}</strong> ({item.qty} unit)
+                            <span className="text-slate-500 dark:text-slate-400 ml-1.5 text-[11px] font-mono">[{item.kl_master_items?.size || '-'}]</span>
                           </div>
                         ))}
                       </div>
                     </td>
 
                     <td className="p-3.5 text-center align-top">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold border whitespace-nowrap ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border whitespace-nowrap ${
                         isReady
-                          ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800'
-                          : 'bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800'
+                          ? 'bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60'
+                          : 'bg-amber-50/90 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60'
                       }`}>
-                        <span className={`w-2 h-2 rounded-full ${isReady ? 'bg-emerald-600' : 'bg-amber-600'}`} />
-                        {isReady ? 'Ready for Print' : 'Pending Design'}
+                        <span className={`w-2 h-2 rounded-full ${isReady ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                        {isReady ? 'Siap Cetak' : 'Menunggu Desain'}
                       </span>
                     </td>
 
@@ -263,31 +266,36 @@ export default function DesignPanel({ isDarkMode, onOpenImageModal }) {
                         type="text"
                         defaultValue={order.design_notes || ''}
                         onBlur={e => handleSaveNotes(order.id, e.target.value)}
-                        placeholder="Enter size / file notes..."
-                        className={`w-full p-2.5 rounded-xl border text-xs font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/50 ${
-                          isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white placeholder-slate-400' : 'bg-white border-slate-300 text-black placeholder-slate-500'
+                        placeholder="Tambahkan catatan ukuran atau berkas..."
+                        className={`w-full p-2 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
+                          isDarkMode
+                            ? 'bg-neutral-800 border-neutral-700 text-slate-100 placeholder-slate-400'
+                            : 'bg-slate-50/70 border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white'
                         }`}
                       />
                     </td>
 
-                    {/* Tombol Aksi */}
                     <td className="p-3.5 text-center align-top">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleUpdateDesignStatus(order, isReady ? 'PROSES' : 'READY')}
-                          className={`px-3.5 py-1.5 rounded-xl font-black text-xs shadow-2xs transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 rounded-xl font-semibold text-xs border transition-all active:scale-95 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                             isReady
-                              ? (isDarkMode ? 'bg-neutral-800 hover:bg-neutral-700 text-white border border-neutral-700' : 'bg-white hover:bg-slate-100 text-black border border-slate-300')
-                              : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                              ? 'bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700'
+                              : 'bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60'
                           }`}
                         >
-                          {isReady ? <><RotateCcw className="w-3.5 h-3.5" /> Undo</> : <><Check className="w-3.5 h-3.5" /> Ready</>}
+                          {isReady ? (
+                            <><RotateCcw className="w-3.5 h-3.5" /> Batalkan</>
+                          ) : (
+                            <><Check className="w-3.5 h-3.5" /> Tandai Siap</>
+                          )}
                         </button>
 
                         <button
                           onClick={() => handleDeleteOrder(order.id, branchName)}
-                          title="Delete Order"
-                          className="w-8 h-8 rounded-full border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-400 font-bold flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                          title="Hapus Pesanan"
+                          className="w-8 h-8 rounded-xl border border-rose-200/80 dark:border-rose-800/60 bg-rose-50/90 dark:bg-rose-950/40 hover:bg-rose-100/90 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 flex items-center justify-center transition-all cursor-pointer active:scale-95"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

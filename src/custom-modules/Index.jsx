@@ -15,13 +15,20 @@ export default function CustomModulesIndex({ isDarkMode }) {
 
   return (
     <div className="space-y-5 p-4 md:p-5 max-w-7xl mx-auto">
-      <header className="mb-4">
-        <h1 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-          External & PMG Allocation Module
-        </h1>
-        <p className={`text-xs opacity-70 ${isDarkMode ? 'text-neutral-300' : 'text-slate-600'}`}>
-          Bulk allocation control center, custom labels, and delivery order allocation for PT. PMG Integrasi Komunikasi.
-        </p>
+      <header className={`p-4 rounded-2xl border shadow-2xs ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800 text-slate-100' : 'bg-slate-50/90 border-slate-200/80 text-slate-800'}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Modul Alokasi & Distribusi PMG
+            </h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Pusat pengelolaan alokasi massal, pencetakan label kolian kustom, serta penerbitan Surat Jalan dan POD PT. PMG Integrasi Komunikasi.
+            </p>
+          </div>
+          <span className="inline-flex items-center self-start sm:self-center px-3 py-1 rounded-xl text-[11px] font-semibold bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60">
+            Sistem Distribusi Terpadu
+          </span>
+        </div>
       </header>
 
       {/* CCOD Allocation Import Widget */}
@@ -39,7 +46,7 @@ export default function CustomModulesIndex({ isDarkMode }) {
         </div>
       </div>
 
-      <hr className="border-stone-300 dark:border-neutral-700 my-4" />
+      <hr className="border-slate-200/80 dark:border-neutral-800 my-4" />
 
       {/* Bulk Allocation & Custom Label Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

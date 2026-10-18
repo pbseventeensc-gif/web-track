@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import * as XLSX from 'xlsx';
+import { FileSpreadsheet } from 'lucide-react';
 
 export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -29,7 +30,7 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
           if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed')) {
             formattedData.push({
               client_name: clientName,
-              address: address || 'Address pending',
+              address: address || 'Alamat belum tersedia',
               pic: picName,
               phone: phoneNum,
               hos_region: hosRegion
@@ -40,16 +41,16 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
         if (formattedData.length > 0) {
           const { error } = await supabase.from('pmg_destinations').insert(formattedData);
           if (!error) {
-            alert(`Successfully imported ${formattedData.length} CCOD records complete with address, PIC, and phone!`);
+            alert(`Berhasil mengimpor ${formattedData.length} data alokasi CCOD beserta alamat, PIC, dan nomor telepon.`);
             if (onImportSuccess) onImportSuccess();
           } else {
-            alert('Failed to insert into database: ' + error.message);
+            alert('Gagal menyimpan data ke basis data: ' + error.message);
           }
         } else {
-          alert('Row format not recognized or empty.');
+          alert('Format baris tidak dikenali atau berkas kosong.');
         }
       } catch (err) {
-        alert('Failed to read file: ' + err.message);
+        alert('Gagal membaca berkas: ' + err.message);
       } finally {
         setLoading(false);
         e.target.value = '';
@@ -59,12 +60,18 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
   };
 
   return (
-    <div className={`p-4 rounded-2xl border shadow-2xs ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-slate-50/80 border-slate-200 text-slate-800'}`}>
-      <h4 className="font-bold text-xs uppercase text-slate-900 dark:text-white mb-2">Import CCOD Master Address</h4>
-      <p className="text-[11px] opacity-70 mb-3">Upload Allocation CCOD Banner - X Banner file to automatically import CCOD Name, Address, PIC, and Phone No.</p>
+    <div className={`p-4 rounded-2xl border shadow-2xs ${isDarkMode ? 'bg-neutral-900/90 border-neutral-800 text-slate-100' : 'bg-slate-50/80 border-slate-200/80 text-slate-800'}`}>
+      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900 dark:text-slate-100 mb-1 flex items-center gap-1.5">
+        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        Impor Data Alokasi CCOD
+      </h4>
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
+        Unggah berkas Excel Alokasi CCOD untuk mengimpor nama klien, alamat tujuan, nama PIC, serta nomor telepon secara otomatis.
+      </p>
       
-      <label className={`block w-full py-2.5 px-3.5 rounded-xl cursor-pointer text-xs font-bold text-center transition-all shadow-2xs ${loading ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-sky-500 hover:bg-sky-600 text-white border border-sky-500 active:scale-95'}`}>
-        {loading ? 'Importing to Supabase...' : 'Select & Import CCOD Allocation File'}
+      <label className={`w-full py-2.5 px-3.5 rounded-xl cursor-pointer text-xs font-semibold text-center transition-all shadow-2xs flex items-center justify-center gap-1.5 ${loading ? 'bg-slate-100/80 text-slate-400 border border-slate-200/80 dark:bg-neutral-800 dark:text-neutral-500 dark:border-neutral-700 cursor-not-allowed' : 'bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 active:scale-95'}`}>
+        <FileSpreadsheet className="w-3.5 h-3.5" />
+        {loading ? 'Mengimpor ke Basis Data...' : 'Pilih & Impor Berkas Alokasi CCOD'}
         <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={loading} className="hidden" />
       </label>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Camera,
   Search,
@@ -6,11 +6,16 @@ import {
   Clock,
   RefreshCw,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Package
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import CustomDropdown from '../ui/CustomDropdown';
+import { extractBaseProjectName, getProjectCategory, getItemMonthKey, getItemMonthLabel } from '../../utils/projectGrouping';
+import { useLanguage } from '../../utils/i18n';
 
-export default function PackingView({ isDarkMode, onOpenImageModal }) {
+export default function PackingView({ isDarkMode, onOpenImageModal, externalProjectFilter, onProjectFilterChange }) {
+  const { lang, t } = useLanguage();
   const [packingList, setPackingList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState(null);
@@ -25,7 +30,13 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   const [filterSource, setFilterSource] = useState('ALL'); // 'ALL', 'google_sheet', 'label_sj'
   const [filterDelivery, setFilterDelivery] = useState('ALL');
   const [filterStatus, setFilterStatus] = useState('ALL'); // 'ALL', 'IN_PROGRESS', 'COMPLETED'
-  const [filterProject, setFilterProject] = useState('ALL');
+  const [filterProject, setFilterProject] = useState(() => externalProjectFilter || 'ALL');
+
+  useEffect(() => {
+    if (externalProjectFilter !== undefined && externalProjectFilter !== filterProject) {
+      setFilterProject(externalProjectFilter);
+    }
+  }, [externalProjectFilter]);
   const [sortOrder, setSortOrder] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -103,48 +114,11 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
           };
         });
 
-        const isValid = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-';
-
-        let cleanStore = isValid(item.store_name) ? String(item.store_name).trim() : '';
-        if (!cleanStore) cleanStore = isValid(item.recipient_name) ? String(item.recipient_name).trim() : '';
-        if (!cleanStore) cleanStore = isValid(item.client_pt) ? String(item.client_pt).trim() : '';
-        if (!cleanStore) {
-          for (const d of details) {
-            if (isValid(d.delivery_address)) { cleanStore = String(d.delivery_address).trim(); break; }
-            if (isValid(d.recipient_name)) { cleanStore = String(d.recipient_name).trim(); break; }
-            if (isValid(d.brand)) { cleanStore = String(d.brand).trim(); break; }
-          }
-        }
-        if (!cleanStore) cleanStore = '-';
-
-        let cleanPromo = isValid(item.promo_title) ? String(item.promo_title).trim() : '';
-        if (!cleanPromo) {
-          for (const d of details) {
-            if (isValid(d.desc)) { cleanPromo = String(d.desc).trim(); break; }
-            if (isValid(d.brand)) { cleanPromo = String(d.brand).trim(); break; }
-            if (isValid(d.po_number)) { cleanPromo = `PO: ${d.po_number}`.trim(); break; }
-          }
-        }
-        if (!cleanPromo) cleanPromo = isValid(item.client_pt) ? String(item.client_pt).trim() : '-';
-
-        let cleanBox = isValid(item.box_code) ? String(item.box_code).trim() : '';
-        if (!cleanBox) {
-          for (const d of details) {
-            if (isValid(d.no_sj)) { cleanBox = String(d.no_sj).trim(); break; }
-            if (isValid(d.code)) { cleanBox = String(d.code).trim(); break; }
-            if (isValid(d.po_number)) { cleanBox = String(d.po_number).trim(); break; }
-          }
-        }
-        if (!cleanBox) cleanBox = isValid(item.no_spk) ? String(item.no_spk).trim() : '-';
-
         const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
         const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
 
         return {
           ...item,
-          store_name: cleanStore,
-          promo_title: cleanPromo,
-          box_code: cleanBox,
           items_detail: details,
           status_qc_packing: statusPacking
         };
@@ -189,7 +163,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
       .eq('id', id);
 
     if (error) {
-      alert('⚠️ Failed to update status: ' + error.message);
+      alert('Gagal memperbarui status paking: ' + error.message);
       fetchPackingData();
     }
   };
@@ -251,7 +225,10 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   };
 
   const processImageForUpload = async (file) => {
-    return file; // Gunakan file asli bawaan HP tanpa kompresi / resize
+    if (file.size <= 15 * 1024 * 1024) {
+      return file;
+    }
+    return await compressImage(file);
   };
 
   const handleCameraCapture = async (e, rowId, trackingId) => {
@@ -298,27 +275,73 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
         )
       );
 
-      alert('✅ Photo proof uploaded successfully!');
+      alert('Dokumentasi foto paking berhasil diunggah.');
     } catch (err) {
-      alert('❌ Failed to upload photo: ' + err.message);
+      alert('Gagal mengunggah dokumentasi foto: ' + err.message);
     } finally {
       setUploadingId(null);
     }
   };
 
   const getProjectGroupKey = (promoTitle) => {
-    if (!promoTitle) return '-';
-    let str = String(promoTitle).trim();
-    str = str.replace(/^NO\s*PO\s*[:\-]?\s*\d+\s*/i, '');
-    str = str.replace(/^\d+\s+/, '');
-    return str.trim();
+    return extractBaseProjectName(promoTitle) || '-';
   };
 
-  // Data tetap berada di Packing Station selama Checker BELUM upload foto
-  const activePackingList = packingList.filter(item => {
-    const hasCheckerPhoto = item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' && item.bukti_checker_url.length > 5;
-    return !hasCheckerPhoto;
-  });
+  // Logika Arsip: Data hanya pindah ke arsip project jika SUDAH ada bukti foto paking DAN scan dari checker/deliver
+  const isClosedItem = (item) => {
+    const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
+    const hasCheckerOrDeliver = Boolean(
+      item.status_qc_checker === 'DONE' ||
+      (item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
+      item.outbound_url ||
+      item.status_deliver === 'DONE'
+    );
+    return hasPhoto && hasCheckerOrDeliver;
+  };
+
+  const activePackingList = packingList.filter(item => !isClosedItem(item));
+
+  // Pengelompokan proyek paking aktif berdasarkan bulan dan kategori brand untuk dropdown
+  const uniqueMonthsAndProjects = useMemo(() => {
+    const monthMap = {};
+    activePackingList.forEach(item => {
+      if (!item.promo_title || item.promo_title.trim() === '') return;
+      const mKey = getItemMonthKey(item.created_at || item.updated_at);
+      const mLabel = getItemMonthLabel(mKey);
+      const cat = getProjectCategory(item.promo_title);
+      const proj = getProjectGroupKey(item.promo_title);
+
+      if (!monthMap[mKey]) {
+        monthMap[mKey] = { key: mKey, label: mLabel, totalBoxes: 0, brands: {} };
+      }
+      monthMap[mKey].totalBoxes++;
+      if (!monthMap[mKey].brands[cat]) {
+        monthMap[mKey].brands[cat] = { categoryName: cat, totalBoxes: 0, projects: {} };
+      }
+      monthMap[mKey].brands[cat].totalBoxes++;
+      if (proj && proj !== '-') {
+        monthMap[mKey].brands[cat].projects[proj] = (monthMap[mKey].brands[cat].projects[proj] || 0) + 1;
+      }
+    });
+
+    return Object.keys(monthMap)
+      .sort((a, b) => b.localeCompare(a))
+      .map(k => {
+        const m = monthMap[k];
+        return {
+          key: m.key,
+          label: m.label,
+          totalBoxes: m.totalBoxes,
+          brands: Object.values(m.brands).map(b => ({
+            categoryName: b.categoryName,
+            totalBoxes: b.totalBoxes,
+            projects: Object.entries(b.projects)
+              .map(([name, count]) => ({ name, count }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          })).sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+        };
+      });
+  }, [activePackingList]);
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
@@ -342,10 +365,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   });
 
   const filteredList = sortedPackingList.filter(item => {
-    if (filterSource !== 'ALL') {
-      if (filterSource === 'google_sheet' && item.source === 'label_sj') return false;
-      if (filterSource === 'label_sj' && item.source !== 'label_sj') return false;
-    }
+    if (filterSource !== 'ALL' && (filterSource === 'google_sheet' ? item.source !== 'google_sheet' : item.source === 'google_sheet')) return false;
     if (filterDelivery !== 'ALL' && item.delivery_type !== filterDelivery) return false;
 
     const isDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
@@ -353,7 +373,22 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
     if (filterStatus === 'COMPLETED' && !isDone) return false;
 
     if (filterProject !== 'ALL') {
-      if (getProjectGroupKey(item.promo_title).toLowerCase() !== filterProject.trim().toLowerCase()) return false;
+      const itemMonth = getItemMonthKey(item.created_at || item.updated_at);
+      const itemCat = getProjectCategory(item.promo_title).toUpperCase();
+      const itemKey = getProjectGroupKey(item.promo_title).toLowerCase();
+
+      if (filterProject.startsWith('MONTH:')) {
+        const clean = filterProject.replace('MONTH:', '');
+        const [targetMonth, targetGroup] = clean.split('|GROUP:');
+        if (itemMonth !== targetMonth) return false;
+        if (targetGroup && itemCat !== targetGroup.trim().toUpperCase()) return false;
+      } else if (filterProject.startsWith('GROUP:')) {
+        const cat = filterProject.replace('GROUP:', '').trim().toUpperCase();
+        if (itemCat !== cat) return false;
+      } else {
+        const target = filterProject.trim().toLowerCase();
+        if (itemKey !== target && itemCat !== target) return false;
+      }
     }
 
     if (searchTerm.trim() !== '') {
@@ -378,219 +413,297 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
   const pendingBoxes = totalBoxes - completedBoxes;
 
   return (
-    <div className={`space-y-3.5 sm:space-y-6 w-full max-w-full overflow-hidden ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+    <div className={`space-y-4 w-full max-w-full overflow-hidden font-sans ${isDarkMode ? 'text-slate-100' : 'text-[#1E293B]'}`}>
 
-      {/* HEADER RINGKAS & REFRESH */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 p-3.5 sm:p-5 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs max-w-full">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base sm:text-xl font-extrabold text-slate-900 dark:text-white truncate">
-            Packing Station Staff
-          </h2>
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-neutral-400 mt-0.5 leading-snug">
-            Verify packing & upload photo proof for each box.
-          </p>
+      {/* HEADER RINGKAS & PERBARUI DATA */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 sm:p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-[#DBEAFE] dark:border-neutral-800 shadow-master-sm max-w-full">
+        <div className="min-w-0 flex-1 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60 flex items-center justify-center shrink-0 shadow-master-sm">
+            <Package className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-md bg-emerald-50/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
+                PACKING STATION
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-[#1E3A8A] dark:text-white truncate mt-0.5">
+              Packing Station
+            </h2>
+            <p className="text-[11px] sm:text-xs text-[#475569] dark:text-neutral-400 mt-0.5 leading-snug">
+              Verifikasi kelengkapan barang dan unggah dokumentasi foto untuk setiap kolian.
+            </p>
+          </div>
         </div>
 
-        <button
-          onClick={fetchPackingData}
-          disabled={loading}
-          className="w-full sm:w-auto px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Loading...' : 'Refresh Data'}
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              const currentKeys = Array.from(new Set(filteredList.map(item => getProjectGroupKey(item.promo_title))));
+              const isAllCollapsed = currentKeys.length > 0 && currentKeys.every(k => !!collapsedProjects[k]);
+              const nextState = {};
+              currentKeys.forEach(k => { nextState[k] = !isAllCollapsed; });
+              setCollapsedProjects(nextState);
+            }}
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-slate-100 hover:bg-slate-200/80 text-slate-700 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-200 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0 select-none"
+            title="Buka atau tutup seluruh rincian proyek"
+          >
+            {(() => {
+              const currentKeys = Array.from(new Set(filteredList.map(item => getProjectGroupKey(item.promo_title))));
+              const isAllCollapsed = currentKeys.length > 0 && currentKeys.every(k => !!collapsedProjects[k]);
+              return isAllCollapsed ? (
+                <>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  <span>Buka Semua</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="w-3.5 h-3.5" />
+                  <span>Tutup Semua</span>
+                </>
+              );
+            })()}
+          </button>
+
+          <button
+            onClick={fetchPackingData}
+            disabled={loading}
+            className="flex-1 sm:flex-initial px-4 py-2 bg-[#EFF6FF] hover:bg-[#DBEAFE] text-[#1D4ED8] border border-[#BFDBFE] dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 active:scale-95 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-master-sm shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Memuat Data...' : 'Perbarui Data'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* RINGKASAN STATUS BOX */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-full">
-        <div className="p-2.5 sm:p-4 rounded-xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs text-center min-w-0">
-          <span className="text-[9px] sm:text-xs font-bold text-slate-500 dark:text-neutral-400 uppercase tracking-wider block truncate">TOTAL BOXES</span>
-          <span className="text-base sm:text-2xl font-black text-slate-800 dark:text-white mt-0.5 block">{totalBoxes}</span>
+      {/* RINGKASAN STATUS KOLIAN */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-full">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-neutral-900 border border-[#DBEAFE] dark:border-neutral-800 shadow-master-sm text-center min-w-0">
+          <span className="font-mono text-[10px] sm:text-xs font-semibold text-[#475569] dark:text-neutral-400 uppercase tracking-wider block truncate">
+            Total Kolian
+          </span>
+          <span className="font-mono text-lg sm:text-2xl font-bold text-[#1E3A8A] dark:text-white mt-0.5 block">
+            {totalBoxes}
+          </span>
         </div>
 
-        <div className="p-2.5 sm:p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 shadow-2xs text-center min-w-0">
-          <span className="text-[9px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block truncate">ON PROGRESS</span>
-          <span className="text-base sm:text-2xl font-black text-amber-700 dark:text-amber-400 mt-0.5 block">{pendingBoxes}</span>
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FFF7ED] dark:bg-amber-950/40 border border-[#FED7AA] dark:border-amber-800/60 shadow-master-sm text-center min-w-0">
+          <span className="font-mono text-[10px] sm:text-xs font-semibold text-[#C2410C] dark:text-amber-300 uppercase tracking-wider block truncate">
+            Dalam Proses
+          </span>
+          <span className="font-mono text-lg sm:text-2xl font-bold text-[#C2410C] dark:text-amber-300 mt-0.5 block">
+            {pendingBoxes}
+          </span>
         </div>
 
-        <div className="p-2.5 sm:p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs text-center min-w-0">
-          <span className="text-[9px] sm:text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block truncate">COMPLETED</span>
-          <span className="text-base sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-0.5 block">{completedBoxes}</span>
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 shadow-master-sm text-center min-w-0">
+          <span className="font-mono text-[10px] sm:text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block truncate">
+            Selesai
+          </span>
+          <span className="font-mono text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-0.5 block">
+            {completedBoxes}
+          </span>
         </div>
       </div>
 
-      {/* FILTER BAR & SEARCH */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 shadow-2xs space-y-2.5 max-w-full">
-        <div className="flex flex-col sm:flex-row gap-2 justify-between">
+      {/* PANEL UTAMA: FILTER BAR & TABEL DATA */}
+      <div className="rounded-2xl border border-[#DBEAFE] dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-master-sm overflow-hidden max-w-full">
+        <div className="p-4 bg-[#F4F8FD]/90 dark:bg-neutral-800/40 border-b border-[#DBEAFE] dark:border-neutral-800 space-y-3 max-w-full">
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-between">
+            {/* INPUT PENCARIAN */}
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#475569] dark:text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari nomor SPK, kode kolian, cabang, atau proyek..."
+                className="w-full pl-9 pr-3 py-2 text-xs font-medium rounded-xl border border-[#CBD5E1] dark:border-neutral-700 bg-white dark:bg-neutral-900 text-[#1E293B] dark:text-slate-100 focus:outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/15 shadow-master-sm"
+              />
+            </div>
 
-          {/* SEARCH INPUT */}
-          <div className="relative flex-1 min-w-0">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search Box Code, SPK, Store, or Project..."
-              className="w-full pl-8 pr-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 dark:border-neutral-600 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+            {/* PEMILIH PROYEK */}
+            {activePackingList.length > 0 && (
+              <CustomDropdown
+                value={filterProject}
+                onChange={(e) => {
+                  setFilterProject(e.target.value);
+                  if (onProjectFilterChange) onProjectFilterChange(e.target.value);
+                }}
+                className="w-full sm:w-auto min-w-[200px] sm:min-w-[260px]"
+              >
+                <option value="ALL">{t('filterProjectAll')} ({activePackingList.length} {t('boxes')})</option>
+                {uniqueMonthsAndProjects.map(m => (
+                  <optgroup key={m.key} label={`🗓️ ${t('periodUpper')} ${m.label.toUpperCase()} (${m.totalBoxes} ${t('boxes')})`}>
+                    <option value={`MONTH:${m.key}`}>{t('filterMonthPrefix')} {m.label} ({m.totalBoxes} ${t('boxes')})</option>
+                    {m.brands.map(b => (
+                      <React.Fragment key={b.categoryName}>
+                        <option value={`MONTH:${m.key}|GROUP:${b.categoryName}`}>
+                          &nbsp;&nbsp;📁 {b.categoryName} ({b.totalBoxes} {t('boxes')})
+                        </option>
+                        {b.projects.map(p => (
+                          <option key={p.name} value={p.name}>
+                            &nbsp;&nbsp;&nbsp;&nbsp;• {p.name} ({p.count})
+                          </option>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </optgroup>
+                ))}
+              </CustomDropdown>
+            )}
           </div>
 
-          {/* PROJECT SELECTOR */}
-          {uniqueProjects.length > 0 && (
-            <select
-              value={filterProject}
-              onChange={(e) => setFilterProject(e.target.value)}
-              className="w-full sm:w-auto px-4.5 py-2.5 sm:py-3 text-sm font-bold rounded-xl border border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer min-w-[180px] sm:min-w-[220px]"
-            >
-              <option value="ALL">All Projects ({packingList.length})</option>
-              {uniqueProjects.map((projName, idx) => (
-                <option key={idx} value={projName}>{projName}</option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* SEGMENTED STATUS & ROUTE TABS - SCROLLABLE ON HP WITHOUT OVERFLOWING PAGE */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-neutral-700 overflow-x-auto pb-1 max-w-full">
-
-          {/* SOURCE FILTER (TEXT ONLY) */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
-            <button
-              onClick={() => setFilterSource('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterSource === 'ALL'
-                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              Semua Data
-            </button>
-            <button
-              onClick={() => setFilterSource('google_sheet')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterSource === 'google_sheet'
-                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              Google Sheets
-            </button>
-            <button
-              onClick={() => setFilterSource('label_sj')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterSource === 'label_sj'
-                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              Label & SJ
-            </button>
-          </div>
-
-          {/* STATUS FILTER */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
-            <button
-              onClick={() => setFilterStatus('ALL')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterStatus === 'ALL'
-                  ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilterStatus('IN_PROGRESS')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterStatus === 'IN_PROGRESS'
-                  ? 'bg-amber-500 text-white shadow-2xs font-bold'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              ⏳ On Progress
-            </button>
-            <button
-              onClick={() => setFilterStatus('COMPLETED')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                filterStatus === 'COMPLETED'
-                  ? 'bg-emerald-600 text-white shadow-2xs font-bold'
-                  : 'text-slate-600 dark:text-neutral-300 font-semibold'
-              }`}
-            >
-              ✅ Done
-            </button>
-          </div>
-
-          {/* ROUTE FILTER */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-neutral-700 p-1 rounded-xl shrink-0">
-            {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((route) => (
+          {/* FILTER TAB STATUS & JALUR PENGIRIMAN */}
+          <div className="flex items-center gap-2 pt-2 border-t border-[#DBEAFE]/70 dark:border-neutral-800 flex-wrap max-w-full">
+            {/* FILTER SUMBER DATA */}
+            <div className="flex items-center gap-1 bg-[#E9EFF8]/80 dark:bg-neutral-800 p-1 rounded-xl shrink-0 border border-[#CBD5E1]/70 dark:border-neutral-700">
               <button
-                key={route}
-                onClick={() => setFilterDelivery(route)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap ${
-                  filterDelivery === route
-                    ? 'bg-white dark:bg-neutral-800 shadow-2xs font-bold text-slate-900 dark:text-white'
-                    : 'text-slate-600 dark:text-neutral-300 font-semibold'
+                onClick={() => setFilterSource('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap cursor-pointer ${
+                  filterSource === 'ALL'
+                    ? 'bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
                 }`}
               >
-                {route === 'ALL' ? 'All Routes' : route}
+                {t('filterSourceAll')}
               </button>
-            ))}
+              <button
+                onClick={() => setFilterSource('google_sheet')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap cursor-pointer ${
+                  filterSource === 'google_sheet'
+                    ? 'bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                }`}
+              >
+                Google Spreadsheet
+              </button>
+              <button
+                onClick={() => setFilterSource('label_sj')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap cursor-pointer ${
+                  filterSource === 'label_sj'
+                    ? 'bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                }`}
+              >
+                Label & Surat Jalan
+              </button>
+            </div>
+
+            {/* FILTER STATUS */}
+            <div className="flex items-center gap-1 bg-[#E9EFF8]/80 dark:bg-neutral-800 p-1 rounded-xl shrink-0 border border-[#CBD5E1]/70 dark:border-neutral-700">
+              <button
+                onClick={() => setFilterStatus('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap cursor-pointer ${
+                  filterStatus === 'ALL'
+                    ? 'bg-white text-[#1E3A8A] border border-[#BFDBFE] dark:bg-neutral-700 dark:text-slate-100 dark:border-neutral-600 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                }`}
+              >
+                {t('filterStatusAll')}
+              </button>
+              <button
+                onClick={() => setFilterStatus('IN_PROGRESS')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap inline-flex items-center gap-1 cursor-pointer ${
+                  filterStatus === 'IN_PROGRESS'
+                    ? 'bg-[#FFF7ED] text-[#C2410C] border border-[#FED7AA] dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                }`}
+              >
+                <Clock className="w-3 h-3" />
+                <span>{t('tabInProgress')}</span>
+              </button>
+              <button
+                onClick={() => setFilterStatus('COMPLETED')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap inline-flex items-center gap-1 cursor-pointer ${
+                  filterStatus === 'COMPLETED'
+                    ? 'bg-emerald-50/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60 font-semibold shadow-master-sm'
+                    : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                }`}
+              >
+                <Check className="w-3 h-3" />
+                <span>{t('tabCompleted')}</span>
+              </button>
+            </div>
+
+            {/* FILTER JALUR PENGIRIMAN */}
+            <div className="flex items-center gap-1 bg-[#E9EFF8]/80 dark:bg-neutral-800 p-1 rounded-xl shrink-0 border border-[#CBD5E1]/70 dark:border-neutral-700">
+              {['ALL', 'DALAM KOTA', 'LUAR KOTA'].map((route) => (
+                <button
+                  key={route}
+                  onClick={() => setFilterDelivery(route)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] transition-all whitespace-nowrap cursor-pointer ${
+                    filterDelivery === route
+                      ? 'bg-purple-50/90 text-purple-700 border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60 font-semibold shadow-master-sm'
+                      : 'text-[#475569] dark:text-neutral-300 font-medium hover:bg-white/70 dark:hover:bg-neutral-700/60'
+                  }`}
+                >
+                  {route === 'ALL' ? t('filterDeliveryAll') : (route === 'DALAM KOTA' ? t('filterInCity') : t('filterOutCity'))}
+                </button>
+              ))}
+            </div>
           </div>
-
         </div>
-      </div>
 
-      {/* DATA CONTENT AREA (TABLE TAMPIL RAPI DENGAN HORIZONTAL SCROLL KHUSUS TABEL) */}
-      {filteredList.length === 0 ? (
-        <div className="p-8 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 text-slate-500 font-semibold text-xs max-w-full">
-          No matching packing box data found.
-        </div>
-      ) : (
-        <div className="w-full max-w-full rounded-2xl border border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 overflow-hidden shadow-2xs">
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+        {/* AREA TABEL DATA */}
+        {filteredList.length === 0 ? (
+          <div className="py-12 px-6 text-center bg-white dark:bg-neutral-900">
+            <div className="max-w-sm mx-auto flex flex-col items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] dark:bg-blue-950/40 border border-[#BFDBFE] dark:border-blue-800/60 text-[#2563EB] dark:text-blue-300 flex items-center justify-center mb-2.5 shadow-master-sm">
+                <Package className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-bold text-[#1E3A8A] dark:text-slate-200">
+                Belum ada data yang sesuai dengan kriteria pencarian.
+              </p>
+              <p className="text-[11px] text-[#475569] dark:text-neutral-400 mt-1">
+                Silakan sesuaikan filter di atas atau klik tombol Perbarui Data.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto w-full custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse min-w-[760px]">
               <thead>
-                <tr className="bg-slate-100 dark:bg-neutral-700/60 text-slate-700 dark:text-neutral-200 font-bold border-b border-slate-200 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
-                  <th className="py-3.5 px-4 text-center font-semibold">PACKING STATUS</th>
-                  <th className="py-3.5 pl-4 pr-1 text-center w-8">
+                <tr className="bg-[#E9EFF8]/85 dark:bg-neutral-800/90 text-[#1E3A8A] dark:text-neutral-200 font-mono font-bold border-b border-[#BFDBFE]/80 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
+                  <th className="py-3.5 px-4 text-center">STATUS PAKING</th>
+                  <th className="py-3.5 pl-4 pr-2 text-center w-10">
                     <button
                       type="button"
                       onClick={handleToggleSelectAll}
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer mx-auto ${
                         selectedRowIds.length === filteredList.length && filteredList.length > 0
-                          ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
-                          : 'border-slate-400 bg-white hover:border-emerald-600'
+                          ? 'bg-emerald-50/90 border-emerald-400 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300 shadow-master-sm'
+                          : 'border-[#93C5FD] dark:border-neutral-600 bg-white dark:bg-neutral-800 hover:border-[#2563EB]'
                       }`}
-                      title="Select All Rows"
+                      title="Pilih Semua Baris"
                     >
                       {selectedRowIds.length === filteredList.length && filteredList.length > 0 && (
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       )}
                     </button>
                   </th>
-                  <th className="py-3.5 pl-1 pr-4 font-semibold">
+                  <th className="py-3.5 pl-1 pr-4">
                     <button
                       type="button"
                       onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                      className="inline-flex items-center gap-1.5 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer select-none"
-                      title="Urutkan Ascending / Descending"
+                      className="inline-flex items-center gap-1.5 hover:text-[#2563EB] dark:hover:text-emerald-300 transition-colors cursor-pointer select-none uppercase"
+                      title="Urutkan Menaik / Menurun"
                     >
-                      <span>BOX</span>
-                      <span className="flex flex-col -space-y-1.5 text-slate-500 dark:text-neutral-400">
-                        <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-emerald-600 dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
-                        <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-emerald-600 dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
+                      <span>KODE KOLIAN</span>
+                      <span className="flex flex-col -space-y-1.5 text-[#475569] dark:text-neutral-500">
+                        <ChevronUp className={`w-3 h-3 ${sortOrder === 'asc' ? 'text-[#2563EB] dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
+                        <ChevronDown className={`w-3 h-3 ${sortOrder === 'desc' ? 'text-[#2563EB] dark:text-emerald-400 stroke-[3]' : 'opacity-40'}`} />
                       </span>
                     </button>
                   </th>
-                  <th className="py-3.5 px-4 font-semibold">STORE NAME / SPK</th>
-                  <th className="py-3.5 px-4 font-semibold">SHIPPING TYPE</th>
-                  <th className="py-3.5 px-4 text-center font-semibold">IMPORT DATE</th>
-                  <th className="py-3.5 px-4 text-center font-semibold">LABEL & DESIGN</th>
-                  <th className="py-3.5 px-4 text-center font-semibold">PHOTO PROOF</th>
+                  <th className="py-3.5 px-4">NAMA CABANG / NOMOR SPK</th>
+                  <th className="py-3.5 px-4">JALUR PENGIRIMAN</th>
+                  <th className="py-3.5 px-4 text-center">TANGGAL MASUK</th>
+                  <th className="py-3.5 px-4 text-center">LABEL & DESAIN</th>
+                  <th className="py-3.5 px-4 text-center">BUKTI FOTO</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
+              <tbody className="divide-y divide-[#E9EFF8] dark:divide-neutral-800">
                 {filteredList.map((item, idx) => {
                   const details = parseItems(item.items_detail);
                   const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
@@ -607,18 +720,21 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                       {showProjectDivider && (
                         <tr
                           onClick={() => toggleProjectCollapse(currentGroupKey)}
-                          className="bg-amber-100/90 border-y-2 border-amber-300 dark:bg-amber-950/80 dark:border-amber-700 cursor-pointer select-none hover:bg-amber-200/90 dark:hover:bg-amber-900/80 transition-colors"
-                          title={isCollapsed ? "Klik untuk buka project" : "Klik untuk tutup (hide) project"}
+                          className="bg-[#FFF7ED] border-y border-[#FED7AA] dark:bg-amber-950/40 dark:border-amber-800/60 cursor-pointer select-none hover:bg-amber-100/70 dark:hover:bg-amber-900/50 transition-colors"
+                          title={isCollapsed ? "Klik untuk menampilkan rincian proyek" : "Klik untuk menyembunyikan rincian proyek"}
                         >
-                          <td colSpan="8" className="py-2.5 px-3 font-bold text-amber-950 dark:text-amber-200 text-[11px] tracking-wider uppercase shadow-2xs">
+                          <td colSpan="8" className="py-2.5 px-4 font-bold text-[#C2410C] dark:text-amber-200 text-[11px] tracking-wider uppercase">
                             <div className="flex flex-row justify-between items-center gap-4 w-full">
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                                <span className="p-0.5 rounded bg-amber-300/80 dark:bg-amber-800 text-amber-950 dark:text-amber-100 flex items-center justify-center shrink-0">
+                                <span className="p-1 rounded-lg bg-white/80 border border-[#FED7AA] dark:bg-amber-900/60 dark:border-amber-700/60 text-[#C2410C] dark:text-amber-200 flex items-center justify-center shrink-0">
                                   {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
                                 </span>
-                                <span className="font-black text-amber-950 dark:text-amber-200 truncate">{currentGroupKey}</span>
+                                <span className="font-bold text-[#9A3412] dark:text-amber-200 truncate">{currentGroupKey}</span>
+                                <span className="text-[10px] font-semibold text-amber-700/80 dark:text-amber-300/80 ml-2">
+                                  ({getItemMonthLabel(getItemMonthKey(item.created_at || item.updated_at))})
+                                </span>
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0 normal-case">
+                              <div className="flex items-center gap-1.5 shrink-0 normal-case font-mono">
                                 {(() => {
                                   const projItems = activePackingList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
                                   const totalProj = projItems.length;
@@ -627,17 +743,17 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                                   const checkerDone = projItems.filter(p => p.status_qc_checker === 'DONE').length;
                                   return (
                                     <>
-                                      <span className="px-2.5 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[10px] border border-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-800">
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-[#EFF6FF] text-[#1D4ED8] font-semibold text-[10px] border border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60">
                                         Label: {labelDone}/{totalProj}
                                       </span>
-                                      <span className="px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800">
-                                        Packing: {packingDone}/{totalProj}
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50/90 text-emerald-700 font-semibold text-[10px] border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
+                                        Paking: {packingDone}/{totalProj}
                                       </span>
-                                      <span className="px-2.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 dark:bg-emerald-950 dark:text-amber-300 dark:border-amber-800">
-                                        Checker: {checkerDone}/{totalProj}
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-white/90 text-[#C2410C] font-semibold text-[10px] border border-[#FED7AA] dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60">
+                                        Pemeriksa: {checkerDone}/{totalProj}
                                       </span>
-                                      <span className="px-2.5 py-0.5 rounded bg-purple-100 text-purple-900 font-bold text-[10px] border border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-800">
-                                        Total Box: {totalProj}
+                                      <span className="px-2.5 py-0.5 rounded-lg bg-purple-50/90 text-purple-700 font-semibold text-[10px] border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800/60">
+                                        Total Kolian: {totalProj}
                                       </span>
                                     </>
                                   );
@@ -648,165 +764,166 @@ export default function PackingView({ isDarkMode, onOpenImageModal }) {
                         </tr>
                       )}
                       {!isCollapsed && (
-                      <tr
-                        className={`transition-colors ${
-                          isSelected
-                            ? 'bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/40'
-                            : isPackingDone
-                            ? 'bg-emerald-50/60 hover:bg-emerald-100/60 dark:bg-emerald-950/20'
-                            : 'hover:bg-slate-50 dark:hover:bg-neutral-700/30'
-                        }`}
-                      >
-                      {/* 1. SELECT CIRCLE */}
-                      {/* 8. PACKING STATUS */}
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
-                              isPackingDone
-                                ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                                : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-blue-600' : 'bg-slate-400'}`} />
-                            {isPackingDone ? 'Done' : 'Pending'}
-                          </button>
-                          {isPackingDone && (
-                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
-                              <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* 1. SELECT CIRCLE */}
-                      <td className="py-3.5 pl-4 pr-1 text-center w-8">
-                        <button
-                          onClick={() => handleToggleSelectRow(item.id)}
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                        <tr
+                          className={`transition-colors ${
                             isSelected
-                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xs'
-                              : 'border-slate-300 bg-white hover:border-emerald-500'
+                              ? 'bg-[#EFF6FF]/70 hover:bg-[#DBEAFE]/50 dark:bg-blue-950/30'
+                              : isPackingDone
+                              ? 'bg-emerald-50/35 hover:bg-emerald-100/35 dark:bg-emerald-950/20'
+                              : 'hover:bg-[#F4F8FD] dark:hover:bg-neutral-800/40'
                           }`}
-                          title={isSelected ? 'Deselect' : 'Select Row'}
                         >
-                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </button>
-                      </td>
-
-                      {/* 2. BOX */}
-                      <td className="py-3 pl-1 pr-4 font-mono text-slate-900 dark:text-white font-semibold text-sm whitespace-nowrap">
-                        <span className="font-bold">{item.box_code || '-'}</span>
-                      </td>
-
-                      {/* 3. STORE NAME / SPK */}
-                      <td className="py-3 px-4 max-w-[280px]">
-                        <div className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm flex items-center gap-2 flex-wrap tracking-tight">
-                          <span>{getCleanStoreName(item.store_name)}</span>
-                        </div>
-                        {item.no_spk && (
-                          <div className="text-[11px] sm:text-xs font-mono text-slate-500 dark:text-neutral-400 font-bold mt-0.5">{item.no_spk}</div>
-                        )}
-                      </td>
-
-                      {/* 4. SHIPPING TYPE */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-lg font-semibold text-[11px] uppercase tracking-wider text-center border ${
-                          item.delivery_type === 'DALAM KOTA'
-                            ? 'bg-emerald-100 text-emerald-950 border-emerald-500 shadow-2xs dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
-                            : 'bg-blue-500/15 text-blue-900 border-blue-400 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-700'
-                        }`}>
-                          {item.delivery_type || 'DALAM KOTA'}
-                        </span>
-                      </td>
-
-                      {/* 5. IMPORT DATE */}
-                      <td className="py-3 px-4 text-center whitespace-nowrap">
-                        <span className="font-mono text-[11px] text-slate-700 dark:text-neutral-300 font-semibold block">
-                          {formatDateTime(item.created_at || item.updated_at)}
-                        </span>
-                      </td>
-
-                      {/* 6. LABEL & DESIGN */}
-                      <td className="py-3 px-4 text-center">
-                        {item.source !== 'google_sheet' ? (
-                          <span className="inline-block px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-[10px] font-bold">
-                            Label SJ (Tab Label)
-                          </span>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <div className="flex items-center justify-center gap-1 max-h-12 overflow-y-auto">
-                              {details.map((sub, sIdx) => (
-                                sub.image_url ? (
-                                  <img
-                                    key={sIdx}
-                                    src={sub.image_url}
-                                    alt="Design"
-                                    onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
-                                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain bg-slate-50 dark:bg-neutral-900 rounded-xl border border-slate-300 dark:border-neutral-600 cursor-pointer shadow-sm hover:scale-105 transition-transform p-0.5"
-                                  />
-                                ) : null
-                              ))}
-                            </div>
-                            <span className="text-[10px] text-slate-500 dark:text-neutral-400 font-medium">
-                              {details.filter(i => i.image_url).length} / {details.length} Designs
-                            </span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 7. PHOTO PROOF */}
-                      <td className="py-3 px-4 text-center">
-                        {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <img
-                              src={item.bukti_paking_url}
-                              alt="Bukti Paking"
-                              onClick={() => onOpenImageModal && onOpenImageModal(
-                                item.bukti_paking_url,
-                                `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
-                                item.destination || item.store_name || item.branch_name || '',
-                                item.promo_title || item.project || '',
-                                item.no_spk || item.tracking_id || ''
+                          {/* 1. STATUS PAKING */}
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleToggleStatus(item.id, 'status_qc_packing', item.status_qc_packing)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                                  isPackingDone
+                                    ? 'bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60'
+                                    : 'bg-[#E9EFF8]/80 hover:bg-[#DBEAFE]/60 text-[#475569] border-[#CBD5E1] dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700'
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${isPackingDone ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                {isPackingDone ? 'Selesai' : 'Menunggu'}
+                              </button>
+                              {isPackingDone && (
+                                <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight mt-0.5">
+                                  <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Petugas Paking'}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                                </div>
                               )}
-                              className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-105 transition-transform shadow-sm"
-                            />
-                            <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
-                              <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <label className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg cursor-pointer shadow-2xs transition-all active:scale-95 inline-flex items-center gap-1 text-[10px] font-bold" title="Upload Photo">
-                              <Camera className="w-3.5 h-3.5" />
-                              <span>{isUploadingThis ? '...' : 'Photo'}</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                disabled={isUploadingThis}
-                                onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
-                                className="hidden"
-                              />
-                            </label>
-                            <span className="text-slate-400 font-semibold text-[10px]">No Photo</span>
-                          </div>
-                        )}
-                      </td>
+                          </td>
 
-                    </tr>
-                  )}
-                  </React.Fragment>
-                );
-              })}
+                          {/* 2. PILIH BARIS */}
+                          <td className="py-3.5 pl-4 pr-2 text-center w-10">
+                            <button
+                              onClick={() => handleToggleSelectRow(item.id)}
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer mx-auto ${
+                                isSelected
+                                  ? 'bg-emerald-50/90 border-emerald-400 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300 shadow-master-sm'
+                                  : 'border-[#CBD5E1] dark:border-neutral-600 bg-white dark:bg-neutral-800 hover:border-[#2563EB]'
+                              }`}
+                              title={isSelected ? 'Batalkan Pilihan' : 'Pilih Baris'}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </button>
+                          </td>
+
+                          {/* 3. KODE KOLIAN */}
+                          <td className="py-3 pl-1 pr-4 font-mono text-xs whitespace-nowrap">
+                            <span className="px-2.5 py-1 rounded-lg bg-[#EFF6FF] dark:bg-blue-950/40 border border-[#BFDBFE] dark:border-blue-800/60 font-bold text-[#1E3A8A] dark:text-blue-200">
+                              {item.box_code || '-'}
+                            </span>
+                          </td>
+
+                          {/* 4. NAMA CABANG / SPK */}
+                          <td className="py-3 px-4 max-w-[280px]">
+                            <div className="font-bold text-[#1E293B] dark:text-white text-xs sm:text-sm flex items-center gap-2 flex-wrap tracking-tight">
+                              <span>{getCleanStoreName(item.store_name)}</span>
+                            </div>
+                            {item.no_spk && (
+                              <div className="text-[11px] font-mono text-[#475569] dark:text-neutral-400 font-semibold mt-0.5">{item.no_spk}</div>
+                            )}
+                          </td>
+
+                          {/* 5. JALUR PENGIRIMAN */}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className={`inline-block whitespace-nowrap px-3 py-1 rounded-lg font-mono font-semibold text-[11px] uppercase tracking-wider text-center border ${
+                              item.delivery_type === 'DALAM KOTA'
+                                ? 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60'
+                                : 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60'
+                            }`}>
+                              {item.delivery_type || 'DALAM KOTA'}
+                            </span>
+                          </td>
+
+                          {/* 6. TANGGAL MASUK */}
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <span className="font-mono text-[11px] text-[#475569] dark:text-neutral-300 font-medium block">
+                              {formatDateTime(item.created_at || item.updated_at)}
+                            </span>
+                          </td>
+
+                          {/* 7. LABEL & DESAIN */}
+                          <td className="py-3 px-4 text-center">
+                            {item.source !== 'google_sheet' ? (
+                              <span className="inline-block px-2.5 py-1 bg-purple-50/90 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/60 rounded-lg text-[10px] font-semibold">
+                                Label Surat Jalan
+                              </span>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <div className="flex items-center justify-center gap-1 max-h-12 overflow-y-auto">
+                                  {details.map((sub, sIdx) => (
+                                    sub.image_url ? (
+                                      <img
+                                        key={sIdx}
+                                        src={sub.image_url}
+                                        alt="Desain"
+                                        onClick={() => onOpenImageModal && onOpenImageModal(sub.image_url, sub.code)}
+                                        className="w-16 h-16 sm:w-20 sm:h-20 object-contain bg-[#F4F8FD] dark:bg-neutral-900 rounded-xl border border-[#BFDBFE] dark:border-neutral-700 cursor-pointer shadow-master-sm hover:scale-105 transition-transform p-0.5"
+                                      />
+                                    ) : null
+                                  ))}
+                                </div>
+                                <span className="font-mono text-[10px] text-[#475569] dark:text-neutral-400 font-medium">
+                                  {details.filter(i => i.image_url).length} / {details.length} Desain
+                                </span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* 8. BUKTI FOTO */}
+                          <td className="py-3 px-4 text-center">
+                            {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <img
+                                  src={item.bukti_paking_url}
+                                  alt="Bukti Paking"
+                                  onClick={() => onOpenImageModal && onOpenImageModal(
+                                    item.bukti_paking_url,
+                                    `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
+                                    item.destination || item.store_name || item.branch_name || '',
+                                    item.promo_title || item.project || '',
+                                    item.no_spk || item.tracking_id || ''
+                                  )}
+                                  className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-[#BFDBFE] dark:border-neutral-700 cursor-pointer hover:scale-105 transition-transform shadow-master-sm"
+                                />
+                                <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight">
+                                  <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Petugas QC'}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <label className="px-3 py-1.5 bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 rounded-xl cursor-pointer shadow-master-sm transition-all active:scale-95 inline-flex items-center gap-1.5 text-[10px] font-semibold" title="Unggah Foto Paking">
+                                  <Camera className="w-3.5 h-3.5" />
+                                  <span>{isUploadingThis ? 'Mengunggah...' : 'Ambil Foto'}</span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    disabled={isUploadingThis}
+                                    onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
+                                    className="hidden"
+                                  />
+                                </label>
+                                <span className="text-[#475569] dark:text-neutral-500 font-medium text-[10px]">Belum Ada Foto</span>
+                              </div>
+                            )}
+                          </td>
+
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
     </div>
   );

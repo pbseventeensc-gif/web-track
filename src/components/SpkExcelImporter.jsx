@@ -38,8 +38,8 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template_SPK");
-    XLSX.writeFile(wb, "Template_Upload_SPK_Wellen.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Templat_SPK");
+    XLSX.writeFile(wb, "Templat_Impor_SPK_Wellen.xlsx");
   };
 
   const handleFileUpload = (e) => {
@@ -55,13 +55,11 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
         const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
 
-        // Dual-mode parsing: Try raw array sheet_to_json({ header: 1 }) first to support Wellen Print print preview / direct format
         const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 });
         let formattedData = [];
         let detectedClient = 'WELLEN PRINT';
         let generatedSpkNo = `SPK-${Math.floor(1000 + Math.random() * 9000)}`;
 
-        // Scan header metadata & tabular columns
         let headerRowIdx = -1;
         let colMap = { no: -1, mesin: -1, namaBarang: -1, ukuran: -1, qty: -1, finishing: -1 };
 
@@ -69,19 +67,16 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
           if (!r || r.length === 0) return;
           const rowStr = r.map(c => String(c || '').trim()).join(' ').toLowerCase();
 
-          // Extract Client Name if present
           if (rowStr.includes('pemberi kerja') || rowStr.includes('client')) {
             const foundClient = r.find(cell => cell && typeof cell === 'string' && !cell.toLowerCase().includes('pemberi kerja') && !cell.toLowerCase().includes('nama'));
             if (foundClient) detectedClient = foundClient.trim();
           }
 
-          // Extract SPK No if present
           if (rowStr.includes('spk-') || rowStr.includes('no. spk') || rowStr.includes('no spk')) {
             const foundSpk = r.find(cell => cell && typeof cell === 'string' && cell.toUpperCase().includes('SPK'));
             if (foundSpk) generatedSpkNo = foundSpk.trim();
           }
 
-          // Detect header row containing "nama barang", "ukuran", "qty", or "finishing"
           if ((rowStr.includes('nama barang') || rowStr.includes('barang') || rowStr.includes('finishing')) && headerRowIdx === -1) {
             headerRowIdx = rIdx;
             r.forEach((cell, cIdx) => {
@@ -97,7 +92,6 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
           }
         });
 
-        // If table header found via array rows, extract data rows below headerRowIdx
         if (headerRowIdx !== -1 && colMap.namaBarang !== -1) {
           for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
             const r = rawRows[i];
@@ -117,7 +111,7 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
             formattedData.push({
               no_spk: generatedSpkNo,
               client: detectedClient,
-              project: `SPK Report - ${detectedClient}`,
+              project: `Laporan SPK - ${detectedClient}`,
               bahan: itemDescription,
               ukuran: ukuran,
               qty_order: qtyOrder,
@@ -131,14 +125,13 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
           }
         }
 
-        // Fallback to standard keyed JSON object parsing if array parser found nothing
         if (formattedData.length === 0) {
           const rawData = XLSX.utils.sheet_to_json(ws);
           if (rawData && rawData.length > 0) {
-            formattedData = rawData.map((row, index) => {
+            formattedData = rawData.map((row) => {
               const noSpk = String(row['No SPK'] || row['NO_SPK'] || row['no_spk'] || generatedSpkNo).trim();
               const client = String(row['Client'] || row['CLIENT'] || row['client'] || detectedClient).trim();
-              const project = String(row['Project'] || row['PROJECT'] || row['project'] || 'Project SPK').trim();
+              const project = String(row['Project'] || row['PROJECT'] || row['project'] || 'Proyek SPK').trim();
               const bahan = String(row['Nama Barang'] || row['NAMA_BARANG'] || row['Bahan'] || row['bahan'] || '').trim();
               const ukuran = String(row['Ukuran'] || row['UKURAN'] || row['ukuran'] || '-').trim();
               const rawQty = row['Qty'] || row['QTY'] || row['qty'] || row['Jumlah'] || 1;
@@ -169,17 +162,17 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
         if (formattedData.length > 0) {
           const { error } = await supabase.from('spk_data').insert(formattedData);
           if (!error) {
-            alert(`✅ Sukses! Berhasil mengimport ${formattedData.length} data item SPK dari Excel.`);
+            alert(`Berhasil mengimpor ${formattedData.length} baris data SPK dari berkas Excel.`);
             if (onImportSuccess) onImportSuccess();
             if (onClose) onClose();
           } else {
-            alert('❌ Gagal menyimpan ke database Supabase: ' + error.message);
+            alert('Gagal menyimpan data ke basis data: ' + error.message);
           }
         } else {
-          alert('⚠️ Format baris Excel tidak dikenali. Pastikan terdapat kolom "Nama Barang", "Ukuran", "Qty", dan "Finishing".');
+          alert('Format kolom Excel tidak dikenali. Pastikan terdapat kolom "Nama Barang", "Ukuran", "Qty", dan "Finishing".');
         }
       } catch (err) {
-        alert('❌ Gagal memproses file Excel: ' + err.message);
+        alert('Gagal memproses berkas Excel: ' + err.message);
       } finally {
         setLoading(false);
         e.target.value = '';
@@ -191,52 +184,54 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className={`w-full max-w-md p-6 rounded-2xl border shadow-xl transition-all ${
-        isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-[100] p-4">
+      <div className={`w-full max-w-md p-6 rounded-2xl border shadow-lg transition-all ${
+        isDarkMode ? 'bg-neutral-900 border-neutral-800 text-slate-100' : 'bg-white border-slate-200/90 text-slate-800'
       }`}>
         <div className="flex justify-between items-center mb-4 border-b pb-3 border-slate-100 dark:border-neutral-800">
-          <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-bold text-base">Import SPK dari Excel</h3>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-emerald-50/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
+            <h3 className="font-bold text-sm">Impor Data SPK dari Excel</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-all cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
-          Unggah file Excel (.xlsx / .xls) dengan format data SPK (Mendukung format standar kolom & format cetak preview Wellen seperti <b>Mesin</b>, <b>Nama Barang</b>, <b>Ukuran</b>, <b>Qty</b>, dan <b>Finishing</b>).
+          Unggah berkas Excel (`.xlsx` atau `.xls`) sesuai struktur data SPK. Sistem mendukung format tabel standar maupun format pratinjau cetak yang memuat kolom <strong>Mesin</strong>, <strong>Nama Barang</strong>, <strong>Ukuran</strong>, <strong>Qty</strong>, dan <strong>Finishing</strong>.
         </p>
 
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           <button
             onClick={handleDownloadTemplate}
-            className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`w-full py-2.5 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
               isDarkMode
-                ? 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-white'
-                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                ? 'bg-neutral-800 hover:bg-neutral-700 border-neutral-700 text-slate-200'
+                : 'bg-slate-100/80 hover:bg-slate-200/70 border-slate-200/80 text-slate-700'
             }`}
           >
-            <Download className="w-4 h-4 text-emerald-600" />
-            Download Template Excel SPK
+            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Unduh Templat Excel SPK
           </button>
 
-          <label className={`block w-full py-3 px-4 rounded-xl cursor-pointer text-xs font-black text-center transition-all shadow-sm ${
+          <label className={`block w-full py-3 px-4 rounded-xl cursor-pointer text-xs font-semibold text-center border transition-all ${
             loading
-              ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-              : 'bg-emerald-600 hover:bg-emerald-500 text-white active:scale-98'
+              ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+              : 'bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 active:scale-[0.99]'
           }`}>
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Mengimport ke Database...
+                <Loader2 className="w-4 h-4 animate-spin" /> Memproses Impor ke Basis Data...
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
-                <Upload className="w-4 h-4" /> Pilih & Upload File Excel SPK
+                <Upload className="w-4 h-4" /> Pilih & Unggah Berkas Excel SPK
               </span>
             )}
             <input

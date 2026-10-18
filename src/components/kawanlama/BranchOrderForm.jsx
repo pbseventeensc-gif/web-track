@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import PinModal from './PinModal';
 import { updateBranchPin } from './PinManager';
+import {
+  Bell,
+  Lock,
+  Unlock,
+  Clock,
+  AlertCircle,
+  ArrowUpDown,
+  Send
+} from 'lucide-react';
 
 export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const [items, setItems] = useState([]);
@@ -14,7 +23,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   
   const [sortOrder, setSortOrder] = useState('asc');
 
-  // State untuk Modal Ganti PIN Mandiri di Sisi Cabang
+  // State untuk Modal Ubah PIN Mandiri di Sisi Cabang
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   // Ambil ID cabang yang sedang aktif secara aman
@@ -24,10 +33,9 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     fetchActivePromo();
   }, [currentUser]);
 
-  // Fungsi untuk memfilter item berdasarkan promo aktif atau mengambil semua jika tidak ada item khusus
+  // Fungsi untuk memfilter item berdasarkan program promosi aktif atau mengambil semua jika tidak ada item khusus
   const fetchMasterItems = async (activePromoId) => {
     if (activePromoId) {
-      // 1. Cek apakah promo ini punya daftar item khusus di kl_promo_items
       const { data: promoItemsData } = await supabase
         .from('kl_promo_items')
         .select('item_id')
@@ -36,7 +44,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       if (promoItemsData && promoItemsData.length > 0) {
         const specificItemIds = promoItemsData.map(pi => pi.item_id);
         
-        // Ambil HANYA item yang dipilih admin untuk promo ini
         const { data: filteredItems } = await supabase
           .from('kl_master_items')
           .select('*')
@@ -50,7 +57,6 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       }
     }
 
-    // 2. Fallback: Jika admin tidak memilih item khusus, tampilkan semua master item
     const { data } = await supabase
       .from('kl_master_items')
       .select('*')
@@ -104,7 +110,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     }
   };
 
-  // Logika Pengecekan H-3 Deadline
+  // Logika Pengecekan H-3 Batas Waktu
   const isLockedByDeadline = (deadlineDateStr) => {
     if (!deadlineDateStr) return false;
     
@@ -136,7 +142,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
 
     if (maxBudgetLimit > 0 && projectedTotal > maxBudgetLimit) {
-      alert(`⚠️ Peringatan: Penambahan kuantiti ini membuat total estimasi pesanan melebihi batas alokasi ${activePromo.budget_type}! Kuantiti dibatasi.`);
+      alert(`Peringatan: Penambahan jumlah ini menyebabkan total nilai pesanan melampaui batas alokasi anggaran ${activePromo.budget_type}. Jumlah barang telah dibatasi.`);
       return;
     }
 
@@ -152,22 +158,22 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       .eq('id', existingOrder.id);
 
     if (!error) {
-      alert('🔓 Permintaan buka kunci telah dikirim ke Admin. Mohon tunggu persetujuan admin.');
+      alert('Permohonan buka kunci telah dikirim kepada Administrasi Pusat. Mohon menunggu persetujuan.');
       fetchActivePromo();
     } else {
-      alert('Gagal mengirim permintaan: ' + error.message);
+      alert('Gagal mengirim permohonan buka kunci: ' + error.message);
     }
     setLoading(false);
   };
 
   const submitOrder = async () => {
-    if (!currentUser || !currentBranchId) return alert('Silakan login cabang terlebih dahulu');
+    if (!currentUser || !currentBranchId) return alert('Silakan masuk menggunakan akun cabang terlebih dahulu.');
     
     const totalOrder = calculateTotalOrderValue(orderQty);
     const maxBudgetLimit = activePromo ? Number(activePromo.custom_budget || 0) : 0;
 
     if (maxBudgetLimit > 0 && totalOrder > maxBudgetLimit) {
-      alert(`❌ Gagal Submit: Total nilai pesanan melewati batas alokasi ${activePromo.budget_type}! Mohon kurangi kuantiti barang.`);
+      alert(`Gagal Mengajukan Pesanan: Total nilai pesanan melampaui batas alokasi anggaran ${activePromo.budget_type}. Mohon sesuaikan kembali jumlah barang.`);
       return;
     }
 
@@ -179,7 +185,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       await supabase.from('kl_orders').update({
         status: 'SUBMITTED',
         lock_status: 'LOCKED',
-        project_name: activePromo ? activePromo.title : 'Order Cabang'
+        project_name: activePromo ? activePromo.title : 'Pesanan Cabang'
       }).eq('id', targetOrderId);
 
       await supabase.from('kl_order_items').delete().eq('order_id', targetOrderId);
@@ -189,7 +195,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         .insert({ 
           branch_id: currentBranchId, 
           promo_id: activePromo ? activePromo.id : null,
-          project_name: activePromo ? activePromo.title : 'Order Cabang',
+          project_name: activePromo ? activePromo.title : 'Pesanan Cabang',
           status: 'SUBMITTED',
           lock_status: 'LOCKED'
         })
@@ -197,7 +203,7 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         .single();
 
       if (orderError) {
-        alert('Gagal submit order: ' + orderError.message);
+        alert('Gagal mengajukan pesanan: ' + orderError.message);
         setLoading(false);
         return;
       }
@@ -216,12 +222,12 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       await supabase.from('kl_order_items').insert(orderItems);
     }
     
-    alert('✅ Order Berhasil Disubmit / Diperbarui!');
+    alert('Pesanan cabang berhasil diajukan dan disimpan.');
     setLoading(false);
     fetchActivePromo();
   };
 
-  // Handler Ganti PIN Mandiri oleh Cabang
+  // Handler Ubah PIN Mandiri oleh Cabang
   const handleBranchChangePinSubmit = async ({ oldPin, newPin }) => {
     if (!currentBranchId) {
       alert("ID Cabang tidak valid.");
@@ -235,16 +241,16 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
       .single();
 
     if (fetchErr || !branchData || String(branchData.pin_code) !== String(oldPin)) {
-      alert("❌ PIN Lama yang Anda masukkan salah!");
+      alert("PIN lama yang Anda masukkan tidak sesuai.");
       return;
     }
 
     const res = await updateBranchPin(currentBranchId, newPin);
     if (res.success) {
-      alert("✅ PIN Berhasil diubah! Silakan gunakan PIN baru untuk sesi login berikutnya.");
+      alert("PIN berhasil diperbarui. Silakan gunakan PIN baru untuk sesi masuk berikutnya.");
       setIsPinModalOpen(false);
     } else {
-      alert("❌ Gagal memperbarui PIN: " + res.error);
+      alert("Gagal memperbarui PIN: " + res.error);
     }
   };
 
@@ -266,12 +272,12 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
   const maxBudget = activePromo ? Number(activePromo.custom_budget || 0) : 0;
   const percentage = maxBudget > 0 ? Math.min(Math.round((currentTotalOrder / maxBudget) * 100), 100) : 0;
 
-  // Logika Warna Progress Bar: 0-75% Hijau, 75-99% Oranye, 100% Merah
-  let progressColor = 'bg-emerald-500'; 
+  // Warna Indikator Penggunaan Anggaran (Soft Pastel Fill)
+  let progressColor = 'bg-emerald-400/80 dark:bg-emerald-500/60'; 
   if (percentage >= 75 && percentage < 100) {
-    progressColor = 'bg-orange-500'; 
+    progressColor = 'bg-amber-400/80 dark:bg-amber-500/60'; 
   } else if (percentage >= 100) {
-    progressColor = 'bg-rose-600'; 
+    progressColor = 'bg-rose-400/80 dark:bg-rose-500/60'; 
   }
 
   const isDeadlineLocked = isLockedByDeadline(activePromo?.deadline_date);
@@ -280,67 +286,69 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
     <div className="space-y-6 relative">
 
       {showNotification && !hasOrdered && activePromo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-stone-200 text-stone-800'}`}>
-            <div className="text-4xl mb-3">📢</div>
-            <h2 className="font-black text-base uppercase mb-2 text-indigo-600 dark:text-indigo-400">Pengingat: Order Belum Disubmit!</h2>
-            <p className="text-xs opacity-80 mb-6 leading-relaxed">
-              Halo Cabang, kampanye atau promo aktif <strong>"{activePromo.title}"</strong> sedang berjalan. Anda belum melakukan submit order. Mohon segera isi formulir pesanan logistik Anda.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className={`p-8 rounded-3xl border shadow-2xl max-w-md w-full animate-in fade-in zoom-in ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50/90 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60 flex items-center justify-center mb-4">
+              <Bell className="w-5 h-5" />
+            </div>
+            <h2 className="font-bold text-base uppercase mb-2 text-indigo-700 dark:text-indigo-300">Pengingat: Pesanan Belum Diajukan</h2>
+            <p className="text-xs text-slate-600 dark:text-neutral-300 mb-6 leading-relaxed">
+              Yth. Tim Cabang, program promosi aktif <strong>"{activePromo.title}"</strong> sedang berlangsung. Cabang Anda tercatat belum mengajukan pesanan. Mohon segera melengkapi formulir pesanan logistik di bawah ini.
             </p>
             <button 
               onClick={() => setShowNotification(false)}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs"
+              className="w-full py-3 bg-indigo-50/90 hover:bg-indigo-100/90 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-300 dark:border-indigo-800/60 font-semibold rounded-2xl shadow-2xs transition-all active:scale-95 text-xs cursor-pointer"
             >
-              Saya Mengerti, Lanjutkan ke Form
+              Saya Mengerti, Lanjutkan ke Formulir
             </button>
           </div>
         </div>
       )}
 
-      {/* Seluruh Kartu Promo & Budget Aktif dibuat Sticky FULL di bawah header utama */}
-      <div className={`sticky top-[105px] z-40 p-6 rounded-3xl border shadow-xl backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors ${isDarkMode ? 'bg-neutral-900/95 border-neutral-700 text-white' : 'bg-white/95 border-[#D8D2C2] text-stone-800'}`}>
+      {/* Kartu Informasi Program Promosi & Anggaran Aktif */}
+      <div className={`sticky top-[105px] z-40 p-6 rounded-3xl border shadow-sm backdrop-blur-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-colors ${isDarkMode ? 'bg-neutral-900/95 border-neutral-800 text-white' : 'bg-white/95 border-slate-200/90 text-slate-800'}`}>
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-              Kampanye / Promo Aktif
+            <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-indigo-50/90 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60">
+              Program Promosi Aktif
             </span>
             {activePromo?.budget_type && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-emerald-50/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60">
                 Alokasi: {activePromo.budget_type}
               </span>
             )}
             {hasOrdered && existingOrder?.lock_status === 'LOCKED' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300">
-                🔒 Terkunci (Telah Disubmit)
+              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-rose-50/90 text-rose-700 border border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60 inline-flex items-center gap-1">
+                <Lock className="w-3 h-3" /> Terkunci (Telah Diajukan)
               </span>
             )}
             {existingOrder?.lock_status === 'REQUEST_UNLOCK' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
-                ⏳ Menunggu Persetujuan Admin Buka Kunci
+              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-amber-50/90 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60 inline-flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Menunggu Persetujuan Buka Kunci
               </span>
             )}
             {existingOrder?.lock_status === 'UNLOCKED' && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                🔓 Dibuka Admin (Silakan Edit & Resubmit)
+              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 inline-flex items-center gap-1">
+                <Unlock className="w-3 h-3" /> Dibuka oleh Admin (Silakan Perbarui & Ajukan Ulang)
               </span>
             )}
             {isDeadlineLocked && (
-              <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-xl bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300">
-                ⚠️ H-3 Deadline (Lempar Pusat Dikunci)
+              <span className="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-xl bg-rose-50/90 text-rose-700 border border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60 inline-flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> H-3 Batas Waktu (Pengajuan Dikunci)
               </span>
             )}
           </div>
-          <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Promo Aktif'}</h3>
+          <h3 className="font-bold text-base mt-2">{activePromo ? activePromo.title : 'Belum Ada Program Promosi Aktif'}</h3>
           
           {activePromo && (
             <div className="pt-2 space-y-2 max-w-xl">
-              {/* Informasi Perhitungan Budget Cabang secara Realtime */}
-              <div className="flex justify-between items-center text-xs font-bold">
-                <span>Penggunaan Budget: Rp {currentTotalOrder.toLocaleString('id-ID')}</span>
-                <span>Limit Budget: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
+              {/* Informasi Perhitungan Anggaran Cabang secara Waktu Nyata */}
+              <div className="flex justify-between items-center text-xs font-semibold">
+                <span>Penggunaan Anggaran: Rp {currentTotalOrder.toLocaleString('id-ID')}</span>
+                <span>Batas Anggaran: Rp {maxBudget.toLocaleString('id-ID')} ({percentage}%)</span>
               </div>
 
-              <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-900 border border-neutral-700' : 'bg-stone-200 border border-stone-300'}`}>
+              <div className={`w-full h-3 rounded-full overflow-hidden p-0.5 ${isDarkMode ? 'bg-neutral-950 border border-neutral-800' : 'bg-slate-100 border border-slate-200/80'}`}>
                 <div 
                   className={`h-full rounded-full transition-all duration-500 ease-out ${progressColor}`}
                   style={{ width: `${percentage}%` }}
@@ -349,10 +357,10 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             </div>
           )}
 
-          <p className="text-xs opacity-70 mt-1">
+          <p className="text-xs text-slate-500 dark:text-neutral-400 mt-1">
             {hasOrdered && existingOrder?.lock_status === 'LOCKED'
-              ? 'Anda sudah melakukan submit order. Jika ingin mengubah pesanan, silakan klik tombol "Minta Buka Kunci ke Admin".'
-              : (activePromo ? activePromo.description : 'Silakan menunggu instruksi admin.')}
+              ? 'Pesanan Anda telah diajukan dan dikunci. Apabila diperlukan perubahan, silakan klik tombol "Ajukan Buka Kunci ke Admin".'
+              : (activePromo ? activePromo.description : 'Silakan menunggu instruksi lebih lanjut dari Administrasi Pusat.')}
           </p>
         </div>
 
@@ -361,13 +369,13 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
             <button 
               onClick={requestUnlock}
               disabled={loading || existingOrder?.lock_status === 'REQUEST_UNLOCK' || isDeadlineLocked}
-              className={`px-5 py-3.5 font-bold rounded-2xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap ${
+              className={`px-5 py-3.5 font-semibold rounded-2xl shadow-2xs transition-all active:scale-95 text-xs whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                 isDeadlineLocked 
-                  ? 'bg-stone-400 cursor-not-allowed text-white' 
-                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+                  ? 'bg-slate-100/80 text-slate-400 border border-slate-200/80 cursor-not-allowed' 
+                  : 'bg-amber-50/90 hover:bg-amber-100/90 text-amber-800 border border-amber-200/80 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60'
               }`}
             >
-              {isDeadlineLocked ? '🔒 Terkunci (H-3 Deadline)' : '🔑 Minta Buka Kunci ke Admin'}
+              {isDeadlineLocked ? <><Lock className="w-3.5 h-3.5" /> Terkunci (H-3 Batas Waktu)</> : <><Unlock className="w-3.5 h-3.5" /> Ajukan Buka Kunci ke Admin</>}
             </button>
           )}
 
@@ -376,17 +384,18 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
               <button 
                 onClick={submitOrder}
                 disabled={loading || !activePromo || isDeadlineLocked}
-                className={`w-full md:w-auto px-6 py-3.5 text-white font-bold rounded-2xl shadow-md transition-all active:scale-95 whitespace-nowrap ${
+                className={`w-full md:w-auto px-6 py-3.5 font-semibold rounded-2xl shadow-2xs transition-all active:scale-95 whitespace-nowrap text-xs flex items-center justify-center gap-2 cursor-pointer ${
                   !activePromo || isDeadlineLocked 
-                    ? 'bg-stone-400 cursor-not-allowed' 
-                    : 'bg-sky-500 hover:bg-sky-600'
+                    ? 'bg-slate-100/80 text-slate-400 border border-slate-200/80 cursor-not-allowed' 
+                    : 'bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60'
                 }`}
               >
-                {loading ? 'Memproses...' : (isDeadlineLocked ? 'Lempar Pusat Dikunci (H-3 Deadline)' : (existingOrder?.lock_status === 'UNLOCKED' ? 'Resubmit / Perbarui Order' : 'Submit Order Cabang'))}
+                <Send className="w-3.5 h-3.5" />
+                <span>{loading ? 'Memproses...' : (isDeadlineLocked ? 'Pengajuan Dikunci (H-3 Batas Waktu)' : (existingOrder?.lock_status === 'UNLOCKED' ? 'Perbarui & Ajukan Ulang Pesanan' : 'Ajukan Pesanan Cabang'))}</span>
               </button>
               {isDeadlineLocked && (
                 <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold text-center">
-                  ⚠️ Pengiriman/lempar pusat telah dikunci karena memasuki H-3 deadline.
+                  Pengajuan pesanan telah dikunci karena memasuki H-3 batas waktu.
                 </span>
               )}
             </div>
@@ -394,38 +403,34 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         </div>
       </div>
 
-      <div className={`p-6 rounded-3xl border shadow-sm ${isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-[#D8D2C2] text-stone-800'}`}>
+      <div className={`p-6 rounded-3xl border shadow-2xs ${isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-slate-200/90 text-slate-800'}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-          <h2 className="font-extrabold text-sm tracking-wide uppercase text-indigo-600 dark:text-indigo-400">
-            {hasOrdered ? 'Form Permintaan (Terkunci - Telah Disubmit)' : 'Form Permintaan / Order Logistik Cabang'}
+          <h2 className="font-bold text-sm tracking-wide uppercase text-indigo-700 dark:text-indigo-300">
+            {hasOrdered ? 'Formulir Permintaan (Terkunci - Telah Diajukan)' : 'Formulir Pengajuan Pesanan Logistik Cabang'}
           </h2>
 
           <button
             onClick={toggleSort}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
-              isDarkMode 
-                ? 'bg-neutral-700 border-neutral-600 text-neutral-200 hover:bg-neutral-600' 
-                : 'bg-stone-100 border-stone-300 text-stone-700 hover:bg-stone-200'
-            }`}
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100/80 hover:bg-slate-200/70 text-slate-700 border border-slate-200/80 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
           >
-            🔤 Urutkan Nama: {sortOrder === 'asc' ? 'A → Z (Naik)' : 'Z → A (Turun)'}
+            <ArrowUpDown className="w-3.5 h-3.5" /> Urutkan Nama Barang: {sortOrder === 'asc' ? 'A ke Z (Naik)' : 'Z ke A (Turun)'}
           </button>
         </div>
 
-        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-stone-200 dark:border-neutral-700">
+        <div className="max-h-[500px] overflow-y-auto relative rounded-2xl border border-slate-200/80 dark:border-neutral-800">
           <table className="w-full text-xs border-collapse">
-            <thead className={`sticky top-0 z-10 font-black uppercase tracking-wider ${isDarkMode ? 'bg-neutral-900 text-neutral-200 border-b border-neutral-700' : 'bg-stone-100 text-stone-700 border-b border-stone-300'}`}>
+            <thead className={`sticky top-0 z-10 font-bold uppercase tracking-wider text-[11px] ${isDarkMode ? 'bg-neutral-900 text-neutral-300 border-b border-neutral-800' : 'bg-slate-50/95 text-slate-600 border-b border-slate-200/80'}`}>
               <tr>
                 <th className="p-3.5 text-left">Nama Barang</th>
                 <th className="p-3.5 text-left">Material / Bahan</th>
-                <th className="p-3.5 text-left">Ukuran (Size)</th>
-                <th className="p-3.5 text-center w-32">Qty Order</th>
+                <th className="p-3.5 text-left">Ukuran</th>
+                <th className="p-3.5 text-center w-32">Jumlah Pesanan</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-700/50' : 'divide-stone-100'}`}>
+            <tbody className={`divide-y ${isDarkMode ? 'divide-neutral-800/70' : 'divide-slate-100'}`}>
               {sortedItems.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-8 text-center opacity-60">Tidak ada item barang tersedia untuk promo ini.</td>
+                  <td colSpan="4" className="p-8 text-center text-slate-400">Tidak ada item barang yang tersedia untuk program promosi ini.</td>
                 </tr>
               ) : (
                 sortedItems.map(item => {
@@ -433,10 +438,10 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
                   const sizeStr = item.size || '-';
 
                   return (
-                    <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-700/30' : 'hover:bg-stone-50/50'}>
-                      <td className="p-3.5 font-bold">{item.item_name}</td>
-                      <td className="p-3.5 opacity-80 uppercase font-medium">{materialStr}</td>
-                      <td className="p-3.5 opacity-80 uppercase font-mono">{sizeStr}</td>
+                    <tr key={item.id} className={isDarkMode ? 'hover:bg-neutral-800/40' : 'hover:bg-slate-50/70'}>
+                      <td className="p-3.5 font-semibold">{item.item_name}</td>
+                      <td className="p-3.5 text-slate-600 dark:text-neutral-300 uppercase font-medium">{materialStr}</td>
+                      <td className="p-3.5 text-slate-500 dark:text-neutral-400 uppercase font-mono">{sizeStr}</td>
                       <td className="p-3.5 text-center">
                         <input 
                           type="number" 
@@ -444,10 +449,10 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
                           disabled={hasOrdered || isDeadlineLocked}
                           value={orderQty[item.id] || ''}
                           onChange={(e) => handleQtyChange(item.id, e.target.value)}
-                          className={`w-24 p-2 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          className={`w-24 p-2 border rounded-xl text-center font-bold font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
                             hasOrdered || isDeadlineLocked
-                              ? 'opacity-50 cursor-not-allowed bg-stone-200 dark:bg-neutral-900' 
-                              : isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-stone-50 border-stone-300 text-black'
+                              ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-neutral-900 border-slate-200 dark:border-neutral-800' 
+                              : isDarkMode ? 'bg-neutral-950 border-neutral-700 text-white' : 'bg-white border-slate-200/90 text-slate-900'
                           }`}
                           placeholder="0"
                         />
@@ -465,8 +470,8 @@ export default function BranchOrderForm({ isDarkMode, currentUser }) {
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
         onSubmit={handleBranchChangePinSubmit}
-        title="Ganti PIN Mandiri"
-        subtitle="Masukkan PIN lama Anda untuk verifikasi, lalu masukkan 6 digit PIN baru."
+        title="Ubah PIN Mandiri"
+        subtitle="Masukkan PIN lama Anda untuk verifikasi, kemudian masukkan 6 digit PIN baru."
         isDarkMode={isDarkMode}
         requireOldPin={true}
       />
