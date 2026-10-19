@@ -2267,8 +2267,6 @@ export default function PackingPanel({
                       )}
                     </div>
                   </td>
-                    </div>
-                  </td>
                 </tr>
               ) : (
                 filteredList.map((item, idx) => {
