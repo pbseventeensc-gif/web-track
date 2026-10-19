@@ -183,10 +183,50 @@ export default function PackingPanel({
   }, []);
 
   const fetchPackingData = async () => {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('packing_tracking')
       .select('*')
       .order('id', { ascending: false });
+
+    // Jika packing_tracking kosong, coba periksa & sinkronkan otomatis dari spk_data
+    if (!error && (!data || data.length === 0)) {
+      const { data: spkRows } = await supabase.from('spk_data').select('*').order('id', { ascending: true });
+      if (spkRows && spkRows.length > 0) {
+        const payloads = spkRows.map((spk, idx) => {
+          const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+          return {
+            tracking_id: trackingCode,
+            no_spk: spk.no_spk || `SPK-${spk.id}`,
+            client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
+            promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
+            store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
+            recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+            total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
+            box_code: spk.box_code || 'WL-01',
+            delivery_type: spk.delivery_type || 'DALAM KOTA',
+            status_qc_label: spk.status_qc_label || 'PENDING',
+            status_qc_packing: spk.status_qc_packing || 'PENDING',
+            status_qc_checker: spk.status_qc_checker || 'PENDING',
+            status_deliver: spk.status_deliver || 'PENDING',
+            items_detail: spk.items_detail || [{
+              code: spk.no_spk || 'ITEM-01',
+              desc: spk.promo_title || spk.project_name || 'Item Pesanan',
+              qty: Number(spk.qty_order || spk.total_qty || 100)
+            }],
+            updated_at: new Date().toISOString()
+          };
+        });
+
+        await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+
+        const { data: newData } = await supabase
+          .from('packing_tracking')
+          .select('*')
+          .order('id', { ascending: false });
+
+        if (newData) data = newData;
+      }
+    }
 
     if (!error && data) {
       if (data.length > 0) {
@@ -198,7 +238,7 @@ export default function PackingPanel({
             const activeUrl = sub.image_url ||
                              window.__ACTIVE_DESIGN_URLS__[itemCode] ||
                              window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
-                             (itemCore ? window.__ACTIVE_DESIGN_URLS__[itemCore] : '') ||
+                             (itemCore ? window.__ACTIVE_DESIGN_URLS__[coreKey] : '') ||
                              '';
 
             return { ...sub, image_url: activeUrl };
@@ -2164,6 +2204,7 @@ export default function PackingPanel({
             <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
               {filteredList.length === 0 ? (
                 <tr>
+<<<<<<< Updated upstream
                   <td colSpan={isPackingRole ? "8" : "9"} className="py-12 px-6 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center justify-center">
                       <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] dark:bg-blue-950/40 border border-[#BFDBFE] dark:border-blue-800/60 text-[#2563EB] dark:text-blue-300 flex items-center justify-center mb-2.5 shadow-master-sm">
@@ -2175,6 +2216,69 @@ export default function PackingPanel({
                       <p className="text-[11px] text-[#475569] dark:text-neutral-400 mt-1">
                         {t('noMatchingDataDesc')}
                       </p>
+=======
+                  <td colSpan={isPackingRole ? "8" : "9"} className="p-8 text-center">
+                    <div className="max-w-md mx-auto space-y-3 py-4">
+                      {packingList.length === 0 ? (
+                        <>
+                          <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
+                            📦
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-800">
+                            Belum Ada Data Paking di Database
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Jika data SPK sudah di-import hari ini, klik tombol di bawah untuk menyinkronkan data SPK ke Packing Station.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleSyncFromSpkData(true)}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 inline-flex items-center gap-2 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Sinkronkan Data SPK Sekarang
+                          </button>
+                        </>
+                      ) : sourceList.length === 0 ? (
+                        <>
+                          <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold">
+                            ✅
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-800">
+                            Semua ({packingList.length}) Box Telah Diverifikasi Checker
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Seluruh data paking telah selesai di-check dan berpindah ke Outbound.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto text-xl font-bold">
+                            🔍
+                          </div>
+                          <h3 className="text-sm font-bold text-slate-800">
+                            Tidak Ada Data Sesuai Filter
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            Terdapat {sourceList.length} box aktif, namun tidak cocok dengan filter / pencarian saat ini.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFilterSource('ALL');
+                              setFilterDelivery('ALL');
+                              setFilterStatus('ALL');
+                              setFilterStage('ALL');
+                              setFilterProject('ALL');
+                              setSearchTerm('');
+                            }}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                          >
+                            Reset Semua Filter
+                          </button>
+                        </>
+                      )}
+>>>>>>> Stashed changes
                     </div>
                   </td>
                 </tr>

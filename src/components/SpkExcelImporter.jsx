@@ -160,9 +160,44 @@ export default function SpkExcelImporter({ isDarkMode, onImportSuccess, isOpen, 
         }
 
         if (formattedData.length > 0) {
-          const { error } = await supabase.from('spk_data').insert(formattedData);
+          const { data: insertedData, error } = await supabase
+            .from('spk_data')
+            .insert(formattedData)
+            .select('*');
+
           if (!error) {
-            alert(`Berhasil mengimpor ${formattedData.length} baris data SPK dari berkas Excel.`);
+            // Auto sync langsung ke packing_tracking
+            const itemsToSync = insertedData && insertedData.length > 0 ? insertedData : formattedData;
+            const packingPayloads = itemsToSync.map((spk, idx) => {
+              const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+              return {
+                tracking_id: trackingCode,
+                no_spk: spk.no_spk || `SPK-${spk.id || idx}`,
+                client_pt: spk.client || spk.client_pt || 'Wellen Customer',
+                promo_title: spk.project || spk.promo_title || 'Project Utama',
+                store_name: spk.store_code || spk.store_name || 'Store Utama',
+                recipient_name: spk.client || 'Penerima',
+                total_qty: Number(spk.qty_order || 100),
+                box_code: 'WL-01',
+                delivery_type: spk.delivery_route || 'DALAM KOTA',
+                status_qc_label: 'PENDING',
+                status_qc_packing: 'PENDING',
+                status_qc_checker: 'PENDING',
+                status_deliver: 'PENDING',
+                items_detail: [{
+                  code: spk.no_spk || 'ITEM-01',
+                  desc: spk.project || 'Item Pesanan',
+                  material: spk.bahan || '-',
+                  size: spk.ukuran || '-',
+                  qty: Number(spk.qty_order || 100)
+                }],
+                updated_at: new Date().toISOString()
+              };
+            });
+
+            await supabase.from('packing_tracking').upsert(packingPayloads, { onConflict: 'tracking_id' });
+
+            alert(`✅ Sukses! Berhasil mengimport ${formattedData.length} data item SPK dari Excel & menyinkronkan ke Packing Station.`);
             if (onImportSuccess) onImportSuccess();
             if (onClose) onClose();
           } else {

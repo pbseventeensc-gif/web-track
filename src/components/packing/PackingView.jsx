@@ -89,12 +89,58 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     }
   };
 
+  const [showCheckedItems, setShowCheckedItems] = useState(false);
+
   const fetchPackingData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('packing_tracking')
       .select('*')
       .order('id', { ascending: false });
+
+    // Jika packing_tracking kosong, otomatis coba periksa & sinkronkan dari spk_data
+    if (!error && (!data || data.length === 0)) {
+      const { data: spkRows } = await supabase
+        .from('spk_data')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (spkRows && spkRows.length > 0) {
+        const payloads = spkRows.map((spk, idx) => {
+          const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+          return {
+            tracking_id: trackingCode,
+            no_spk: spk.no_spk || `SPK-${spk.id}`,
+            client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
+            promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
+            store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
+            recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+            total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
+            box_code: spk.box_code || 'WL-01',
+            delivery_type: spk.delivery_type || 'DALAM KOTA',
+            status_qc_label: spk.status_qc_label || 'PENDING',
+            status_qc_packing: spk.status_qc_packing || 'PENDING',
+            status_qc_checker: spk.status_qc_checker || 'PENDING',
+            status_deliver: spk.status_deliver || 'PENDING',
+            items_detail: spk.items_detail || [{
+              code: spk.no_spk || 'ITEM-01',
+              desc: spk.promo_title || spk.project_name || 'Item Pesanan',
+              qty: Number(spk.qty_order || spk.total_qty || 100)
+            }],
+            updated_at: new Date().toISOString()
+          };
+        });
+
+        await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+
+        const { data: newData } = await supabase
+          .from('packing_tracking')
+          .select('*')
+          .order('id', { ascending: false });
+
+        if (newData) data = newData;
+      }
+    }
 
     if (!error && data) {
       const normalizedData = data.map(item => {
@@ -127,6 +173,51 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
       setPackingList(normalizedData);
     }
     setLoading(false);
+  };
+
+  const handleSyncFromSpkData = async () => {
+    setLoading(true);
+    try {
+      const { data: spkRows, error } = await supabase.from('spk_data').select('*').order('id', { ascending: true });
+      if (error || !spkRows || spkRows.length === 0) {
+        alert('⚠️ Tidak ada data SPK di database yang dapat disinkronkan.');
+        setLoading(false);
+        return;
+      }
+
+      const payloads = spkRows.map((spk, idx) => {
+        const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+        return {
+          tracking_id: trackingCode,
+          no_spk: spk.no_spk || `SPK-${spk.id}`,
+          client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
+          promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
+          store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
+          recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+          total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
+          box_code: spk.box_code || 'WL-01',
+          delivery_type: spk.delivery_type || 'DALAM KOTA',
+          status_qc_label: spk.status_qc_label || 'PENDING',
+          status_qc_packing: spk.status_qc_packing || 'PENDING',
+          status_qc_checker: spk.status_qc_checker || 'PENDING',
+          status_deliver: spk.status_deliver || 'PENDING',
+          items_detail: spk.items_detail || [{
+            code: spk.no_spk || 'ITEM-01',
+            desc: spk.promo_title || spk.project_name || 'Item Pesanan',
+            qty: Number(spk.qty_order || spk.total_qty || 100)
+          }],
+          updated_at: new Date().toISOString()
+        };
+      });
+
+      await supabase.from('packing_tracking').upsert(payloads, { onConflict: 'tracking_id' });
+      await fetchPackingData();
+      alert(`✅ Berhasil menyinkronkan ${payloads.length} data SPK ke Packing Station!`);
+    } catch (err) {
+      alert('❌ Gagal sinkronisasi data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -287,7 +378,6 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     return extractBaseProjectName(promoTitle) || '-';
   };
 
-  // Logika Arsip: Data hanya pindah ke arsip project jika SUDAH ada bukti foto paking DAN scan dari checker/deliver
   const isClosedItem = (item) => {
     const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
     const hasCheckerOrDeliver = Boolean(
@@ -299,49 +389,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     return hasPhoto && hasCheckerOrDeliver;
   };
 
-  const activePackingList = packingList.filter(item => !isClosedItem(item));
-
-  // Pengelompokan proyek paking aktif berdasarkan bulan dan kategori brand untuk dropdown
-  const uniqueMonthsAndProjects = useMemo(() => {
-    const monthMap = {};
-    activePackingList.forEach(item => {
-      if (!item.promo_title || item.promo_title.trim() === '') return;
-      const mKey = getItemMonthKey(item.created_at || item.updated_at);
-      const mLabel = getItemMonthLabel(mKey);
-      const cat = getProjectCategory(item.promo_title);
-      const proj = getProjectGroupKey(item.promo_title);
-
-      if (!monthMap[mKey]) {
-        monthMap[mKey] = { key: mKey, label: mLabel, totalBoxes: 0, brands: {} };
-      }
-      monthMap[mKey].totalBoxes++;
-      if (!monthMap[mKey].brands[cat]) {
-        monthMap[mKey].brands[cat] = { categoryName: cat, totalBoxes: 0, projects: {} };
-      }
-      monthMap[mKey].brands[cat].totalBoxes++;
-      if (proj && proj !== '-') {
-        monthMap[mKey].brands[cat].projects[proj] = (monthMap[mKey].brands[cat].projects[proj] || 0) + 1;
-      }
-    });
-
-    return Object.keys(monthMap)
-      .sort((a, b) => b.localeCompare(a))
-      .map(k => {
-        const m = monthMap[k];
-        return {
-          key: m.key,
-          label: m.label,
-          totalBoxes: m.totalBoxes,
-          brands: Object.values(m.brands).map(b => ({
-            categoryName: b.categoryName,
-            totalBoxes: b.totalBoxes,
-            projects: Object.entries(b.projects)
-              .map(([name, count]) => ({ name, count }))
-              .sort((a, b) => a.name.localeCompare(b.name))
-          })).sort((a, b) => a.categoryName.localeCompare(b.categoryName))
-        };
-      });
-  }, [activePackingList]);
+  const activePackingList = showCheckedItems ? packingList : packingList.filter(item => !isClosedItem(item));
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
@@ -436,7 +484,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
           <button
             onClick={() => {
               const currentKeys = Array.from(new Set(filteredList.map(item => getProjectGroupKey(item.promo_title))));
@@ -464,6 +512,34 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
               );
             })()}
           </button>
+
+          <button
+            onClick={handleSyncFromSpkData}
+            disabled={loading}
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+            title="Sinkronkan data SPK terbaru dari Database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Sync SPK Data
+          </button>
+
+          <button
+            onClick={fetchPackingData}
+            disabled={loading}
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+>>>>>>> Stashed changes
 
           <button
             onClick={fetchPackingData}
@@ -645,24 +721,79 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
           </div>
         </div>
 
-        {/* AREA TABEL DATA */}
-        {filteredList.length === 0 ? (
-          <div className="py-12 px-6 text-center bg-white dark:bg-neutral-900">
-            <div className="max-w-sm mx-auto flex flex-col items-center justify-center">
-              <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] dark:bg-blue-950/40 border border-[#BFDBFE] dark:border-blue-800/60 text-[#2563EB] dark:text-blue-300 flex items-center justify-center mb-2.5 shadow-master-sm">
-                <Package className="w-5 h-5" />
+      {/* DATA CONTENT AREA */}
+      {filteredList.length === 0 ? (
+        <div className="p-8 sm:p-12 text-center bg-white dark:bg-neutral-800 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-2xs max-w-full space-y-4">
+          {packingList.length === 0 ? (
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto text-xl font-bold">
+                📦
               </div>
-              <p className="text-xs font-bold text-[#1E3A8A] dark:text-slate-200">
-                Belum ada data yang sesuai dengan kriteria pencarian.
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                Belum Ada Data Paking di Database
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mx-auto">
+                Jika data SPK sudah di-import hari ini, klik tombol di bawah untuk menyinkronkan data SPK ke Packing Station.
               </p>
-              <p className="text-[11px] text-[#475569] dark:text-neutral-400 mt-1">
-                Silakan sesuaikan filter di atas atau klik tombol Perbarui Data.
-              </p>
+              <button
+                type="button"
+                onClick={handleSyncFromSpkData}
+                disabled={loading}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all active:scale-95 inline-flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Sinkronkan Data SPK Sekarang
+              </button>
             </div>
-          </div>
-        ) : (
-          <div className="overflow-x-auto w-full custom-scrollbar">
-            <table className="w-full text-left text-xs border-collapse min-w-[760px]">
+          ) : activePackingList.length === 0 ? (
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">
+                ✅
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                Semua ({packingList.length}) Box Telah Diverifikasi Checker
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mx-auto">
+                Seluruh data paking telah di-check oleh Staff Checker dan berpindah ke Outbound.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCheckedItems(!showCheckedItems)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                {showCheckedItems ? 'Sembunyikan Box Finished' : 'Tampilkan Box Finished'}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-neutral-400 flex items-center justify-center mx-auto text-xl font-bold">
+                🔍
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white">
+                Tidak Ada Data Sesuai Filter
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 max-w-md mx-auto">
+                Ada {activePackingList.length} box paking aktif, namun tidak cocok dengan filter / kata kunci pencarian saat ini.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterSource('ALL');
+                  setFilterDelivery('ALL');
+                  setFilterStatus('ALL');
+                  setFilterProject('ALL');
+                  setSearchTerm('');
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+              >
+                Reset Semua Filter
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-x-auto w-full custom-scrollbar">
+          <table className="w-full text-left text-xs border-collapse min-w-[760px]">
               <thead>
                 <tr className="bg-[#E9EFF8]/85 dark:bg-neutral-800/90 text-[#1E3A8A] dark:text-neutral-200 font-mono font-bold border-b border-[#BFDBFE]/80 dark:border-neutral-700 uppercase text-[11px] tracking-wider">
                   <th className="py-3.5 px-4 text-center">STATUS PAKING</th>
