@@ -32,6 +32,7 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
               client_name: clientName,
               address: address || 'Alamat belum tersedia',
               pic: picName,
+              pic_name: picName,
               phone: phoneNum,
               hos_region: hosRegion
             });

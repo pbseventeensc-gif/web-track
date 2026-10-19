@@ -491,7 +491,10 @@ export default function App() {
             qty_finish: 1,
             qty_pack: 1,
             qty_ship: 1,
-            store_code: p.pic_up || '-',
+            store_code: p.pic_up || p.pic_name || '-',
+            recipient_name: p.pic_up || p.pic_name || '-',
+            phone_number: p.phone_no || p.phone || '-',
+            address: p.address || '-',
             delivery_route: (p.address || '').toLowerCase().includes('jakarta') ? 'DALAM KOTA' : 'LUAR KOTA',
             tes_scan: 'Terverifikasi',
             created_at: p.delivery_date || p.created_at || new Date().toISOString()

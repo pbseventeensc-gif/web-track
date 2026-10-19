@@ -5,7 +5,7 @@ import { Trash2, MapPin, Plus } from 'lucide-react';
 
 export default function PmgDestinationManager({ isDarkMode }) {
   const [destinations, setDestinations] = useState([]);
-  const [form, setForm] = useState({ client_name: '', address: '' });
+  const [form, setForm] = useState({ client_name: '', address: '', pic_name: '', phone: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -22,9 +22,16 @@ export default function PmgDestinationManager({ isDarkMode }) {
     if (!form.client_name || !form.address) return alert('Nama klien dan alamat tujuan wajib diisi.');
 
     setLoading(true);
-    const { error } = await supabase.from('pmg_destinations').insert([form]);
+    const payload = {
+      client_name: form.client_name.trim(),
+      address: form.address.trim(),
+      pic_name: form.pic_name.trim(),
+      pic: form.pic_name.trim(),
+      phone: form.phone.trim()
+    };
+    const { error } = await supabase.from('pmg_destinations').insert([payload]);
     if (!error) {
-      setForm({ client_name: '', address: '' });
+      setForm({ client_name: '', address: '', pic_name: '', phone: '' });
       fetchDestinations();
     } else {
       alert('Gagal menambahkan alamat tujuan: ' + error.message);
@@ -63,7 +70,23 @@ export default function PmgDestinationManager({ isDarkMode }) {
           className={`w-full p-2.5 border rounded-xl font-medium text-xs transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-slate-100 placeholder:text-neutral-500' : 'bg-slate-50/80 border-slate-200/90 text-slate-800 placeholder:text-slate-400'}`}
           required
         />
-        <textarea 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input
+            type="text"
+            placeholder="Nama PIC / Penerima"
+            value={form.pic_name}
+            onChange={e => setForm({ ...form, pic_name: e.target.value })}
+            className={`w-full p-2.5 border rounded-xl font-medium text-xs transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-slate-100 placeholder:text-neutral-500' : 'bg-slate-50/80 border-slate-200/90 text-slate-800 placeholder:text-slate-400'}`}
+          />
+          <input
+            type="text"
+            placeholder="Nomor Telepon / No HP"
+            value={form.phone}
+            onChange={e => setForm({ ...form, phone: e.target.value })}
+            className={`w-full p-2.5 border rounded-xl font-medium text-xs transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${isDarkMode ? 'bg-neutral-800/90 border-neutral-700 text-slate-100 placeholder:text-neutral-500' : 'bg-slate-50/80 border-slate-200/90 text-slate-800 placeholder:text-slate-400'}`}
+          />
+        </div>
+        <textarea
           placeholder="Alamat lengkap tujuan pengiriman..."
           value={form.address}
           onChange={e => setForm({ ...form, address: e.target.value })}
@@ -87,6 +110,10 @@ export default function PmgDestinationManager({ isDarkMode }) {
             <div>
               <p className="font-bold text-slate-900 dark:text-slate-100">{d.client_name}</p>
               <p className="text-[11px] mt-0.5 text-slate-600 dark:text-slate-400">{d.address}</p>
+              <div className="flex flex-wrap gap-x-3 text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                {(d.pic_name || d.pic) && <span>👤 PIC: {d.pic_name || d.pic}</span>}
+                {d.phone && <span>📞 Telp: {d.phone}</span>}
+              </div>
             </div>
             <button 
               onClick={() => handleDelete(d.id, d.client_name)}

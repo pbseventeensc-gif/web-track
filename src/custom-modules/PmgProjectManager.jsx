@@ -182,12 +182,20 @@ export default function PmgProjectManager({ isDarkMode }) {
 
     const existing = destinations.find(d => d.client_name.toLowerCase() === form.deliver_to.trim().toLowerCase());
     if (existing) {
+      const updateData = {
+        address: form.address.trim() || existing.address,
+        pic_name: form.pic_up.trim() || existing.pic_name || existing.pic,
+        pic: form.pic_up.trim() || existing.pic || existing.pic_name,
+        phone: form.phone_no.trim() || existing.phone
+      };
+      await supabase.from('pmg_destinations').update(updateData).eq('id', existing.id);
       return existing.id;
     } else {
       const newEntry = {
         client_name: form.deliver_to.trim(),
         address: form.address.trim(),
         pic_name: form.pic_up.trim(),
+        pic: form.pic_up.trim(),
         phone: form.phone_no.trim(),
         hos_region: '-'
       };
@@ -239,7 +247,39 @@ export default function PmgProjectManager({ isDarkMode }) {
     if (itemError) {
       alert('Gagal menyimpan rincian barang: ' + itemError.message);
     } else {
-      alert('Dokumen Surat Jalan & Alokasi PMG berhasil disimpan ke basis data.');
+      // Sync to packing_tracking on POD creation
+      const totalItemQty = items.reduce((acc, curr) => acc + (Number(curr.qty) || 0), 0);
+      const trackingPayload = {
+        tracking_id: form.transaction_code,
+        box_code: form.transaction_code,
+        no_spk: form.dr_number || form.transaction_code,
+        store_name: form.deliver_to,
+        client_pt: form.deliver_to,
+        recipient_name: form.pic_up,
+        pic_name: form.pic_up,
+        phone_number: form.phone_no,
+        phone: form.phone_no,
+        address: form.address,
+        destination: form.address,
+        promo_title: form.project_name,
+        total_qty: totalItemQty,
+        delivery_type: (form.address || '').toLowerCase().includes('jakarta') ? 'DALAM KOTA' : 'LUAR KOTA',
+        source: 'pmg_pod',
+        items_detail: items.map(it => ({ code: it.item_name, desc: it.item_name, qty: it.qty, unit: it.unit || 'PCS' })),
+        status_qc_label: 'DONE',
+        status_qc_packing: 'DONE',
+        status_qc_checker: 'DONE',
+        status_deliver: 'PENDING',
+        created_at: form.delivery_date ? new Date(form.delivery_date).toISOString() : new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      try {
+        await supabase.from('packing_tracking').upsert([trackingPayload], { onConflict: 'tracking_id' });
+      } catch (e) {
+        console.warn('Auto sync to packing_tracking:', e);
+      }
+
+      alert('Dokumen Surat Jalan & Alokasi PMG berhasil disimpan dan dipush ke basis data.');
       setForm({ dr_number: '', transaction_code: '', project_name: '', delivery_date: new Date().toISOString().split('T')[0], deliver_to: '', address: '', pic_up: '', phone_no: '', vehicle_no: '', sender_name: 'NINING' });
       setSelectedDest('');
       setItems([{ destination_id: '', item_name: '', dimensions: '', qty: 1, unit: 'PCS' }]);
@@ -625,8 +665,15 @@ export default function PmgProjectManager({ isDarkMode }) {
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <input type="checkbox" checked={selectedProjectIds.includes(p.id)} onChange={() => setSelectedProjectIds(prev => prev.includes(p.id) ? prev.filter(i => i !== p.id) : [...prev, p.id])} className="w-4 h-4 accent-blue-600 flex-shrink-0 cursor-pointer" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{p.project_name}</p>
-                  <p className="text-[10px] font-mono truncate text-slate-500 dark:text-slate-400">Kode Transaksi: {p.transaction_code} | Tanggal: {p.delivery_date}</p>
+                  <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                    {p.project_name} {p.deliver_to ? `- ${p.deliver_to}` : ''}
+                  </p>
+                  <p className="text-[10px] font-mono truncate text-slate-500 dark:text-slate-400">
+                    Kode: {p.transaction_code} | Tgl: {p.delivery_date}
+                    {(p.pic_up || p.pic_name) ? ` | PIC: ${p.pic_up || p.pic_name}` : ''}
+                    {(p.phone_no || p.phone) ? ` | Telp: ${p.phone_no || p.phone}` : ''}
+                    {p.address ? ` | Alamat: ${p.address}` : ''}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -702,38 +749,26 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
                       <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.time || ''}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.courier_info || ''}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}><div style={{ borderBottom: '1px solid #000', height: '10px', width: '90%' }}></div></td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>:</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Alamat / Address</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.address || ''}</td>
                     </tr>
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project No.</td>
                       <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_no || ''}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Nama PIC / Penerima</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.pic_up || printData.pic_name || ''}</td>
                     </tr>
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No. / No Tlp</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || printData.phone || ''}</td>
                     </tr>
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project Name</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -861,38 +896,26 @@ export default function PmgProjectManager({ isDarkMode }) {
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Time</td>
                       <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.time || ''}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.courier_info || ''}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}><div style={{ borderBottom: '1px solid #000', height: '10px', width: '90%' }}></div></td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>:</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Alamat / Address</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.address || ''}</td>
                     </tr>
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Project No.</td>
                       <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_no || ''}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>&nbsp;</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Nama PIC / Penerima</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.pic_up || printData.pic_name || ''}</td>
                     </tr>
                     <tr>
                       <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Transaction Code</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.transaction_code || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No. / No Tlp</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || printData.phone || ''}</td>
                     </tr>
                     <tr>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>ITEM</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name}</td>
-                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Phone No.</td>
-                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.phone_no || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>ITEM / Proyek</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.project_name || ''}</td>
+                      <td style={{ border: 'none', padding: '2px 3px', fontWeight: 'bold' }}>Vehicle No.</td>
+                      <td style={{ border: 'none', padding: '2px 3px' }}>: {printData.vehicle_no || ''}</td>
                     </tr>
                   </tbody>
                 </table>
