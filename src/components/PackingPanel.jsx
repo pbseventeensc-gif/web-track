@@ -308,28 +308,6 @@ export default function PackingPanel({
       console.error('fetchPackingData error:', err);
     }
   };
-          if (!cleanPromo) cleanPromo = isValid(item.client_pt) ? String(item.client_pt).trim() : 'Proyek Utama';
-
-          // Set status sesuai data DB, hormati nilai DONE jika di database sudah DONE (hasil scan)
-          const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url.length > 5;
-          const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
-          const statusChecker = item.status_qc_checker === 'DONE' ? 'DONE' : 'PENDING';
-
-          return {
-            ...item,
-            store_name: cleanStore,
-            promo_title: cleanPromo,
-            status_qc_packing: statusPacking,
-            status_qc_checker: statusChecker,
-            items_detail: details
-          };
-        });
-        setPackingList(normalizedData);
-      } else {
-        setPackingList([]);
-      }
-    }
-  };
 
   const cleanKey = (str) => {
     if (!str) return '';
