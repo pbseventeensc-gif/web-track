@@ -2204,19 +2204,6 @@ export default function PackingPanel({
             <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
               {filteredList.length === 0 ? (
                 <tr>
-<<<<<<< Updated upstream
-                  <td colSpan={isPackingRole ? "8" : "9"} className="py-12 px-6 text-center">
-                    <div className="max-w-sm mx-auto flex flex-col items-center justify-center">
-                      <div className="w-10 h-10 rounded-2xl bg-[#EFF6FF] dark:bg-blue-950/40 border border-[#BFDBFE] dark:border-blue-800/60 text-[#2563EB] dark:text-blue-300 flex items-center justify-center mb-2.5 shadow-master-sm">
-                        <Box className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs font-bold text-[#1E3A8A] dark:text-slate-200">
-                        {t('noMatchingData')}
-                      </p>
-                      <p className="text-[11px] text-[#475569] dark:text-neutral-400 mt-1">
-                        {t('noMatchingDataDesc')}
-                      </p>
-=======
                   <td colSpan={isPackingRole ? "8" : "9"} className="p-8 text-center">
                     <div className="max-w-md mx-auto space-y-3 py-4">
                       {packingList.length === 0 ? (
@@ -2224,10 +2211,10 @@ export default function PackingPanel({
                           <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
                             📦
                           </div>
-                          <h3 className="text-sm font-bold text-slate-800">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                             Belum Ada Data Paking di Database
                           </h3>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">
                             Jika data SPK sudah di-import hari ini, klik tombol di bawah untuk menyinkronkan data SPK ke Packing Station.
                           </p>
                           <button
@@ -2244,10 +2231,10 @@ export default function PackingPanel({
                           <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold">
                             ✅
                           </div>
-                          <h3 className="text-sm font-bold text-slate-800">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                             Semua ({packingList.length}) Box Telah Diverifikasi Checker
                           </h3>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">
                             Seluruh data paking telah selesai di-check dan berpindah ke Outbound.
                           </p>
                         </>
@@ -2256,10 +2243,10 @@ export default function PackingPanel({
                           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto text-xl font-bold">
                             🔍
                           </div>
-                          <h3 className="text-sm font-bold text-slate-800">
+                          <h3 className="text-sm font-bold text-slate-800 dark:text-white">
                             Tidak Ada Data Sesuai Filter
                           </h3>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-neutral-400">
                             Terdapat {sourceList.length} box aktif, namun tidak cocok dengan filter / pencarian saat ini.
                           </p>
                           <button
@@ -2278,7 +2265,8 @@ export default function PackingPanel({
                           </button>
                         </>
                       )}
->>>>>>> Stashed changes
+                    </div>
+                  </td>
                     </div>
                   </td>
                 </tr>
