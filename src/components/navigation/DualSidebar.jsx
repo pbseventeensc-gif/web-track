@@ -131,7 +131,7 @@ export default function DualSidebar({
         // 2. Ambil proyek dari packing_tracking
         const { data: packData, error: packErr } = await supabase
           .from('packing_tracking')
-          .select('promo_title, created_at, bukti_paking_url, status_qc_checker, status_deliver, bukti_outbound_url')
+          .select('*')
           .order('id', { ascending: false });
 
         if (!packErr && packData) {

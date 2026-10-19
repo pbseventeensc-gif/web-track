@@ -255,7 +255,7 @@ export default function PackingPanel({
               const activeUrl = sub.image_url ||
                                window.__ACTIVE_DESIGN_URLS__[itemCode] ||
                                window.__ACTIVE_DESIGN_URLS__[cleanKey(itemCode)] ||
-                               (itemCore ? window.__ACTIVE_DESIGN_URLS__[coreKey] : '') ||
+                               (itemCore ? window.__ACTIVE_DESIGN_URLS__[itemCore] : '') ||
                                '';
 
               return { ...sub, image_url: activeUrl };
