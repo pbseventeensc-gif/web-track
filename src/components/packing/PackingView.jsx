@@ -98,8 +98,10 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
       .select('*')
       .order('id', { ascending: false });
 
-    // Jika packing_tracking kosong, otomatis coba periksa & sinkronkan dari spk_data
-    if (!error && (!data || data.length === 0)) {
+    const needsRepair = !error && data && data.length > 0 && data.some(row => !row.promo_title || row.promo_title === 'Project Utama' || row.promo_title === 'Proyek Utama' || !row.store_name || row.store_name === 'Store Utama' || row.store_name === 'Cabang Utama');
+
+    // Jika packing_tracking kosong atau perlu perbaikan promo_title/store_name, otomatis sinkronkan dari spk_data
+    if (!error && (!data || data.length === 0 || needsRepair)) {
       const { data: spkRows } = await supabase
         .from('spk_data')
         .select('*')
@@ -108,25 +110,35 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
       if (spkRows && spkRows.length > 0) {
         const payloads = spkRows.map((spk, idx) => {
           const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+          const promoVal = spk.project || spk.promo_title || spk.project_name || spk.item_name || spk.bahan || 'Project Utama';
+          const clientVal = spk.client || spk.client_pt || spk.client_name || 'Wellen Customer';
+          const storeVal = spk.store_code || spk.store_name || spk.branch_name || spk.destination || spk.client || 'Store Utama';
+          const recipientVal = spk.recipient_name || spk.pic_name || spk.client || 'Penerima';
+          const routeVal = spk.delivery_route || spk.delivery_type || 'DALAM KOTA';
+
           return {
             tracking_id: trackingCode,
-            no_spk: spk.no_spk || `SPK-${spk.id}`,
-            client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
-            promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
-            store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
-            recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+            no_spk: spk.no_spk || `SPK-${spk.id || idx}`,
+            client_pt: clientVal,
+            promo_title: promoVal,
+            store_name: storeVal,
+            recipient_name: recipientVal,
             total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
             box_code: spk.box_code || 'WL-01',
-            delivery_type: spk.delivery_type || 'DALAM KOTA',
+            delivery_type: routeVal,
             status_qc_label: spk.status_qc_label || 'PENDING',
             status_qc_packing: spk.status_qc_packing || 'PENDING',
             status_qc_checker: spk.status_qc_checker || 'PENDING',
             status_deliver: spk.status_deliver || 'PENDING',
-            items_detail: spk.items_detail || [{
-              code: spk.no_spk || 'ITEM-01',
-              desc: spk.promo_title || spk.project_name || 'Item Pesanan',
-              qty: Number(spk.qty_order || spk.total_qty || 100)
-            }],
+            items_detail: (Array.isArray(spk.items_detail) && spk.items_detail.length > 0)
+              ? spk.items_detail
+              : [{
+                  code: spk.no_spk || 'ITEM-01',
+                  desc: promoVal,
+                  material: spk.bahan || '-',
+                  size: spk.ukuran || '-',
+                  qty: Number(spk.qty_order || spk.total_qty || 100)
+                }],
             updated_at: new Date().toISOString()
           };
         });
@@ -160,11 +172,37 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
           };
         });
 
+        const isValid = (val) => val && String(val).trim() !== '' && String(val).trim() !== '-' && String(val).trim() !== 'Project Utama' && String(val).trim() !== 'Proyek Utama';
+
+        let cleanStore = isValid(item.store_name) ? String(item.store_name).trim() : '';
+        if (!cleanStore) cleanStore = isValid(item.recipient_name) ? String(item.recipient_name).trim() : '';
+        if (!cleanStore) cleanStore = isValid(item.client_pt) ? String(item.client_pt).trim() : '';
+        if (!cleanStore) {
+          for (const d of details) {
+            if (isValid(d.delivery_address)) { cleanStore = String(d.delivery_address).trim(); break; }
+            if (isValid(d.recipient_name)) { cleanStore = String(d.recipient_name).trim(); break; }
+            if (isValid(d.brand)) { cleanStore = String(d.brand).trim(); break; }
+          }
+        }
+        if (!cleanStore) cleanStore = '-';
+
+        let cleanPromo = isValid(item.promo_title) ? String(item.promo_title).trim() : '';
+        if (!cleanPromo) {
+          for (const d of details) {
+            if (isValid(d.desc)) { cleanPromo = String(d.desc).trim(); break; }
+            if (isValid(d.brand)) { cleanPromo = String(d.brand).trim(); break; }
+            if (isValid(d.po_number)) { cleanPromo = `PO: ${d.po_number}`.trim(); break; }
+          }
+        }
+        if (!cleanPromo) cleanPromo = isValid(item.client_pt) ? String(item.client_pt).trim() : 'Project Utama';
+
         const hasPhoto = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-';
         const statusPacking = item.status_qc_packing === 'DONE' || hasPhoto ? 'DONE' : 'PENDING';
 
         return {
           ...item,
+          store_name: cleanStore,
+          promo_title: cleanPromo,
           items_detail: details,
           status_qc_packing: statusPacking
         };
@@ -187,25 +225,35 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
 
       const payloads = spkRows.map((spk, idx) => {
         const trackingCode = spk.tracking_id || `${spk.no_spk || 'SPK'}-${spk.id || Date.now() + idx}`;
+        const promoVal = spk.project || spk.promo_title || spk.project_name || spk.item_name || spk.bahan || 'Project Utama';
+        const clientVal = spk.client || spk.client_pt || spk.client_name || 'Wellen Customer';
+        const storeVal = spk.store_code || spk.store_name || spk.branch_name || spk.destination || spk.client || 'Store Utama';
+        const recipientVal = spk.recipient_name || spk.pic_name || spk.client || 'Penerima';
+        const routeVal = spk.delivery_route || spk.delivery_type || 'DALAM KOTA';
+
         return {
           tracking_id: trackingCode,
-          no_spk: spk.no_spk || `SPK-${spk.id}`,
-          client_pt: spk.client_pt || spk.client_name || spk.client || 'Wellen Customer',
-          promo_title: spk.promo_title || spk.project_name || spk.item_name || 'Project Utama',
-          store_name: spk.store_name || spk.branch_name || spk.destination || 'Store Utama',
-          recipient_name: spk.recipient_name || spk.pic_name || 'Penerima',
+          no_spk: spk.no_spk || `SPK-${spk.id || idx}`,
+          client_pt: clientVal,
+          promo_title: promoVal,
+          store_name: storeVal,
+          recipient_name: recipientVal,
           total_qty: Number(spk.qty_order || spk.total_qty || spk.qty_finish || 100),
           box_code: spk.box_code || 'WL-01',
-          delivery_type: spk.delivery_type || 'DALAM KOTA',
+          delivery_type: routeVal,
           status_qc_label: spk.status_qc_label || 'PENDING',
           status_qc_packing: spk.status_qc_packing || 'PENDING',
           status_qc_checker: spk.status_qc_checker || 'PENDING',
           status_deliver: spk.status_deliver || 'PENDING',
-          items_detail: spk.items_detail || [{
-            code: spk.no_spk || 'ITEM-01',
-            desc: spk.promo_title || spk.project_name || 'Item Pesanan',
-            qty: Number(spk.qty_order || spk.total_qty || 100)
-          }],
+          items_detail: (Array.isArray(spk.items_detail) && spk.items_detail.length > 0)
+            ? spk.items_detail
+            : [{
+                code: spk.no_spk || 'ITEM-01',
+                desc: promoVal,
+                material: spk.bahan || '-',
+                size: spk.ukuran || '-',
+                qty: Number(spk.qty_order || spk.total_qty || 100)
+              }],
           updated_at: new Date().toISOString()
         };
       });
