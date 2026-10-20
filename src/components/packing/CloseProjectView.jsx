@@ -97,8 +97,9 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
       // 1. Ambil data arsip dari pmg_projects
       const { data: pmgData, error: pmgErr } = await supabase
         .from('pmg_projects')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, project_name, transaction_code, deliver_to, pic_up, dr_number, address, delivery_date, created_at')
+        .order('id', { ascending: false })
+        .limit(300);
 
       if (!pmgErr && pmgData) {
         pmgData.forEach(p => {
@@ -129,8 +130,9 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
       // 2. Ambil data dari packing_tracking
       const { data: packData, error: packErr } = await supabase
         .from('packing_tracking')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver, bukti_checker_url, status_qc_label, status_qc_packing, tracking_id, box_code, store_name, no_spk, promo_title, delivery_type, delivery_date, created_at, updated_at, items_detail')
+        .order('id', { ascending: false })
+        .limit(300);
 
       if (!packErr && packData) {
         packData.forEach(item => {
@@ -243,22 +245,31 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
   useEffect(() => {
     fetchClosedData();
 
+    let debounceTimer = null;
+    const triggerDebouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchClosedData();
+      }, 500);
+    };
+
     const handleArchiveSync = () => {
-      fetchClosedData();
+      triggerDebouncedFetch();
     };
     window.addEventListener('app_archive_data_changed', handleArchiveSync);
 
     const channel1 = supabase
       .channel('close_project_pack_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, fetchClosedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, triggerDebouncedFetch)
       .subscribe();
 
     const channel2 = supabase
       .channel('close_project_pmg_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, fetchClosedData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, triggerDebouncedFetch)
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel1);
       supabase.removeChannel(channel2);
       window.removeEventListener('app_archive_data_changed', handleArchiveSync);

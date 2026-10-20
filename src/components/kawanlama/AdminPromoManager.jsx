@@ -42,7 +42,7 @@ export default function AdminPromoManager({ isDarkMode }) {
   const fetchPromos = async () => {
     const { data } = await supabase
       .from('kl_promos')
-      .select('*')
+      .select('id, title, budget_type, budget_nominal, is_active, created_at')
       .order('created_at', { ascending: false });
     if (data) setPromos(data);
   };
@@ -50,7 +50,7 @@ export default function AdminPromoManager({ isDarkMode }) {
   const fetchMasterItems = async () => {
     const { data } = await supabase
       .from('kl_master_items')
-      .select('*')
+      .select('id, item_code, item_name, unit, default_price')
       .order('item_name', { ascending: true });
     if (data) setMasterItems(data);
   };

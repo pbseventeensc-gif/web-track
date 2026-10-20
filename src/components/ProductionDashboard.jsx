@@ -320,14 +320,22 @@ export default function ProductionDashboard({
     setIsLoading(true);
     try {
       const [packingRes, klOrdersRes, klBranchesRes, pmgRes, custRes] = await Promise.all([
-        supabase.from('packing_tracking').select('*').order('id', { ascending: false }),
+        supabase
+          .from('packing_tracking')
+          .select('id, status_qc_label, status_qc_packing, bukti_paking_url, status_qc_checker, status_deliver, delivery_type, box_code, no_spk, store_name, promo_title, created_at')
+          .order('id', { ascending: false })
+          .limit(200),
         supabase
           .from('kl_orders')
           .select('*, kl_branches(branch_name)')
           .order('updated_at', { ascending: false })
           .limit(50),
         supabase.from('kl_branches').select('id', { count: 'exact', head: true }),
-        supabase.from('pmg_projects').select('*').order('id', { ascending: false }).limit(50),
+        supabase
+          .from('pmg_projects')
+          .select('id, project_name, deliver_to, delivery_date, created_at')
+          .order('id', { ascending: false })
+          .limit(50),
         supabase.from('customers').select('id', { count: 'exact', head: true })
       ]);
 
@@ -361,20 +369,23 @@ export default function ProductionDashboard({
   useEffect(() => {
     if (!isLiveEnabled) return undefined;
 
+    let debounceTimer = null;
+    const triggerDebouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        fetchDashboardTelemetry();
+      }, 500);
+    };
+
     const channel = supabase
       .channel('dashboard_telemetry_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, () => {
-        fetchDashboardTelemetry();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kl_orders' }, () => {
-        fetchDashboardTelemetry();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, () => {
-        fetchDashboardTelemetry();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, triggerDebouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kl_orders' }, triggerDebouncedFetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, triggerDebouncedFetch)
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [isLiveEnabled, fetchDashboardTelemetry]);

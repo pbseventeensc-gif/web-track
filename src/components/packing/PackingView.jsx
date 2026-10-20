@@ -96,8 +96,9 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     try {
       let { data, error } = await supabase
         .from('packing_tracking')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, items_detail, promo_title, box_code, store_name, no_spk, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_outbound_url, outbound_url, packing_by, scanned_by, packing_at, updated_at, created_at, tracking_id, destination, branch_name, project, foto_by, foto_at')
+        .order('id', { ascending: false })
+        .limit(300);
 
       if (error) console.error('Fetch packing_tracking error:', error);
 
@@ -280,18 +281,23 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
   useEffect(() => {
     fetchPackingData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('packing_view_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'packing_tracking' },
         () => {
-          fetchPackingData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchPackingData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

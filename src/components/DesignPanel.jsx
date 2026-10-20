@@ -11,7 +11,8 @@ export default function DesignPanel({ isDarkMode }) {
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
       .in('status', ['APPROVED', 'approved'])
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .limit(50);
 
     if (!error && data) {
       setOrders(data);
@@ -21,18 +22,23 @@ export default function DesignPanel({ isDarkMode }) {
   useEffect(() => {
     fetchApprovedOrders();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('kl_design_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'kl_orders' },
         () => {
-          fetchApprovedOrders();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchApprovedOrders();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

@@ -458,20 +458,23 @@ export default function App() {
       const { data: dbSpk } = await supabase
         .from('spk_data')
         .select('*')
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(100);
 
       let list = Array.isArray(dbSpk) ? [...dbSpk] : [];
 
-      // Ambil juga data nyata dari pmg_projects dan packing_tracking
+      // Ambil juga data nyata dari pmg_projects dan packing_tracking dengan seleksi kolom terarah & limit
       const { data: pmgData } = await supabase
         .from('pmg_projects')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, dr_number, transaction_code, deliver_to, project_name, pic_up, address, delivery_date, created_at')
+        .order('id', { ascending: false })
+        .limit(100);
 
       const { data: packData } = await supabase
         .from('packing_tracking')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, no_spk, store_name, promo_title, status_deliver, box_code, delivery_type, created_at')
+        .order('id', { ascending: false })
+        .limit(100);
 
       if (pmgData && pmgData.length > 0) {
         pmgData.forEach(p => {
@@ -538,18 +541,23 @@ export default function App() {
   useEffect(() => {
     fetchSpkData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('spk_data_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'spk_data' },
         () => {
-          fetchSpkData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchSpkData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

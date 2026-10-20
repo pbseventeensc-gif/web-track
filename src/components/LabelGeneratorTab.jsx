@@ -44,18 +44,23 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   useEffect(() => {
     fetchPackingData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('label_generator_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'packing_tracking' },
         () => {
-          fetchPackingData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchPackingData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -63,8 +68,9 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const fetchPackingData = async () => {
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('*')
-      .order('id', { ascending: false });
+      .select('id, no_spk, box_code, client_pt, promo_title, recipient_name, store_name, total_qty, tracking_id, items_detail, created_at')
+      .order('id', { ascending: false })
+      .limit(300);
 
     if (!error && data) {
       const formatted = [];
@@ -137,8 +143,21 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const saveItemsToSupabase = async (itemsToSave) => {
     if (!itemsToSave || itemsToSave.length === 0) return;
 
-    // Preservasi status jika tracking_id sudah ada di database Supabase
-    const { data: existingRows } = await supabase.from('packing_tracking').select('tracking_id, status_qc_packing, status_qc_checker, status_qc_label, status_deliver, items_detail');
+    const targetTrackingIds = Array.from(new Set(itemsToSave.map(item => {
+      const spkVal = (item.NO_SPK && item.NO_SPK !== '-') ? item.NO_SPK : 'SPK';
+      const addressVal = (item.DELIVERY_ADDRESS && item.DELIVERY_ADDRESS !== '-') ? item.DELIVERY_ADDRESS : ((item.RECIPIENT_NAME && item.RECIPIENT_NAME !== '-') ? item.RECIPIENT_NAME : 'STORE');
+      return item.TRACKING_ID || generateNumericTrackingId(spkVal, addressVal);
+    }))).filter(Boolean);
+
+    // Preservasi status jika tracking_id sudah ada di database Supabase (hanya query tracking_id yang bersangkutan)
+    let existingRows = [];
+    if (targetTrackingIds.length > 0) {
+      const { data } = await supabase
+        .from('packing_tracking')
+        .select('tracking_id, status_qc_packing, status_qc_checker, status_qc_label, status_deliver, items_detail')
+        .in('tracking_id', targetTrackingIds);
+      if (data) existingRows = data;
+    }
     const existingMap = {};
     if (existingRows) {
       existingRows.forEach(r => { existingMap[r.tracking_id] = r; });

@@ -105,7 +105,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
       .or('status.in.(SUBMITTED,submitted,REQUEST_UNLOCK,request_unlock),lock_status.eq.REQUEST_UNLOCK')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (!pendingError && pendingData) {
       setPendingOrders(pendingData);
@@ -115,7 +116,8 @@ export default function AdminApprovalPanel({ isDarkMode }) {
       .from('kl_orders')
       .select('*, kl_branches(branch_name), kl_order_items(*, kl_master_items(*))')
       .in('status', ['APPROVED', 'approved'])
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .limit(50);
 
     if (!approvedError && approvedData) {
       setApprovedOrders(approvedData);

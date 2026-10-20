@@ -67,12 +67,12 @@ export default function PmgProjectManager({ isDarkMode }) {
   }, []);
 
   const fetchProjects = async () => {
-    const { data } = await supabase.from('pmg_projects').select('*, pmg_project_items(*, pmg_destinations(client_name, address))').order('id', { ascending: false });
+    const { data } = await supabase.from('pmg_projects').select('*, pmg_project_items(*, pmg_destinations(client_name, address))').order('id', { ascending: false }).limit(100);
     if (data) setProjects(data);
   };
 
   const fetchDestinations = async () => {
-    const { data } = await supabase.from('pmg_destinations').select('*').order('client_name');
+    const { data } = await supabase.from('pmg_destinations').select('id, client_name, address, pic_name, phone').order('client_name');
     if (data) {
       const cleanData = data.filter(d => d.client_name && !d.client_name.includes('Kolom'));
       setDestinations(cleanData);

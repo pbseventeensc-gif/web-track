@@ -66,8 +66,9 @@ export default function DualSidebar({
       try {
         const { data: packData } = await supabase
           .from('packing_tracking')
-          .select('*')
-          .order('id', { ascending: false });
+          .select('id, promo_title, created_at, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver')
+          .order('id', { ascending: false })
+          .limit(300);
 
         const rawItems = [];
         if (packData && packData.length > 0) {
@@ -106,7 +107,8 @@ export default function DualSidebar({
         const { data: pmgData, error: pmgErr } = await supabase
           .from('pmg_projects')
           .select('project_name, transaction_code, delivery_date, created_at')
-          .order('id', { ascending: false });
+          .order('id', { ascending: false })
+          .limit(300);
 
         if (!pmgErr && pmgData) {
           pmgData.forEach(item => {
@@ -131,8 +133,9 @@ export default function DualSidebar({
         // 2. Ambil proyek dari packing_tracking
         const { data: packData, error: packErr } = await supabase
           .from('packing_tracking')
-          .select('*')
-          .order('id', { ascending: false });
+          .select('promo_title, created_at, bukti_paking_url, status_qc_checker, status_deliver, bukti_outbound_url')
+          .order('id', { ascending: false })
+          .limit(300);
 
         if (!packErr && packData) {
           packData.forEach(item => {
@@ -166,29 +169,32 @@ export default function DualSidebar({
     fetchPackingProjects();
     fetchArchivedProjects();
 
-    const channel1 = supabase
-      .channel('dual_sidebar_packing_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, () => {
+    let debounceTimer = null;
+    const triggerDebouncedSync = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
         fetchPackingProjects();
         fetchArchivedProjects();
-      })
+      }, 500);
+    };
+
+    const channel1 = supabase
+      .channel('dual_sidebar_packing_rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packing_tracking' }, triggerDebouncedSync)
       .subscribe();
 
     const channel2 = supabase
       .channel('dual_sidebar_pmg_rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, () => {
-        fetchPackingProjects();
-        fetchArchivedProjects();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pmg_projects' }, triggerDebouncedSync)
       .subscribe();
 
     const handleArchiveSync = () => {
-      fetchPackingProjects();
-      fetchArchivedProjects();
+      triggerDebouncedSync();
     };
     window.addEventListener('app_archive_data_changed', handleArchiveSync);
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel1);
       supabase.removeChannel(channel2);
       window.removeEventListener('app_archive_data_changed', handleArchiveSync);

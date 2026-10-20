@@ -57,7 +57,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
 
     const { data: branches, error: branchError } = await supabase
       .from('kl_branches')
-      .select('*')
+      .select('id, branch_id, branch_name, name, nama_cabang, region, phone, whatsapp, email')
       .order('id', { ascending: true });
 
     if (branchError) {
@@ -66,7 +66,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
       return;
     }
 
-    let query = supabase.from('kl_orders').select('*');
+    let query = supabase.from('kl_orders').select('id, branch_id, status, lock_status, is_delegated_to_pusat');
     if (activePromo) {
       query = query.eq('promo_id', activePromo.id);
     }

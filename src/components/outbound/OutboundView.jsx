@@ -81,8 +81,9 @@ export default function OutboundView({ isDarkMode, onOpenImageModal }) {
     setLoading(true);
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('*')
-      .order('id', { ascending: false });
+      .select('id, items_detail, store_name, recipient_name, client_pt, promo_title, box_code, no_spk, tracking_id, delivery_type, status_deliver, surat_jalan_url, surat_jalan_manual_url, bukti_outbound_url, outbound_by, outbound_at, created_at, updated_at')
+      .order('id', { ascending: false })
+      .limit(300);
 
     if (!error && data) {
       const normalizedData = data.map(item => {
@@ -136,18 +137,23 @@ export default function OutboundView({ isDarkMode, onOpenImageModal }) {
   useEffect(() => {
     fetchOutboundData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('outbound_view_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'packing_tracking' },
         () => {
-          fetchOutboundData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchOutboundData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

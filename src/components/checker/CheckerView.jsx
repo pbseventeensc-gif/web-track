@@ -182,8 +182,9 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
     setLoading(true);
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('*')
-      .order('id', { ascending: false });
+      .select('id, tracking_id, box_code, no_spk, store_name, recipient_name, client_pt, promo_title, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_checker_url, foto_by, scanned_by, foto_at, packing_by, packing_at, checker_by, checker_at, updated_at, created_at, items_detail')
+      .order('id', { ascending: false })
+      .limit(300);
 
     if (!error && data) {
       const normalizedData = data.map(item => {
@@ -237,18 +238,23 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
   useEffect(() => {
     fetchCheckerData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('checker_view_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'packing_tracking' },
         () => {
-          fetchCheckerData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchCheckerData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);

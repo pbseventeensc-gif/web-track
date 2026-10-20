@@ -166,18 +166,23 @@ export default function PackingPanel({
   useEffect(() => {
     fetchPackingData();
 
+    let debounceTimer = null;
     const channel = supabase
       .channel('packing_tracking_realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'packing_tracking' },
         () => {
-          fetchPackingData();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchPackingData();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -187,7 +192,8 @@ export default function PackingPanel({
       let { data, error } = await supabase
         .from('packing_tracking')
         .select('*')
-        .order('id', { ascending: false });
+        .order('id', { ascending: false })
+        .limit(300);
 
       if (error) console.error('Fetch packing_tracking error:', error);
 
