@@ -128,6 +128,17 @@ export const TRANSLATIONS = {
     btnCancel: 'Batal',
     btnConfirmDelete: 'Konfirmasi Hapus',
 
+    // Delete Project Modal
+    deleteProjectTitle: 'Hapus Proyek',
+    deleteProjectSubtitle: 'Masukkan PIN Keamanan untuk konfirmasi',
+    deleteProjectDesc: 'Tindakan ini akan menghapus permanen seluruh data untuk proyek',
+    deleteProjectSuccess: 'Data proyek berhasil dihapus.',
+    deleteProjectFail: 'Gagal menghapus data proyek: ',
+    deleteProjectTooltip: 'Hapus Proyek Ini',
+    pinProjectTooltip: 'Sematkan Proyek ke Paling Atas',
+    unpinProjectTooltip: 'Lepas Sematan Proyek',
+    pinnedBadge: 'PINNED',
+
     // Project Archive View
     archiveTitle: 'Arsip Proyek Selesai',
     archiveSubtitle: 'Daftar proyek dan kolian paking yang telah selesai diproses secara menyeluruh.',
@@ -312,6 +323,17 @@ export const TRANSLATIONS = {
     modalClearFail: 'Failed to delete data: ',
     btnCancel: 'Cancel',
     btnConfirmDelete: 'Confirm Delete',
+
+    // Delete Project Modal
+    deleteProjectTitle: 'Delete Project',
+    deleteProjectSubtitle: 'Enter Security PIN to confirm',
+    deleteProjectDesc: 'This action will permanently delete all data for project',
+    deleteProjectSuccess: 'Project data successfully deleted.',
+    deleteProjectFail: 'Failed to delete project data: ',
+    deleteProjectTooltip: 'Delete This Project',
+    pinProjectTooltip: 'Pin Project to Top',
+    unpinProjectTooltip: 'Unpin Project',
+    pinnedBadge: 'PINNED',
 
     // Project Archive View
     archiveTitle: 'Completed Project Archive',

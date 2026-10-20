@@ -25,7 +25,8 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
-  AlertCircle
+  AlertCircle,
+  Pin
 } from 'lucide-react';
 
 import PackingView from './packing/PackingView';
@@ -126,10 +127,27 @@ export default function PackingPanel({
   // Row Selection Circle Checklist States
   const [selectedRowIds, setSelectedRowIds] = useState([]);
 
+  // Pinned Projects State (persisted to localStorage)
+  const [pinnedProjects, setPinnedProjects] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pinned_packing_projects');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   // PIN Kosongkan Seluruh Data States
   const [showClearPinModal, setShowClearPinModal] = useState(false);
   const [clearPinInput, setClearPinInput] = useState('');
   const [clearPinError, setClearPinError] = useState('');
+
+  // Hapus Proyek dengan PIN States
+  const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [deleteProjectPinInput, setDeleteProjectPinInput] = useState('');
+  const [deleteProjectPinError, setDeleteProjectPinError] = useState('');
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
 
   // Outbound QR Scan States
   const [showOutboundScanModal, setShowOutboundScanModal] = useState(false);
@@ -1337,6 +1355,74 @@ export default function PackingPanel({
     }
   };
 
+  const handleTogglePinProject = (groupKey) => {
+    setPinnedProjects(prev => {
+      const isPinned = prev.includes(groupKey);
+      const updated = isPinned ? prev.filter(k => k !== groupKey) : [...prev, groupKey];
+      try {
+        localStorage.setItem('pinned_packing_projects', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Gagal menyimpan status pin:', e);
+      }
+      return updated;
+    });
+  };
+
+  const handleOpenDeleteProjectModal = (groupKey, rowIds, totalBoxes) => {
+    setProjectToDelete({ name: groupKey, rowIds, totalBoxes });
+    setDeleteProjectPinInput('');
+    setDeleteProjectPinError('');
+    setShowDeleteProjectModal(true);
+  };
+
+  const handleConfirmDeleteProject = async (e) => {
+    if (e) e.preventDefault();
+    if (deleteProjectPinInput.trim() !== '123') {
+      setDeleteProjectPinError(t('modalClearError'));
+      return;
+    }
+    if (!projectToDelete || !projectToDelete.rowIds || projectToDelete.rowIds.length === 0) {
+      alert('Tidak ada data baris yang ditemukan untuk proyek ini.');
+      setShowDeleteProjectModal(false);
+      return;
+    }
+
+    setIsDeletingProject(true);
+    try {
+      const ids = projectToDelete.rowIds;
+      // Hapus data secara presisi HANYA untuk ID milik proyek ini (batch 100 agar aman dan stabil)
+      for (let i = 0; i < ids.length; i += 100) {
+        const batch = ids.slice(i, i + 100);
+        const { error } = await supabase.from('packing_tracking').delete().in('id', batch);
+        if (error) throw error;
+      }
+
+      setPackingList(prev => prev.filter(item => !ids.includes(item.id)));
+      setSelectedRowIds(prev => prev.filter(id => !ids.includes(id)));
+      setPinnedProjects(prev => {
+        const next = prev.filter(k => k !== projectToDelete.name);
+        try {
+          localStorage.setItem('pinned_packing_projects', JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+
+      const deletedName = projectToDelete.name;
+      setShowDeleteProjectModal(false);
+      setProjectToDelete(null);
+      setDeleteProjectPinInput('');
+      setDeleteProjectPinError('');
+
+      await fetchPackingData();
+      alert(`✅ ${t('deleteProjectSuccess')} (${deletedName})`);
+    } catch (err) {
+      console.error('Error deleting project:', err);
+      alert(t('deleteProjectFail') + err.message);
+    } finally {
+      setIsDeletingProject(false);
+    }
+  };
+
   const handleSyncFromSpkData = async (isManual = false) => {
     try {
       let rowsToSync = [];
@@ -1488,8 +1574,17 @@ export default function PackingPanel({
   ).sort((a, b) => a.localeCompare(b));
 
   const sortedStatusList = [...statusFilteredList].sort((a, b) => {
-    const projA = getProjectGroupKey(a.promo_title).toLowerCase();
-    const projB = getProjectGroupKey(b.promo_title).toLowerCase();
+    const groupA = getProjectGroupKey(a.promo_title);
+    const groupB = getProjectGroupKey(b.promo_title);
+    const isPinnedA = pinnedProjects.includes(groupA);
+    const isPinnedB = pinnedProjects.includes(groupB);
+
+    if (isPinnedA !== isPinnedB) {
+      return isPinnedA ? -1 : 1;
+    }
+
+    const projA = groupA.toLowerCase();
+    const projB = groupB.toLowerCase();
     if (projA !== projB) {
       return sortOrder === 'asc' ? projA.localeCompare(projB) : projB.localeCompare(projA);
     }
@@ -2357,6 +2452,12 @@ export default function PackingPanel({
                                   {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
                                 </span>
                                 <span className="font-bold text-[#9A3412] dark:text-amber-200 truncate">{currentGroupKey}</span>
+                                {pinnedProjects.includes(currentGroupKey) && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500 text-white uppercase tracking-wider ml-1.5 shrink-0 inline-flex items-center gap-1 shadow-2xs">
+                                    <Pin className="w-2.5 h-2.5 fill-current" />
+                                    {t('pinnedBadge')}
+                                  </span>
+                                )}
                                 <span className="text-[10px] font-semibold text-amber-700/80 dark:text-amber-300/80 ml-2">
                                   ({getItemMonthLabel(getItemMonthKey(item.created_at || item.updated_at), lang)})
                                 </span>
@@ -2431,6 +2532,43 @@ export default function PackingPanel({
                                         );
                                       }
                                       return null;
+                                    })()}
+
+                                    {/* Tombol Pin / Sematkan Proyek ke Atas */}
+                                    {(() => {
+                                      const isPinned = pinnedProjects.includes(currentGroupKey);
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleTogglePinProject(currentGroupKey)}
+                                          className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center shadow-master-sm active:scale-95 border ${
+                                            isPinned
+                                              ? 'bg-amber-500 text-white border-amber-600 dark:bg-amber-600 dark:border-amber-500 shadow-sm'
+                                              : 'bg-white dark:bg-neutral-800 text-amber-700 dark:text-amber-300 border-amber-200/90 dark:border-amber-800/60 hover:bg-amber-50/90'
+                                          }`}
+                                          title={isPinned ? t('unpinProjectTooltip') : t('pinProjectTooltip')}
+                                        >
+                                          <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current' : ''}`} />
+                                        </button>
+                                      );
+                                    })()}
+
+                                    {/* Tombol Hapus Proyek dengan PIN Keamanan */}
+                                    {(() => {
+                                      const projItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
+                                      const projRowIds = projItems.map(p => p.id);
+                                      const totalProj = projItems.length;
+
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenDeleteProjectModal(currentGroupKey, projRowIds, totalProj)}
+                                          className="p-1.5 bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer shadow-master-sm flex items-center justify-center active:scale-95"
+                                          title={t('deleteProjectTooltip')}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      );
                                     })()}
                                   </div>
                                 )}
@@ -3212,6 +3350,73 @@ export default function PackingPanel({
                   className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-900 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-white shadow-xs transition-colors cursor-pointer active:scale-95"
                 >
                   {t('btnConfirmDelete')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PIN KEAMANAN UNTUK HAPUS SATU PROYEK */}
+      {showDeleteProjectModal && projectToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fadeIn">
+          <div className={`w-full max-w-sm p-6 rounded-3xl border shadow-2xl ${
+            isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white' : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-neutral-800">
+              <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200/80 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-900/50">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">{t('deleteProjectTitle')}</h3>
+                <p className="text-[11px] text-slate-500 dark:text-neutral-400">{t('deleteProjectSubtitle')}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmDeleteProject} className="space-y-4 pt-4">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {t('deleteProjectDesc')} <strong className="text-rose-600 dark:text-rose-400 font-bold">{projectToDelete.name}</strong> ({projectToDelete.totalBoxes} {t('boxes')}). {t('modalClearSubtitle')}:
+              </p>
+
+              <div>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoFocus
+                  value={deleteProjectPinInput}
+                  onChange={(e) => {
+                    setDeleteProjectPinInput(e.target.value);
+                    setDeleteProjectPinError('');
+                  }}
+                  placeholder={t('modalClearPlaceholder')}
+                  className="w-full text-center tracking-widest text-base font-mono font-semibold px-4 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50/80 dark:bg-neutral-800/80 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200 dark:focus:ring-rose-950 transition-all"
+                />
+                {deleteProjectPinError && (
+                  <p className="text-xs font-semibold text-rose-500 mt-1.5 text-center">
+                    {deleteProjectPinError}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteProjectModal(false);
+                    setProjectToDelete(null);
+                    setDeleteProjectPinInput('');
+                    setDeleteProjectPinError('');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                >
+                  {t('btnCancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeletingProject}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  {isDeletingProject ? (lang === 'en' ? 'Deleting...' : 'Menghapus...') : t('btnConfirmDelete')}
                 </button>
               </div>
             </form>
