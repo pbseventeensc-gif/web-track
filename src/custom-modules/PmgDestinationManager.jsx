@@ -24,10 +24,7 @@ export default function PmgDestinationManager({ isDarkMode }) {
     setLoading(true);
     const payload = {
       client_name: form.client_name.trim(),
-      address: form.address.trim(),
-      pic_name: form.pic_name.trim(),
-      pic: form.pic_name.trim(),
-      phone: form.phone.trim()
+      address: form.address.trim()
     };
     const { error } = await supabase.from('pmg_destinations').insert([payload]);
     if (!error) {

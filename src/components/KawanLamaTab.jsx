@@ -87,13 +87,13 @@ export default function KawanLamaTab({ isDarkMode, currentUser, isBranchMode }) 
             }`}>
               <div>
                 <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-neutral-300' : 'text-slate-600'}`}>
-                  Portal Resmi Kantor Cabang
+                  Akses Resmi Kantor Cabang
                 </span>
                 <h2 className={`text-lg font-extrabold tracking-wide uppercase mt-1 ${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>
                   FORMULIR CABANG: {branchName || currentUser?.branch_name || 'KANTOR CABANG'}
                 </h2>
                 <p className={`text-xs font-medium mt-0.5 ${isDarkMode ? 'text-neutral-300' : 'text-slate-600'}`}>
-                  Sistem Terpadu Portal Logistik & Pengadaan Kawan Lama
+                  Sistem Terpadu Logistik & Pengadaan Kawan Lama
                 </p>
               </div>
 

@@ -21,7 +21,7 @@ export default function AdminBranchMonitoring({ isDarkMode }) {
   const [branchStatus, setBranchStatus] = useState([]);
   const [activeTabFilter, setActiveTabFilter] = useState('belum'); 
   const [reminderHours, setReminderHours] = useState(24);
-  const [customMessage, setCustomMessage] = useState('Mohon segera menyelesaikan pengajuan pesanan program promosi melalui portal resmi Kawan Lama.');
+  const [customMessage, setCustomMessage] = useState('Mohon segera menyelesaikan pengajuan pesanan program promosi melalui sistem resmi Kawan Lama.');
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [activePromoId, setActivePromoId] = useState(null);

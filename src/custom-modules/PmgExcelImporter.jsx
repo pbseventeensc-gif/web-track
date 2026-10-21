@@ -30,11 +30,7 @@ export default function PmgExcelImporter({ isDarkMode, onImportSuccess }) {
           if (clientName && clientName.length > 2 && !clientName.toLowerCase().includes('unnamed')) {
             formattedData.push({
               client_name: clientName,
-              address: address || 'Alamat belum tersedia',
-              pic: picName,
-              pic_name: picName,
-              phone: phoneNum,
-              hos_region: hosRegion
+              address: address || 'Alamat belum tersedia'
             });
           }
         });

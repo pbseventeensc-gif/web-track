@@ -72,7 +72,7 @@ export default function PmgProjectManager({ isDarkMode }) {
   };
 
   const fetchDestinations = async () => {
-    const { data } = await supabase.from('pmg_destinations').select('id, client_name, address, pic_name, phone').order('client_name');
+    const { data } = await supabase.from('pmg_destinations').select('*').order('client_name');
     if (data) {
       const cleanData = data.filter(d => d.client_name && !d.client_name.includes('Kolom'));
       setDestinations(cleanData);
@@ -183,21 +183,14 @@ export default function PmgProjectManager({ isDarkMode }) {
     const existing = destinations.find(d => d.client_name.toLowerCase() === form.deliver_to.trim().toLowerCase());
     if (existing) {
       const updateData = {
-        address: form.address.trim() || existing.address,
-        pic_name: form.pic_up.trim() || existing.pic_name || existing.pic,
-        pic: form.pic_up.trim() || existing.pic || existing.pic_name,
-        phone: form.phone_no.trim() || existing.phone
+        address: form.address.trim() || existing.address
       };
       await supabase.from('pmg_destinations').update(updateData).eq('id', existing.id);
       return existing.id;
     } else {
       const newEntry = {
         client_name: form.deliver_to.trim(),
-        address: form.address.trim(),
-        pic_name: form.pic_up.trim(),
-        pic: form.pic_up.trim(),
-        phone: form.phone_no.trim(),
-        hos_region: '-'
+        address: form.address.trim()
       };
 
       const { data, error } = await supabase.from('pmg_destinations').insert([newEntry]).select();

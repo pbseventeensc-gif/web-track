@@ -130,26 +130,93 @@ function SoftLoginView({
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-neutral-950 flex items-center justify-center p-4 sm:p-6 select-none font-sans">
-      {/* Soft Pastel Ambient Background Accents */}
-      <div className="absolute top-[-10%] left-[-8%] w-[480px] h-[480px] rounded-full bg-blue-100/70 dark:bg-blue-950/30 blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-8%] w-[480px] h-[480px] rounded-full bg-indigo-100/70 dark:bg-indigo-950/30 blur-[110px] pointer-events-none" />
+    <div className="min-h-screen relative bg-slate-100/70 dark:bg-neutral-950 flex flex-col items-center justify-center p-4 sm:p-6 select-none font-sans antialiased text-slate-800 dark:text-slate-100">
+      {/* Subtle top brand accent bar */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 z-20" />
 
-      {/* Main Card */}
-      <div className="relative z-10 w-full max-w-md p-8 sm:p-10 rounded-3xl bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-slate-200/90 dark:border-neutral-800 shadow-sm text-slate-800 dark:text-slate-100 space-y-6">
-        {/* Header */}
-        <div className="space-y-1">
-          <span className="inline-block px-3 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wider bg-blue-50/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60 mb-1">
-            Sistem Pemantauan Produksi & Distribusi
+      {/* Subtle background grid pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#262626_1px,transparent_1px)] [background-size:24px_24px] opacity-60 pointer-events-none" />
+
+      {/* Main Login Card */}
+      <div className="relative z-10 w-full max-w-[420px] rounded-2xl bg-white dark:bg-neutral-900 border border-slate-200/90 dark:border-neutral-800 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.35)] p-7 sm:p-8 space-y-6">
+        
+        {/* Brand Header */}
+        <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-neutral-800/80">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold">
+              <Printer className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-none">
+                  Wellen Print
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" title="Sistem Aktif" />
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                Tracking & Logistik
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-neutral-700">
+            v2.4
           </span>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Masuk ke Portal</h1>
+        </div>
+
+        {/* Title */}
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Masuk ke Sistem
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Silakan masukkan kredensial sesuai hak akses divisi Anda.
+            Pilih hak akses dan lengkapi kredensial untuk melanjutkan.
           </p>
         </div>
 
+        {/* Segmented Control Role Selector */}
+        <div className="grid grid-cols-3 p-1 bg-slate-100 dark:bg-neutral-800 rounded-xl text-xs font-semibold gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('admin')}
+            className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'admin'
+                ? 'bg-white dark:bg-neutral-900 text-blue-600 dark:text-blue-400 shadow-xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span className="truncate">Internal</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('kawan_lama')}
+            className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'kawan_lama'
+                ? 'bg-white dark:bg-neutral-900 text-emerald-600 dark:text-emerald-400 shadow-xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span className="truncate">Kawan Lama</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('branch')}
+            className={`py-2 px-2 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'branch'
+                ? 'bg-white dark:bg-neutral-900 text-indigo-600 dark:text-indigo-400 shadow-xs font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Building className="w-3.5 h-3.5" />
+            <span className="truncate">Cabang</span>
+          </button>
+        </div>
+
         {/* Form Otentikasi */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {activeTab !== 'branch' ? (
             <>
               <div>
@@ -163,12 +230,12 @@ function SoftLoginView({
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder={activeTab === 'admin' ? 'Contoh: admin / packing / checker / outbound' : 'admin_kl'}
+                  placeholder={activeTab === 'admin' ? 'Contoh: admin / packing / checker' : 'admin_kl'}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                   required
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50/90 dark:bg-neutral-800 border border-slate-200/90 dark:border-neutral-700 focus:border-blue-400 focus:bg-white dark:focus:bg-neutral-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none transition-all text-xs font-medium"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none transition-all text-xs font-medium"
                 />
               </div>
 
@@ -189,12 +256,12 @@ function SoftLoginView({
                     autoCorrect="off"
                     spellCheck={false}
                     required
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50/90 dark:bg-neutral-800 border border-slate-200/90 dark:border-neutral-700 focus:border-blue-400 focus:bg-white dark:focus:bg-neutral-800 text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none transition-all text-xs font-medium pr-10"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none transition-all text-xs font-medium pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-1 cursor-pointer"
+                    className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-1 cursor-pointer"
                     title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                     aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
                   >
@@ -218,7 +285,7 @@ function SoftLoginView({
                   onChange={(e) => setAccessCode(e.target.value)}
                   placeholder="Contoh: AZKO-001"
                   required
-                  className="w-full px-4 py-3 rounded-xl bg-slate-50/90 dark:bg-neutral-800 border border-slate-200/90 dark:border-neutral-700 focus:border-blue-400 focus:bg-white text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none transition-all text-xs font-semibold uppercase"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none transition-all text-xs font-semibold uppercase"
                 />
               </div>
 
@@ -237,12 +304,12 @@ function SoftLoginView({
                     placeholder="••••••"
                     maxLength={6}
                     required
-                    className="w-full px-4 py-3 rounded-xl bg-slate-50/90 dark:bg-neutral-800 border border-slate-200/90 dark:border-neutral-700 focus:border-blue-400 focus:bg-white text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none transition-all text-xs font-semibold tracking-widest text-center pr-10"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-neutral-900 border border-slate-300 dark:border-neutral-700 focus:border-blue-600 dark:focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none transition-all text-xs font-semibold tracking-widest text-center pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-1 cursor-pointer"
+                    className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all p-1 cursor-pointer"
                     aria-label={showPassword ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -252,7 +319,7 @@ function SoftLoginView({
             </>
           )}
 
-          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-1">
+          <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-0.5">
             <label htmlFor="login-remember-me" className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
               <input
                 id="login-remember-me"
@@ -260,14 +327,14 @@ function SoftLoginView({
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-slate-300 text-blue-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
               />
-              <span>Simpan sesi masuk</span>
+              <span>Ingat sesi masuk</span>
             </label>
           </div>
 
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50/90 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-xs text-center font-medium">
+            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200/90 dark:border-red-800/60 text-red-600 dark:text-red-300 text-xs text-center font-medium">
               {errorMsg}
             </div>
           )}
@@ -275,67 +342,17 @@ function SoftLoginView({
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 font-semibold py-3 px-6 rounded-xl transition-all duration-150 active:scale-[0.98] text-xs flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-xs transition-all duration-150 active:scale-[0.99] text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
-            {isLoading ? 'Memverifikasi Kredensial...' : 'Masuk ke Sistem'} <ArrowRight className="w-4 h-4" />
+            {isLoading ? 'Memverifikasi...' : 'Masuk ke Sistem'}
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Pilihan Peran */}
-        <div className="space-y-3.5 pt-2">
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-200 dark:border-neutral-800 w-full" />
-            <span className="bg-white dark:bg-neutral-900 px-3 text-[11px] text-slate-400 uppercase tracking-wider font-semibold shrink-0">
-              Pilih Kategori Akses
-            </span>
-            <div className="border-t border-slate-200 dark:border-neutral-800 w-full" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <button
-              type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`py-2.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'admin'
-                  ? 'bg-blue-50/90 border-blue-200/90 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800/60 dark:text-blue-300'
-                  : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 dark:bg-neutral-800/60 dark:border-neutral-700 dark:text-slate-400'
-              }`}
-            >
-              <Key className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Internal Pusat</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('kawan_lama')}
-              className={`py-2.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'kawan_lama'
-                  ? 'bg-emerald-50/90 border-emerald-200/90 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800/60 dark:text-emerald-300'
-                  : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 dark:bg-neutral-800/60 dark:border-neutral-700 dark:text-slate-400'
-              }`}
-            >
-              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Admin Kawan Lama</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('branch')}
-              className={`py-2.5 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
-                activeTab === 'branch'
-                  ? 'bg-indigo-50/90 border-indigo-200/90 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800/60 dark:text-indigo-300'
-                  : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 dark:bg-neutral-800/60 dark:border-neutral-700 dark:text-slate-400'
-              }`}
-            >
-              <Building className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>Portal Cabang</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center pt-1">
-          <p className="text-[11px] text-slate-400 tracking-wide">
-            Portal Kendali Mutu, Produksi, dan Distribusi Terpadu
+        {/* Footer info */}
+        <div className="text-center pt-1 border-t border-slate-100 dark:border-neutral-800/80">
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+            Sistem Kendali Mutu, Produksi & Distribusi Terpadu
           </p>
         </div>
       </div>
@@ -755,7 +772,7 @@ export default function App() {
   };
 
   const activeModuleLabel = isBranchMode
-    ? `Branch Portal — ${currentBranch?.branch_name || 'Kawan Lama'}`
+    ? `Akses Cabang — ${currentBranch?.branch_name || 'Kawan Lama'}`
     : (activeModuleTitleMap[activeTab] || 'Dashboard');
 
   const activeSessionRoleLabel = currentAdmin?.role === 'outbound_role'

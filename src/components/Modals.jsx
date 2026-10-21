@@ -43,7 +43,7 @@ export function BranchLoginModal({ isOpen, onLoginSuccess }) {
         <div className="w-12 h-12 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 flex items-center justify-center mx-auto mb-4">
           <KeyRound className="w-6 h-6" />
         </div>
-        <h3 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">Akses Portal Cabang</h3>
+        <h3 className="font-bold text-base text-slate-800 dark:text-slate-100 mb-1">Akses Cabang</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-5">Masukkan kode identitas cabang beserta PIN 6 digit</p>
 
         <form onSubmit={handleLogin} className="space-y-3.5">
@@ -63,9 +63,9 @@ export function BranchLoginModal({ isOpen, onLoginSuccess }) {
           />
           <button
             type="submit"
-            className="w-full py-2.5 bg-blue-50/90 hover:bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60 font-semibold rounded-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all duration-150 active:scale-[0.98] text-sm flex items-center justify-center gap-2 cursor-pointer shadow-xs"
           >
-            Masuk ke Portal
+            Masuk ke Sistem
           </button>
         </form>
       </div>
