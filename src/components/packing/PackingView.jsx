@@ -96,7 +96,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     try {
       let { data, error } = await supabase
         .from('packing_tracking')
-        .select('id, items_detail, promo_title, box_code, store_name, no_spk, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_outbound_url, outbound_url, packing_by, scanned_by, packing_at, updated_at, created_at, tracking_id, destination, branch_name, project, foto_by, foto_at')
+        .select('id, items_detail, promo_title, box_code, store_name, no_spk, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_outbound_url, outbound_url, packing_by, scanned_by, packing_at, updated_at, tracking_id, destination, branch_name, project, foto_by, foto_at')
         .order('id', { ascending: false })
         .limit(300);
 

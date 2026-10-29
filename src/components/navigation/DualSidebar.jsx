@@ -66,7 +66,7 @@ export default function DualSidebar({
       try {
         const { data: packData } = await supabase
           .from('packing_tracking')
-          .select('id, promo_title, created_at, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver')
+          .select('id, promo_title, updated_at, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver')
           .order('id', { ascending: false })
           .limit(300);
 
@@ -76,7 +76,7 @@ export default function DualSidebar({
             if (!isClosedPackingItem(item)) {
               const str = extractBaseProjectName(item.promo_title);
               if (str && str !== '-' && !/^tes(\d+)?$/i.test(str) && !/^test(\d+)?$/i.test(str)) {
-                const rawDate = item.created_at || new Date().toISOString();
+                const rawDate = item.updated_at || new Date().toISOString();
                 const mKey = getItemMonthKey(rawDate);
                 rawItems.push({
                   id: item.id,
@@ -133,7 +133,7 @@ export default function DualSidebar({
         // 2. Ambil proyek dari packing_tracking
         const { data: packData, error: packErr } = await supabase
           .from('packing_tracking')
-          .select('promo_title, created_at, bukti_paking_url, status_qc_checker, status_deliver, bukti_outbound_url')
+          .select('promo_title, updated_at, bukti_paking_url, status_qc_checker, status_deliver, bukti_outbound_url')
           .order('id', { ascending: false })
           .limit(300);
 
@@ -143,7 +143,7 @@ export default function DualSidebar({
             if (str && str !== '-' && !/^tes(\d+)?$/i.test(str) && !/^test(\d+)?$/i.test(str)) {
               projectsSet.add(str);
               counts[str] = (counts[str] || 0) + 1;
-              const rawDate = item.created_at;
+              const rawDate = item.updated_at || new Date().toISOString();
               const mKey = getItemMonthKey(rawDate);
               rawItems.push({
                 projectName: str,

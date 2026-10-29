@@ -130,7 +130,7 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
       // 2. Ambil data dari packing_tracking
       const { data: packData, error: packErr } = await supabase
         .from('packing_tracking')
-        .select('id, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver, bukti_checker_url, status_qc_label, status_qc_packing, tracking_id, box_code, store_name, no_spk, promo_title, delivery_type, delivery_date, created_at, updated_at, items_detail')
+        .select('id, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver, bukti_checker_url, status_qc_label, status_qc_packing, tracking_id, box_code, store_name, no_spk, promo_title, delivery_type, delivery_date, updated_at, items_detail')
         .order('id', { ascending: false })
         .limit(300);
 

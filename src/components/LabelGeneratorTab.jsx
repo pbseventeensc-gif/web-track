@@ -68,7 +68,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   const fetchPackingData = async () => {
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('id, no_spk, box_code, client_pt, promo_title, recipient_name, store_name, total_qty, tracking_id, items_detail, created_at')
+      .select('id, no_spk, box_code, client_pt, promo_title, recipient_name, store_name, total_qty, tracking_id, items_detail, updated_at')
       .order('id', { ascending: false })
       .limit(300);
 

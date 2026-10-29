@@ -34,12 +34,12 @@ export async function deleteMonthArchive(monthKey) {
     // 2. Ambil & Hapus data dari packing_tracking yang berada pada bulan ini
     const { data: packData, error: packFetchErr } = await supabase
       .from('packing_tracking')
-      .select('id, created_at, delivery_date');
+      .select('id, updated_at, delivery_date');
 
     if (packFetchErr) console.warn('Fetch pack err:', packFetchErr);
 
     const packIdsToDelete = (packData || [])
-      .filter(p => getItemMonthKey(p.delivery_date || p.created_at) === monthKey)
+      .filter(p => getItemMonthKey(p.delivery_date || p.updated_at) === monthKey)
       .map(p => p.id);
 
     if (packIdsToDelete.length > 0) {

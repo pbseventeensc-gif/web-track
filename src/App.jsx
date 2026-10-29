@@ -489,7 +489,7 @@ export default function App() {
 
       const { data: packData } = await supabase
         .from('packing_tracking')
-        .select('id, no_spk, store_name, promo_title, status_deliver, box_code, delivery_type, created_at')
+        .select('id, no_spk, store_name, promo_title, status_deliver, box_code, delivery_type, updated_at')
         .order('id', { ascending: false })
         .limit(100);
 

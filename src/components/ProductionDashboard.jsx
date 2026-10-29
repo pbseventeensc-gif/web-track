@@ -322,7 +322,7 @@ export default function ProductionDashboard({
       const [packingRes, klOrdersRes, klBranchesRes, pmgRes, custRes] = await Promise.all([
         supabase
           .from('packing_tracking')
-          .select('id, status_qc_label, status_qc_packing, bukti_paking_url, status_qc_checker, status_deliver, delivery_type, box_code, no_spk, store_name, promo_title, created_at')
+          .select('id, status_qc_label, status_qc_packing, bukti_paking_url, status_qc_checker, status_deliver, delivery_type, box_code, no_spk, store_name, promo_title, updated_at')
           .order('id', { ascending: false })
           .limit(200),
         supabase

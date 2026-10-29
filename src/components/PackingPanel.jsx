@@ -457,9 +457,21 @@ export default function PackingPanel({
     try {
       let parsedRecords = [];
 
-      selectedSheets.forEach((sheetName) => {
+      selectedSheets.forEach((sheetName, sheetIdx) => {
         const ws = pendingWorkbook.Sheets[sheetName];
         if (!ws) return;
+
+        const cleanSheet = String(sheetName || '').trim();
+        let sheetProject = '';
+        let sheetBox = '';
+
+        const dashParts = cleanSheet.split(/\s*[-–—]\s*/);
+        if (dashParts.length >= 2) {
+          sheetProject = dashParts[0].trim();
+          sheetBox = dashParts.slice(1).join(' - ').trim();
+        } else {
+          sheetBox = cleanSheet;
+        }
 
         const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
         if (!data || data.length < 2) return;
@@ -469,6 +481,7 @@ export default function PackingPanel({
           storeNo: -1,
           prCode: -1,
           boxCode: -1,
+          urut: -1,
           storeId: -1,
           company: -1,
           storeName: -1,
@@ -486,7 +499,8 @@ export default function PackingPanel({
             const h = String(val || '').toUpperCase().trim();
             if (h.includes('NO. STORE') || h.includes('STORE NO') || h === 'NO STORE') colMap.storeNo = c;
             else if (h.includes('PR. KODE') || h.includes('PR KODE') || h === 'PR CODE') colMap.prCode = c;
-            else if (h.includes('NO. URUT') || h.includes('NO URUT') || h === 'URUT') colMap.boxCode = c;
+            else if (h.includes('KODE BOX') || h.includes('NO. BOX') || h.includes('NO BOX') || h === 'BOX' || h.includes('KODE KOLI') || h.includes('NO. KOLI') || h.includes('NO KOLI') || h === 'KOLI' || h.includes('KOLIAN')) colMap.boxCode = c;
+            else if (h.includes('NO. URUT') || h.includes('NO URUT') || h === 'URUT') colMap.urut = c;
             else if (h.includes('STORE ID') || h === 'ID STORE') colMap.storeId = c;
             else if (h.includes('COMPANY') || h.includes('CLIENT PT') || h === 'PT') colMap.company = c;
             else if (h.includes('STORE NAME') || h.includes('NAMA TOKO')) colMap.storeName = c;
@@ -501,22 +515,22 @@ export default function PackingPanel({
 
         // Apply fallback indices if header names were not found explicitly
         const idxStoreNo = colMap.storeNo !== -1 ? colMap.storeNo : 0;
-        const idxPrCode = colMap.prCode !== -1 ? colMap.prCode : 1;
-        const idxBoxCode = colMap.boxCode !== -1 ? colMap.boxCode : 2;
+        const idxPrCode = colMap.prCode;
+        const idxBoxCode = colMap.boxCode;
         const idxStoreId = colMap.storeId !== -1 ? colMap.storeId : 3;
         const idxCompany = colMap.company !== -1 ? colMap.company : 4;
         const idxStoreName = colMap.storeName !== -1 ? colMap.storeName : 5;
-        const idxNoPo = colMap.noPo !== -1 ? colMap.noPo : 6;
-        const idxSpkWpp = colMap.spkWpp !== -1 ? colMap.spkWpp : 7;
+        const idxNoPo = colMap.noPo;
+        const idxSpkWpp = colMap.spkWpp;
         const idxDelivery = colMap.delivery !== -1 ? colMap.delivery : 8;
         const idxRegion = colMap.region !== -1 ? colMap.region : 9;
-        const idxQrAddress = colMap.qrAddress !== -1 ? colMap.qrAddress : 10;
-        const idxQr = colMap.qr !== -1 ? colMap.qr : 11;
+        const idxQrAddress = colMap.qrAddress;
+        const idxQr = colMap.qr;
 
         // Item catalog starts after QR column (col 12 by default if QR column exists, or after last metadata column)
         const itemStartColIdx = Math.max(
           12,
-          idxQr !== -1 ? idxQr + 1 : (idxQrAddress !== -1 ? idxQrAddress + 1 : 12)
+          idxQr !== -1 && idxQr !== undefined ? idxQr + 1 : (idxQrAddress !== -1 && idxQrAddress !== undefined ? idxQrAddress + 1 : 12)
         );
 
         // Smart Header Row Detection for Item Codes
@@ -587,20 +601,38 @@ export default function PackingPanel({
           if (!rawStoreNo || rawStoreNo.toUpperCase().includes('STORE') || rawStoreNo.toUpperCase().includes('NOMOR') || rawStoreNo.toUpperCase().includes('NO.')) continue;
 
           const storeNo = rawStoreNo;
-          const prCode = row[idxPrCode] ? String(row[idxPrCode]).trim() : '';
-          const boxCode = row[idxBoxCode] ? String(row[idxBoxCode]).trim() : `B${r}`;
-          const storeId = row[idxStoreId] ? String(row[idxStoreId]).trim() : '';
-          const clientPt = row[idxCompany] ? String(row[idxCompany]).trim() : 'PT. Sukses Prima Jayaindo';
-          const storeName = row[idxStoreName] ? String(row[idxStoreName]).trim() : '';
-          const noPo = row[idxNoPo] ? String(row[idxNoPo]).trim() : '';
-          const spkWpp = row[idxSpkWpp] ? String(row[idxSpkWpp]).trim() : '';
-          const deliveryType = row[idxDelivery] ? String(row[idxDelivery]).trim() : 'DALAM KOTA';
-          const regionStr = row[idxRegion] ? String(row[idxRegion]).trim() : '-';
+          const prCode = (idxPrCode !== -1 && row[idxPrCode]) ? String(row[idxPrCode]).trim() : (sheetProject || 'PR');
+
+          let boxCode = '';
+          if (idxBoxCode !== -1 && row[idxBoxCode]) {
+            boxCode = String(row[idxBoxCode]).trim();
+          } else if (sheetBox) {
+            boxCode = sheetBox;
+          } else if (colMap.urut !== -1 && row[colMap.urut]) {
+            boxCode = String(row[colMap.urut]).trim();
+          } else {
+            boxCode = `B${sheetIdx + 1}-${r}`;
+          }
+
+          const storeId = (idxStoreId !== -1 && row[idxStoreId]) ? String(row[idxStoreId]).trim() : '';
+          const clientPt = (idxCompany !== -1 && row[idxCompany]) ? String(row[idxCompany]).trim() : 'PT. Sukses Prima Jayaindo';
+          const storeName = (idxStoreName !== -1 && row[idxStoreName]) ? String(row[idxStoreName]).trim() : '';
+          const noPo = (idxNoPo !== -1 && row[idxNoPo]) ? String(row[idxNoPo]).trim() : '';
+          const spkWpp = (idxSpkWpp !== -1 && row[idxSpkWpp]) ? String(row[idxSpkWpp]).trim() : '';
+          const deliveryType = (idxDelivery !== -1 && row[idxDelivery]) ? String(row[idxDelivery]).trim() : 'DALAM KOTA';
+          const regionStr = (idxRegion !== -1 && row[idxRegion]) ? String(row[idxRegion]).trim() : '-';
 
           // READ / GENERATE QR ADDRESS (Format: STORENO_BOXCODE_STOREID_STORENAME)
-          const explicitQrAddress = row[idxQrAddress] ? String(row[idxQrAddress]).trim() : '';
-          const qrAddress = explicitQrAddress || `${storeNo}_${boxCode}_${storeId}_${storeName}`;
-          const trackingId = `${prCode || 'PR'}-${boxCode}-${storeId || storeNo}`;
+          const explicitQrAddress = (idxQrAddress !== -1 && row[idxQrAddress]) ? String(row[idxQrAddress]).trim() : '';
+          const qrAddress = explicitQrAddress || `${storeNo}_${boxCode}_${storeId || storeNo}_${storeName}`;
+
+          // Form unique, URL-safe tracking ID for each sheet, box, and store
+          const cleanPr = (prCode || 'PR').replace(/[\s/]/g, '');
+          const cleanBox = (boxCode || `S${sheetIdx + 1}`).replace(/[\s/]/g, '');
+          const cleanStore = (storeId || storeNo || `R${r}`).replace(/[\s/]/g, '');
+          const trackingId = `${cleanPr}-${cleanBox}-${cleanStore}`;
+
+          const promoTitle = noPo || spkWpp || (sheetProject ? `PO ${sheetProject}` : cleanSheet);
 
           let storeItems = [];
           let totalQty = 0;
@@ -623,17 +655,21 @@ export default function PackingPanel({
             }
           });
 
-          // Extract area code from boxCode or prCode
-          const areaCodeMatch = boxCode.match(/^[A-Za-z0-9]+/);
-          const areaCode = areaCodeMatch ? areaCodeMatch[0] : 'A1';
+          // If catalog items were found in the sheet, skip stores with zero quantity in this sheet
+          if (catalogItems.length > 0 && totalQty === 0) {
+            continue;
+          }
+
+          // Area code on label (e.g. A 3, A 4, or boxCode)
+          const areaCode = sheetBox || boxCode || 'A1';
 
           parsedRecords.push({
             tracking_id: trackingId,
-            no_spk: spkWpp,
+            no_spk: spkWpp || prCode,
             client_pt: clientPt,
-            promo_title: noPo,
+            promo_title: promoTitle,
             store_name: storeName,
-            recipient_name: `Store #${storeNo} (${storeId})`,
+            recipient_name: `Store #${storeNo} (${storeId || storeNo})`,
             total_qty: totalQty,
             box_code: boxCode,
             area_code: areaCode,
@@ -651,26 +687,44 @@ export default function PackingPanel({
         }
       });
 
-      if (parsedRecords.length === 0) {
+      // Deduplicate by tracking_id so PostgreSQL ON CONFLICT DO UPDATE command can never fail
+      const recordMap = new Map();
+      parsedRecords.forEach((record) => {
+        if (!recordMap.has(record.tracking_id)) {
+          recordMap.set(record.tracking_id, { ...record });
+        } else {
+          const existing = recordMap.get(record.tracking_id);
+          existing.total_qty = (existing.total_qty || 0) + (record.total_qty || 0);
+          existing.items_detail = [...(existing.items_detail || []), ...(record.items_detail || [])];
+        }
+      });
+      const recordsToUpsert = Array.from(recordMap.values());
+
+      if (recordsToUpsert.length === 0) {
         throw new Error('Tidak ada data matriks cabang yang terbaca.');
       }
 
-      let { error } = await supabase
-        .from('packing_tracking')
-        .upsert(parsedRecords, { onConflict: 'tracking_id' });
-
-      // Smart Fallback: Jika kolom 'region' belum ada di tabel Supabase, otomatis strip kolom 'region' dan retry
-      if (error && error.message && error.message.includes('region')) {
-        const fallbackRecords = parsedRecords.map(({ region, ...rest }) => rest);
-        const retryRes = await supabase
+      // Upsert in chunks of 100 to avoid request size limits
+      const CHUNK_SIZE = 100;
+      for (let i = 0; i < recordsToUpsert.length; i += CHUNK_SIZE) {
+        const chunk = recordsToUpsert.slice(i, i + CHUNK_SIZE);
+        let { error } = await supabase
           .from('packing_tracking')
-          .upsert(fallbackRecords, { onConflict: 'tracking_id' });
-        error = retryRes.error;
+          .upsert(chunk, { onConflict: 'tracking_id' });
+
+        // Smart Fallback: Jika kolom 'region' belum ada di tabel Supabase, otomatis strip kolom 'region' dan retry
+        if (error && error.message && error.message.includes('region')) {
+          const fallbackChunk = chunk.map(({ region, ...rest }) => rest);
+          const retryRes = await supabase
+            .from('packing_tracking')
+            .upsert(fallbackChunk, { onConflict: 'tracking_id' });
+          error = retryRes.error;
+        }
+
+        if (error) throw error;
       }
 
-      if (error) throw error;
-
-      alert(`Berhasil mengimpor ${parsedRecords.length} data kolian cabang.`);
+      alert(`Berhasil mengimpor ${recordsToUpsert.length} data kolian cabang dari ${selectedSheets.length} lembar kerja.`);
       setIsSheetSelectorOpen(false);
       setPendingWorkbook(null);
       fetchPackingData();

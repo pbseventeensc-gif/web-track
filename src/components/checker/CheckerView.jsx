@@ -182,7 +182,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
     setLoading(true);
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('id, tracking_id, box_code, no_spk, store_name, recipient_name, client_pt, promo_title, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_checker_url, foto_by, scanned_by, foto_at, packing_by, packing_at, checker_by, checker_at, updated_at, created_at, items_detail')
+      .select('id, tracking_id, box_code, no_spk, store_name, recipient_name, client_pt, promo_title, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_checker_url, foto_by, scanned_by, foto_at, packing_by, packing_at, checker_by, checker_at, updated_at, items_detail')
       .order('id', { ascending: false })
       .limit(300);
 
