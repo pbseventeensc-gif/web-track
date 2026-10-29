@@ -66,7 +66,7 @@ export default function DualSidebar({
       try {
         const { data: packData } = await supabase
           .from('packing_tracking')
-          .select('id, promo_title, updated_at, bukti_paking_url, status_qc_checker, bukti_outbound_url, outbound_url, status_deliver')
+          .select('id, promo_title, updated_at, bukti_paking_url, status_qc_checker, outbound_url, status_deliver')
           .order('id', { ascending: false })
           .limit(300);
 
@@ -133,7 +133,7 @@ export default function DualSidebar({
         // 2. Ambil proyek dari packing_tracking
         const { data: packData, error: packErr } = await supabase
           .from('packing_tracking')
-          .select('promo_title, updated_at, bukti_paking_url, status_qc_checker, status_deliver, bukti_outbound_url')
+          .select('promo_title, updated_at, bukti_paking_url, status_qc_checker, status_deliver, outbound_url')
           .order('id', { ascending: false })
           .limit(300);
 

@@ -81,7 +81,7 @@ export default function OutboundView({ isDarkMode, onOpenImageModal }) {
     setLoading(true);
     const { data, error } = await supabase
       .from('packing_tracking')
-      .select('id, items_detail, store_name, recipient_name, client_pt, promo_title, box_code, no_spk, tracking_id, delivery_type, status_deliver, surat_jalan_url, surat_jalan_manual_url, bukti_outbound_url, outbound_by, outbound_at, updated_at')
+      .select('id, items_detail, store_name, recipient_name, client_pt, promo_title, box_code, no_spk, tracking_id, delivery_type, status_deliver, surat_jalan_url, surat_jalan_manual_url, outbound_url, outbound_by, outbound_at, updated_at')
       .order('id', { ascending: false })
       .limit(300);
 
