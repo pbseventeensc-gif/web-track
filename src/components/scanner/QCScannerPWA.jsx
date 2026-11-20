@@ -15,7 +15,6 @@ import {
   Download,
   Image as ImageIcon,
   Keyboard,
-  Sparkles,
   Upload
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
@@ -515,11 +514,15 @@ export default function QCScannerPWA({
 
   return (
     <div className={`min-h-screen w-full flex flex-col ${
-      isDarkMode ? 'bg-[#090D16] text-slate-100' : 'bg-slate-50 text-slate-900'
+      isDarkMode ? 'bg-[#151311] text-[#F5F2EE]' : 'bg-[#F8F6F3] text-[#1F1D1B]'
     }`}>
-      {/* TOP APP BAR */}
-      <header className="sticky top-0 z-30 bg-[#1E3A8A] text-white shadow-md px-4 py-3">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
+      {/* TOP APP BAR — CLEAN WHITE WITH WELLEN PRINT LOGO */}
+      <header className={`sticky top-0 z-30 border-b px-4 py-3 backdrop-blur-md ${
+        isDarkMode
+          ? 'bg-[#1C1917]/95 border-[#2E2925] text-[#F5F2EE]'
+          : 'bg-white/95 border-[#E8E2DC] text-[#1F1D1B]'
+      }`}>
+        <div className="max-w-xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             {onBack ? (
               <button
@@ -528,7 +531,11 @@ export default function QCScannerPWA({
                   await stopCamera();
                   onBack();
                 }}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors cursor-pointer shrink-0"
+                className={`p-2 rounded-xl border transition-colors cursor-pointer shrink-0 ${
+                  isDarkMode
+                    ? 'border-[#332E29] bg-[#24201D] hover:bg-[#2E2925] text-[#E7E2DC]'
+                    : 'border-[#E8E2DC] bg-[#FAF8F6] hover:bg-[#F1ECE6] text-[#44403C]'
+                }`}
                 title="Kembali ke Tabel"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -536,28 +543,38 @@ export default function QCScannerPWA({
             ) : isStandalone ? (
               <a
                 href="/"
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors shrink-0"
+                className={`p-2 rounded-xl border transition-colors shrink-0 ${
+                  isDarkMode
+                    ? 'border-[#332E29] bg-[#24201D] hover:bg-[#2E2925] text-[#E7E2DC]'
+                    : 'border-[#E8E2DC] bg-[#FAF8F6] hover:bg-[#F1ECE6] text-[#44403C]'
+                }`}
                 title="Buka Web Dashboard"
               >
                 <ArrowLeft className="w-4 h-4" />
               </a>
             ) : null}
 
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <QrCode className="w-4 h-4 text-emerald-300 shrink-0" />
-                <h1 className="font-extrabold text-sm sm:text-base tracking-tight truncate">
-                  Wellen QC Scanner
-                </h1>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                  PWA
-                </span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className={`shrink-0 ${isDarkMode ? 'bg-white px-2 py-1 rounded-lg' : ''}`}>
+                <img
+                  src="/wellen-logo.png"
+                  alt="Wellen Print"
+                  className="h-7 sm:h-8 w-auto object-contain block"
+                />
               </div>
-              <p className="text-[11px] text-blue-100/90 truncate">
-                {scanMode === 'packing'
-                  ? 'Alur: 1. Scan QR → 2. Foto Asli HP (Google Drive)'
-                  : 'Alur: Scan QR Saja → Rekam Nama & Waktu Checker'}
-              </p>
+              <div className={`h-6 w-px shrink-0 ${isDarkMode ? 'bg-[#332E29]' : 'bg-[#E5DFD8]'}`} />
+              <div className="min-w-0">
+                <h1 className="font-bold text-xs sm:text-sm tracking-tight truncate leading-tight">
+                  QC Scanner
+                </h1>
+                <p className={`text-[11px] truncate leading-tight mt-0.5 ${
+                  isDarkMode ? 'text-[#A8A29E]' : 'text-[#78716C]'
+                }`}>
+                  {scanMode === 'packing'
+                    ? 'Scan QR → Foto Asli HP'
+                    : 'Scan QR → Verifikasi Checker'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -566,26 +583,28 @@ export default function QCScannerPWA({
               <button
                 type="button"
                 onClick={handleInstallPwa}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-[#FFF3EC] hover:bg-[#FFE6D7] text-[#C84B24] border border-[#F3CFC0] text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Install App</span>
+                <span>Install</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-xl mx-auto p-3.5 sm:p-5 space-y-4 pb-16">
+      <main className="flex-1 w-full max-w-xl mx-auto p-3.5 sm:p-5 space-y-3.5 pb-16">
         {/* 1. IDENTITAS PETUGAS */}
-        <section className={`rounded-2xl border p-3.5 shadow-2xs ${
-          isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+        <section className={`rounded-2xl border p-3.5 ${
+          isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-white border-[#E8E2DC]'
         }`}>
           {isEditingName ? (
-            <form onSubmit={handleSaveStaffName} className="space-y-2">
-              <label className="text-xs font-bold flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
+            <form onSubmit={handleSaveStaffName} className="space-y-2.5">
+              <label className={`text-xs font-semibold flex items-center gap-1.5 ${
+                isDarkMode ? 'text-[#F5B096]' : 'text-[#9A3F20]'
+              }`}>
                 <User className="w-3.5 h-3.5" />
-                Nama Petugas QC (Wajib untuk catatan waktu & riwayat)
+                Nama Petugas QC (untuk catatan waktu & riwayat)
               </label>
               <div className="flex gap-2">
                 <input
@@ -595,13 +614,15 @@ export default function QCScannerPWA({
                   placeholder="Contoh: Budi / Agus / Siti..."
                   autoFocus
                   required
-                  className={`flex-1 px-3.5 py-2.5 rounded-xl border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  className={`flex-1 px-3.5 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#DF5A2B]/25 focus:border-[#DF5A2B] ${
+                    isDarkMode
+                      ? 'bg-[#26221F] border-[#38322D] text-[#F5F2EE] placeholder:text-[#78716C]'
+                      : 'bg-[#FAF8F6] border-[#DFD8D0] text-[#1F1D1B] placeholder:text-[#A8A29E]'
                   }`}
                 />
                 <button
                   type="submit"
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[#DF5A2B] hover:bg-[#C94D22] text-white text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Simpan
                 </button>
@@ -610,14 +631,20 @@ export default function QCScannerPWA({
           ) : (
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0 font-extrabold text-sm">
+                <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 font-bold text-xs ${
+                  isDarkMode
+                    ? 'bg-[#2B201B] text-[#F3A183] border-[#453128]'
+                    : 'bg-[#FFF4EE] text-[#C84B24] border-[#F4D5C6]'
+                }`}>
                   {staffName.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider block ${
+                    isDarkMode ? 'text-[#8C857E]' : 'text-[#8C857E]'
+                  }`}>
                     Petugas Aktif
                   </span>
-                  <span className="text-sm font-extrabold truncate block">{staffName}</span>
+                  <span className="text-sm font-bold truncate block">{staffName}</span>
                 </div>
               </div>
               <button
@@ -626,7 +653,11 @@ export default function QCScannerPWA({
                   setNameDraft(staffName);
                   setIsEditingName(true);
                 }}
-                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-neutral-800 cursor-pointer"
+                className={`px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-[#332E29] text-[#D6D0C9] hover:bg-[#282420]'
+                    : 'border-[#E6E0D9] text-[#57534E] hover:bg-[#F7F4F0]'
+                }`}
               >
                 Ganti Nama
               </button>
@@ -635,78 +666,105 @@ export default function QCScannerPWA({
         </section>
 
         {/* 2. PEMILIH MODE: QC PAKING vs QC CHECKER */}
-        <section className={`grid grid-cols-2 gap-2 p-1.5 rounded-2xl border ${
-          isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-slate-200/70 border-slate-200'
+        <section className={`grid grid-cols-2 gap-1.5 p-1 rounded-2xl border ${
+          isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-[#EFECE8] border-[#E5DFD8]'
         }`}>
           <button
             type="button"
             disabled={isModeLocked && scanMode !== 'packing'}
             onClick={() => handleModeSwitch('packing')}
-            className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`py-2.5 px-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               scanMode === 'packing'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-neutral-800'
+                ? isDarkMode
+                  ? 'bg-[#2C2622] text-[#F5F2EE] shadow-2xs ring-1 ring-white/10'
+                  : 'bg-white text-[#1F1D1B] shadow-2xs ring-1 ring-black/5'
+                : isDarkMode
+                ? 'text-[#A8A29E] hover:text-[#E7E2DC]'
+                : 'text-[#6B6560] hover:text-[#1F1D1B]'
             }`}
           >
-            <Package className="w-4 h-4" />
-            <span>QC PAKING</span>
+            <Package className={`w-4 h-4 ${scanMode === 'packing' ? 'text-[#DF5A2B]' : ''}`} />
+            <span>QC Paking</span>
           </button>
 
           <button
             type="button"
             disabled={isModeLocked && scanMode !== 'checker'}
             onClick={() => handleModeSwitch('checker')}
-            className={`py-3 px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`py-2.5 px-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
               scanMode === 'checker'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-neutral-800'
+                ? isDarkMode
+                  ? 'bg-[#2C2622] text-[#F5F2EE] shadow-2xs ring-1 ring-white/10'
+                  : 'bg-white text-[#1F1D1B] shadow-2xs ring-1 ring-black/5'
+                : isDarkMode
+                ? 'text-[#A8A29E] hover:text-[#E7E2DC]'
+                : 'text-[#6B6560] hover:text-[#1F1D1B]'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>QC CHECKER</span>
+            <ShieldCheck className={`w-4 h-4 ${scanMode === 'checker' ? 'text-[#D4881C]' : ''}`} />
+            <span>QC Checker</span>
           </button>
         </section>
 
         {scanMode === 'checker' && (
-          <div className={`flex items-center justify-between px-4 py-2.5 rounded-2xl border text-xs ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-amber-50/70 border-amber-200/80 text-amber-950'
+          <label className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl border text-xs cursor-pointer select-none ${
+            isDarkMode
+              ? 'bg-[#231E18] border-[#3B3022] text-[#EAD3AE]'
+              : 'bg-[#FFF9EE] border-[#F2E0BD] text-[#6E4911]'
           }`}>
-            <div className="flex items-center gap-2 font-semibold">
-              <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Auto-Verifikasi saat QR terbaca (jika sudah ada foto)</span>
-            </div>
+            <span className="font-medium">
+              Auto-verifikasi langsung saat QR terbaca (jika foto bukti sudah ada)
+            </span>
             <input
               type="checkbox"
               checked={autoVerifyChecker}
               onChange={(e) => setAutoVerifyChecker(e.target.checked)}
-              className="w-4 h-4 accent-amber-600 cursor-pointer"
+              className="w-4 h-4 accent-[#D4881C] cursor-pointer shrink-0"
             />
-          </div>
+          </label>
         )}
 
         {/* 3. VIEWFINDER KAMERA QR SCANNER */}
         {scanState === 'idle' && (
-          <section className={`rounded-3xl border overflow-hidden shadow-sm ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+          <section className={`rounded-2xl border overflow-hidden ${
+            isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-white border-[#E8E2DC]'
           }`}>
-            <div className="relative bg-slate-950 w-full min-h-[270px] flex flex-col items-center justify-center">
+            <div className={`relative w-full min-h-[250px] flex flex-col items-center justify-center transition-colors ${
+              isCameraActive
+                ? 'bg-[#1C1917]'
+                : isDarkMode
+                ? 'bg-[#211D1A]'
+                : 'bg-[#FAF7F4]'
+            }`}>
               <div id="wellen-qr-reader" className="w-full" />
 
               {!isCameraActive && (
-                <div className="p-6 text-center space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center justify-center mx-auto">
+                <div className="p-6 text-center space-y-3.5">
+                  <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center mx-auto ${
+                    scanMode === 'packing'
+                      ? isDarkMode
+                        ? 'bg-[#2B201B] text-[#F08C69] border-[#453128]'
+                        : 'bg-[#FFF4EE] text-[#DF5A2B] border-[#F4D5C6]'
+                      : isDarkMode
+                      ? 'bg-[#292218] text-[#EBB75D] border-[#423522]'
+                      : 'bg-[#FFF8EB] text-[#C97A16] border-[#F2DFB8]'
+                  }`}>
                     <QrCode className="w-7 h-7" />
                   </div>
-                  <p className="text-xs text-slate-300 max-w-xs mx-auto leading-relaxed">
+                  <p className={`text-xs max-w-xs mx-auto leading-relaxed ${
+                    isDarkMode ? 'text-[#A8A29E]' : 'text-[#6B6560]'
+                  }`}>
                     {scanMode === 'packing'
-                      ? 'Tekan tombol di bawah untuk memindai QR Code pada label kolian sebelum mengambil foto bukti paking.'
-                      : 'Tekan tombol di bawah untuk memindai QR Code kolian dan mencatat verifikasi Checker secara otomatis.'}
+                      ? 'Pindai QR Code pada label kolian terlebih dahulu, lalu ambil foto bukti paking resolusi asli HP.'
+                      : 'Pindai QR Code pada label kolian untuk mencatat verifikasi Checker beserta nama dan waktu.'}
                   </p>
                   <button
                     type="button"
                     onClick={startCamera}
-                    className={`px-6 py-3 rounded-2xl font-extrabold text-sm text-white shadow-md flex items-center gap-2 mx-auto cursor-pointer active:scale-95 transition-all ${
-                      scanMode === 'packing' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'
+                    className={`px-5 py-3 rounded-xl font-semibold text-sm text-white flex items-center gap-2 mx-auto cursor-pointer active:scale-[0.98] transition-all ${
+                      scanMode === 'packing'
+                        ? 'bg-[#DF5A2B] hover:bg-[#C94D22]'
+                        : 'bg-[#C97A16] hover:bg-[#B26A11]'
                     }`}
                   >
                     <Camera className="w-4 h-4" />
@@ -716,15 +774,15 @@ export default function QCScannerPWA({
               )}
 
               {isCameraActive && (
-                <div className="p-2.5 bg-slate-900/90 w-full flex items-center justify-between px-4">
-                  <span className="text-[11px] font-semibold text-emerald-300 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Kamera Aktif — Arahkan ke QR Label
+                <div className="p-2.5 bg-[#24211E]/95 w-full flex items-center justify-between px-4 border-t border-white/10">
+                  <span className="text-[11px] font-medium text-[#E7E2DC] flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#E87A4F] animate-pulse" />
+                    Kamera aktif — arahkan ke QR label
                   </span>
                   <button
                     type="button"
                     onClick={stopCamera}
-                    className="px-3 py-1 rounded-lg bg-rose-600/90 hover:bg-rose-700 text-white text-[11px] font-bold cursor-pointer"
+                    className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-semibold cursor-pointer transition-colors"
                   >
                     Hentikan
                   </button>
@@ -733,28 +791,43 @@ export default function QCScannerPWA({
             </div>
 
             {cameraError && (
-              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border-t border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold">
+              <div className={`p-3 border-t text-xs font-medium ${
+                isDarkMode
+                  ? 'bg-[#2C1B1B] border-[#4A2828] text-[#F4B4B4]'
+                  : 'bg-[#FDF2F2] border-[#F2CECE] text-[#9E2A2A]'
+              }`}>
                 {cameraError}
               </div>
             )}
 
             {/* Input Manual / Scanner USB Fallback */}
-            <form onSubmit={handleManualSubmit} className="p-3 border-t border-slate-200 dark:border-neutral-800 flex gap-2">
+            <form
+              onSubmit={handleManualSubmit}
+              className={`p-3 border-t flex gap-2 ${
+                isDarkMode ? 'border-[#2E2925] bg-[#1D1A18]' : 'border-[#ECE7E1] bg-white'
+              }`}
+            >
               <div className="relative flex-1">
-                <Keyboard className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Keyboard className="w-3.5 h-3.5 text-[#A8A29E] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={manualInput}
                   onChange={(e) => setManualInput(e.target.value)}
-                  placeholder="Atau ketik / tempel kode QR / tracking ID..."
-                  className={`w-full pl-8 pr-3 py-2 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
+                  placeholder="Atau ketik / tempel kode QR..."
+                  className={`w-full pl-8 pr-3 py-2 rounded-xl border text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#DF5A2B]/25 focus:border-[#DF5A2B] ${
+                    isDarkMode
+                      ? 'bg-[#26221F] border-[#38322D] text-[#F5F2EE] placeholder:text-[#78716C]'
+                      : 'bg-[#FAF8F6] border-[#E5DFD8] text-[#1F1D1B] placeholder:text-[#A8A29E]'
                   }`}
                 />
               </div>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-neutral-700 text-white text-xs font-bold cursor-pointer"
+                className={`px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'bg-[#332E29] hover:bg-[#3F3933] text-[#F5F2EE]'
+                    : 'bg-[#292524] hover:bg-[#1C1917] text-white'
+                }`}
               >
                 Cari QR
               </button>
@@ -764,31 +837,37 @@ export default function QCScannerPWA({
 
         {/* 4. HASIL PENCARIAN & AKSI SESUAI STEP */}
         {scanState === 'searching' && (
-          <div className={`rounded-3xl border p-8 text-center space-y-3 ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+          <div className={`rounded-2xl border p-8 text-center space-y-3 ${
+            isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-white border-[#E8E2DC]'
           }`}>
-            <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
-            <p className="text-sm font-bold">{statusMessage}</p>
-            <p className="text-xs font-mono text-slate-400 break-all">{lastScannedRaw}</p>
+            <RefreshCw className="w-7 h-7 text-[#DF5A2B] animate-spin mx-auto" />
+            <p className="text-sm font-semibold">{statusMessage}</p>
+            <p className="text-xs font-mono text-[#8C857E] break-all">{lastScannedRaw}</p>
           </div>
         )}
 
         {scanState === 'not_found' && (
-          <div className="rounded-3xl border border-rose-300 bg-rose-50 dark:bg-rose-950/40 dark:border-rose-800 p-5 space-y-4">
+          <div className={`rounded-2xl border p-5 space-y-4 ${
+            isDarkMode
+              ? 'border-[#4A2828] bg-[#281A1A]'
+              : 'border-[#F2CACA] bg-[#FDF4F4]'
+          }`}>
             <div className="flex items-start gap-3">
-              <XCircle className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
+              <XCircle className={`w-5 h-5 shrink-0 mt-0.5 ${isDarkMode ? 'text-[#F09A9A]' : 'text-[#B83232]'}`} />
               <div className="space-y-1 min-w-0">
-                <h2 className="font-extrabold text-sm text-rose-800 dark:text-rose-200">
+                <h2 className={`font-bold text-sm ${isDarkMode ? 'text-[#F7CECE]' : 'text-[#8C2222]'}`}>
                   Data Kolian Tidak Ditemukan
                 </h2>
-                <p className="text-xs text-rose-700 dark:text-rose-300">{statusMessage}</p>
-                <p className="text-[11px] font-mono text-rose-600/80 break-all">QR: {lastScannedRaw}</p>
+                <p className={`text-xs ${isDarkMode ? 'text-[#E5B4B4]' : 'text-[#A03030]'}`}>{statusMessage}</p>
+                <p className={`text-[11px] font-mono break-all ${isDarkMode ? 'text-[#C99292]' : 'text-[#B45353]'}`}>
+                  QR: {lastScannedRaw}
+                </p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleResetAndScanNext}
-              className="w-full py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm cursor-pointer"
+              className="w-full py-2.5 rounded-xl bg-[#B83232] hover:bg-[#9E2828] text-white font-semibold text-sm cursor-pointer transition-colors"
             >
               Scan Ulang QR
             </button>
@@ -796,20 +875,28 @@ export default function QCScannerPWA({
         )}
 
         {matchedItem && scanState !== 'not_found' && scanState !== 'searching' && (
-          <section className={`rounded-3xl border shadow-sm overflow-hidden ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+          <section className={`rounded-2xl border overflow-hidden ${
+            isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-white border-[#E8E2DC]'
           }`}>
-            {/* Banner Status */}
+            {/* Banner Status Soft */}
             <div className={`px-4 py-3 flex items-center justify-between gap-2 border-b ${
               scanState === 'success'
-                ? 'bg-emerald-600 text-white border-emerald-700'
+                ? isDarkMode
+                  ? 'bg-[#1B2B22] text-[#A8E0BE] border-[#294334]'
+                  : 'bg-[#EEF7F1] text-[#215E3B] border-[#CCE6D5]'
                 : scanState === 'warning_no_photo'
-                ? 'bg-amber-500 text-white border-amber-600'
+                ? isDarkMode
+                  ? 'bg-[#2B2316] text-[#F2D091] border-[#453720]'
+                  : 'bg-[#FEF7E8] text-[#8A510E] border-[#F3DCAD]'
                 : scanState === 'uploading'
-                ? 'bg-blue-600 text-white border-blue-700'
-                : 'bg-[#EFF6FF] text-[#1E3A8A] border-[#BFDBFE] dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800'
+                ? isDarkMode
+                  ? 'bg-[#2B1F1A] text-[#F4B49A] border-[#453128]'
+                  : 'bg-[#FFF3EC] text-[#B84720] border-[#F3D2C1]'
+                : isDarkMode
+                ? 'bg-[#24201D] text-[#E7E2DC] border-[#332E29]'
+                : 'bg-[#FAF7F4] text-[#292524] border-[#E8E2DC]'
             }`}>
-              <div className="flex items-center gap-2 font-extrabold text-xs sm:text-sm">
+              <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
                 {scanState === 'success' ? (
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                 ) : scanState === 'warning_no_photo' ? (
@@ -817,53 +904,61 @@ export default function QCScannerPWA({
                 ) : scanState === 'uploading' ? (
                   <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
                 ) : (
-                  <Package className="w-4 h-4 shrink-0" />
+                  <Package className="w-4 h-4 shrink-0 text-[#DF5A2B]" />
                 )}
                 <span>
                   {scanState === 'success'
-                    ? 'BERHASIL TERSIMPAN'
+                    ? 'Berhasil Tersimpan'
                     : scanState === 'warning_no_photo'
-                    ? 'BELUM ADA FOTO BUKTI PAKING'
+                    ? 'Belum Ada Foto Bukti Paking'
                     : scanState === 'uploading'
-                    ? 'MEMPROSES...'
-                    : 'KOLIAN TERIDENTIFIKASI'}
+                    ? 'Menyimpan...'
+                    : 'Kolian Teridentifikasi'}
                 </span>
               </div>
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-black/15">
+              <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg border ${
+                isDarkMode
+                  ? 'bg-black/25 border-white/10'
+                  : 'bg-white/80 border-black/10 text-[#292524]'
+              }`}>
                 {matchedItem.box_code || '-'}
               </span>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-3.5">
               {/* Info Kolian */}
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8C857E]">
                       Customer / Cabang
                     </span>
-                    <h3 className="font-extrabold text-base leading-snug">
+                    <h3 className="font-bold text-base leading-snug">
                       {matchedItem.store_name || '-'}
                     </h3>
                   </div>
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-neutral-800 text-slate-600 dark:text-slate-300 shrink-0">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border shrink-0 ${
+                    isDarkMode
+                      ? 'bg-[#26221F] border-[#36302B] text-[#D6D0C9]'
+                      : 'bg-[#FAF8F6] border-[#E6E0D9] text-[#57534E]'
+                  }`}>
                     {matchedItem.delivery_type || 'DALAM KOTA'}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs pt-1">
                   <div className={`p-2.5 rounded-xl border ${
-                    isDarkMode ? 'bg-neutral-800/70 border-neutral-700' : 'bg-slate-50 border-slate-200'
+                    isDarkMode ? 'bg-[#24201D] border-[#332E29]' : 'bg-[#FAF8F6] border-[#ECE7E1]'
                   }`}>
-                    <span className="text-[10px] text-slate-400 font-bold block">Proyek</span>
-                    <span className="font-bold line-clamp-2">{matchedItem.promo_title || '-'}</span>
+                    <span className="text-[10px] text-[#8C857E] font-semibold block">Proyek</span>
+                    <span className="font-semibold line-clamp-2">{matchedItem.promo_title || '-'}</span>
                   </div>
                   <div className={`p-2.5 rounded-xl border ${
-                    isDarkMode ? 'bg-neutral-800/70 border-neutral-700' : 'bg-slate-50 border-slate-200'
+                    isDarkMode ? 'bg-[#24201D] border-[#332E29]' : 'bg-[#FAF8F6] border-[#ECE7E1]'
                   }`}>
-                    <span className="text-[10px] text-slate-400 font-bold block">No. SPK / Tracking</span>
-                    <span className="font-mono font-bold block truncate">{matchedItem.no_spk || '-'}</span>
-                    <span className="font-mono text-[10px] text-slate-400 block truncate">{matchedItem.tracking_id}</span>
+                    <span className="text-[10px] text-[#8C857E] font-semibold block">No. SPK / Tracking</span>
+                    <span className="font-mono font-semibold block truncate">{matchedItem.no_spk || '-'}</span>
+                    <span className="font-mono text-[10px] text-[#8C857E] block truncate">{matchedItem.tracking_id}</span>
                   </div>
                 </div>
               </div>
@@ -872,15 +967,23 @@ export default function QCScannerPWA({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className={`p-2.5 rounded-xl border ${
                   isPackingDone(matchedItem)
-                    ? 'bg-emerald-50/70 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800'
-                    : 'bg-slate-50 border-slate-200 dark:bg-neutral-800/50 dark:border-neutral-700'
+                    ? isDarkMode
+                      ? 'bg-[#1B2B22] border-[#2B4636]'
+                      : 'bg-[#EEF7F1] border-[#CEE6D6]'
+                    : isDarkMode
+                    ? 'bg-[#24201D] border-[#332E29]'
+                    : 'bg-[#FAF8F6] border-[#ECE7E1]'
                 }`}>
-                  <span className="text-[10px] font-bold uppercase text-slate-500 block">Status Paking</span>
-                  <span className="font-extrabold block mt-0.5">
-                    {isPackingDone(matchedItem) ? 'SELESAI' : 'MENUNGGU'}
+                  <span className="text-[10px] font-semibold uppercase text-[#78716C] block">Status Paking</span>
+                  <span className={`font-bold block mt-0.5 ${
+                    isPackingDone(matchedItem)
+                      ? isDarkMode ? 'text-[#9CDCB5]' : 'text-[#215E3B]'
+                      : ''
+                  }`}>
+                    {isPackingDone(matchedItem) ? 'Selesai' : 'Menunggu'}
                   </span>
                   {packerMeta.name && (
-                    <span className="text-[10px] text-slate-500 block truncate">
+                    <span className="text-[10px] text-[#78716C] block truncate mt-0.5">
                       {packerMeta.name} • {formatClockTime(packerMeta.timestamp)}
                     </span>
                   )}
@@ -888,15 +991,23 @@ export default function QCScannerPWA({
 
                 <div className={`p-2.5 rounded-xl border ${
                   isCheckerDone(matchedItem)
-                    ? 'bg-amber-50/70 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800'
-                    : 'bg-slate-50 border-slate-200 dark:bg-neutral-800/50 dark:border-neutral-700'
+                    ? isDarkMode
+                      ? 'bg-[#2B2316] border-[#453720]'
+                      : 'bg-[#FEF7E8] border-[#F2DCAD]'
+                    : isDarkMode
+                    ? 'bg-[#24201D] border-[#332E29]'
+                    : 'bg-[#FAF8F6] border-[#ECE7E1]'
                 }`}>
-                  <span className="text-[10px] font-bold uppercase text-slate-500 block">Status Checker</span>
-                  <span className="font-extrabold block mt-0.5">
-                    {isCheckerDone(matchedItem) ? 'TERVERIFIKASI' : 'MENUNGGU'}
+                  <span className="text-[10px] font-semibold uppercase text-[#78716C] block">Status Checker</span>
+                  <span className={`font-bold block mt-0.5 ${
+                    isCheckerDone(matchedItem)
+                      ? isDarkMode ? 'text-[#F0CB85]' : 'text-[#8A510E]'
+                      : ''
+                  }`}>
+                    {isCheckerDone(matchedItem) ? 'Terverifikasi' : 'Menunggu'}
                   </span>
                   {checkerMeta.name && (
-                    <span className="text-[10px] text-slate-500 block truncate">
+                    <span className="text-[10px] text-[#78716C] block truncate mt-0.5">
                       {checkerMeta.name} • {formatClockTime(checkerMeta.timestamp)}
                     </span>
                   )}
@@ -906,9 +1017,9 @@ export default function QCScannerPWA({
               {/* Preview Foto Bukti */}
               {(localPreviewUrl || hasValidPhoto(matchedItem)) && (
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#8C857E] flex items-center gap-1">
                     <ImageIcon className="w-3 h-3" />
-                    Thumbnail Foto Bukti (Resolusi Asli HP)
+                    Foto Bukti Paking (Resolusi Asli HP)
                   </span>
                   <img
                     src={localPreviewUrl || getPhotoThumbUrl(matchedItem.bukti_paking_url, 480)}
@@ -928,18 +1039,26 @@ export default function QCScannerPWA({
                         window.open(fullUrl, '_blank', 'noopener,noreferrer');
                       }
                     }}
-                    className="w-full max-h-56 object-contain rounded-2xl border border-slate-200 dark:border-neutral-700 bg-slate-100 dark:bg-neutral-950 cursor-pointer"
+                    className={`w-full max-h-56 object-contain rounded-xl border cursor-pointer ${
+                      isDarkMode ? 'border-[#332E29] bg-[#141210]' : 'border-[#E8E2DC] bg-[#F5F2EE]'
+                    }`}
                   />
                 </div>
               )}
 
               {statusMessage && (
-                <p className={`text-xs font-semibold p-3 rounded-xl border ${
+                <p className={`text-xs font-medium p-3 rounded-xl border ${
                   scanState === 'success'
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-200 dark:border-emerald-800'
+                    ? isDarkMode
+                      ? 'bg-[#1B2B22] text-[#A8E0BE] border-[#2B4636]'
+                      : 'bg-[#EEF7F1] text-[#215E3B] border-[#CEE6D6]'
                     : scanState === 'warning_no_photo'
-                    ? 'bg-amber-50 text-amber-900 border-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800'
-                    : 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/30 dark:text-blue-200 dark:border-blue-800'
+                    ? isDarkMode
+                      ? 'bg-[#2B2316] text-[#F2D091] border-[#453720]'
+                      : 'bg-[#FEF7E8] text-[#8A510E] border-[#F2DCAD]'
+                    : isDarkMode
+                    ? 'bg-[#26201D] text-[#E7D8CE] border-[#3B302A]'
+                    : 'bg-[#FFF5F0] text-[#9A3F20] border-[#F4D5C6]'
                 }`}>
                   {statusMessage}
                 </p>
@@ -947,13 +1066,13 @@ export default function QCScannerPWA({
 
               {/* TOMBOL AKSI: QC PAKING */}
               {scanMode === 'packing' && scanState !== 'uploading' && (
-                <div className="space-y-2.5 pt-1">
-                  <label className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-[0.99] transition-all">
-                    <Camera className="w-5 h-5" />
+                <div className="space-y-2 pt-1">
+                  <label className="w-full py-3.5 px-4 rounded-xl bg-[#DF5A2B] hover:bg-[#C94D22] text-white font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] transition-all">
+                    <Camera className="w-4 h-4" />
                     <span>
                       {scanState === 'success' || hasValidPhoto(matchedItem)
-                        ? 'Ambil Ulang Foto Bukti Paking'
-                        : 'Ambil Foto Bukti Paking (Kamera HP)'}
+                        ? 'Ambil Ulang Foto Bukti'
+                        : 'Ambil Foto Bukti (Kamera HP)'}
                     </span>
                     <input
                       type="file"
@@ -965,7 +1084,11 @@ export default function QCScannerPWA({
                   </label>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-neutral-700 text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-neutral-800 cursor-pointer">
+                    <label className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                      isDarkMode
+                        ? 'border-[#36302B] text-[#E7E2DC] hover:bg-[#282420]'
+                        : 'border-[#E4DDD5] text-[#44403C] hover:bg-[#F7F4F0]'
+                    }`}>
                       <Upload className="w-3.5 h-3.5" />
                       <span>Pilih Galeri</span>
                       <input
@@ -979,10 +1102,14 @@ export default function QCScannerPWA({
                     <button
                       type="button"
                       onClick={handleResetAndScanNext}
-                      className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      className={`py-2.5 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                        isDarkMode
+                          ? 'bg-[#332E29] hover:bg-[#3F3933] text-[#F5F2EE]'
+                          : 'bg-[#292524] hover:bg-[#1C1917] text-white'
+                      }`}
                     >
                       <QrCode className="w-3.5 h-3.5" />
-                      <span>{scanState === 'success' ? 'Scan Kolian Berikutnya' : 'Scan Ulang'}</span>
+                      <span>{scanState === 'success' ? 'Scan Berikutnya' : 'Scan Ulang'}</span>
                     </button>
                   </div>
                 </div>
@@ -995,13 +1122,13 @@ export default function QCScannerPWA({
                     <button
                       type="button"
                       onClick={() => executeCheckerVerify(matchedItem, staffName)}
-                      className="w-full py-3.5 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                      className="w-full py-3.5 px-4 rounded-xl bg-[#C97A16] hover:bg-[#B26A11] text-white font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
                     >
-                      <ShieldCheck className="w-5 h-5" />
+                      <ShieldCheck className="w-4 h-4" />
                       <span>
                         {scanState === 'warning_no_photo'
                           ? 'Tetap Verifikasi Checker'
-                          : 'Verifikasi QC Checker Sekarang'}
+                          : 'Verifikasi QC Checker'}
                       </span>
                     </button>
                   )}
@@ -1009,7 +1136,11 @@ export default function QCScannerPWA({
                   <button
                     type="button"
                     onClick={handleResetAndScanNext}
-                    className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center justify-center gap-2 cursor-pointer"
+                    className={`w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+                      isDarkMode
+                        ? 'bg-[#332E29] hover:bg-[#3F3933] text-[#F5F2EE]'
+                        : 'bg-[#292524] hover:bg-[#1C1917] text-white'
+                    }`}
                   >
                     <QrCode className="w-4 h-4" />
                     <span>{scanState === 'warning_no_photo' ? 'Batal / Scan Kolian Lain' : 'Scan Kolian Berikutnya'}</span>
@@ -1018,7 +1149,7 @@ export default function QCScannerPWA({
               )}
 
               {matchType && (
-                <div className="text-[10px] font-mono text-slate-400 text-right">
+                <div className="text-[10px] font-mono text-[#A8A29E] text-right">
                   Match: {matchType}
                 </div>
               )}
@@ -1029,41 +1160,45 @@ export default function QCScannerPWA({
         {/* 5. RIWAYAT SCAN SESI INI */}
         {scanHistory.length > 0 && (
           <section className={`rounded-2xl border p-4 space-y-2.5 ${
-            isDarkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-slate-200'
+            isDarkMode ? 'bg-[#1D1A18] border-[#2E2925]' : 'bg-white border-[#E8E2DC]'
           }`}>
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C] flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
-                Riwayat Scan Sesi Ini ({scanHistory.length})
+                Riwayat Sesi Ini ({scanHistory.length})
               </h3>
               <button
                 type="button"
                 onClick={() => setScanHistory([])}
-                className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 cursor-pointer"
+                className="text-[11px] font-medium text-[#8C857E] hover:text-[#44403C] cursor-pointer"
               >
                 Bersihkan
               </button>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-neutral-800">
+            <div className={`divide-y ${isDarkMode ? 'divide-[#2B2622]' : 'divide-[#F0ECE7]'}`}>
               {scanHistory.map((h) => (
                 <div key={h.id} className="py-2 flex items-center justify-between gap-2 text-xs">
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${
                         h.mode === 'packing'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                          ? isDarkMode
+                            ? 'bg-[#2E201A] text-[#F09A7A]'
+                            : 'bg-[#FFF2EB] text-[#B84720]'
+                          : isDarkMode
+                          ? 'bg-[#2B2316] text-[#EBBF75]'
+                          : 'bg-[#FEF6E6] text-[#9A5B13]'
                       }`}>
                         {h.mode === 'packing' ? 'Paking' : 'Checker'}
                       </span>
-                      <span className="font-mono font-bold">{h.boxCode}</span>
-                      <span className="text-slate-400 truncate">• {h.storeName}</span>
+                      <span className="font-mono font-semibold">{h.boxCode}</span>
+                      <span className="text-[#8C857E] truncate">• {h.storeName}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">
+                    <div className="text-[10px] text-[#8C857E] mt-0.5">
                       {h.staff} • {h.time} {h.storage === 'google_drive' ? '• Drive' : ''}
                     </div>
                   </div>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-[#2E7D52] shrink-0" />
                 </div>
               ))}
             </div>
