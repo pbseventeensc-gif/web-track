@@ -6,6 +6,13 @@ import { supabase } from './supabaseClient'
 
 if (typeof window !== 'undefined') {
   window.__supabase = supabase;
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('Service worker registration skipped:', err);
+      });
+    });
+  }
 }
 
 createRoot(document.getElementById('root')).render(

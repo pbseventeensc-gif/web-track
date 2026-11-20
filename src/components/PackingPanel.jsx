@@ -26,13 +26,27 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  Pin
+  Pin,
+  QrCode
 } from 'lucide-react';
 
 import PackingView from './packing/PackingView';
 import CustomDropdown from './ui/CustomDropdown';
 import { extractBaseProjectName, getProjectCategory, getItemMonthKey, getItemMonthLabel } from '../utils/projectGrouping';
 import { useLanguage } from '../utils/i18n';
+import { uploadPhotoWithFallback, getPhotoThumbUrl, getPhotoFullUrl } from '../utils/driveUpload';
+import {
+  hasValidPhoto,
+  isPackingDone as checkPackingDone,
+  isCheckerDone as checkCheckerDone,
+  isReadyToArchive,
+  isArchivedItem,
+  getPackingMeta,
+  getCheckerMeta,
+  updatePackingWithMeta,
+  fetchAllPackingRows
+} from '../utils/packingMeta';
+import { exportStyledPackingExcel } from '../utils/excelReport';
 
 // Global memory cache untuk link gambar aktif di browser
 if (!window.__ACTIVE_DESIGN_URLS__) {
@@ -46,12 +60,21 @@ export default function PackingPanel({
   onOpenImageModal,
   isPackingRole,
   externalProjectFilter,
-  onProjectFilterChange
+  onProjectFilterChange,
+  onOpenScanner
 }) {
   const { lang, t } = useLanguage();
 
   if (isPackingRole) {
-    return <PackingView isDarkMode={isDarkMode} onOpenImageModal={onOpenImageModal} />;
+    return (
+      <PackingView
+        isDarkMode={isDarkMode}
+        onOpenImageModal={onOpenImageModal}
+        externalProjectFilter={externalProjectFilter}
+        onProjectFilterChange={onProjectFilterChange}
+        onOpenScanner={onOpenScanner}
+      />
+    );
   }
 
   const [packingList, setPackingList] = useState([]);
@@ -149,11 +172,6 @@ export default function PackingPanel({
   const [deleteProjectPinError, setDeleteProjectPinError] = useState('');
   const [isDeletingProject, setIsDeletingProject] = useState(false);
 
-  // Outbound QR Scan States
-  const [showOutboundScanModal, setShowOutboundScanModal] = useState(false);
-  const [outboundScannedCode, setOutboundScannedCode] = useState('');
-  const [matchedOutboundItem, setMatchedOutboundItem] = useState(null);
-  const [outboundScanMsg, setOutboundScanMsg] = useState('');
   const [collapsedProjects, setCollapsedProjects] = useState({});
 
   const toggleProjectCollapse = (projKey) => {
@@ -164,7 +182,7 @@ export default function PackingPanel({
     { id: 'status_qc_label', label: 'QC LABEL', staff: 'Bagian: Staff Label', color: 'bg-blue-50/90 text-blue-700 border-blue-200/80' },
     { id: 'status_qc_packing', label: 'QC PACKING', staff: 'Bagian: Staff Paking', color: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80' },
     { id: 'status_qc_checker', label: 'QC CHECKER', staff: 'Bagian: Staff Checker', color: 'bg-amber-50/90 text-amber-800 border-amber-200/80' },
-    { id: 'status_deliver', label: 'DELIVER', staff: 'Bagian: Staff Deliver', color: 'bg-purple-50/90 text-purple-700 border-purple-200/80' }
+    { id: 'ready_to_archive', label: 'SIAP ARSIP', staff: 'Siap Pindah ke Asset', color: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80' }
   ];
 
   const parseItems = (raw) => {
@@ -207,11 +225,7 @@ export default function PackingPanel({
 
   const fetchPackingData = async () => {
     try {
-      let { data, error } = await supabase
-        .from('packing_tracking')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(300);
+      let { data, error } = await fetchAllPackingRows(supabase, { archived: false });
 
       if (error) console.error('Fetch packing_tracking error:', error);
 
@@ -394,13 +408,24 @@ export default function PackingPanel({
 
   const handleToggleStatus = async (id, fieldName, currentValue) => {
     const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
-    const targetItem = packingList.find(i => i.id === id);
+    const nowIso = new Date().toISOString();
+    const staffName = (typeof window !== 'undefined' && localStorage.getItem('wellen_qc_staff_name')) || 'Admin';
+    const payload = { [fieldName]: nextValue, updated_at: nowIso };
 
-    setPackingList((prev) => prev.map((item) => (item.id === id ? { ...item, [fieldName]: nextValue } : item)));
+    if (fieldName === 'status_qc_packing') {
+      payload.staff_outbound = nextValue === 'DONE'
+        ? JSON.stringify({ packing_by: staffName, packing_at: nowIso })
+        : null;
+    } else if (fieldName === 'status_qc_checker') {
+      payload.checker_by = nextValue === 'DONE' ? staffName : null;
+      payload.checker_at = nextValue === 'DONE' ? nowIso : null;
+    }
+
+    setPackingList((prev) => prev.map((item) => (item.id === id ? { ...item, ...payload } : item)));
 
     const { error } = await supabase
       .from('packing_tracking')
-      .update({ [fieldName]: nextValue, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id);
 
     if (error) {
@@ -627,12 +652,14 @@ export default function PackingPanel({
           const qrAddress = explicitQrAddress || `${storeNo}_${boxCode}_${storeId || storeNo}_${storeName}`;
 
           // Form unique, URL-safe tracking ID for each sheet, box, and store
-          const cleanPr = (prCode || 'PR').replace(/[\s/]/g, '');
+          const promoTitle = noPo || spkWpp || (sheetProject ? `PO ${sheetProject}` : cleanSheet);
+          const effectivePr = prCode && prCode !== 'PR'
+            ? prCode
+            : ((promoTitle || cleanSheet || 'PR').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase() || 'PR');
+          const cleanPr = effectivePr.replace(/[\s/]/g, '');
           const cleanBox = (boxCode || `S${sheetIdx + 1}`).replace(/[\s/]/g, '');
           const cleanStore = (storeId || storeNo || `R${r}`).replace(/[\s/]/g, '');
           const trackingId = `${cleanPr}-${cleanBox}-${cleanStore}`;
-
-          const promoTitle = noPo || spkWpp || (sheetProject ? `PO ${sheetProject}` : cleanSheet);
 
           let storeItems = [];
           let totalQty = 0;
@@ -1108,85 +1135,28 @@ export default function PackingPanel({
     }, 1200);
   };
 
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_DIM = 2560;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_DIM || height > MAX_DIM) {
-            if (width > height) {
-              height = Math.round((height * MAX_DIM) / width);
-              width = MAX_DIM;
-            } else {
-              width = Math.round((width * MAX_DIM) / height);
-              height = MAX_DIM;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-
-          // Smooth High Quality Interpolation Filter
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob((blob) => {
-            resolve(blob);
-          }, 'image/jpeg', 0.98);
-        };
-      };
-    });
-  };
-
-  const processImageForUpload = async (file) => {
-    if (file.size <= 15 * 1024 * 1024) {
-      return file;
-    }
-    return await compressImage(file);
-  };
-
   const handleCameraCapture = async (e, rowId, trackingId) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadingId(rowId);
     try {
-      const uploadBlob = await processImageForUpload(file);
       const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.${fileExt}`;
+      const uploadRes = await uploadPhotoWithFallback(file, `bukti_paking_${cleanTrackingId}`, supabase);
 
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(fileName, uploadBlob, { contentType: file.type || 'image/jpeg', upsert: true });
+      const savedName = (typeof localStorage !== 'undefined' && localStorage.getItem('wellen_qc_staff_name')) || 'Admin / Petugas Paking';
+      const nowIso = new Date().toISOString();
 
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-
-      const { error: updateError } = await supabase
-        .from('packing_tracking')
-        .update({ 
-          bukti_paking_url: urlData.publicUrl, 
-          status_qc_packing: 'DONE',
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', rowId);
+      const { error: updateError } = await updatePackingWithMeta(supabase, rowId, {
+        buktiPakingUrl: uploadRes.url,
+        staffName: savedName,
+        status: 'DONE',
+        nowIso
+      });
 
       if (updateError) throw updateError;
 
-      alert('Dokumentasi bukti paking berhasil diunggah.');
+      alert('Dokumentasi bukti paking resolusi asli berhasil disimpan ke Google Drive.');
       fetchPackingData();
     } catch (err) {
       alert('Gagal mengunggah dokumentasi foto: ' + err.message);
@@ -1194,189 +1164,83 @@ export default function PackingPanel({
     setUploadingId(null);
   };
 
-  const handleOutboundCameraCapture = async (e, rowId, boxCode) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingId(`outbound-${rowId}`);
-    try {
-      const uploadBlob = await processImageForUpload(file);
-      const cleanCode = boxCode ? String(boxCode).replace(/[^a-zA-Z0-9-_]/g, '_') : 'box';
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const fileName = `outbound_${cleanCode}_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(fileName, uploadBlob, { contentType: file.type || 'image/jpeg', upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      const publicUrl = urlData.publicUrl;
-
-      const nowIso = new Date().toISOString();
-      const staffName = 'Petugas Pengiriman';
-
-      // Update di Supabase packing_tracking (dukung kolom outbound_url & staff_outbound dengan fallback)
-      let { error: updateError } = await supabase
-        .from('packing_tracking')
-        .update({
-          outbound_url: publicUrl,
-          staff_outbound: staffName,
-          bukti_outbound_url: publicUrl,
-          outbound_at: nowIso,
-          updated_at: nowIso
-        })
-        .eq('id', rowId);
-
-      if (updateError) {
-        console.warn('Extended outbound columns missing in Supabase, using fallback update:', updateError);
-        const { error: fallbackError } = await supabase
-          .from('packing_tracking')
-          .update({
-            catatan: publicUrl,
-            updated_at: nowIso
-          })
-          .eq('id', rowId);
-        if (fallbackError) console.error('Fallback update error:', fallbackError);
-      }
-
-      // Update state lokal secara instan
-      setPackingList((prev) =>
-        prev.map((item) =>
-          item.id === rowId
-            ? {
-                ...item,
-                outbound_url: publicUrl,
-                staff_outbound: staffName,
-                bukti_outbound_url: publicUrl,
-                outbound_at: nowIso,
-                catatan: publicUrl
-              }
-            : item
-        )
-      );
-
-      alert('Dokumentasi pengiriman (Outbound) berhasil diunggah.');
-      fetchPackingData();
-    } catch (err) {
-      alert('Gagal mengunggah foto pengiriman: ' + err.message);
-    }
-    setUploadingId(null);
-  };
-
-  const handleProcessOutboundScan = (codeValue) => {
-    if (!codeValue || !codeValue.trim()) return;
-
-    const rawCode = codeValue.trim();
-    let cleanCode = rawCode;
-    if (rawCode.includes('scan=')) {
-      cleanCode = rawCode.split('scan=')[1]?.split('&')[0] || rawCode;
-    }
-    cleanCode = decodeURIComponent(cleanCode).trim();
-
-    const found = packingList.find((item) => {
-      const boxCode = (item.box_code || '').toLowerCase();
-      const trackingId = (item.tracking_id || '').toLowerCase();
-      const spk = (item.no_spk || '').toLowerCase();
-      const searchTarget = cleanCode.toLowerCase();
-
-      return boxCode === searchTarget || trackingId === searchTarget || spk === searchTarget || (item.store_name || '').toLowerCase().includes(searchTarget);
-    });
-
-    if (!found) {
-      setOutboundScanMsg(`Kode kolian / QR "${cleanCode}" tidak ditemukan dalam daftar paking.`);
-      setOutboundScannedCode('');
-      setMatchedOutboundItem(null);
+  const handleArchiveItem = async (item) => {
+    if (!isReadyToArchive(item)) {
+      alert('Kolian belum siap diarsipkan. Pastikan Foto Bukti, Status Paking, dan Status Checker sudah selesai semua.');
       return;
     }
 
-    setMatchedOutboundItem(found);
-    setOutboundScanMsg(`Kolian ditemukan: ${found.box_code || '-'} (${found.store_name}). Silakan unggah dokumentasi pengiriman.`);
-    setOutboundScannedCode('');
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('packing_tracking')
+      .update({ status_deliver: 'DONE', updated_at: nowIso })
+      .eq('id', item.id);
+
+    if (error) {
+      alert('Gagal memindahkan kolian ke Arsip Proyek: ' + error.message);
+      return;
+    }
+
+    setPackingList((prev) => prev.filter((p) => p.id !== item.id));
+    setSelectedRowIds((prev) => prev.filter((id) => id !== item.id));
   };
 
-  const generateViewerUrl = (rawUrl, title, item) => {
-    if (!rawUrl || rawUrl === 'No Foto' || rawUrl === '-') return '-';
-    if (rawUrl.startsWith('data:')) {
-      return '[Data Gambar Base64]';
+  const handleArchiveProjectReadyItems = async (groupKey, readyItems) => {
+    if (!readyItems || readyItems.length === 0) {
+      alert(`Belum ada kolian pada proyek "${groupKey}" yang memenuhi syarat (Foto + Paking + Checker selesai semua).`);
+      return;
     }
-    if (rawUrl.length > 500) {
-      return rawUrl.slice(0, 500);
+
+    if (!confirm(`Pindahkan ${readyItems.length} kolian siap arsip dari proyek "${groupKey}" ke Project Archive (Asset)?`)) {
+      return;
     }
-    return rawUrl;
+
+    try {
+      const ids = readyItems.map((i) => i.id);
+      const nowIso = new Date().toISOString();
+      for (let i = 0; i < ids.length; i += 100) {
+        const batch = ids.slice(i, i + 100);
+        const { error } = await supabase
+          .from('packing_tracking')
+          .update({ status_deliver: 'DONE', updated_at: nowIso })
+          .in('id', batch);
+        if (error) throw error;
+      }
+
+      setPackingList((prev) => prev.filter((p) => !ids.includes(p.id)));
+      setSelectedRowIds((prev) => prev.filter((id) => !ids.includes(id)));
+      alert(`✅ ${ids.length} kolian dari "${groupKey}" berhasil dipindahkan ke Project Archive.`);
+    } catch (err) {
+      alert('Gagal mengarsipkan proyek: ' + err.message);
+    }
   };
 
   const handleDownloadPackingReport = async () => {
     try {
-      const dataToExport = filteredList.length > 0 ? filteredList : packingList;
+      const dataToExport = filteredList.length > 0 ? filteredList : sourceList;
       if (dataToExport.length === 0) return alert('Belum ada data paking untuk diekspor.');
-
-      const formattedData = dataToExport.map((item, index) => {
-        const details = parseItems(item.items_detail);
-        const designUrls = details
-          .map(sub => sub.image_url || sub.visual_image)
-          .filter(url => url && typeof url === 'string' && url.trim() !== '');
-        const rawDesignUrl = Array.from(new Set(designUrls))[0] || '';
-
-        const rawPakingUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' ? item.bukti_paking_url : '';
-        const rawOutboundUrl = item.bukti_outbound_url || item.outbound_url || (item.catatan?.startsWith('http') ? item.catatan : '');
-
-        return {
-          No: index + 1,
-          'Kode Kolian': item.box_code || '-',
-          'ID Pelacakan': item.tracking_id || '-',
-          'Nomor SPK': item.no_spk || '-',
-          'Perusahaan / Pelanggan': item.client_pt || '-',
-          'Proyek / Promo': item.promo_title || '-',
-          'Nama Cabang / Alamat': item.store_name || '-',
-          Penerima: item.recipient_name || '-',
-          'Total Kuantitas': item.total_qty || 0,
-          'Jalur Pengiriman': item.delivery_type || '-',
-          'Status QC Label': item.status_qc_label || 'PENDING',
-          'Status QC Paking': item.status_qc_packing || 'PENDING',
-          'Status QC Pemeriksa': item.status_qc_checker || 'PENDING',
-          'Status Pengiriman': item.status_deliver || 'PENDING',
-          'Tautan Foto Bukti Paking': generateViewerUrl(rawPakingUrl, 'Foto Bukti Paking', item),
-          'Tautan Foto Pengiriman': generateViewerUrl(rawOutboundUrl, 'Foto Pengiriman', item),
-          'Tautan Foto Desain Visual': generateViewerUrl(rawDesignUrl, 'Foto Desain Visual', item),
-          'Terakhir Diperbarui': item.updated_at ? new Date(item.updated_at).toLocaleString('id-ID') : '-'
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(formattedData);
-
-      // Otomatis ubah sel berisi link HTTP/HTTPS menjadi hyperlink interaktif di Excel / Google Sheets
-      if (worksheet['!ref']) {
-        const range = XLSX.utils.decode_range(worksheet['!ref']);
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            const cell = worksheet[cellAddress];
-            if (cell && typeof cell.v === 'string') {
-              if (cell.v.length > 32767) {
-                cell.v = cell.v.slice(0, 32000) + '...';
-              }
-              if (cell.v.startsWith('http') && cell.v.length <= 1000) {
-                cell.l = { Target: cell.v, Tooltip: 'Klik untuk Membuka Foto' };
-              }
-            }
-          }
-        }
-      }
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan_Paking');
 
       const todayStr = new Date().toISOString().slice(0, 10);
       let fileNameStr = `Laporan_Paking_Semua_${todayStr}.xlsx`;
+      let filterDesc = 'Semua Proyek Aktif';
 
       if (filterProject !== 'ALL') {
         const cleanProj = String(filterProject).replace(/[/\\?%*:|"<>]/g, '_').trim();
         fileNameStr = `Laporan_Paking_${cleanProj}_${todayStr}.xlsx`;
+        filterDesc = filterProject.startsWith('MONTH:')
+          ? getItemMonthLabel(filterProject.replace('MONTH:', '').split('|GROUP:')[0], lang)
+          : filterProject;
       }
 
-      XLSX.writeFile(workbook, fileNameStr);
+      await exportStyledPackingExcel({
+        items: dataToExport,
+        reportTitle: 'LAPORAN MONITORING PACKING STATION & QC',
+        filterLabel: filterDesc,
+        fileName: fileNameStr,
+        sheetName: 'Laporan_Paking',
+        isArchive: false
+      });
+
       alert(`Laporan Excel Paking (${fileNameStr}) berhasil diunduh.`);
     } catch (err) {
       alert('Gagal mengunduh laporan: ' + err.message);
@@ -1541,32 +1405,22 @@ export default function PackingPanel({
     }
   };
 
-  // Logika Arsip: Data hanya pindah ke Arsip Proyek jika SUDAH ada bukti foto paking DAN scan dari checker/deliver
-  const isClosedItem = (item) => {
-    const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
-    const hasCheckerOrDeliver = Boolean(
-      item.status_qc_checker === 'DONE' ||
-      (item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-      item.outbound_url ||
-      item.status_deliver === 'DONE'
-    );
-    return hasPhoto && hasCheckerOrDeliver;
-  };
-
-  // Seluruh data aktif (termasuk label_sj & google_sheet) tetap tampil selama belum selesai foto + scan
-  const sourceList = packingList.filter(item => !isClosedItem(item));
+  // Data hanya pindah ke Arsip Proyek saat tombol ceklis Arsip diklik (status_deliver === 'DONE')
+  const sourceList = packingList.filter(item => !isArchivedItem(item));
 
   // Filter list by status & delivery first so uniqueProjects only shows projects matching current status (e.g. Done)
   const statusFilteredList = sourceList.filter((item) => {
     const matchDelivery = filterDelivery === 'ALL' || item.delivery_type === filterDelivery;
     const matchSource = filterSource === 'ALL' || (filterSource === 'google_sheet' ? item.source === 'google_sheet' : item.source === 'label_sj');
-    const isDone = item.status_qc_packing === 'DONE' || item.status_qc_checker === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
+    const isDone = checkPackingDone(item) || checkCheckerDone(item);
     const matchStatus = filterStatus === 'ALL' || (filterStatus === 'COMPLETED' ? isDone : !isDone);
 
     let matchStage = true;
-    if (filterStage !== 'ALL') {
+    if (filterStage === 'ready_to_archive') {
+      matchStage = isReadyToArchive(item);
+    } else if (filterStage !== 'ALL') {
       const val = item[filterStage];
-      const isStageDone = val === 'DONE' || val === 'CHECKED' || (filterStage === 'status_qc_packing' && (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto'));
+      const isStageDone = val === 'DONE' || val === 'CHECKED' || (filterStage === 'status_qc_packing' && hasValidPhoto(item));
       matchStage = isStageDone;
     }
 
@@ -1574,7 +1428,9 @@ export default function PackingPanel({
   });
 
   const getProjectGroupKey = (promoTitle) => {
-    return extractBaseProjectName(promoTitle) || '-';
+    const raw = String(promoTitle || '').trim();
+    if (!raw || /^tes(\s*\d+)?$/i.test(raw) || /^test(\s*\d+)?$/i.test(raw)) return '-';
+    return extractBaseProjectName(raw) || raw;
   };
 
   // Pengelompokan proyek paking aktif berdasarkan bulan dan kategori brand untuk dropdown
@@ -1709,7 +1565,7 @@ export default function PackingPanel({
                     {item.area_code && item.area_code !== 'Q1' ? item.area_code : (item.box_code || 'B1')}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2px' }}>
-                    <QRCodeSVG value={item.source === 'google_sheet' ? (item.qr_address || item.tracking_id) : `https://web-track-phi-gilt.vercel.app/?scan=${item.tracking_id}`} size={92} />
+                    <QRCodeSVG value={`https://web-track-phi-gilt.vercel.app/?scan=${encodeURIComponent(item.tracking_id || '')}`} size={92} />
                   </div>
                 </div>
 
@@ -1866,6 +1722,19 @@ export default function PackingPanel({
 
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
           <button
+            type="button"
+            onClick={() => {
+              if (onOpenScanner) onOpenScanner();
+              else window.location.href = '/?mode=scanner';
+            }}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
+            title="Buka Pemindai QR & Kamera Bukti Paking (PWA)"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Scanner QR (PWA)</span>
+          </button>
+
+          <button
             onClick={() => {
               const currentKeys = Array.from(new Set(filteredList.map(item => getProjectGroupKey(item.promo_title))));
               const isAllCollapsed = currentKeys.length > 0 && currentKeys.every(k => !!collapsedProjects[k]);
@@ -1904,7 +1773,7 @@ export default function PackingPanel({
       <div ref={statCardsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: QC LABEL */}
         {(() => {
-          const labelDoneCount = packingList.filter(s => s.status_qc_label === 'DONE' || (s.status_qc_label && String(s.status_qc_label).includes('DONE'))).length;
+          const labelDoneCount = sourceList.filter(s => s.status_qc_label === 'DONE' || (s.status_qc_label && String(s.status_qc_label).includes('DONE'))).length;
           const labelPct = totalSpk > 0 ? Math.round((labelDoneCount / totalSpk) * 100) : 0;
           const isSelected = filterStage === 'status_qc_label';
           return (
@@ -1971,7 +1840,7 @@ export default function PackingPanel({
 
         {/* Card 2: QC PACKING */}
         {(() => {
-          const packingDoneCount = packingList.filter(s => s.status_qc_packing === 'DONE' || (s.status_qc_packing && String(s.status_qc_packing).includes('DONE'))).length;
+          const packingDoneCount = sourceList.filter(s => checkPackingDone(s)).length;
           const packingPct = totalSpk > 0 ? Math.round((packingDoneCount / totalSpk) * 100) : 0;
           const isSelected = filterStage === 'status_qc_packing';
           return (
@@ -2038,7 +1907,7 @@ export default function PackingPanel({
 
         {/* Card 3: QC CHECKER */}
         {(() => {
-          const checkerDoneCount = packingList.filter(s => s.status_qc_checker === 'DONE' || (s.status_qc_checker && String(s.status_qc_checker).includes('DONE'))).length;
+          const checkerDoneCount = sourceList.filter(s => checkCheckerDone(s)).length;
           const checkerPct = totalSpk > 0 ? Math.round((checkerDoneCount / totalSpk) * 100) : 0;
           const isSelected = filterStage === 'status_qc_checker';
           return (
@@ -2103,17 +1972,17 @@ export default function PackingPanel({
           );
         })()}
 
-        {/* Card 4: DELIVER */}
+        {/* Card 4: SIAP ARSIP (Foto + Paking + Checker OK) */}
         {(() => {
-          const deliverDoneCount = packingList.filter(s => s.status_deliver === 'DONE' || (s.status_deliver && String(s.status_deliver).includes('DONE'))).length;
-          const deliverPct = totalSpk > 0 ? Math.round((deliverDoneCount / totalSpk) * 100) : 0;
-          const isSelected = filterStage === 'status_deliver';
+          const readyToArchiveCount = sourceList.filter(s => isReadyToArchive(s)).length;
+          const readyPct = totalSpk > 0 ? Math.round((readyToArchiveCount / totalSpk) * 100) : 0;
+          const isSelected = filterStage === 'ready_to_archive';
           return (
             <div
-              onClick={() => setFilterStage(isSelected ? 'ALL' : 'status_deliver')}
+              onClick={() => setFilterStage(isSelected ? 'ALL' : 'ready_to_archive')}
               className={`p-4 sm:p-5 rounded-2xl border relative flex flex-col justify-between cursor-pointer transition-all duration-200 ${
                 isSelected
-                  ? 'bg-white dark:bg-neutral-900 border-[#FF6422] ring-2 ring-[#FF6422]/20 shadow-md'
+                  ? 'bg-white dark:bg-neutral-900 border-emerald-500 ring-2 ring-emerald-500/20 shadow-md'
                   : 'bg-white dark:bg-neutral-900 border-slate-200/80 dark:border-neutral-800 hover:border-slate-300 shadow-xs hover:shadow-md'
               }`}
             >
@@ -2123,33 +1992,33 @@ export default function PackingPanel({
                     {t('packingReadyDeliver')}
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'deliver' ? null : 'deliver'); }}
+                    onClick={(e) => { e.stopPropagation(); setOpenDetailCard(openDetailCard === 'ready_archive' ? null : 'ready_archive'); }}
                     className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-neutral-800 transition-all cursor-pointer"
                     title={t('packingDetail')}
                   >
-                    {openDetailCard === 'deliver' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    {openDetailCard === 'ready_archive' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </button>
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                      {deliverDoneCount}
+                      {readyToArchiveCount}
                     </span>
                     <span className="text-xs text-slate-400 font-normal">/ {totalSpk}</span>
                     <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300">
-                      ↗ {deliverPct}%
+                      ↗ {readyPct}%
                     </span>
                   </div>
 
-                  {/* Dribbble smooth orange wave sparkline */}
-                  <svg className="w-20 h-7 overflow-visible text-[#FF6422] shrink-0" viewBox="0 0 100 30" fill="none">
+                  {/* Dribbble smooth emerald wave sparkline */}
+                  <svg className="w-20 h-7 overflow-visible text-emerald-500 shrink-0" viewBox="0 0 100 30" fill="none">
                     <path d="M0 22 Q 25 18, 50 8 T 80 14 T 100 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
               </div>
 
-              {openDetailCard === 'deliver' && (
+              {openDetailCard === 'ready_archive' && (
                 <div onClick={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-neutral-900 rounded-2xl border border-slate-200 dark:border-neutral-700 shadow-xl p-4 z-30 space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-neutral-800 pb-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">{t('breakdownDeliver')}</span>
@@ -2158,10 +2027,10 @@ export default function PackingPanel({
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-200">
                       <span>{t('completedOfTotal')}</span>
-                      <span className="font-bold">{deliverDoneCount} / {totalSpk}</span>
+                      <span className="font-bold">{readyToArchiveCount} / {totalSpk}</span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#FF6422] h-full rounded-full" style={{ width: `${deliverPct}%` }}></div>
+                      <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${readyPct}%` }}></div>
                     </div>
                   </div>
                 </div>
@@ -2408,14 +2277,17 @@ export default function PackingPanel({
                 <th className="py-3.5 px-4 text-center whitespace-nowrap">{t('thPhotoProof')}</th>
                 <th className="py-3.5 px-4 text-center whitespace-nowrap">{t('thPackingStatus')}</th>
                 {!isPackingRole && (
-                  <th className="py-3.5 px-4 text-center whitespace-nowrap">{t('thCheckerStatus')}</th>
+                  <>
+                    <th className="py-3.5 px-4 text-center whitespace-nowrap">{t('thCheckerStatus')}</th>
+                    <th className="py-3.5 px-3 text-center whitespace-nowrap">ARSIP</th>
+                  </>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-neutral-800 bg-white dark:bg-neutral-900">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={isPackingRole ? "8" : "9"} className="p-8 text-center">
+                  <td colSpan={isPackingRole ? "8" : "10"} className="p-8 text-center">
                     <div className="max-w-md mx-auto space-y-3 py-4">
                       {packingList.length === 0 ? (
                         <>
@@ -2443,10 +2315,10 @@ export default function PackingPanel({
                             ✅
                           </div>
                           <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-                            Semua ({packingList.length}) Box Telah Diverifikasi Checker
+                            Semua ({packingList.length}) Box Telah Diarsipkan
                           </h3>
                           <p className="text-xs text-slate-500 dark:text-neutral-400">
-                            Seluruh data paking telah selesai di-check dan berpindah ke Outbound.
+                            Seluruh data paking telah selesai diproses dan dipindahkan ke Project Archive (Asset).
                           </p>
                         </>
                       ) : (
@@ -2481,8 +2353,11 @@ export default function PackingPanel({
                 </tr>
               ) : (
                 filteredList.map((item, idx) => {
-                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto');
-                  const isCheckerDone = item.status_qc_checker === 'DONE';
+                  const isPackingDone = checkPackingDone(item);
+                  const isCheckerDone = checkCheckerDone(item);
+                  const readyArchive = isReadyToArchive(item);
+                  const packerMeta = getPackingMeta(item);
+                  const checkerMeta = getCheckerMeta(item);
                   const isRowComplete = isPackingDone || isCheckerDone;
                   const isSelected = selectedRowIds.includes(item.id);
                   const currentGroupKey = getProjectGroupKey(item.promo_title);
@@ -2499,7 +2374,7 @@ export default function PackingPanel({
                           className="bg-[#FFF7ED] border-y border-[#FED7AA] dark:bg-amber-950/40 dark:border-amber-800/60 cursor-pointer select-none hover:bg-amber-100/70 dark:hover:bg-amber-900/50 transition-colors"
                           title={isCollapsed ? "Klik untuk menampilkan proyek" : "Klik untuk menyembunyikan proyek"}
                         >
-                          <td colSpan={isPackingRole ? "8" : "9"} className="py-2.5 px-4 font-bold text-[#C2410C] dark:text-amber-200 text-[11px] tracking-wider uppercase">
+                          <td colSpan={isPackingRole ? "8" : "10"} className="py-2.5 px-4 font-bold text-[#C2410C] dark:text-amber-200 text-[11px] tracking-wider uppercase">
                             <div className="flex flex-row justify-between items-center gap-4 w-full">
                               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                 <span className="p-1 rounded-lg bg-white/80 border border-[#FED7AA] dark:bg-amber-900/60 dark:border-amber-700/60 text-[#C2410C] dark:text-amber-200 flex items-center justify-center shrink-0">
@@ -2603,6 +2478,24 @@ export default function PackingPanel({
                                           title={isPinned ? t('unpinProjectTooltip') : t('pinProjectTooltip')}
                                         >
                                           <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current' : ''}`} />
+                                        </button>
+                                      );
+                                    })()}
+
+                                    {/* Tombol Arsipkan Kolian Siap (Foto + Paking + Checker OK) ke Project Archive */}
+                                    {(() => {
+                                      const projItems = sourceList.filter(p => getProjectGroupKey(p.promo_title).toLowerCase() === currentGroupKey.toLowerCase());
+                                      const readyItems = projItems.filter(p => isReadyToArchive(p));
+                                      if (readyItems.length === 0) return null;
+                                      return (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleArchiveProjectReadyItems(currentGroupKey, readyItems)}
+                                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer shadow-xs inline-flex items-center gap-1 active:scale-95"
+                                          title={`Pindahkan ${readyItems.length} kolian selesai ke Project Archive`}
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5" />
+                                          <span>Arsipkan ({readyItems.length}/{projItems.length})</span>
                                         </button>
                                       );
                                     })()}
@@ -2724,29 +2617,43 @@ export default function PackingPanel({
 
                           {/* 7. BUKTI PAKING */}
                           <td className="py-3.5 px-4 text-center">
-                            {item.bukti_paking_url ? (
+                            {hasValidPhoto(item) ? (
                               <div className="flex flex-col items-center justify-center gap-1">
                                 <img
-                                  src={item.bukti_paking_url}
+                                  src={getPhotoThumbUrl(item.bukti_paking_url)}
+                                  referrerPolicy="no-referrer"
                                   alt={lang === 'en' ? 'Packing Proof' : 'Bukti Paking'}
                                   onClick={() => onOpenImageModal(
-                                    item.bukti_paking_url,
+                                    getPhotoFullUrl(item.bukti_paking_url),
                                     `${lang === 'en' ? 'Packing Proof' : 'Bukti Paking'} - ${item.tracking_id || ''}`,
                                     item.destination || item.store_name || item.branch_name || '',
-                                    item.project || item.project_name || '',
+                                    item.promo_title || item.project || item.project_name || '',
                                     item.no_spk || item.spk_no || item.tracking_id || ''
                                   )}
                                   className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-[#BFDBFE] dark:border-neutral-700 cursor-pointer hover:scale-105 transition-transform shadow-master-sm"
                                 />
                                 <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight">
-                                  <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || (lang === 'en' ? 'QC Officer' : 'Petugas QC')}</span>
-                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                                  <span className="block truncate max-w-[110px]">{packerMeta.name || (lang === 'en' ? 'QC Officer' : 'Petugas QC')}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                                 </div>
                               </div>
                             ) : (
-                              <span className="inline-block px-2.5 py-1 rounded-lg bg-[#F4F8FD] dark:bg-neutral-800 border border-[#E2E8F0] dark:border-neutral-700 text-[#475569] dark:text-neutral-400 font-medium text-[11px]">
-                                {t('badgeNoPhoto')}
-                              </span>
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                <span className="inline-block px-2.5 py-1 rounded-lg bg-[#F4F8FD] dark:bg-neutral-800 border border-[#E2E8F0] dark:border-neutral-700 text-[#475569] dark:text-neutral-400 font-medium text-[11px]">
+                                  {t('badgeNoPhoto')}
+                                </span>
+                                <label className="text-[10px] font-semibold text-blue-600 hover:underline cursor-pointer">
+                                  {uploadingId === item.id ? t('badgeUploading') : t('badgeUploadPhoto')}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    onChange={(e) => handleCameraCapture(e, item.id, item.tracking_id || item.box_code)}
+                                    disabled={uploadingId === item.id}
+                                    className="hidden"
+                                  />
+                                </label>
+                              </div>
                             )}
                           </td>
 
@@ -2766,35 +2673,57 @@ export default function PackingPanel({
                               </button>
                               {isPackingDone && (
                                 <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight mt-0.5">
-                                  <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || (lang === 'en' ? 'Packing Staff' : 'Petugas Paking')}</span>
-                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                                  <span className="block truncate max-w-[110px]">{packerMeta.name || (lang === 'en' ? 'Packing Staff' : 'Petugas Paking')}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                                 </div>
                               )}
                             </div>
                           </td>
 
                           {!isPackingRole && (
-                            <td className="py-3.5 px-4 text-center">
-                              <div className="flex flex-col items-center justify-center gap-1">
+                            <>
+                              <td className="py-3.5 px-4 text-center">
+                                <div className="flex flex-col items-center justify-center gap-1">
+                                  <button
+                                    onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                                      isCheckerDone
+                                        ? 'bg-[#FFF7ED] hover:bg-amber-100/80 text-[#C2410C] border-[#FED7AA] dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60'
+                                        : 'bg-[#E9EFF8]/80 hover:bg-[#DBEAFE]/60 text-[#475569] border-[#CBD5E1] dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700'
+                                    }`}
+                                  >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-[#C2410C]' : 'bg-slate-400'}`} />
+                                    {isCheckerDone ? t('statusVerified') : t('statusWaiting')}
+                                  </button>
+                                  {isCheckerDone && (
+                                    <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight mt-0.5">
+                                      <span className="block truncate max-w-[110px]">{checkerMeta.name || (lang === 'en' ? 'QC Checker' : 'Petugas Pemeriksa')}</span>
+                                      <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(checkerMeta.timestamp) || '-'}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="py-3.5 px-3 text-center">
                                 <button
-                                  onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
-                                    isCheckerDone
-                                      ? 'bg-[#FFF7ED] hover:bg-amber-100/80 text-[#C2410C] border-[#FED7AA] dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60'
-                                      : 'bg-[#E9EFF8]/80 hover:bg-[#DBEAFE]/60 text-[#475569] border-[#CBD5E1] dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700'
+                                  type="button"
+                                  disabled={!readyArchive}
+                                  onClick={() => handleArchiveItem(item)}
+                                  title={
+                                    readyArchive
+                                      ? 'Klik ceklis untuk pindahkan ke Project Archive (Asset)'
+                                      : 'Lengkapi Foto Bukti, Status Paking, dan Checker dulu'
+                                  }
+                                  className={`w-8 h-8 rounded-xl border flex items-center justify-center mx-auto transition-all ${
+                                    readyArchive
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-xs cursor-pointer active:scale-95'
+                                      : 'bg-slate-100 dark:bg-neutral-800 text-slate-300 dark:text-neutral-600 border-slate-200 dark:border-neutral-700 cursor-not-allowed'
                                   }`}
                                 >
-                                  <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-[#C2410C]' : 'bg-slate-400'}`} />
-                                  {isCheckerDone ? t('statusVerified') : t('statusWaiting')}
+                                  <Check className="w-4 h-4 stroke-[2.75]" />
                                 </button>
-                                {isCheckerDone && (
-                                  <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight mt-0.5">
-                                    <span className="block truncate max-w-[110px]">{item.checker_by || item.scanned_by || (lang === 'en' ? 'QC Checker' : 'Petugas Pemeriksa')}</span>
-                                    <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
+                              </td>
+                            </>
                           )}
                         </tr>
                       )}
@@ -3071,123 +3000,6 @@ export default function PackingPanel({
                 {lang === 'en' ? 'Attach Design Images' : 'Pasang Gambar Desain'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PINDAI KODE QR OUTBOUND */}
-      {showOutboundScanModal && (
-        <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center z-[100] p-4 animate-fade-in">
-          <div className={`w-full max-w-md p-6 rounded-2xl border shadow-master-xl ${isDarkMode ? 'bg-neutral-900 border-neutral-800 text-white' : 'bg-white border-[#DBEAFE] text-[#1E293B]'}`}>
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#E9EFF8] dark:border-neutral-800">
-              <div className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
-                <h3 className="font-bold text-sm uppercase text-[#1E3A8A] dark:text-white">
-                  {lang === 'en' ? 'Scan Outbound QR Code' : 'Pindai Kode QR Pengiriman (Outbound)'}
-                </h3>
-              </div>
-              <button
-                onClick={() => {
-                  setShowOutboundScanModal(false);
-                  setMatchedOutboundItem(null);
-                  setOutboundScanMsg('');
-                  setOutboundScannedCode('');
-                }}
-                className="w-8 h-8 rounded-xl bg-[#E9EFF8] hover:bg-[#FFF1F2] text-[#475569] hover:text-[#BE123C] border border-[#CBD5E1] hover:border-rose-200 dark:bg-neutral-800 dark:text-slate-300 flex items-center justify-center font-bold transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {!matchedOutboundItem ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleProcessOutboundScan(outboundScannedCode);
-                }}
-                className="space-y-4 text-sm"
-              >
-                <div className="bg-emerald-50/90 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-emerald-700 dark:text-emerald-300 shrink-0" />
-                  <span>
-                    {lang === 'en'
-                      ? 'Point barcode scanner or camera at Package Label QR Code to capture delivery documentation.'
-                      : 'Arahkan pemindai kode batang atau kamera ke Kode QR Label Kolian untuk mengambil dokumentasi pengiriman.'}
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold mb-1 text-[#475569] dark:text-slate-300">
-                    {lang === 'en' ? 'Enter / Scan Package Label QR Code:' : 'Masukkan / Pindai Kode QR Label Kolian:'}
-                  </label>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={outboundScannedCode}
-                    onChange={(e) => setOutboundScannedCode(e.target.value)}
-                    placeholder={lang === 'en' ? 'Scan Label QR Code / Enter Package Code...' : 'Pindai Kode QR Label / Masukkan Kode Kolian...'}
-                    className={`w-full p-3 rounded-xl border font-mono text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-300 ${
-                      isDarkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-[#F4F8FD] border-[#CBD5E1] text-[#1E293B]'
-                    }`}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 font-bold rounded-xl transition-all cursor-pointer shadow-master-sm active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>{lang === 'en' ? 'Process QR Code Scan' : 'Proses Pindai Kode QR'}</span>
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-4 text-sm">
-                <div className="bg-emerald-50/90 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 text-[#1E293B] dark:text-white space-y-1.5">
-                  <div className="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
-                    {lang === 'en' ? 'Package Data Detected' : 'Data Kolian Terdeteksi'}
-                  </div>
-                  <div className="text-base font-extrabold">{matchedOutboundItem.store_name}</div>
-                  <div className="text-xs font-mono font-bold text-[#475569] dark:text-slate-300">
-                    {lang === 'en' ? 'PACKAGE' : 'KOLIAN'}: {matchedOutboundItem.box_code || '-'} | SPK: {matchedOutboundItem.no_spk}
-                  </div>
-                </div>
-
-                <label className="w-full py-3.5 bg-emerald-50/90 hover:bg-emerald-100/90 text-emerald-700 border border-emerald-200/80 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 dark:border-emerald-800/60 font-bold rounded-xl transition-all cursor-pointer shadow-master-sm flex items-center justify-center gap-2 text-sm active:scale-95">
-                  <Camera className="w-5 h-5" />
-                  <span>{lang === 'en' ? 'Take / Upload Delivery Photo Now' : 'Ambil / Unggah Foto Pengiriman Sekarang'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={async (e) => {
-                      await handleOutboundCameraCapture(e, matchedOutboundItem.id, matchedOutboundItem.box_code || matchedOutboundItem.tracking_id);
-                      setMatchedOutboundItem(null);
-                      setShowOutboundScanModal(false);
-                    }}
-                    className="hidden"
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => setMatchedOutboundItem(null)}
-                  className="w-full py-2 bg-[#E9EFF8] hover:bg-[#DBEAFE] text-[#334155] border border-[#CBD5E1] dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-slate-200 dark:border-neutral-700 font-semibold rounded-xl text-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>{lang === 'en' ? 'Scan Another Package QR Code' : 'Pindai Kode QR Kolian Lain'}</span>
-                </button>
-              </div>
-            )}
-
-            {outboundScanMsg && (
-              <div className={`mt-4 p-3 text-center text-xs font-bold rounded-xl border ${
-                outboundScanMsg.startsWith('Kolian ditemukan') || outboundScanMsg.startsWith('Package found')
-                  ? 'bg-emerald-50/90 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60'
-                  : 'bg-[#FFF1F2] text-[#BE123C] border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60'
-              }`}>
-                {outboundScanMsg}
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import CustomDropdown from './ui/CustomDropdown';
+import { getPhotoFullUrl } from '../utils/driveUpload';
 
 /* 1. MODAL OTENTIKASI CABANG */
 export function BranchLoginModal({ isOpen, onLoginSuccess }) {
@@ -219,13 +220,16 @@ export function ScanQCModal({ isOpen, onClose, isDarkMode, scanTargetColumn, set
 export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
   if (!isOpen) return null;
 
+  const fullImageUrl = getPhotoFullUrl(modalImageInfo?.url);
+
   const handleDownloadHD = (e) => {
     e.stopPropagation();
-    if (!modalImageInfo?.url) return;
+    if (!fullImageUrl) return;
     const link = document.createElement('a');
-    link.href = modalImageInfo.url;
+    link.href = fullImageUrl;
     link.download = `Dokumentasi_${modalImageInfo.title || 'Bukti'}_${Date.now()}.jpg`;
     link.target = '_blank';
+    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -250,7 +254,8 @@ export function ImagePreviewModal({ isOpen, onClose, modalImageInfo }) {
       >
         <div className="flex items-center justify-center">
           <img
-            src={modalImageInfo.url}
+            src={fullImageUrl}
+            referrerPolicy="no-referrer"
             alt="Pratinjau Dokumentasi"
             style={{ width: '420px', height: '560px', maxWidth: '88vw', maxHeight: '72vh', objectFit: 'contain' }}
             className="rounded-2xl border border-slate-200/80 dark:border-neutral-800 bg-slate-50 dark:bg-neutral-950 object-contain"

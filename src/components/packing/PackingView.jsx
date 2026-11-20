@@ -7,14 +7,24 @@ import {
   RefreshCw,
   ChevronUp,
   ChevronDown,
-  Package
+  Package,
+  QrCode
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import CustomDropdown from '../ui/CustomDropdown';
 import { extractBaseProjectName, getProjectCategory, getItemMonthKey, getItemMonthLabel } from '../../utils/projectGrouping';
 import { useLanguage } from '../../utils/i18n';
+import { uploadPhotoWithFallback, getPhotoThumbUrl, getPhotoFullUrl } from '../../utils/driveUpload';
+import {
+  hasValidPhoto,
+  isPackingDone as checkPackingDone,
+  isArchivedItem,
+  getPackingMeta,
+  updatePackingWithMeta,
+  fetchAllPackingRows
+} from '../../utils/packingMeta';
 
-export default function PackingView({ isDarkMode, onOpenImageModal, externalProjectFilter, onProjectFilterChange }) {
+export default function PackingView({ isDarkMode, onOpenImageModal, externalProjectFilter, onProjectFilterChange, onOpenScanner }) {
   const { lang, t } = useLanguage();
   const [packingList, setPackingList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,11 +104,7 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
   const fetchPackingData = async () => {
     setLoading(true);
     try {
-      let { data, error } = await supabase
-        .from('packing_tracking')
-        .select('id, items_detail, promo_title, box_code, store_name, no_spk, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, outbound_url, packing_by, scanned_by, packing_at, updated_at, tracking_id, destination, branch_name, project, foto_by, foto_at')
-        .order('id', { ascending: false })
-        .limit(300);
+      let { data, error } = await fetchAllPackingRows(supabase, { archived: false });
 
       if (error) console.error('Fetch packing_tracking error:', error);
 
@@ -336,123 +342,57 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
     }
   };
 
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_DIM = 2560;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > MAX_DIM || height > MAX_DIM) {
-            if (width > height) {
-              height = Math.round((height * MAX_DIM) / width);
-              width = MAX_DIM;
-            } else {
-              width = Math.round((width * MAX_DIM) / height);
-              height = MAX_DIM;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              resolve(blob || file);
-            },
-            'image/jpeg',
-            0.98
-          );
-        };
-      };
-    });
-  };
-
-  const processImageForUpload = async (file) => {
-    if (file.size <= 15 * 1024 * 1024) {
-      return file;
-    }
-    return await compressImage(file);
-  };
-
   const handleCameraCapture = async (e, rowId, trackingId) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadingId(rowId);
     try {
-      const uploadBlob = await processImageForUpload(file);
       const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const fileName = `bukti_paking_${cleanTrackingId}_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(fileName, uploadBlob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type || 'image/jpeg'
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      const publicUrl = urlData.publicUrl;
+      const uploadRes = await uploadPhotoWithFallback(file, `bukti_paking_${cleanTrackingId}`, supabase);
 
       const nowIso = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('packing_tracking')
-        .update({
-          bukti_paking_url: publicUrl,
-          status_qc_packing: 'DONE',
-          updated_at: nowIso
-        })
-        .eq('id', rowId);
+      const staffName = (typeof localStorage !== 'undefined' && localStorage.getItem('wellen_qc_staff_name')) || 'Petugas Paking';
+
+      const { error: updateError } = await updatePackingWithMeta(supabase, rowId, {
+        buktiPakingUrl: uploadRes.url,
+        staffName,
+        status: 'DONE',
+        nowIso
+      });
 
       if (updateError) throw updateError;
 
       setPackingList(prev =>
         prev.map(item =>
           item.id === rowId
-            ? { ...item, bukti_paking_url: publicUrl, status_qc_packing: 'DONE' }
+            ? {
+                ...item,
+                bukti_paking_url: uploadRes.url,
+                status_qc_packing: 'DONE',
+                staff_outbound: JSON.stringify({ packing_by: staffName, packing_at: nowIso }),
+                updated_at: nowIso
+              }
             : item
         )
       );
 
-      alert('Dokumentasi foto paking berhasil diunggah.');
+      alert('Dokumentasi foto paking resolusi asli berhasil disimpan ke Google Drive.');
     } catch (err) {
       alert('Gagal mengunggah dokumentasi foto: ' + err.message);
     } finally {
       setUploadingId(null);
+      e.target.value = '';
     }
   };
 
   const getProjectGroupKey = (promoTitle) => {
-    return extractBaseProjectName(promoTitle) || '-';
+    const raw = String(promoTitle || '').trim();
+    if (!raw || /^tes(\s*\d+)?$/i.test(raw) || /^test(\s*\d+)?$/i.test(raw)) return '-';
+    return extractBaseProjectName(raw) || raw;
   };
 
-  const isClosedItem = (item) => {
-    const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
-    const hasCheckerOrDeliver = Boolean(
-      item.status_qc_checker === 'DONE' ||
-      (item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-      item.outbound_url ||
-      item.status_deliver === 'DONE'
-    );
-    return hasPhoto && hasCheckerOrDeliver;
-  };
-
-  const activePackingList = showCheckedItems ? packingList : packingList.filter(item => !isClosedItem(item));
+  const activePackingList = showCheckedItems ? packingList : packingList.filter(item => !isArchivedItem(item));
 
   // Filter Data Logic
   const uniqueProjects = Array.from(
@@ -463,6 +403,48 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
         .filter(str => str !== '-' && str !== '')
     )
   ).sort((a, b) => a.localeCompare(b));
+
+  // Pengelompokan proyek paking aktif berdasarkan bulan dan kategori brand untuk dropdown
+  const uniqueMonthsAndProjects = useMemo(() => {
+    const monthMap = {};
+    activePackingList.forEach(item => {
+      if (!item.promo_title || item.promo_title.trim() === '') return;
+      const mKey = getItemMonthKey(item.created_at || item.updated_at);
+      const mLabel = getItemMonthLabel(mKey, lang);
+      const cat = getProjectCategory(item.promo_title);
+      const proj = getProjectGroupKey(item.promo_title);
+
+      if (!monthMap[mKey]) {
+        monthMap[mKey] = { key: mKey, label: mLabel, totalBoxes: 0, brands: {} };
+      }
+      monthMap[mKey].totalBoxes++;
+      if (!monthMap[mKey].brands[cat]) {
+        monthMap[mKey].brands[cat] = { categoryName: cat, totalBoxes: 0, projects: {} };
+      }
+      monthMap[mKey].brands[cat].totalBoxes++;
+      if (proj && proj !== '-') {
+        monthMap[mKey].brands[cat].projects[proj] = (monthMap[mKey].brands[cat].projects[proj] || 0) + 1;
+      }
+    });
+
+    return Object.keys(monthMap)
+      .sort((a, b) => b.localeCompare(a))
+      .map(k => {
+        const m = monthMap[k];
+        return {
+          key: m.key,
+          label: m.label,
+          totalBoxes: m.totalBoxes,
+          brands: Object.values(m.brands).map(b => ({
+            categoryName: b.categoryName,
+            totalBoxes: b.totalBoxes,
+            projects: Object.entries(b.projects)
+              .map(([name, count]) => ({ name, count }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          })).sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+        };
+      });
+  }, [activePackingList, lang]);
 
   const sortedPackingList = [...activePackingList].sort((a, b) => {
     const projA = getProjectGroupKey(a.promo_title).toLowerCase();
@@ -548,6 +530,19 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenScanner) onOpenScanner();
+              else window.location.href = '/?mode=scanner';
+            }}
+            className="flex-1 sm:flex-initial px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+            title="Buka Mode Scanner QR + Kamera HP (PWA)"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Buka Scanner QR (PWA)</span>
+          </button>
+
           <button
             onClick={() => {
               const currentKeys = Array.from(new Set(filteredList.map(item => getProjectGroupKey(item.promo_title))));
@@ -882,7 +877,8 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
               <tbody className="divide-y divide-[#E9EFF8] dark:divide-neutral-800">
                 {filteredList.map((item, idx) => {
                   const details = parseItems(item.items_detail);
-                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
+                  const isPackingDone = checkPackingDone(item);
+                  const packerMeta = getPackingMeta(item);
                   const isUploadingThis = uploadingId === item.id;
                   const isSelected = selectedRowIds.includes(item.id);
                   const currentGroupKey = getProjectGroupKey(item.promo_title);
@@ -965,8 +961,8 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
                               </button>
                               {isPackingDone && (
                                 <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight mt-0.5">
-                                  <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Petugas Paking'}</span>
-                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                                  <span className="block truncate max-w-[110px]">{packerMeta.name || 'Petugas Paking'}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                                 </div>
                               )}
                             </div>
@@ -1052,13 +1048,14 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
 
                           {/* 8. BUKTI FOTO */}
                           <td className="py-3 px-4 text-center">
-                            {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
+                            {hasValidPhoto(item) ? (
                               <div className="flex flex-col items-center justify-center gap-1">
                                 <img
-                                  src={item.bukti_paking_url}
+                                  src={getPhotoThumbUrl(item.bukti_paking_url)}
+                                  referrerPolicy="no-referrer"
                                   alt="Bukti Paking"
                                   onClick={() => onOpenImageModal && onOpenImageModal(
-                                    item.bukti_paking_url,
+                                    getPhotoFullUrl(item.bukti_paking_url),
                                     `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
                                     item.destination || item.store_name || item.branch_name || '',
                                     item.promo_title || item.project || '',
@@ -1067,8 +1064,8 @@ export default function PackingView({ isDarkMode, onOpenImageModal, externalProj
                                   className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-xl border border-[#BFDBFE] dark:border-neutral-700 cursor-pointer hover:scale-105 transition-transform shadow-master-sm"
                                 />
                                 <div className="text-[10px] font-semibold text-[#1E293B] dark:text-neutral-300 leading-tight">
-                                  <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Petugas QC'}</span>
-                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                                  <span className="block truncate max-w-[110px]">{packerMeta.name || 'Petugas QC'}</span>
+                                  <span className="text-[9px] font-mono text-[#475569] dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                                 </div>
                               </div>
                             ) : (

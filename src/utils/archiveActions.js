@@ -31,15 +31,16 @@ export async function deleteMonthArchive(monthKey) {
       if (pmgDelErr) console.warn('PMG delete err:', pmgDelErr);
     }
 
-    // 2. Ambil & Hapus data dari packing_tracking yang berada pada bulan ini
+    // 2. Ambil & Hapus data arsip dari packing_tracking yang berada pada bulan ini (hanya baris berstatus arsip)
     const { data: packData, error: packFetchErr } = await supabase
       .from('packing_tracking')
-      .select('id, updated_at, delivery_date');
+      .select('id, updated_at')
+      .eq('status_deliver', 'DONE');
 
     if (packFetchErr) console.warn('Fetch pack err:', packFetchErr);
 
     const packIdsToDelete = (packData || [])
-      .filter(p => getItemMonthKey(p.delivery_date || p.updated_at) === monthKey)
+      .filter(p => getItemMonthKey(p.updated_at) === monthKey)
       .map(p => p.id);
 
     if (packIdsToDelete.length > 0) {

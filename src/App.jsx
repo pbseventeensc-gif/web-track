@@ -6,7 +6,7 @@ import {
   Printer,
   Scissors,
   Package,
-  Truck,
+  QrCode,
   Tag,
   Building2,
   Users,
@@ -47,7 +47,7 @@ import FinishingPanel from './components/FinishingPanel';
 import DesignPanel from './components/DesignPanel';
 import PackingPanel from './components/PackingPanel';
 import CheckerView from './components/checker/CheckerView';
-import OutboundView from './components/outbound/OutboundView';
+import QCScannerPWA from './components/scanner/QCScannerPWA';
 import DeskPrintView from './components/deskprint/DeskPrintView';
 import CloseProjectView from './components/packing/CloseProjectView';
 import { getItemMonthLabel } from './utils/projectGrouping';
@@ -95,8 +95,6 @@ function SoftLoginView({
           onAdminLogin({ role: 'packing_role', name: 'Petugas Paking' });
         } else if (cleanUser === 'checker' && (cleanPass === 'Check3' || cleanPassLower === 'check3')) {
           onAdminLogin({ role: 'checker_role', name: 'Petugas Pemeriksa Mutu' });
-        } else if (cleanUser === 'outbound' && (cleanPass === 'Out123' || cleanPassLower === 'out123')) {
-          onAdminLogin({ role: 'outbound_role', name: 'Petugas Pengiriman' });
         } else if (cleanUser === 'admin' && cleanPass === '123456') {
           onAdminLogin({ role: 'admin', name: 'Administrator' });
         } else {
@@ -347,6 +345,14 @@ function SoftLoginView({
             {isLoading ? 'Memverifikasi...' : 'Masuk ke Sistem'}
             <ArrowRight className="w-4 h-4" />
           </button>
+
+          <a
+            href="/?mode=scanner"
+            className="w-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-semibold py-2.5 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-2"
+          >
+            <QrCode className="w-4 h-4" />
+            Buka Scanner QC (Mode HP / PWA)
+          </a>
         </form>
 
         {/* Footer info */}
@@ -363,6 +369,7 @@ function SoftLoginView({
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isBranchMode = searchParams.get('mode') === 'cabang';
+  const isScannerMode = searchParams.get('mode') === 'scanner';
   const scanParam = searchParams.get('scan');
 
   const [currentAdmin, setCurrentAdmin] = useState(() => {
@@ -383,27 +390,23 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState(
-    currentAdmin?.role === 'outbound_role'
-      ? 'outbound'
-      : currentAdmin?.role === 'checker_role'
-        ? 'checker'
-        : currentAdmin?.role === 'packing_role'
-          ? 'paking'
-          : currentKawanLamaAdmin
-            ? 'label'
-            : isBranchMode
-              ? 'kawan_lama'
-              : 'dashboard'
+    currentAdmin?.role === 'checker_role'
+      ? 'checker'
+      : currentAdmin?.role === 'packing_role' || currentAdmin?.role === 'outbound_role'
+        ? 'paking'
+        : currentKawanLamaAdmin
+          ? 'label'
+          : isBranchMode
+            ? 'kawan_lama'
+            : 'dashboard'
   );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (currentAdmin?.role === 'packing_role') {
+    if (currentAdmin?.role === 'packing_role' || currentAdmin?.role === 'outbound_role') {
       setActiveTab('paking');
     } else if (currentAdmin?.role === 'checker_role') {
       setActiveTab('checker');
-    } else if (currentAdmin?.role === 'outbound_role') {
-      setActiveTab('outbound');
     }
   }, [currentAdmin]);
 
@@ -707,6 +710,20 @@ export default function App() {
     (item.store_code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (isScannerMode) {
+    return (
+      <>
+        <QCScannerPWA
+          isStandalone={true}
+          isDarkMode={isDarkMode}
+          currentAdmin={currentAdmin}
+          onOpenImageModal={openImageModal}
+        />
+        <ImagePreviewModal isOpen={modalImageInfo.isOpen} onClose={closeImageModal} modalImageInfo={modalImageInfo} />
+      </>
+    );
+  }
+
   const isAuthenticated = isBranchMode ? currentBranch : (currentAdmin || currentKawanLamaAdmin);
 
   if (!isAuthenticated) {
@@ -763,29 +780,26 @@ export default function App() {
       }
       return `Project Archive — ${selectedArchiveProject}`;
     })(),
-    pengiriman: language === 'en' ? 'Shipping & Waybill' : 'Pengiriman & Surat Jalan',
     label: language === 'en' ? 'Print Label & Waybill' : 'Cetak Label & Surat Jalan',
     kawan_lama: 'Kawan Lama Solution',
     custom_modules: language === 'en' ? 'Customer & PMG Module' : 'Modul Pelanggan & PMG',
-    checker: 'QC Station',
-    outbound: language === 'en' ? 'Shipping Station' : 'Stasiun Pengiriman'
+    qc_scanner: 'QC Scanner (PWA)',
+    checker: 'QC Station'
   };
 
   const activeModuleLabel = isBranchMode
     ? `Akses Cabang — ${currentBranch?.branch_name || 'Kawan Lama'}`
     : (activeModuleTitleMap[activeTab] || 'Dashboard');
 
-  const activeSessionRoleLabel = currentAdmin?.role === 'outbound_role'
-    ? (language === 'en' ? 'Outbound & Dispatch Officer' : 'Petugas Pengiriman')
-    : currentAdmin?.role === 'checker_role'
-      ? (language === 'en' ? 'QC Checker Officer' : 'Petugas Pemeriksa Mutu')
-      : currentAdmin?.role === 'packing_role'
-        ? (language === 'en' ? 'Packing Operator' : 'Petugas Paking')
-        : isBranchMode
-          ? `Branch: ${currentBranch?.branch_name || 'Active'}`
-          : currentKawanLamaAdmin
-            ? 'Kawan Lama Administrator'
-            : (language === 'en' ? 'Operations Administrator' : 'Administrator Operasional');
+  const activeSessionRoleLabel = currentAdmin?.role === 'checker_role'
+    ? (language === 'en' ? 'QC Checker Officer' : 'Petugas Pemeriksa Mutu')
+    : currentAdmin?.role === 'packing_role' || currentAdmin?.role === 'outbound_role'
+      ? (language === 'en' ? 'Packing Operator' : 'Petugas Paking')
+      : isBranchMode
+        ? `Branch: ${currentBranch?.branch_name || 'Active'}`
+        : currentKawanLamaAdmin
+          ? 'Kawan Lama Administrator'
+          : (language === 'en' ? 'Operations Administrator' : 'Administrator Operasional');
 
   const renderSidebarItem = (item, isLocked = false) => {
     const isActive = activeTab === item.id;
@@ -1014,9 +1028,10 @@ export default function App() {
                   spkList={displayedList}
                   handleUpdateField={handleUpdateField}
                   onOpenImageModal={openImageModal}
-                  isPackingRole={currentAdmin?.role === 'packing_role'}
+                  isPackingRole={currentAdmin?.role === 'packing_role' || currentAdmin?.role === 'outbound_role'}
                   externalProjectFilter={selectedPackingProject}
                   onProjectFilterChange={setSelectedPackingProject}
+                  onOpenScanner={() => setActiveTab('qc_scanner')}
                   language={language}
                 />
               )}
@@ -1031,8 +1046,14 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'pengiriman' && (
-                <OutboundView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+              {activeTab === 'qc_scanner' && (
+                <QCScannerPWA
+                  isStandalone={false}
+                  isDarkMode={isDarkMode}
+                  currentAdmin={currentAdmin}
+                  onBack={() => setActiveTab(currentAdmin?.role === 'checker_role' ? 'checker' : 'paking')}
+                  onOpenImageModal={openImageModal}
+                />
               )}
 
               {activeTab === 'kawan_lama' && (
@@ -1048,11 +1069,11 @@ export default function App() {
               )}
 
               {activeTab === 'checker' && (
-                <CheckerView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
-              )}
-
-              {activeTab === 'outbound' && (
-                <OutboundView isDarkMode={isDarkMode} onOpenImageModal={openImageModal} />
+                <CheckerView
+                  isDarkMode={isDarkMode}
+                  onOpenImageModal={openImageModal}
+                  onOpenScanner={() => setActiveTab('qc_scanner')}
+                />
               )}
 
               {activeTab === 'produksi' && (

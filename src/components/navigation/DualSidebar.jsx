@@ -8,7 +8,7 @@ import {
   getItemMonthLabel 
 } from '../../utils/projectGrouping';
 import { 
-  Home, ShoppingCart, Box, Send, Database, Truck, BarChart3, 
+  Home, ShoppingCart, Box, Send, Database, QrCode, BarChart3, 
   Users, Settings, Monitor, Layers, Clock, Scissors, Package, 
   FolderCheck, Palette, FolderKanban, FileText, ChevronLeft, 
   ChevronRight, ChevronDown, Sun, Moon, LogOut, CheckCircle2, ShieldCheck, Tag,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../utils/i18n';
 import { deleteMonthArchive } from '../../utils/archiveActions';
+import { fetchAllPackingRows, isArchivedItem } from '../../utils/packingMeta';
 
 export default function DualSidebar({
   isDarkMode,
@@ -51,30 +52,20 @@ export default function DualSidebar({
   const [isDeletingMonth, setIsDeletingMonth] = useState(false);
 
   useEffect(() => {
-    const isClosedPackingItem = (item) => {
-      const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
-      const hasCheckerOrDeliver = Boolean(
-        item.status_qc_checker === 'DONE' ||
-        (item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-        item.outbound_url ||
-        item.status_deliver === 'DONE'
-      );
-      return hasPhoto && hasCheckerOrDeliver;
-    };
-
     const fetchPackingProjects = async () => {
       try {
-        const { data: packData } = await supabase
-          .from('packing_tracking')
-          .select('id, promo_title, updated_at, bukti_paking_url, status_qc_checker, outbound_url, status_deliver')
-          .order('id', { ascending: false })
-          .limit(300);
+        const { data: packData } = await fetchAllPackingRows(supabase, {
+          archived: false,
+          select: 'id, promo_title, updated_at, status_deliver'
+        });
 
         const rawItems = [];
         if (packData && packData.length > 0) {
           packData.forEach(item => {
-            if (!isClosedPackingItem(item)) {
-              const str = extractBaseProjectName(item.promo_title);
+            if (!isArchivedItem(item)) {
+              const rawTitle = String(item.promo_title || '').trim();
+              const cleaned = extractBaseProjectName(rawTitle);
+              const str = (cleaned && cleaned !== '-') ? cleaned : rawTitle;
               if (str && str !== '-' && !/^tes(\d+)?$/i.test(str) && !/^test(\d+)?$/i.test(str)) {
                 const rawDate = item.updated_at || new Date().toISOString();
                 const mKey = getItemMonthKey(rawDate);
@@ -130,16 +121,17 @@ export default function DualSidebar({
           });
         }
 
-        // 2. Ambil proyek dari packing_tracking
-        const { data: packData, error: packErr } = await supabase
-          .from('packing_tracking')
-          .select('promo_title, updated_at, bukti_paking_url, status_qc_checker, status_deliver, outbound_url')
-          .order('id', { ascending: false })
-          .limit(300);
+        // 2. Ambil proyek arsip dari packing_tracking (hanya status_deliver === 'DONE')
+        const { data: packData, error: packErr } = await fetchAllPackingRows(supabase, {
+          archived: true,
+          select: 'promo_title, updated_at, status_deliver'
+        });
 
         if (!packErr && packData) {
           packData.forEach(item => {
-            const str = extractBaseProjectName(item.promo_title);
+            const rawTitle = String(item.promo_title || '').trim();
+            const cleaned = extractBaseProjectName(rawTitle);
+            const str = (cleaned && cleaned !== '-') ? cleaned : rawTitle;
             if (str && str !== '-' && !/^tes(\d+)?$/i.test(str) && !/^test(\d+)?$/i.test(str)) {
               projectsSet.add(str);
               counts[str] = (counts[str] || 0) + 1;
@@ -236,7 +228,7 @@ export default function DualSidebar({
     if (tab === 'paking') return 'packing';
     if (tab === 'close_project') return 'archive';
     if (['produksi', 'desk_print', 'design', 'finishing'].includes(tab)) return 'production';
-    if (['checker', 'outbound'].includes(tab)) return 'logistics';
+    if (['qc_scanner', 'checker'].includes(tab)) return 'logistics';
     if (['label', 'kawan_lama', 'custom_modules'].includes(tab)) return 'workspaces';
     return 'production';
   };
@@ -259,7 +251,7 @@ export default function DualSidebar({
     { id: 'production', category: 'production', icon: Printer, title: t('navDeskPrint'), tab: 'produksi' },
     { id: 'packing', category: 'packing', icon: Package, title: t('navPacking'), tab: 'paking' },
     { id: 'archive', category: 'archive', icon: FolderCheck, title: t('navArchive'), tab: 'close_project' },
-    { id: 'logistics', category: 'logistics', icon: Truck, title: t('navLogistics'), tab: 'outbound' },
+    { id: 'logistics', category: 'logistics', icon: QrCode, title: t('navLogistics'), tab: 'qc_scanner' },
     { id: 'workspaces', category: 'workspaces', icon: Users, title: t('navMaster'), tab: 'kawan_lama' }
   ];
 
@@ -495,13 +487,13 @@ export default function DualSidebar({
       ]
     },
     logistics: {
-      title: lang === 'en' ? 'Logistics & QC' : 'Logistik & QC',
+      title: lang === 'en' ? 'Quality Control & QR' : 'QC & Scanner QR',
       sections: [
         {
-          heading: lang === 'en' ? 'QUALITY CONTROL & SHIPPING' : 'QUALITY CONTROL & PENGIRIMAN',
+          heading: lang === 'en' ? 'QUALITY CONTROL & PWA SCANNER' : 'QUALITY CONTROL & SCANNER QR',
           items: [
-            { id: 'checker', label: 'QC Station', icon: ShieldCheck },
-            { id: 'outbound', label: lang === 'en' ? 'Shipping Station' : 'Stasiun Pengiriman', icon: Truck }
+            { id: 'qc_scanner', label: t('navQcScanner'), icon: QrCode },
+            { id: 'checker', label: 'QC Checker', icon: ShieldCheck }
           ]
         }
       ]

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import * as XLSX from 'xlsx';
 import {
   Search,
   CheckCircle2,
@@ -23,6 +22,9 @@ import { extractBaseProjectName, getProjectCategory, getItemMonthKey, getItemMon
 import CustomDropdown from '../ui/CustomDropdown';
 import { useLanguage } from '../../utils/i18n';
 import { deleteMonthArchive } from '../../utils/archiveActions';
+import { uploadPhotoWithFallback, getPhotoThumbUrl, getPhotoFullUrl } from '../../utils/driveUpload';
+import { fetchAllPackingRows } from '../../utils/packingMeta';
+import { exportStyledPackingExcel } from '../../utils/excelReport';
 
 export default function CloseProjectView({ isDarkMode, onOpenImageModal, externalProjectFilter, onProjectFilterChange }) {
   const { lang, t } = useLanguage();
@@ -85,7 +87,9 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
   };
 
   const getProjectGroupKey = (promoTitle) => {
-    return extractBaseProjectName(promoTitle) || '-';
+    const raw = String(promoTitle || '').trim();
+    if (!raw || /^tes(\s*\d+)?$/i.test(raw) || /^test(\s*\d+)?$/i.test(raw)) return '-';
+    return extractBaseProjectName(raw) || raw;
   };
 
   const fetchClosedData = async () => {
@@ -127,32 +131,20 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
         });
       }
 
-      // 2. Ambil data dari packing_tracking
-      const { data: packData, error: packErr } = await supabase
-        .from('packing_tracking')
-        .select('id, bukti_paking_url, status_qc_checker, outbound_url, status_deliver, bukti_checker_url, status_qc_label, status_qc_packing, tracking_id, box_code, store_name, no_spk, promo_title, delivery_type, delivery_date, updated_at, items_detail')
-        .order('id', { ascending: false })
-        .limit(300);
+      // 2. Ambil data arsip dari packing_tracking (hanya yang sudah diceklis Arsip / status_deliver === 'DONE')
+      const { data: packData, error: packErr } = await fetchAllPackingRows(supabase, { archived: true });
 
       if (!packErr && packData) {
         packData.forEach(item => {
           const hasPhoto = Boolean(item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' && item.bukti_paking_url.length > 5);
-          const hasCheckerOrDeliver = Boolean(
-            item.status_qc_checker === 'DONE' ||
-            (item.bukti_outbound_url && item.bukti_outbound_url !== 'No Foto' && item.bukti_outbound_url !== '-' && item.bukti_outbound_url.length > 5) ||
-            item.outbound_url ||
-            item.status_deliver === 'DONE'
-          );
-          if (hasPhoto || hasCheckerOrDeliver) {
-            const photoUrl = (hasPhoto ? item.bukti_paking_url : null) || item.outbound_url || item.bukti_outbound_url || item.bukti_checker_url || savedCustomPhotos[item.id] || null;
-            combined.push({
-              ...item,
-              bukti_paking_url: photoUrl,
-              status_qc_label: item.status_qc_label || 'DONE',
-              status_qc_packing: item.status_qc_packing || 'DONE',
-              status_qc_checker: item.status_qc_checker || 'DONE'
-            });
-          }
+          const photoUrl = (hasPhoto ? item.bukti_paking_url : null) || item.outbound_url || item.bukti_checker_url || savedCustomPhotos[item.id] || null;
+          combined.push({
+            ...item,
+            bukti_paking_url: photoUrl,
+            status_qc_label: item.status_qc_label || 'DONE',
+            status_qc_packing: item.status_qc_packing || 'DONE',
+            status_qc_checker: item.status_qc_checker || 'DONE'
+          });
         });
       }
 
@@ -203,17 +195,8 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
     try {
       setUploadingId(item.id);
       const cleanBox = String(item.box_code || item.id).replace(/[^a-zA-Z0-9-_]/g, '_');
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const fileName = `archive_bukti_${cleanBox}_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(fileName, file, { contentType: file.type || 'image/jpeg', upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      const publicUrl = urlData.publicUrl;
+      const uploadRes = await uploadPhotoWithFallback(file, `archive_bukti_${cleanBox}`, supabase);
+      const publicUrl = uploadRes.url;
 
       // Update di packing_tracking jika id numerik
       if (typeof item.id === 'number' || (!String(item.id).startsWith('pmg-') && !isNaN(Number(item.id)))) {
@@ -431,8 +414,8 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
     return filteredList.filter(item => !!(item.bukti_paking_url || item.bukti_checker_url || item.outbound_url)).length;
   }, [filteredList]);
 
-  // EXPORT EXCEL KHUSUS PROYEK ARSIP SELESAI
-  const handleExportExcel = () => {
+  // EXPORT EXCEL KHUSUS PROYEK ARSIP SELESAI (KOP + HEADER BERWARNA)
+  const handleExportExcel = async () => {
     try {
       const dataToExport = selectedRowIds.length > 0
         ? filteredList.filter(item => selectedRowIds.includes(item.id))
@@ -443,55 +426,27 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
         return;
       }
 
-      const formattedData = dataToExport.map((item, index) => {
-        const rawPakingUrl = item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? item.bukti_paking_url : '';
-        const rawOutboundUrl = item.bukti_outbound_url || item.outbound_url || '';
-
-        return {
-          No: index + 1,
-          'Kode Kolian': item.box_code || '-',
-          'Nomor SPK': item.no_spk || '-',
-          'Nama Cabang / Alamat': item.store_name || '-',
-          'Proyek / Promo': item.promo_title || '-',
-          'Jalur Pengiriman': item.delivery_type || 'DALAM KOTA',
-          'Tanggal Selesai': item.delivery_date ? new Date(item.delivery_date).toLocaleDateString('id-ID') : (item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID') : '-'),
-          'Status QC Label': item.status_qc_label || 'DONE',
-          'Status QC Paking': item.status_qc_packing || 'DONE',
-          'Status QC Pemeriksa': item.status_qc_checker || 'DONE',
-          'Status Pengiriman': item.status_deliver || 'DONE',
-          'Tautan Bukti Foto Paking': rawPakingUrl || '-',
-          'Tautan Bukti Pengiriman': rawOutboundUrl || '-'
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(formattedData);
-
-      // Otomatis jadikan link sebagai hyperlink interaktif
-      if (worksheet['!ref']) {
-        const range = XLSX.utils.decode_range(worksheet['!ref']);
-        for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-            const cell = worksheet[cellAddress];
-            if (cell && typeof cell.v === 'string' && cell.v.startsWith('http')) {
-              cell.l = { Target: cell.v, Tooltip: 'Klik untuk melihat foto dokumentasi' };
-            }
-          }
-        }
-      }
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Arsip_Proyek_Selesai');
-
       const todayStr = new Date().toISOString().slice(0, 10);
       let fileNameStr = `Arsip_Proyek_Selesai_Semua_${todayStr}.xlsx`;
+      let filterDesc = 'Semua Proyek Arsip';
 
       if (filterProject !== 'ALL') {
         const cleanProj = String(filterProject).replace(/[/\\?%*:|"<>]/g, '_').trim();
         fileNameStr = `Arsip_Proyek_${cleanProj}_${todayStr}.xlsx`;
+        filterDesc = filterProject.startsWith('MONTH:')
+          ? getItemMonthLabel(filterProject.replace('MONTH:', '').split('|GROUP:')[0], lang)
+          : filterProject;
       }
 
-      XLSX.writeFile(workbook, fileNameStr);
+      await exportStyledPackingExcel({
+        items: dataToExport,
+        reportTitle: 'LAPORAN ARSIP PROYEK SELESAI (ASSET)',
+        filterLabel: filterDesc,
+        fileName: fileNameStr,
+        sheetName: 'Arsip_Proyek_Selesai',
+        isArchive: true
+      });
+
       alert(`Berhasil mengunduh berkas Excel: ${fileNameStr} (${dataToExport.length} data).`);
     } catch (err) {
       alert('Gagal mengekspor laporan arsip: ' + err.message);
@@ -948,10 +903,11 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
                               <div className="flex flex-col items-center justify-center gap-1.5">
                                 <div className="relative group mx-auto">
                                   <img
-                                    src={pakingImgUrl}
+                                    src={getPhotoThumbUrl(pakingImgUrl)}
+                                    referrerPolicy="no-referrer"
                                     alt="Bukti Paking"
                                     onClick={() => onOpenImageModal && onOpenImageModal(
-                                      pakingImgUrl,
+                                      getPhotoFullUrl(pakingImgUrl),
                                       `Dokumentasi Paking - ${item.box_code || ''}`,
                                       item.store_name || '',
                                       item.promo_title || '',
@@ -962,7 +918,7 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
                                   <button
                                     type="button"
                                     onClick={() => onOpenImageModal && onOpenImageModal(
-                                      pakingImgUrl,
+                                      getPhotoFullUrl(pakingImgUrl),
                                       `Dokumentasi Paking - ${item.box_code || ''}`,
                                       item.store_name || '',
                                       item.promo_title || '',
@@ -1057,13 +1013,14 @@ export default function CloseProjectView({ isDarkMode, onOpenImageModal, externa
                       {photoUrl ? (
                         <>
                           <img
-                            src={photoUrl}
+                            src={getPhotoThumbUrl(photoUrl, 480)}
+                            referrerPolicy="no-referrer"
                             alt={`Foto ${item.box_code || item.store_name}`}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                           <div
                             onClick={() => onOpenImageModal && onOpenImageModal(
-                              photoUrl,
+                              getPhotoFullUrl(photoUrl),
                               `Dokumentasi Paking - ${item.box_code || ''}`,
                               item.store_name || '',
                               item.promo_title || '',

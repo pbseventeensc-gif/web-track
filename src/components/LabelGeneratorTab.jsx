@@ -69,6 +69,7 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
     const { data, error } = await supabase
       .from('packing_tracking')
       .select('id, no_spk, box_code, client_pt, promo_title, recipient_name, store_name, total_qty, tracking_id, items_detail, updated_at')
+      .eq('source', 'label_sj')
       .order('id', { ascending: false })
       .limit(300);
 
@@ -486,12 +487,12 @@ export default function LabelGeneratorTab({ isDarkMode, onOpenImageModal }) {
   };
 
   const handleClearAllData = async () => {
-    if (confirm('Apakah Anda yakin ingin menghapus seluruh data yang tersimpan di basis data?')) {
-      const { error } = await supabase.from('packing_tracking').delete().gt('id', 0);
+    if (confirm('Apakah Anda yakin ingin menghapus seluruh data Label & Surat Jalan yang tersimpan? (Data import Google Sheet di Packing Station tetap aman)')) {
+      const { error } = await supabase.from('packing_tracking').delete().eq('source', 'label_sj');
       if (!error) {
         setLabelData([]);
         setSelectedRows([]);
-        alert('Seluruh data berhasil dihapus.');
+        alert('Seluruh data Label & Surat Jalan berhasil dihapus.');
       } else {
         alert('Gagal menghapus data: ' + error.message);
       }

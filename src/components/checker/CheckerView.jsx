@@ -2,126 +2,25 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Check,
-  Clock,
   RefreshCw,
-  Image as ImageIcon,
   ShieldCheck,
-  Camera
+  QrCode
 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
+import { getPhotoThumbUrl, getPhotoFullUrl } from '../../utils/driveUpload';
+import {
+  hasValidPhoto,
+  isPackingDone as checkPackingDone,
+  isCheckerDone as checkCheckerDone,
+  getPackingMeta,
+  getCheckerMeta,
+  fetchAllPackingRows
+} from '../../utils/packingMeta';
 
-export default function CheckerView({ isDarkMode, onOpenImageModal }) {
+export default function CheckerView({ isDarkMode, onOpenImageModal, onOpenScanner }) {
   const [packingList, setPackingList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRowIds, setSelectedRowIds] = useState([]);
-  const [uploadingId, setUploadingId] = useState(null);
-
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const maxDimension = 1600;
-          if (width > height && width > maxDimension) {
-            height = Math.round((height * maxDimension) / width);
-            width = maxDimension;
-          } else if (height >= width && height > maxDimension) {
-            width = Math.round((width * maxDimension) / height);
-            height = maxDimension;
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob(
-            (blob) => {
-              resolve(blob || file);
-            },
-            'image/jpeg',
-            0.98
-          );
-        };
-      };
-    });
-  };
-
-  const processImageForUpload = async (file) => {
-    return file; // Gunakan file asli bawaan HP tanpa kompresi / resize
-  };
-
-  const handleCheckerCameraCapture = async (e, rowId, trackingId) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploadingId(rowId);
-    try {
-      const uploadBlob = await processImageForUpload(file);
-      const cleanTrackingId = trackingId ? String(trackingId).replace(/[^a-zA-Z0-9-_]/g, '_') : 'item';
-      const fileExt = file.name ? file.name.split('.').pop() : 'jpg';
-      const fileName = `bukti_checker_${cleanTrackingId}_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('surat-jalan')
-        .upload(fileName, uploadBlob, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: file.type || 'image/jpeg'
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('surat-jalan').getPublicUrl(fileName);
-      const publicUrl = urlData.publicUrl;
-
-      const nowIso = new Date().toISOString();
-      const { error: updateError } = await supabase
-        .from('packing_tracking')
-        .update({
-          bukti_checker_url: publicUrl,
-          status_qc_checker: 'DONE',
-          checker_by: 'Staff Checker',
-          checker_at: nowIso,
-          updated_at: nowIso
-        })
-        .eq('id', rowId);
-
-      if (updateError) {
-        await supabase
-          .from('packing_tracking')
-          .update({
-            status_qc_checker: 'DONE',
-            checker_by: 'Staff Checker',
-            checker_at: nowIso,
-            updated_at: nowIso
-          })
-          .eq('id', rowId);
-      }
-
-      setPackingList(prev =>
-        prev.map(item =>
-          item.id === rowId
-            ? { ...item, bukti_checker_url: publicUrl, status_qc_checker: 'DONE', checker_by: 'Staff Checker', checker_at: nowIso }
-            : item
-        )
-      );
-
-      alert('✅ Foto Checker berhasil diunggah & diverifikasi!');
-    } catch (err) {
-      alert('❌ Gagal upload foto checker: ' + err.message);
-    } finally {
-      setUploadingId(null);
-      e.target.value = '';
-    }
-  };
 
   // Filter & Search States
   const [filterDelivery, setFilterDelivery] = useState('ALL');
@@ -180,11 +79,7 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
 
   const fetchCheckerData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('packing_tracking')
-      .select('id, tracking_id, box_code, no_spk, store_name, recipient_name, client_pt, promo_title, delivery_type, source, status_qc_packing, status_qc_checker, status_deliver, bukti_paking_url, bukti_checker_url, foto_by, scanned_by, foto_at, packing_by, packing_at, checker_by, checker_at, updated_at, items_detail')
-      .order('id', { ascending: false })
-      .limit(300);
+    const { data, error } = await fetchAllPackingRows(supabase, { archived: false });
 
     if (!error && data) {
       const normalizedData = data.map(item => {
@@ -261,17 +156,24 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
 
   const handleToggleStatus = async (id, fieldName, currentValue) => {
     const nextValue = currentValue === 'DONE' ? 'PENDING' : 'DONE';
+    const staffName = (typeof localStorage !== 'undefined' && localStorage.getItem('wellen_qc_staff_name')) || 'Staff Checker';
+    const nowIso = new Date().toISOString();
+
     setPackingList(prev =>
-      prev.map(item => item.id === id ? { ...item, [fieldName]: nextValue } : item)
+      prev.map(item =>
+        item.id === id
+          ? { ...item, [fieldName]: nextValue, checker_by: staffName, checker_at: nowIso, updated_at: nowIso }
+          : item
+      )
     );
 
     const { error } = await supabase
       .from('packing_tracking')
       .update({
         [fieldName]: nextValue,
-        checker_by: 'Staff Checker',
-        checker_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        checker_by: staffName,
+        checker_at: nowIso,
+        updated_at: nowIso
       })
       .eq('id', id);
 
@@ -356,14 +258,28 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
           </p>
         </div>
 
-        <button
-          onClick={fetchCheckerData}
-          disabled={loading}
-          className="w-full sm:w-auto px-3.5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Loading...' : 'Refresh Data'}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenScanner) onOpenScanner();
+              else window.location.href = '/?mode=scanner';
+            }}
+            className="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Buka Scanner QR Checker (PWA)</span>
+          </button>
+
+          <button
+            onClick={fetchCheckerData}
+            disabled={loading}
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading...' : 'Refresh Data'}
+          </button>
+        </div>
       </div>
 
       {/* RINGKASAN STATUS BOX CHECKER */}
@@ -519,8 +435,10 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
               <tbody className="divide-y divide-slate-200 dark:divide-neutral-700">
                 {filteredList.map((item) => {
                   const details = parseItems(item.items_detail);
-                  const isPackingDone = item.status_qc_packing === 'DONE' || (item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-');
-                  const isCheckerDone = item.status_qc_checker === 'DONE';
+                  const isPackingDone = checkPackingDone(item);
+                  const isCheckerDone = checkCheckerDone(item);
+                  const packerMeta = getPackingMeta(item);
+                  const checkerMeta = getCheckerMeta(item);
                   const isSelected = selectedRowIds.includes(item.id);
 
                   return (
@@ -612,23 +530,24 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
 
                       {/* 7. PHOTO PROOF */}
                       <td className="py-3 px-4 text-center">
-                        {item.bukti_paking_url && item.bukti_paking_url !== 'No Foto' && item.bukti_paking_url !== '-' ? (
+                        {hasValidPhoto(item) ? (
                           <div className="flex flex-col items-center justify-center gap-1">
                             <img
-                              src={item.bukti_paking_url}
+                              src={getPhotoThumbUrl(item.bukti_paking_url)}
+                              referrerPolicy="no-referrer"
                               alt="Bukti Paking"
                               onClick={() => onOpenImageModal && onOpenImageModal(
-                                item.bukti_paking_url,
+                                getPhotoFullUrl(item.bukti_paking_url),
                                 `Bukti Paking - ${item.tracking_id || item.box_code || ''}`,
                                 item.destination || item.store_name || item.branch_name || '',
                                 item.promo_title || item.project || '',
                                 item.no_spk || item.tracking_id || ''
                               )}
-                              className="w-9 h-9 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
+                              className="w-10 h-10 object-cover rounded-lg border-2 border-slate-300 dark:border-neutral-600 cursor-pointer hover:scale-110 transition-transform shadow-2xs"
                             />
                             <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight">
-                              <span className="block truncate max-w-[110px]">{item.foto_by || item.scanned_by || 'Staff QC'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.foto_at || item.updated_at) || '-'}</span>
+                              <span className="block truncate max-w-[110px]">{packerMeta.name || 'Staff QC'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                             </div>
                           </div>
                         ) : (
@@ -651,8 +570,8 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                           </span>
                           {isPackingDone && (
                             <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
-                              <span className="block truncate max-w-[110px]">{item.packing_by || item.scanned_by || 'Staff Packing'}</span>
-                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.packing_at || item.updated_at) || '-'}</span>
+                              <span className="block truncate max-w-[110px]">{packerMeta.name || 'Staff Packing'}</span>
+                              <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(packerMeta.timestamp) || '-'}</span>
                             </div>
                           )}
                         </div>
@@ -662,16 +581,16 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                       <td className="py-3 px-4 text-center">
                         {(() => {
                           const checkerImgUrl = item.bukti_checker_url && item.bukti_checker_url !== 'No Foto' && item.bukti_checker_url !== '-' ? item.bukti_checker_url : '';
-                          const isUploadingThis = uploadingId === item.id;
 
                           return (
                             <div className="flex flex-col items-center justify-center gap-1.5">
                               {checkerImgUrl ? (
                                 <img
-                                  src={checkerImgUrl}
+                                  src={getPhotoThumbUrl(checkerImgUrl)}
+                                  referrerPolicy="no-referrer"
                                   alt="Bukti Checker"
                                   onClick={() => onOpenImageModal && onOpenImageModal(
-                                    checkerImgUrl,
+                                    getPhotoFullUrl(checkerImgUrl),
                                     `Bukti Checker - ${item.tracking_id || item.box_code || ''}`,
                                     item.destination || item.store_name || item.branch_name || '',
                                     item.promo_title || item.project || '',
@@ -681,26 +600,23 @@ export default function CheckerView({ isDarkMode, onOpenImageModal }) {
                                 />
                               ) : null}
 
-                              <label className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
-                                isCheckerDone
-                                  ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-                                  : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
-                              }`}>
-                                <Camera className="w-3.5 h-3.5" />
-                                <span>{isUploadingThis ? '...' : (isCheckerDone ? 'Checked' : 'Upload Foto & Check')}</span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  className="hidden"
-                                  onChange={(e) => handleCheckerCameraCapture(e, item.id, item.tracking_id || item.box_code)}
-                                />
-                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(item.id, 'status_qc_checker', item.status_qc_checker)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer border active:scale-95 ${
+                                  isCheckerDone
+                                    ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                                    : 'bg-slate-100 hover:bg-amber-50 text-slate-700 border-slate-300 dark:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-600'
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${isCheckerDone ? 'bg-amber-600' : 'bg-slate-400'}`} />
+                                <span>{isCheckerDone ? 'Terverifikasi' : 'Verifikasi Checker'}</span>
+                              </button>
 
                               {isCheckerDone && (
                                 <div className="text-[10px] font-semibold text-slate-800 dark:text-neutral-200 leading-tight mt-0.5">
-                                  <span className="block truncate max-w-[110px]">{item.checker_by || 'Staff Checker'}</span>
-                                  <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(item.checker_at || item.updated_at) || '-'}</span>
+                                  <span className="block truncate max-w-[110px]">{checkerMeta.name || 'Staff Checker'}</span>
+                                  <span className="text-[9px] font-mono text-slate-500 dark:text-neutral-400 font-normal block">{formatDateTime(checkerMeta.timestamp) || '-'}</span>
                                 </div>
                               )}
                             </div>
